@@ -398,7 +398,7 @@ async function createClient(){const name=$('new-client-name')?.value.trim(),slug
 function setAccountsFilter(value){ST.accountsFilter=value;showAccounts();}
 async function showAccounts(syncResult=null){
   showModulePage('Contas conectadas','<div class="section-card"><div class="empty-state"><div class="empty-title">Carregando...</div></div></div>',false);
-  const found=await tryTable(['accounts'],'select=*&limit=500'),accounts=found?.data||[],all=ST.accountsFilter==='all';
+  const [found,metaAssets]=await Promise.all([tryTable(['accounts'],'select=*&limit=500'),rest('meta_assets?select=*&order=asset_type,name').catch(()=>[])]),accounts=found?.data||[],all=ST.accountsFilter==='all';
   const result=syncResult?`<div class="sync-result success" role="status"><strong>✓ Sincronização concluída com sucesso</strong><span>${fmt(syncResult.posts||0)} publicações processadas · ${fmt(syncResult.metrics||0)} métricas atualizadas · ${fmt(syncResult.images||0)} imagens armazenadas</span><small>Dados recebidos do Windsor e gravados no Supabase.</small></div>`:'';
   const options=['<option value="all">Todos os clientes</option>',...ST.clients.map(c=>`<option value="${esc(c.id)}" ${String(c.id)===String(ST.accountsFilter)?'selected':''}>${esc(c.name)}</option>`)].join('');
   let rows;
@@ -407,7 +407,19 @@ async function showAccounts(syncResult=null){
   const connected=ST.clients.filter(c=>accounts.some(a=>String(a.client_id)===String(c.id))).length,pending=ST.clients.length-connected;
   const summary=all?`<div class="accounts-summary"><div><strong>${ST.clients.length}</strong><span>Clientes</span></div><div class="ok"><strong>${connected}</strong><span>Sincronizados</span></div><div class="pending"><strong>${pending}</strong><span>Pendentes</span></div></div>`:'';
   const empty='<div class="empty-state"><div class="empty-title">Nenhuma conta vinculada a este cliente</div><div class="empty-desc">O Windsor ainda não retornou uma conta correspondente para este cliente.</div></div>';
-  showModulePage('Contas conectadas',`${result}<div class="section-card"><div class="section-hdr accounts-header"><div><span class="section-title">Visão das contas sincronizadas</span><select class="accounts-filter" onchange="setAccountsFilter(this.value)">${options}</select></div>${isSuperAdmin()?'<button class="btn-sm-prim sync-action" id="sync-windsor-btn" onclick="syncWindsor()">Sincronizar Windsor agora</button>':''}</div><div id="sync-progress" class="sync-progress" aria-live="polite"></div>${summary}${rows.length?objectTable(rows):empty}</div>`,false);
+  const metaRows=(metaAssets||[]).map(a=>`<div class="meta-asset-row"><span class="meta-badge">${esc(a.asset_type==='ad_account'?'Meta Ads':a.asset_type==='instagram'?'Instagram':'Facebook')}</span><span><strong>${esc(a.name)}</strong><small>${esc(a.username?'@'+a.username:(a.ad_account_id||a.page_id||a.id))}</small></span><select onchange="assignMetaAsset('${esc(a.id)}',this.value)"><option value="">Não vinculado</option>${ST.clients.map(c=>`<option value="${esc(c.id)}" ${String(c.id)===String(a.client_id)?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>`).join('');
+  const meta=`<div class="section-card"><div class="section-hdr"><div><span class="section-title">Integração direta com a Meta</span><small class="section-subtitle">Facebook, Instagram e Meta Ads</small></div>${isSuperAdmin()?'<button class="btn-sm-prim sync-action" id="connect-meta-btn" onclick="connectMeta()">Conectar conta Meta</button>':''}</div><div id="meta-progress" class="sync-progress" aria-live="polite"></div>${metaRows?`<div class="meta-assets">${metaRows}</div>`:'<div class="empty-state"><div class="empty-title">Nenhuma conta Meta autorizada</div><div class="empty-desc">Conecte a conta empresarial para descobrir páginas, Instagrams e contas de anúncios.</div></div>'}</div>`;
+  showModulePage('Contas conectadas',`${result}${meta}<div class="section-card"><div class="section-hdr accounts-header"><div><span class="section-title">Visão das contas sincronizadas</span><select class="accounts-filter" onchange="setAccountsFilter(this.value)">${options}</select></div>${isSuperAdmin()?'<button class="btn-sm-ghost sync-action" id="sync-windsor-btn" onclick="syncWindsor()">Windsor (legado)</button>':''}</div><div id="sync-progress" class="sync-progress" aria-live="polite"></div>${summary}${rows.length?objectTable(rows):empty}</div>`,false);
+}
+async function connectMeta(){
+  if(!isSuperAdmin())return toast('Apenas o superadministrador pode conectar a Meta.','error');
+  const btn=$('connect-meta-btn'),progress=$('meta-progress');if(btn){btn.disabled=true;btn.textContent='Abrindo Meta…';}
+  if(progress){progress.className='sync-progress running';progress.innerHTML='<strong>Preparando autorização segura</strong><span>Você será direcionado para a Meta.</span>';}
+  try{const r=await fetch(SB_URL+'/functions/v1/meta-auth',{method:'POST',headers:authHeaders()});const d=await r.json();if(!r.ok||!d.url)throw new Error(d.error||'Não foi possível iniciar a conexão');location.href=d.url;}catch(e){if(btn){btn.disabled=false;btn.textContent='Conectar conta Meta';}if(progress){progress.className='sync-result error';progress.innerHTML=`<strong>Falha ao conectar</strong><span>${esc(e.message)}</span>`;}}
+}
+async function assignMetaAsset(id,clientId){
+  try{await rest('meta_assets?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({client_id:clientId||null,status:clientId?'connected':'discovered',updated_at:new Date().toISOString()})});toast(clientId?'Conta vinculada ao cliente.':'Vínculo removido.');}
+  catch(e){toast('Não foi possível salvar o vínculo: '+e.message,'error');showAccounts();}
 }
 async function syncWindsor(){
   if(!isSuperAdmin())return toast('Apenas o superadministrador pode sincronizar.','error');
