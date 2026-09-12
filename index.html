@@ -81,9 +81,19 @@
         </div>
       </div>
       <div class="tb-sep"></div>
-      <div class="date-range" onclick="cyclePeriod()">
+      <div class="date-range" onclick="toggleDrop('date-drop',event)">
         <svg viewBox="0 0 16 16" fill="currentColor"><path d="M5 1v2h6V1h1v2h2a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h2V1h1zm8 5H3v7h10V6zM5 8h2v2H5V8zm4 0h2v2H9V8z"/></svg>
         <span id="tb-period-label">Últimos 30 dias</span>
+        <span class="caret">▾</span>
+        <div class="tb-drop date-drop" id="date-drop" onclick="event.stopPropagation()">
+          <button class="date-preset" onclick="setPeriod(7,'Últimos 7 dias')">Últimos 7 dias</button>
+          <button class="date-preset" onclick="setPeriod(30,'Últimos 30 dias')">Últimos 30 dias</button>
+          <button class="date-preset" onclick="setPeriod(90,'Últimos 90 dias')">Últimos 90 dias</button>
+          <div class="date-custom-title">Período personalizado</div>
+          <label>Data inicial<input type="date" id="date-start"></label>
+          <label>Data final<input type="date" id="date-end"></label>
+          <button class="date-apply" onclick="applyCustomRange()">Aplicar período</button>
+        </div>
       </div>
     </div>
 

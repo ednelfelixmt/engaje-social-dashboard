@@ -67,12 +67,12 @@ input,select{font-family:inherit}
 .topbar-logo img{width:100%;height:100%;object-fit:contain}
 .topbar-brand-name{font-size:13px;font-weight:800;letter-spacing:-.3px;line-height:1.1}
 .topbar-brand-sub{font-size:8px;color:var(--text2);letter-spacing:.3px;font-weight:500}
-.topbar-center{flex:1;display:flex;align-items:center;gap:8px;padding:0 10px;overflow:hidden}
+.topbar-center{flex:1;display:flex;align-items:center;gap:8px;padding:0 10px;overflow:visible;min-width:0}
 .topbar-label{font-size:10px;color:var(--text2);white-space:nowrap;font-weight:500}
 .tb-sel{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:5px 10px;cursor:pointer;position:relative;white-space:nowrap;font-size:12px;font-weight:500;transition:border-color .15s}
 .tb-sel:hover{border-color:var(--border2)}
 .tb-sel .caret{color:var(--text2);font-size:9px;margin-left:2px}
-.tb-drop{position:absolute;top:calc(100% + 4px);left:0;min-width:180px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:4px;z-index:200;display:none;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.tb-drop{position:absolute;top:calc(100% + 4px);left:0;min-width:220px;max-height:360px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:4px;z-index:2000;display:none;box-shadow:0 8px 24px rgba(0,0,0,.5)}
 .tb-drop.open{display:block}
 .tb-drop-item{padding:7px 10px;border-radius:5px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;transition:background .1s}
 .tb-drop-item:hover{background:var(--surface2)}
@@ -80,6 +80,7 @@ input,select{font-family:inherit}
 .tb-drop-item .item-av{width:20px;height:20px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0}
 .tb-sep{width:1px;height:24px;background:var(--border);flex-shrink:0}
 .date-range{display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:5px 10px;font-size:11px;cursor:pointer;white-space:nowrap}
+.date-range{position:relative}.date-drop{left:auto;right:0;width:250px;padding:10px;white-space:normal}.date-preset,.date-apply{display:block;width:100%;border:0;border-radius:5px;padding:8px 10px;text-align:left;background:transparent;color:var(--text);font:inherit;cursor:pointer}.date-preset:hover{background:var(--surface2)}.date-custom-title{font-size:10px;font-weight:700;color:var(--text2);border-top:1px solid var(--border);margin-top:6px;padding:10px 2px 5px}.date-drop label{display:block;font-size:10px;color:var(--text2);margin:6px 0}.date-drop input{display:block;width:100%;margin-top:4px;padding:7px;border-radius:5px;border:1px solid var(--border);background:var(--surface2);color:var(--text);color-scheme:dark}.date-apply{margin-top:9px;text-align:center;background:var(--blue);color:#fff;font-weight:600}
 .date-range svg{width:12px;height:12px;color:var(--text2)}
 .topbar-right{display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0}
 .btn-share{display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:5px 11px;font-size:11px;font-weight:500;color:var(--text);cursor:pointer;white-space:nowrap;transition:border-color .15s}
