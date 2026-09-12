@@ -6,7 +6,7 @@ let SESSION=null,PROFILE=null;
 const ST={
   period:30,compare:'prev_period',clientId:null,clientName:'',clients:[],accounts:[],posts:[],comparePosts:[],charts:{},
   activeTab:'overview',chartGran:'day',seriesVisible:[true,true,true],shareLink:null,platform:'all',module:null,
-  branding:{login_cover_url:'/assets/zf-cover-2026.png',login_cover_year:2026,platform_name:'Engaje Mídia Hub'}
+  branding:{login_cover_url:'/assets/zf-cover-2026.png?v=2026-2',login_cover_year:2026,platform_name:'Engaje Mídia Hub'}
 };
 
 const $=id=>document.getElementById(id);
@@ -38,7 +38,7 @@ async function loadBranding(){
   try{const rows=await rest('app_settings?id=eq.branding&select=value',{},false);if(rows?.[0]?.value)ST.branding={...ST.branding,...rows[0].value};}catch(e){console.warn('branding',e);}
   applyLoginCover();
 }
-function applyLoginCover(){const el=$('auth-cover');if(el)el.style.backgroundImage=`url("${safeUrl(ST.branding.login_cover_url||'/assets/zf-cover-2026.png')}")`;}
+function applyLoginCover(){const el=$('auth-cover');if(el)el.src=safeUrl(ST.branding.login_cover_url||'/assets/zf-cover-2026.png?v=2026-2');}
 function selectedClient(){return ST.clients.find(c=>String(c.id)===String(ST.clientId));}
 function applyClientCover(){
   const el=$('client-cover'),c=selectedClient();if(!el)return;
