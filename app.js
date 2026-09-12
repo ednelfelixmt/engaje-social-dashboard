@@ -38,7 +38,10 @@ async function loadBranding(){
   try{const rows=await rest('app_settings?id=eq.branding&select=value',{},false);if(rows?.[0]?.value)ST.branding={...ST.branding,...rows[0].value};}catch(e){console.warn('branding',e);}
   applyLoginCover();
 }
-function applyLoginCover(){const el=$('auth-cover');if(el)el.src=safeUrl(ST.branding.login_cover_url||'/assets/zf-cover-2026.png?v=2026-2');}
+function applyLoginCover(){
+  const el=$('auth-cover'),url=ST.branding.login_cover_url||'';if(!el)return;
+  if(url&&!url.startsWith('/assets/zf-cover-2026.'))el.src=safeUrl(url);
+}
 function selectedClient(){return ST.clients.find(c=>String(c.id)===String(ST.clientId));}
 function applyClientCover(){
   const el=$('client-cover'),c=selectedClient();if(!el)return;
