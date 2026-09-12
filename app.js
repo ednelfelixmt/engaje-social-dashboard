@@ -6,6 +6,7 @@ let SESSION=null,PROFILE=null;
 const ST={
   period:30,customStart:null,customEnd:null,compare:'prev_period',clientId:null,clientName:'',clients:[],accounts:[],posts:[],comparePosts:[],charts:{},
   activeTab:'overview',chartGran:'day',seriesVisible:[true,true,true],shareLink:null,platform:'all',module:null,accountsFilter:'all',
+  available:{organic:[],paid:[],content:false,audience:false,conversions:false},
   branding:{login_cover_url:'/assets/zf-cover-2026.png?v=2026-2',login_cover_year:2026,platform_name:'Engaje Mídia Hub'}
 };
 
@@ -251,9 +252,33 @@ function seriesValues(posts,metric,gran=ST.chartGran){const o=series(posts,metri
 
 async function renderDashboard(){
   if(!ST.clientId)return renderNoClients();
-  ST.module=null;restoreDashboardShell();updateClientHeader();await loadPosts();
+  ST.module=null;restoreDashboardShell();updateClientHeader();await loadPosts();await loadAvailability();applyAvailability();
   renderKPIs(ST.posts,ST.comparePosts);renderPerformanceChart(ST.posts);renderDonut(ST.posts);renderPlatformMetrics(ST.posts);renderTopContent(ST.posts);renderInsights(ST.posts);updateShareCard();
   if(ST.activeTab!=='overview')renderTab(ST.activeTab);
+}
+
+async function loadAvailability(){
+  const cid=encodeURIComponent(ST.clientId),available={organic:[],paid:[],content:false,audience:false,conversions:false};
+  const [history,ads,audience]=await Promise.all([
+    rest('posts?client_id=eq.'+cid+'&select=platform&limit=1000').catch(()=>[]),
+    rest('meta_ad_metrics?client_id=eq.'+cid+'&select=ad_id&limit=1').catch(()=>[]),
+    rest('account_snapshots?client_id=eq.'+cid+'&select=id&limit=1').catch(()=>[])
+  ]);
+  available.organic=[...new Set((history||[]).map(x=>x.platform).filter(Boolean))];
+  if((ads||[]).length)available.paid.push('meta_ads');
+  available.content=available.organic.length>0;available.audience=(audience||[]).length>0;
+  available.conversions=available.paid.length>0;ST.available=available;
+}
+function applyAvailability(){
+  const iconPlatforms=['instagram','facebook_organic','tiktok','youtube','google_my_business'];
+  qsa('.client-accounts .plat-icon').forEach((el,i)=>{const p=iconPlatforms[i];el.style.display=ST.available.organic.includes(p)?'flex':'none';});
+  const select=$('chart-plat-filter');
+  if(select){const current=ST.available.organic.includes(ST.platform)?ST.platform:'all';select.innerHTML='<option value="all">Todas as plataformas</option>'+ST.available.organic.map(p=>'<option value="'+esc(p)+'">'+esc(platformName(p))+'</option>').join('');select.value=current;ST.platform=current;}
+  const tabs=qsa('.dash-tab'),show=[true,ST.available.content,ST.available.paid.length>0,ST.available.audience,ST.available.conversions,false];
+  tabs.forEach((tab,i)=>tab.style.display=show[i]?'flex':'none');
+  if(!show[['overview','content','paid','audience','conversions','competitors'].indexOf(ST.activeTab)]){ST.activeTab='overview';tabs.forEach((t,i)=>t.classList.toggle('active',i===0));qsa('[id^="tab-"]').forEach(t=>t.style.display=t.id==='tab-overview'?'block':'none');}
+  const details=qs('.client-accounts .btn-details');if(details)details.style.display=(ST.available.organic.length||ST.available.paid.length)?'':'none';
+  const health=qs('.health-card');if(health)health.style.display='none';
 }
 
 function updateClientHeader(){
@@ -306,8 +331,8 @@ function updatePerformanceChart(){ST.platform=$('chart-plat-filter')?.value||'al
 function toggleSeries(idx,el){ST.seriesVisible[idx]=!ST.seriesVisible[idx];el?.classList.toggle('inactive');if(ST.charts.perf){ST.charts.perf.data.datasets[idx].hidden=!ST.seriesVisible[idx];ST.charts.perf.update();}}
 function setChartGran(gran,btn){ST.chartGran=gran;qsa('.ctrl-grp .ctrl-btn').forEach(b=>b.classList.remove('active'));btn?.classList.add('active');renderPerformanceChart(ST.posts);}
 
-function platformName(k){return ({instagram:'Instagram',facebook_organic:'Facebook',facebook:'Facebook',tiktok:'TikTok',youtube:'YouTube',google_my_business:'Google Business',linkedin:'LinkedIn'}[k]||k||'—');}
-function platformColor(k){return ({instagram:'#e1306c',facebook_organic:'#1877f2',facebook:'#1877f2',tiktok:'#69c9d0',youtube:'#ff0000',google_my_business:'#4285f4',linkedin:'#0a66c2'}[k]||'#4361ee');}
+function platformName(k){return ({instagram:'Instagram',facebook_organic:'Facebook',facebook:'Facebook',meta_ads:'Meta Ads',google_ads:'Google Ads',tiktok:'TikTok',tiktok_ads:'TikTok Ads',youtube:'YouTube',google_my_business:'Google Business',linkedin:'LinkedIn'}[k]||k||'—');}
+function platformColor(k){return ({instagram:'#e1306c',facebook_organic:'#1877f2',facebook:'#1877f2',meta_ads:'#1877f2',google_ads:'#4285f4',tiktok:'#69c9d0',tiktok_ads:'#25f4ee',youtube:'#ff0000',google_my_business:'#4285f4',linkedin:'#0a66c2'}[k]||'#4361ee');}
 
 function renderDonut(posts){
   const by={};posts.forEach(p=>by[p.platform]=(by[p.platform]||0)+getReach(p.metrics));const entries=Object.entries(by).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);const total=entries.reduce((s,[,v])=>s+v,0);
@@ -369,7 +394,7 @@ function objectTable(rows){if(!rows?.length)return'<div class="empty-state">Sem 
 function formatCell(v){if(v===null||v===undefined)return'—';if(typeof v==='object')return JSON.stringify(v);return String(v);}
 
 function setPeriod(days,label){ST.period=days;ST.customStart=null;ST.customEnd=null;if($('tb-period-label'))$('tb-period-label').textContent=label;closeAllDrops();renderDashboard();}
-function applyCustomRange(){const start=$('date-start')?.value,end=$('date-end')?.value;if(!start||!end)return toast('Informe as duas datas.','error');if(start>end)return toast('A data inicial deve ser anterior à final.','error');const days=Math.round((new Date(end)-new Date(start))/86400000)+1;if(days>366)return toast('O período máximo é de 366 dias.','error');ST.customStart=start;ST.customEnd=end;if($('tb-period-label'))$('tb-period-label').textContent=new Date(start+'T12:00:00').toLocaleDateString('pt-BR')+' – '+new Date(end+'T12:00:00').toLocaleDateString('pt-BR');closeAllDrops();renderDashboard();}
+function applyCustomRange(){const start=$('date-start')?.value,end=$('date-end')?.value;if(!start||!end)return toast('Informe as duas datas.','error');if(start>end)return toast('A data inicial deve ser anterior à final.','error');const days=Math.round((new Date(end)-new Date(start))/86400000)+1;if(days>365)return toast('O período máximo é de 365 dias.','error');ST.customStart=start;ST.customEnd=end;if($('tb-period-label'))$('tb-period-label').textContent=new Date(start+'T12:00:00').toLocaleDateString('pt-BR')+' – '+new Date(end+'T12:00:00').toLocaleDateString('pt-BR');closeAllDrops();renderDashboard();}
 function setCompare(val,name,e){ST.compare=val;if($('tb-compare-name'))$('tb-compare-name').textContent=name;qsa('#compare-drop .tb-drop-item').forEach(x=>x.classList.remove('active'));(e?.target||window.event?.target)?.classList.add('active');closeAllDrops();renderDashboard();}
 function buildClientDrop(){const drop=$('client-drop');if(!drop)return;drop.innerHTML=ST.clients.length?ST.clients.map(c=>`<div class="tb-drop-item${String(c.id)===String(ST.clientId)?' active':''}" onclick="selectClient('${esc(c.id)}','${esc(c.name)}',event)"><div class="item-av">${esc(c.name?.[0]||'?')}</div>${esc(c.name)}${c.is_agency?' (agência)':''}</div>`).join(''):'<div class="tb-drop-item">Nenhum cliente</div>';}
 function selectClient(id,name,e){e?.stopPropagation();ST.clientId=id;ST.clientName=name;if($('tb-client-name'))$('tb-client-name').textContent=name;closeAllDrops();buildClientDrop();applyClientCover();if(ST.module==='accounts'){ST.accountsFilter=String(id);showAccounts();}else renderDashboard();}
