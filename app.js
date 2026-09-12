@@ -1,512 +1,1017 @@
-const SB_URL='https://ityidnsfhgotucgvcifq.supabase.co';
-const SB_ANON='sb_publishable_uSek4JLn4bAUje-gnfES4g_XVJB3Why';
-const SESSION_KEY='engaje_session_v2';
-let SESSION=null,PROFILE=null;
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×]yßÄèµ©hºÚn¶X§zÎXÛÛœİĞ—ÕT“IÚÎ‹ËÚ]ZYœÙšÛİXÙİ˜ÚYœKœİ\X˜\ÙK˜ÛÉÎÂ˜ÛÛœİĞ—ĞS“ÓIÜØ—ÜX›\ÚX›WİTÙZÍ“UZ™KYÛ™‘TÍ×Ö’ŒÕÚIÎÂ˜ÛÛœİÑTÔÒSÓ—ÒÑVOIÙ[™ØZ™WÜÙ\ÜÚ[Û—İŒ‰ÎÂ›]ÑTÔÒSÓ[[“Ñ’SO[[Â‚˜ÛÛœİÕ^Âˆ\š[ÙŒÌİ\İÛTİ\›[İ\İÛQ[™›[ÛÛ\\™N‰Ü™]—Ü\š[Ù	ËÛY[Y›[ÛY[˜[YN‰ÉËÛY[Î–×KXØÛİ[Î–×KÜİÎ–×KÛÛ\\™TÜİÎ–×KÚ\ÎßKˆXİ]™UX‰Ûİ™\šY]ÉËÚ\Ü˜[‰Ù^IËÙ\šY\Õš\ÚX›N–İYKYKYWKÚ\™S[šÎ›[]›Ü›N‰Ø[	Ë[Ù[N›[XØÛİ[Ñš[\‰Ø[	Ëˆ]˜Z[X›NÛÜ™Ø[šXÎ–×KZY–×KÛÛ[™˜[ÙK]YY[˜ÙN™˜[ÙKÛÛ™\œÚ[ÛœÎ™˜[Ù_Kˆœ˜[™[™ÎÛÙÚ[—ØÛİ™\—İ\›‰ËØ\ÜÙ]ËŞ™‹XÛİ™\‹LŒ‹œ™ÏİLŒ‹L‰ËÙÚ[—ØÛİ™\—ŞYX\ŒŒ‹]›Ü›WÛ˜[YN‰Ñ[™ØZ™HpëYXHX‰ßBŸNÂ‚˜ÛÛœİ	ZYO™Øİ[Y[™Ù][[Y[RY
+Y
+NÂ˜ÛÛœİ\ÏJÙ[›ÛİYØİ[Y[
+OOœ›Ûİœ]Y\TÙ[XİÜŠÙ[
+NÂ˜ÛÛœİ\ØOJÙ[›ÛİYØİ[Y[
+OO–Ë‹‹œ›Ûİœ]Y\TÙ[XİÜ[
+Ù[
+WNÂ˜ÛÛœİ\ØÏ]O”İš[™ÊÏÉÉÊKœ™\XÙJÖÉ‰È—KÙËÏOŠÉÉ‰Î‰É˜[\ÉË	Ï	Î‰É›ÉË	Ï‰Î‰É™İÉË‰È‰ÉˆÌÎNÉË	È‰Î‰Éœ][İÉßVØ×JJNÂ˜ÛÛœİØY™U\›]Oİ^ØÛÛœİO[™]ÈT“
+‹ØØ][Û‹›ÜšYÚ[ŠNÜ™]\›ˆÉÚ‰Ë	ÚÎ‰×Kš[˜ÛY\ÊKœ›İØÛÛ
+OİKš™Y‰ÈÉÎßXØ]ÚÜ™]\›ˆ	ÈÉÎß_NÂ‚™[˜İ[Ûˆ]]XY\œÊ\ÙTÙ\ÜÚ[Û]YJ^ÂˆÛÛœİÚÙ[]\ÙTÙ\ÜÚ[Û‰‰”ÑTÔÒSÓË˜XØÙ\Ü×İÚÙ[ÔÑTÔÒSÓ‹˜XØÙ\Ü×İÚÙ[”Ğ—ĞS“ÓÂˆ™]\›ˆÉĞÛÛ[U\IÎ‰Ø\XØ][Û‹ÚœÛÛ‰Ë	Ø\ZÙ^IÎ”Ğ—ĞS“Ó‹	Ğ]]Üš^˜][Û‰Î‰Ğ™X\™\ˆ	ÊİÚÙ[ŸNÂŸB‚˜\Ş[˜È[˜İ[Ûˆ™\İ
+]ÜÏ^ßK\ÙTÙ\ÜÚ[Û]YJ^ÂˆÛÛœİX]ØZ]™]Ú
+Ğ—ÕT“
+ÉËÜ™\İİŒKÉÊÜ]Ë‹‹›ÜËXY\œÎË‹‹˜]]XY\œÊ\ÙTÙ\ÜÚ[ÛŠK‹‹ŠÜËšXY\œßßJ__JNÂˆYŠ\‹›ÚÊ^ÂˆÛÛœİOX]ØZ]‹šœÛÛŠ
+K˜Ø]Ú
 
-const ST={
-  period:30,customStart:null,customEnd:null,compare:'prev_period',clientId:null,clientName:'',clients:[],accounts:[],posts:[],comparePosts:[],charts:{},
-  activeTab:'overview',chartGran:'day',seriesVisible:[true,true,true],shareLink:null,platform:'all',module:null,accountsFilter:'all',
-  available:{organic:[],paid:[],content:false,audience:false,conversions:false},
-  branding:{login_cover_url:'/assets/zf-cover-2026.png?v=2026-2',login_cover_year:2026,platform_name:'Engaje MÃ­dia Hub'}
-};
 
-const $=id=>document.getElementById(id);
-const qs=(sel,root=document)=>root.querySelector(sel);
-const qsa=(sel,root=document)=>[...root.querySelectorAll(sel)];
-const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-const safeUrl=v=>{try{const u=new URL(v,location.origin);return ['http:','https:'].includes(u.protocol)?u.href:'#';}catch{return '#';}};
+OOŠßJJNÂˆÛÛœİ\œ[™]È\œ›ÜŠK›Y\ÜØYÙ_Kš[
+	Ò	ÊÜ‹œİ]\ÊJNÂˆ\œ‹œİ]\Ï\‹œİ]\ÎÙ\œ‹˜ÛÙOYK˜ÛÙNÙ\œ‹™]Z[ÏYK™]Z[Îİ›İÈ\œÂˆBˆYŠ‹œİ]\ÏOOLŒ
+\™]\›ˆ[ÂˆÛÛœİ^X]ØZ]‹^
 
-function authHeaders(useSession=true){
-  const token=useSession&&SESSION?.access_token?SESSION.access_token:SB_ANON;
-  return {'Content-Type':'application/json','apikey':SB_ANON,'Authorization':'Bearer '+token};
-}
+NÂˆ™]\›ˆ^Ò”ÓÓ‹œ\œÙJ^
+N›[ÂŸB‚™[˜İ[ÛˆX›XĞ\ÜÙ]\›
+]
+^Ü™]\›ˆĞ—ÕT“
+ÉËÜİÜ˜YÙKİŒKÛØš™XİÜX›XËØœ˜[™X\ÜÙ]ËÉÊÜ]ßB™[˜İ[Ûˆ\Ôİ\\YZ[Š
+^Ü™]\›ˆ“Ñ’SOËœ›ÛOOOIÜİ\\—ØYZ[‰ÎßB˜\Ş[˜È[˜İ[ÛˆØYœ˜[™[™Ê
+^Âˆ^ØÛÛœİ›İÜÏX]ØZ]™\İ
+	Ø\ÜÙ][™ÜÏÚYY\K˜œ˜[™[™ÉœÙ[Xİ]˜[YIËßK˜[ÙJNÚYŠ›İÜÏË–ÌOË˜[YJTÕ˜œ˜[™[™Ï^Ë‹‹”Õ˜œ˜[™[™Ë‹‹œ›İÜÖÌK˜[Y_NßXØ]Ú
+J^ØÛÛœÛÛKØ\›Š	Øœ˜[™[™ÉËJNßBˆ\SÙÚ[Ûİ™\Š
+NÂŸB™[˜İ[Ûˆ\SÙÚ[Ûİ™\Š
+^ÂˆÛÛœİ[I
+	Ø]]XÛİ™\‰ÊK\›TÕ˜œ˜[™[™Ë›ÙÚ[—ØÛİ™\—İ\›	ÉÎÚYŠY[
+\™]\›ÂˆYŠ\›	‰ˆ]\›œİ\ÕÚ]
+	ËØ\ÜÙ]ËŞ™‹XÛİ™\‹LŒ‹‰ÊJY[œÜ˜Ï\ØY™U\›
+\›
+NÂŸB™[˜İ[ÛˆÙ[XİYÛY[
 
-async function rest(path,opts={},useSession=true){
-  const r=await fetch(SB_URL+'/rest/v1/'+path,{...opts,headers:{...authHeaders(useSession),...(opts.headers||{})}});
-  if(!r.ok){
-    const e=await r.json().catch(()=>({}));
-    const err=new Error(e.message||e.hint||('HTTP '+r.status));
-    err.status=r.status;err.code=e.code;err.details=e.details;throw err;
-  }
-  if(r.status===204)return null;
-  const text=await r.text();
-  return text?JSON.parse(text):null;
-}
+^Ü™]\›ˆÕ˜ÛY[Ë™š[™
+ÏO”İš[™ÊËšY
+OOOTİš[™ÊÕ˜ÛY[Y
+JNßB™[˜İ[Ûˆ\PÛY[Ûİ™\Š
+^ÂˆÛÛœİ[I
+	ØÛY[XÛİ™\‰ÊKÏ\Ù[XİYÛY[
 
-function publicAssetUrl(path){return SB_URL+'/storage/v1/object/public/brand-assets/'+path;}
-function isSuperAdmin(){return PROFILE?.role==='super_admin';}
-async function loadBranding(){
-  try{const rows=await rest('app_settings?id=eq.branding&select=value',{},false);if(rows?.[0]?.value)ST.branding={...ST.branding,...rows[0].value};}catch(e){console.warn('branding',e);}
-  applyLoginCover();
-}
-function applyLoginCover(){
-  const el=$('auth-cover'),url=ST.branding.login_cover_url||'';if(!el)return;
-  if(url&&!url.startsWith('/assets/zf-cover-2026.'))el.src=safeUrl(url);
-}
-function selectedClient(){return ST.clients.find(c=>String(c.id)===String(ST.clientId));}
-function applyClientCover(){
-  const el=$('client-cover'),c=selectedClient();if(!el)return;
-  const url=c?.cover_url;if(!url){el.style.display='none';el.style.backgroundImage='';return;}
-  el.style.display='block';el.style.backgroundImage=`url("${safeUrl(url)}")`;el.style.backgroundPosition=c?.cover_position||'center';
-}
-async function uploadBrandAsset(file,path){
-  if(!file)throw new Error('Selecione uma imagem.');
-  if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw new Error('Use JPG, PNG ou WebP.');
-  if(file.size>5*1024*1024)throw new Error('A imagem deve ter no mÃ¡ximo 5 MB.');
-  const r=await fetch(SB_URL+'/storage/v1/object/brand-assets/'+path,{method:'POST',headers:{apikey:SB_ANON,Authorization:'Bearer '+SESSION.access_token,'Content-Type':file.type,'x-upsert':'true'},body:file});
-  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.message||'Falha no upload.');}
-  return publicAssetUrl(path)+'?v='+Date.now();
-}
-async function saveGlobalCover(input){
-  if(!isSuperAdmin())return toast('Apenas o superadministrador pode alterar capas.','error');
-  const file=input?.files?.[0];if(!file)return;try{
-    const year=new Date().getFullYear(),ext=file.type.split('/')[1].replace('jpeg','jpg');
-    const url=await uploadBrandAsset(file,`global/login-${year}.${ext}`);
-    ST.branding={...ST.branding,login_cover_url:url,login_cover_year:year};
-    await rest('app_settings?id=eq.branding',{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({value:ST.branding,updated_at:new Date().toISOString(),updated_by:SESSION.user.id})});
-    applyLoginCover();toast('Capa anual atualizada.');showSettings();
-  }catch(e){toast(e.message,'error');}finally{input.value='';}
-}
-async function saveClientCover(input){
-  if(!isSuperAdmin())return toast('Apenas o superadministrador pode alterar capas.','error');
-  const file=input?.files?.[0],c=selectedClient();if(!file||!c)return;try{
-    const ext=file.type.split('/')[1].replace('jpeg','jpg'),url=await uploadBrandAsset(file,`clients/${c.id}/cover.${ext}`);
-    await rest('clients?id=eq.'+encodeURIComponent(c.id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({cover_url:url,updated_at:new Date().toISOString()})});
-    c.cover_url=url;applyClientCover();toast('Capa do cliente atualizada.');showSettings();
-  }catch(e){toast(e.message,'error');}finally{input.value='';}
-}
-async function resetClientCover(){
-  if(!isSuperAdmin())return toast('Apenas o superadministrador pode alterar capas.','error');const c=selectedClient();if(!c)return;
-  try{await rest('clients?id=eq.'+encodeURIComponent(c.id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({cover_url:null,updated_at:new Date().toISOString()})});c.cover_url=null;applyClientCover();toast('Capa global restaurada para o cliente.');showSettings();}catch(e){toast(e.message,'error');}
-}
+NÚYŠY[
+\™]\›ÂˆÛÛœİ\›XÏË˜Ûİ™\—İ\›ÚYŠ]\›
+^Ù[œİ[K™\Ü^OIÛ›Û™IÎÙ[œİ[K˜˜XÚÙÜ›İ[™[XYÙOIÉÎÜ™]\›ßBˆ[œİ[K™\Ü^OIØ›ØÚÉÎÙ[œİ[K˜˜XÚÙÜ›İ[™[XYÙOX\›
+‰ÜØY™U\›
+\›
+_HŠXÙ[œİ[K˜˜XÚÙÜ›İ[™ÜÚ][ÛXÏË˜Ûİ™\—ÜÜÚ][ÛŸ	ØÙ[\‰ÎÂŸB˜\Ş[˜È[˜İ[Ûˆ\ØYœ˜[™\ÜÙ]
+š[K]
+^ÂˆYŠYš[J]›İÈ™]È\œ›ÜŠ	ÔÙ[XÚ[Û™H[XH[XYÙ[K‰ÊNÂˆYŠVÉÚ[XYÙKÚœYÉË	Ú[XYÙKÜ™ÉË	Ú[XYÙKİÙXœ	×Kš[˜ÛY\Êš[K\JJ]›İÈ™]È\œ›ÜŠ	Õ\ÙH”Ë‘ÈİHÙX”‰ÊNÂˆYŠš[KœÚ^™OJŒL
+ŒL
+]›İÈ™]È\œ›ÜŠ	ĞH[XYÙ[H]™H\ˆ›Èpè^[[ÈHP‹‰ÊNÂˆÛÛœİX]ØZ]™]Ú
+Ğ—ÕT“
+ÉËÜİÜ˜YÙKİŒKÛØš™XİØœ˜[™X\ÜÙ]ËÉÊÜ]ÛY]Ù‰ÔÔÕ	ËXY\œÎØ\ZÙ^N”Ğ—ĞS“Ó‹]]Üš^˜][Û‰Ğ™X\™\ˆ	ÊÔÑTÔÒSÓ‹˜XØÙ\Ü×İÚÙ[‹	ĞÛÛ[U\IÎ™š[K\K	Ş]\Ù\	Î‰İYIßK›ÙN™š[_JNÂˆYŠ\‹›ÚÊ^ØÛÛœİOX]ØZ]‹šœÛÛŠ
+K˜Ø]Ú
 
-async function authRequest(path,opts={}){
-  const r=await fetch(SB_URL+'/auth/v1/'+path,{...opts,headers:{'Content-Type':'application/json','apikey':SB_ANON,...(opts.headers||{})}});
-  const d=await r.json().catch(()=>({}));
-  if(!r.ok)throw new Error(d.error_description||d.msg||d.message||'Falha de autenticaÃ§Ã£o');
-  return d;
-}
 
-function persistSession(s){
-  SESSION=s||null;
-  if(s)localStorage.setItem(SESSION_KEY,JSON.stringify(s));else localStorage.removeItem(SESSION_KEY);
-}
+OOŠßJJNİ›İÈ™]È\œ›ÜŠK›Y\ÜØYÙ_	Ñ˜[H›È\ØY‰ÊNßBˆ™]\›ˆX›XĞ\ÜÙ]\›
+]
+JÉÏİIÊÑ]K››İÊ
+NÂŸB˜\Ş[˜È[˜İ[ÛˆØ]™QÛØ˜[Ûİ™\Š[œ]
+^ÂˆYŠZ\Ôİ\\YZ[Š
+J\™]\›ˆØ\İ
+	Ğ\[˜\ÈÈİ\\˜YZ[š\İ˜YÜˆÙH[\˜\ˆØ\\Ë‰Ë	Ù\œ›Ü‰ÊNÂˆÛÛœİš[OZ[œ]Ë™š[\ÏË–ÌNÚYŠYš[J\™]\›İ^ÂˆÛÛœİYX\[™]È]J
+K™Ù][YX\Š
+K^Yš[K\KœÜ]
+	ËÉÊVÌWKœ™\XÙJ	ÚœYÉË	ÚœÉÊNÂˆÛÛœİ\›X]ØZ]\ØYœ˜[™\ÜÙ]
+š[KÛØ˜[ÛÙÚ[‹IŞYX\ŸK‰Ù^X
+NÂˆÕ˜œ˜[™[™Ï^Ë‹‹”Õ˜œ˜[™[™ËÙÚ[—ØÛİ™\—İ\›\›ÙÚ[—ØÛİ™\—ŞYX\YX\ŸNÂˆ]ØZ]™\İ
+	Ø\ÜÙ][™ÜÏÚYY\K˜œ˜[™[™ÉËÛY]Ù‰ÔUÒ	ËXY\œÎÔ™Y™\‰Ü™]\›[Z[š[X[	ßK›ÙN’”ÓÓ‹œİš[™ÚYJİ˜[YN”Õ˜œ˜[™[™Ë\]YØ]›™]È]J
+KÒTÓÔİš[™Ê
+K\]YØN”ÑTÔÒSÓ‹\Ù\‹šYJ_JNÂˆ\SÙÚ[Ûİ™\Š
+NİØ\İ
+	ĞØ\H[X[]X[^˜YK‰ÊNÜÚİÔÙ][™ÜÊ
+NÂˆXØ]Ú
+J^İØ\İ
+K›Y\ÜØYÙK	Ù\œ›Ü‰ÊNßYš[˜[^Ú[œ]˜[YOIÉÎßBŸB˜\Ş[˜È[˜İ[ÛˆØ]™PÛY[Ûİ™\Š[œ]
+^ÂˆYŠZ\Ôİ\\YZ[Š
+J\™]\›ˆØ\İ
+	Ğ\[˜\ÈÈİ\\˜YZ[š\İ˜YÜˆÙH[\˜\ˆØ\\Ë‰Ë	Ù\œ›Ü‰ÊNÂˆÛÛœİš[OZ[œ]Ë™š[\ÏË–ÌKÏ\Ù[XİYÛY[
 
-async function restoreSession(){
-  try{
-    const raw=localStorage.getItem(SESSION_KEY);if(!raw)return null;
-    const s=JSON.parse(raw);if(!s?.access_token)return null;
-    const now=Math.floor(Date.now()/1000);
-    if(s.expires_at&&s.expires_at<now+90&&s.refresh_token){
-      const refreshed=await authRequest('token?grant_type=refresh_token',{method:'POST',body:JSON.stringify({refresh_token:s.refresh_token})});
-      if(!refreshed.expires_at&&refreshed.expires_in)refreshed.expires_at=now+refreshed.expires_in;
-      persistSession(refreshed);return refreshed;
-    }
-    SESSION=s;return s;
-  }catch(e){console.warn('restoreSession',e);persistSession(null);return null;}
-}
+NÚYŠYš[_XÊ\™]\›İ^ÂˆÛÛœİ^Yš[K\KœÜ]
+	ËÉÊVÌWKœ™\XÙJ	ÚœYÉË	ÚœÉÊK\›X]ØZ]\ØYœ˜[™\ÜÙ]
+š[KÛY[ËÉØËšYKØÛİ™\‹‰Ù^X
+NÂˆ]ØZ]™\İ
+	ØÛY[ÏÚYY\K‰ÊÙ[˜ÛÙUT’PÛÛ\Û™[
+ËšY
+KÛY]Ù‰ÔUÒ	ËXY\œÎÔ™Y™\‰Ü™]\›[Z[š[X[	ßK›ÙN’”ÓÓ‹œİš[™ÚYJØÛİ™\—İ\›\›\]YØ]›™]È]J
+KÒTÓÔİš[™Ê
+_J_JNÂˆË˜Ûİ™\—İ\›]\›Ø\PÛY[Ûİ™\Š
+NİØ\İ
+	ĞØ\HÈÛY[H]X[^˜YK‰ÊNÜÚİÔÙ][™ÜÊ
+NÂˆXØ]Ú
+J^İØ\İ
+K›Y\ÜØYÙK	Ù\œ›Ü‰ÊNßYš[˜[^Ú[œ]˜[YOIÉÎßBŸB˜\Ş[˜È[˜İ[Ûˆ™\Ù]ÛY[Ûİ™\Š
+^ÂˆYŠZ\Ôİ\\YZ[Š
+J\™]\›ˆØ\İ
+	Ğ\[˜\ÈÈİ\\˜YZ[š\İ˜YÜˆÙH[\˜\ˆØ\\Ë‰Ë	Ù\œ›Ü‰ÊNØÛÛœİÏ\Ù[XİYÛY[
 
-function showForgot(){if($('login-form'))$('login-form').style.display='none';if($('forgot-form'))$('forgot-form').style.display='block';}
-function showLogin(){if($('forgot-form'))$('forgot-form').style.display='none';if($('login-form'))$('login-form').style.display='block';}
+NÚYŠXÊ\™]\›Âˆ^Ø]ØZ]™\İ
+	ØÛY[ÏÚYY\K‰ÊÙ[˜ÛÙUT’PÛÛ\Û™[
+ËšY
+KÛY]Ù‰ÔUÒ	ËXY\œÎÔ™Y™\‰Ü™]\›[Z[š[X[	ßK›ÙN’”ÓÓ‹œİš[™ÚYJØÛİ™\—İ\››[\]YØ]›™]È]J
+KÒTÓÔİš[™Ê
+_J_JNØË˜Ûİ™\—İ\›[[Ø\PÛY[Ûİ™\Š
+NİØ\İ
+	ĞØ\HÛØ˜[™\İ]\˜YH\˜HÈÛY[K‰ÊNÜÚİÔÙ][™ÜÊ
+NßXØ]Ú
+J^İØ\İ
+K›Y\ÜØYÙK	Ù\œ›Ü‰ÊNßBŸB‚˜\Ş[˜È[˜İ[Ûˆ]]™\]Y\İ
+]ÜÏ^ßJ^ÂˆÛÛœİX]ØZ]™]Ú
+Ğ—ÕT“
+ÉËØ]]İŒKÉÊÜ]Ë‹‹›ÜËXY\œÎÉĞÛÛ[U\IÎ‰Ø\XØ][Û‹ÚœÛÛ‰Ë	Ø\ZÙ^IÎ”Ğ—ĞS“Ó‹‹‹ŠÜËšXY\œßßJ__JNÂˆÛÛœİX]ØZ]‹šœÛÛŠ
+K˜Ø]Ú
 
-async function doLogin(){
-  const email=$('l-email')?.value.trim(),pass=$('l-pass')?.value;
-  const errEl=$('l-err'),btn=$('l-btn');
-  if(errEl)errEl.style.display='none';
-  if(!email||!pass){if(errEl){errEl.textContent='Preencha e-mail e senha.';errEl.style.display='block';}return;}
-  if(btn){btn.disabled=true;btn.textContent='Entrando...';}
-  try{
-    const d=await authRequest('token?grant_type=password',{method:'POST',body:JSON.stringify({email,password:pass})});
-    if(!d.expires_at&&d.expires_in)d.expires_at=Math.floor(Date.now()/1000)+d.expires_in;
-    persistSession(d);await afterLogin(d.user);
-  }catch(e){
-    if(errEl){errEl.textContent=e.message==='Invalid login credentials'?'E-mail ou senha incorretos.':e.message;errEl.style.display='block';}
-    if(btn){btn.disabled=false;btn.textContent='Entrar';}
-  }
-}
 
-async function doForgot(){
-  const email=$('f-email')?.value.trim(),errEl=$('f-err'),okEl=$('f-ok'),btn=$('f-btn');
-  if(errEl)errEl.style.display='none';if(okEl)okEl.style.display='none';
-  if(!email){if(errEl){errEl.textContent='Digite seu e-mail.';errEl.style.display='block';}return;}
-  if(btn){btn.disabled=true;btn.textContent='Enviando...';}
-  try{
-    await authRequest('recover',{method:'POST',body:JSON.stringify({email,redirect_to:location.origin})});
-    if(okEl){okEl.textContent='Link enviado. Verifique seu e-mail.';okEl.style.display='block';}
-  }catch(e){if(errEl){errEl.textContent=e.message;errEl.style.display='block';}}
-  finally{if(btn){btn.disabled=false;btn.textContent='Enviar link';}}
-}
+OOŠßJJNÂˆYŠ\‹›ÚÊ]›İÈ™]È\œ›ÜŠ™\œ›Ü—Ù\ØÜš\[ÛŸ›\Ùß›Y\ÜØYÙ_	Ñ˜[HH]][XØpéğèÛÉÊNÂˆ™]\›ˆÂŸB‚™[˜İ[Ûˆ\œÚ\İÙ\ÜÚ[ÛŠÊ^ÂˆÑTÔÒSÓ\ß[ÂˆYŠÊ[ØØ[İÜ˜YÙKœÙ]][JÑTÔÒSÓ—ÒÑVK”ÓÓ‹œİš[™ÚYJÊJNÙ[ÙHØØ[İÜ˜YÙKœ™[[İ™R][JÑTÔÒSÓ—ÒÑVJNÂŸB‚˜\Ş[˜È[˜İ[Ûˆ™\İÜ™TÙ\ÜÚ[ÛŠ
+^Âˆ^ÂˆÛÛœİ˜]Ï[ØØ[İÜ˜YÙK™Ù]][JÑTÔÒSÓ—ÒÑVJNÚYŠ\˜]Ê\™]\›ˆ[ÂˆÛÛœİÏR”ÓÓ‹œ\œÙJ˜]ÊNÚYŠ\ÏË˜XØÙ\Ü×İÚÙ[Š\™]\›ˆ[ÂˆÛÛœİ›İÏSX]™›ÛÜŠ]K››İÊ
+KÌL
+NÂˆYŠË™^\™\×Ø]	‰œË™^\™\×Ø]›İÊÎL	‰œËœ™Yœ™\ÚİÚÙ[Š^ÂˆÛÛœİ™Yœ™\ÚYX]ØZ]]]™\]Y\İ
+	İÚÙ[ÙÜ˜[İ\O\™Yœ™\ÚİÚÙ[‰ËÛY]Ù‰ÔÔÕ	Ë›ÙN’”ÓÓ‹œİš[™ÚYJÜ™Yœ™\ÚİÚÙ[œËœ™Yœ™\ÚİÚÙ[ŸJ_JNÂˆYŠ\™Yœ™\ÚY™^\™\×Ø]	‰œ™Yœ™\ÚY™^\™\×Ú[Š\™Yœ™\ÚY™^\™\×Ø][›İÊÜ™Yœ™\ÚY™^\™\×Ú[Âˆ\œÚ\İÙ\ÜÚ[ÛŠ™Yœ™\ÚY
+NÜ™]\›ˆ™Yœ™\ÚYÂˆBˆÑTÔÒSÓ\ÎÜ™]\›ˆÎÂˆXØ]Ú
+J^ØÛÛœÛÛKØ\›Š	Ü™\İÜ™TÙ\ÜÚ[Û‰ËJNÜ\œÚ\İÙ\ÜÚ[ÛŠ[
+NÜ™]\›ˆ[ßBŸB‚™[˜İ[ÛˆÚİÑ›Ü™Ûİ
 
-async function doLogout(){
-  try{if(SESSION?.access_token)await fetch(SB_URL+'/auth/v1/logout',{method:'POST',headers:authHeaders()});}catch(e){}
-  persistSession(null);PROFILE=null;ST.clientId=null;
-  if($('app'))$('app').style.display='none';if($('auth-wrap'))$('auth-wrap').style.display='flex';
-}
+^ÚYŠ	
+	ÛÙÚ[‹Y›Ü›IÊJI
+	ÛÙÚ[‹Y›Ü›IÊKœİ[K™\Ü^OIÛ›Û™IÎÚYŠ	
+	Ù›Ü™ÛİY›Ü›IÊJI
+	Ù›Ü™ÛİY›Ü›IÊKœİ[K™\Ü^OIØ›ØÚÉÎßB™[˜İ[ÛˆÚİÓÙÚ[Š
+^ÚYŠ	
+	Ù›Ü™ÛİY›Ü›IÊJI
+	Ù›Ü™ÛİY›Ü›IÊKœİ[K™\Ü^OIÛ›Û™IÎÚYŠ	
+	ÛÙÚ[‹Y›Ü›IÊJI
+	ÛÙÚ[‹Y›Ü›IÊKœİ[K™\Ü^OIØ›ØÚÉÎßB‚˜\Ş[˜È[˜İ[ÛˆÓÙÚ[Š
+^ÂˆÛÛœİ[XZ[I
+	ÛY[XZ[	ÊOË˜[YKš[J
+K\ÜÏI
+	Û\\ÜÉÊOË˜[YNÂˆÛÛœİ\œ‘[I
+	ÛY\œ‰ÊKI
+	ÛX‰ÊNÂˆYŠ\œ‘[
+Y\œ‘[œİ[K™\Ü^OIÛ›Û™IÎÂˆYŠY[XZ[\\ÜÊ^ÚYŠ\œ‘[
+^Ù\œ‘[^ÛÛ[IÔ™Y[˜ÚHK[XZ[HÙ[šK‰ÎÙ\œ‘[œİ[K™\Ü^OIØ›ØÚÉÎß\™]\›ßBˆYŠŠ^Ø‹™\ØX›Y]YNØ‹^ÛÛ[IÑ[˜[™Ë‹‹‰ÎßBˆ^ÂˆÛÛœİX]ØZ]]]™\]Y\İ
+	İÚÙ[ÙÜ˜[İ\O\\ÜİÛÜ™	ËÛY]Ù‰ÔÔÕ	Ë›ÙN’”ÓÓ‹œİš[™ÚYJÙ[XZ[\ÜİÛÜ™œ\ÜßJ_JNÂˆYŠY™^\™\×Ø]	‰™™^\™\×Ú[ŠY™^\™\×Ø]SX]™›ÛÜŠ]K››İÊ
+KÌL
+JÙ™^\™\×Ú[Âˆ\œÚ\İÙ\ÜÚ[ÛŠ
+NØ]ØZ]Y\“ÙÚ[Š\Ù\ŠNÂˆXØ]Ú
+J^ÂˆYŠ\œ‘[
+^Ù\œ‘[^ÛÛ[YK›Y\ÜØYÙOOOIÒ[˜[YÙÚ[ˆÜ™Y[X[ÉÏÉÑK[XZ[İHÙ[šH[˜ÛÜœ™]ÜË‰Î™K›Y\ÜØYÙNÙ\œ‘[œİ[K™\Ü^OIØ›ØÚÉÎßBˆYŠŠ^Ø‹™\ØX›YY˜[ÙNØ‹^ÛÛ[IÑ[˜\‰ÎßBˆBŸB‚˜\Ş[˜È[˜İ[ÛˆÑ›Ü™Ûİ
 
-async function afterLogin(user){
-  if(!user&&SESSION?.user)user=SESSION.user;
-  if(!user)return doLogout();
-  try{const p=await rest('user_profiles?id=eq.'+encodeURIComponent(user.id)+'&select=*');PROFILE=p?.[0]||null;}catch(e){PROFILE=null;}
-  const name=PROFILE?.full_name||user.email?.split('@')[0]||'UsuÃ¡rio';
-  if($('user-initials'))$('user-initials').textContent=name.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
-  if($('um-name'))$('um-name').textContent=name;if($('um-email'))$('um-email').textContent=user.email||'';
-  if($('auth-wrap'))$('auth-wrap').style.display='none';if($('app'))$('app').style.display='block';
-  await loadClients();
-  if(ST.clientId)await renderDashboard();
-  else renderNoClients();
-}
+^ÂˆÛÛœİ[XZ[I
+	Ù‹Y[XZ[	ÊOË˜[YKš[J
+K\œ‘[I
+	Ù‹Y\œ‰ÊKÚÑ[I
+	Ù‹[ÚÉÊKI
+	Ù‹X‰ÊNÂˆYŠ\œ‘[
+Y\œ‘[œİ[K™\Ü^OIÛ›Û™IÎÚYŠÚÑ[
+[ÚÑ[œİ[K™\Ü^OIÛ›Û™IÎÂˆYŠY[XZ[
+^ÚYŠ\œ‘[
+^Ù\œ‘[^ÛÛ[IÑYÚ]HÙ]HK[XZ[‰ÎÙ\œ‘[œİ[K™\Ü^OIØ›ØÚÉÎß\™]\›ßBˆYŠŠ^Ø‹™\ØX›Y]YNØ‹^ÛÛ[IÑ[šX[™Ë‹‹‰ÎßBˆ^Âˆ]ØZ]]]™\]Y\İ
+	Ü™XÛİ™\‰ËÛY]Ù‰ÔÔÕ	Ë›ÙN’”ÓÓ‹œİš[™ÚYJÙ[XZ[™Y\™XİİÎ›ØØ][Û‹›ÜšYÚ[ŸJ_JNÂˆYŠÚÑ[
+^ÛÚÑ[^ÛÛ[IÓ[šÈ[šXYËˆ™\šYš\]YHÙ]HK[XZ[‰ÎÛÚÑ[œİ[K™\Ü^OIØ›ØÚÉÎßBˆXØ]Ú
+J^ÚYŠ\œ‘[
+^Ù\œ‘[^ÛÛ[YK›Y\ÜØYÙNÙ\œ‘[œİ[K™\Ü^OIØ›ØÚÉÎß_Bˆš[˜[^ÚYŠŠ^Ø‹™\ØX›YY˜[ÙNØ‹^ÛÛ[IÑ[šX\ˆ[šÉÎß_BŸB‚˜\Ş[˜È[˜İ[ÛˆÓÙÛİ]
 
-async function loadClients(){
-  try{
-    ST.clients=await rest('clients?order=name.asc&select=id,name,slug,status,is_agency,cover_url,cover_position')||[];
-    buildClientDrop();
-    if(ST.clients.length&&!ST.clientId){
-      const first=ST.clients.find(c=>!c.is_agency)||ST.clients[0];
-      ST.clientId=first.id;ST.clientName=first.name;if($('tb-client-name'))$('tb-client-name').textContent=first.name;
-    }
-    applyClientCover();
-  }catch(e){console.error('loadClients',e);ST.clients=[];buildClientDrop();}
-}
+^Âˆ^ÚYŠÑTÔÒSÓË˜XØÙ\Ü×İÚÙ[ŠX]ØZ]™]Ú
+Ğ—ÕT“
+ÉËØ]]İŒKÛÙÛİ]	ËÛY]Ù‰ÔÔÕ	ËXY\œÎ˜]]XY\œÊ
+_JNßXØ]Ú
+J^ßBˆ\œÚ\İÙ\ÜÚ[ÛŠ[
+NÔ“Ñ’SO[[ÔÕ˜ÛY[Y[[ÂˆYŠ	
+	Ø\	ÊJI
+	Ø\	ÊKœİ[K™\Ü^OIÛ›Û™IÎÚYŠ	
+	Ø]]]Ü˜\	ÊJI
+	Ø]]]Ü˜\	ÊKœİ[K™\Ü^OIÙ›^	ÎÂŸB‚˜\Ş[˜È[˜İ[ÛˆY\“ÙÚ[Š\Ù\Š^ÂˆYŠ]\Ù\‰‰”ÑTÔÒSÓË\Ù\Š]\Ù\TÑTÔÒSÓ‹\Ù\ÂˆYŠ]\Ù\Š\™]\›ˆÓÙÛİ]
 
-function renderNoClients(){
-  if($('tb-client-name'))$('tb-client-name').textContent='Nenhum cliente';
-  const k=$('kpi-row');if(k)k.innerHTML='<div class="empty-state"><div class="empty-title">Nenhum cliente acessÃ­vel</div><div class="empty-desc">Cadastre um cliente ou revise as permissÃµes RLS no Supabase.</div></div>';
-}
+NÂˆ^ØÛÛœİX]ØZ]™\İ
+	İ\Ù\—Ü›Ùš[\ÏÚYY\K‰ÊÙ[˜ÛÙUT’PÛÛ\Û™[
+\Ù\‹šY
+JÉÉœÙ[XİJ‰ÊNÔ“Ñ’SO\Ë–Ì_[ßXØ]Ú
+J^Ô“Ñ’SO[[ßBˆÛÛœİ˜[YOT“Ñ’SOË™[Û˜[Y_\Ù\‹™[XZ[ËœÜ]
+	Ğ	ÊVÌ_	Õ\İpè\š[ÉÎÂˆYŠ	
+	İ\Ù\‹Z[š]X[ÉÊJI
+	İ\Ù\‹Z[š]X[ÉÊK^ÛÛ[[˜[YKœÜ]
+×ÊËÊK›X\
+ÏOÖÌJKš›Ú[Š	ÉÊKœÛXÙJŠKÕ\\Ø\ÙJ
+NÂˆYŠ	
+	İ[K[˜[YIÊJI
+	İ[K[˜[YIÊK^ÛÛ[[˜[YNÚYŠ	
+	İ[KY[XZ[	ÊJI
+	İ[KY[XZ[	ÊK^ÛÛ[]\Ù\‹™[XZ[	ÉÎÂˆYŠ	
+	Ø]]]Ü˜\	ÊJI
+	Ø]]]Ü˜\	ÊKœİ[K™\Ü^OIÛ›Û™IÎÚYŠ	
+	Ø\	ÊJI
+	Ø\	ÊKœİ[K™\Ü^OIØ›ØÚÉÎÂˆ]ØZ]ØYÛY[Ê
+NÂˆYŠÕ˜ÛY[Y
+X]ØZ]™[™\‘\Ú›Ø\™
 
-function isoDate(d){return d.toISOString().slice(0,10);}
-function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x;}
-function startOfToday(){const d=new Date();d.setHours(0,0,0,0);return d;}
-function currentRange(){if(ST.customStart&&ST.customEnd)return{start:new Date(ST.customStart+'T00:00:00'),end:addDays(new Date(ST.customEnd+'T00:00:00'),1)};const end=addDays(startOfToday(),1),start=addDays(end,-ST.period);return {start,end};}
-function compareRange(){
-  const cur=currentRange();
-  if(ST.compare==='prev_month'){
-    const now=startOfToday();const start=new Date(now.getFullYear(),now.getMonth()-1,1);const end=new Date(now.getFullYear(),now.getMonth(),1);return {start,end};
-  }
-  if(ST.compare==='same_prev'){
-    const start=new Date(cur.start),end=new Date(cur.end);start.setMonth(start.getMonth()-1);end.setMonth(end.getMonth()-1);return {start,end};
-  }
-  const days=Math.max(1,Math.round((cur.end-cur.start)/86400000));return {start:addDays(cur.start,-days),end:new Date(cur.start)};
-}
+NÂˆ[ÙH™[™\“›ĞÛY[Ê
+NÂŸB‚˜\Ş[˜È[˜İ[ÛˆØYÛY[Ê
+^Âˆ^ÂˆÕ˜ÛY[ÏX]ØZ]™\İ
+	ØÛY[ÏÛÜ™\[˜[YK˜\ØÉœÙ[XİZY˜[YKÛYËİ]\Ë\×ØYÙ[˜ŞKÛİ™\—İ\›Ûİ™\—ÜÜÚ][Û‰Ê_×NÂˆZ[ÛY[›Ü
 
-async function loadPostsRange(range,platform='all'){
-  if(!ST.clientId)return[];
-  let q='posts?client_id=eq.'+encodeURIComponent(ST.clientId)+'&published_at=gte.'+isoDate(range.start)+'&published_at=lt.'+isoDate(range.end)+'&select=id,account_id,platform,media_type,media_url,thumbnail_url,permalink,caption,published_at&order=published_at.desc&limit=1000';
-  if(platform&&platform!=='all')q+='&platform=eq.'+encodeURIComponent(platform);
-  const posts=await rest(q)||[];
-  if(!posts.length)return posts;
-  const ids=posts.map(p=>p.id);
-  const mm={};
-  for(let i=0;i<ids.length;i+=40){
-    const chunk=ids.slice(i,i+40).map(v=>'"'+String(v).replace(/"/g,'\\"')+'"').join(',');
-    try{
-      const mets=await rest('post_metrics?post_id=in.('+encodeURIComponent(chunk)+')&select=post_id,reach,impressions,engagement,like_count,comment_count,shares,saved,views,synced_at&order=synced_at.desc')||[];
-      mets.forEach(m=>{if(!mm[m.post_id])mm[m.post_id]=m;});
-    }catch(e){
-      try{
-        const mets=await rest('post_metrics?post_id=in.('+chunk+')&select=post_id,reach,impressions,engagement,like_count,comment_count,shares,saved,views,synced_at&order=synced_at.desc')||[];
-        mets.forEach(m=>{if(!mm[m.post_id])mm[m.post_id]=m;});
-      }catch(err){console.warn('post_metrics',err);}
-    }
-  }
-  posts.forEach(p=>p.metrics=mm[p.id]||{});
-  return posts;
-}
+NÂˆYŠÕ˜ÛY[Ë›[™İ	‰ˆTÕ˜ÛY[Y
+^ÂˆÛÛœİš\œİTÕ˜ÛY[Ë™š[™
+ÏOˆXËš\×ØYÙ[˜ŞJ_Õ˜ÛY[ÖÌNÂˆÕ˜ÛY[YYš\œİšYÔÕ˜ÛY[˜[YOYš\œİ›˜[YNÚYŠ	
+	İ‹XÛY[[˜[YIÊJI
+	İ‹XÛY[[˜[YIÊK^ÛÛ[Yš\œİ›˜[YNÂˆBˆ\PÛY[Ûİ™\Š
+NÂˆXØ]Ú
+J^ØÛÛœÛÛK™\œ›ÜŠ	ÛØYÛY[ÉËJNÔÕ˜ÛY[ÏV×NØZ[ÛY[›Ü
 
-async function loadPosts(){
-  ST.platform=$('chart-plat-filter')?.value||ST.platform||'all';
-  try{
-    const [cur,prev]=await Promise.all([loadPostsRange(currentRange(),ST.platform),loadPostsRange(compareRange(),ST.platform)]);
-    ST.posts=cur;ST.comparePosts=prev;return cur;
-  }catch(e){console.error('loadPosts',e);ST.posts=[];ST.comparePosts=[];toast('Falha ao carregar dados: '+e.message,'error');return[];}
-}
+NßBŸB‚™[˜İ[Ûˆ™[™\“›ĞÛY[Ê
+^ÂˆYŠ	
+	İ‹XÛY[[˜[YIÊJI
+	İ‹XÛY[[˜[YIÊK^ÛÛ[IÓ™[š[HÛY[IÎÂˆÛÛœİÏI
+	ÚÜK\›İÉÊNÚYŠÊZËš[›™\’SIÏ]ˆÛ\ÜÏH™[\K\İ]H]ˆÛ\ÜÏH™[\K]]H“™[š[HÛY[HXÙ\Üğë]™[Ù]]ˆÛ\ÜÏH™[\KY\ØÈØY\İ™H[HÛY[HİH™]š\ÙH\È\›Z\ÜğíY\È“È›Èİ\X˜\ÙKÙ]Ù]‰ÎÂŸB‚™[˜İ[Ûˆ\ÛÑ]J
+^Ü™]\›ˆÒTÓÔİš[™Ê
+KœÛXÙJL
+NßB™[˜İ[ÛˆY^\ÊŠ^ØÛÛœİ[™]È]J
+NŞœÙ]]J™Ù]]J
+JÛŠNÜ™]\›ˆßB™[˜İ[Ûˆİ\Ù•Ù^J
+^ØÛÛœİ[™]È]J
+NÙœÙ]İ\œÊ
+NÜ™]\›ˆßB™[˜İ[Ûˆİ\œ™[˜[™ÙJ
+^ÚYŠÕ˜İ\İÛTİ\	‰”Õ˜İ\İÛQ[™
+\™]\›Üİ\›™]È]JÕ˜İ\İÛTİ\
+ÉÕŒŒ	ÊK[™˜Y^\Ê™]È]JÕ˜İ\İÛQ[™
+ÉÕŒŒ	ÊKJ_NØÛÛœİ[™XY^\Êİ\Ù•Ù^J
+KJKİ\XY^\Ê[™TÕœ\š[Ù
+NÜ™]\›ˆÜİ\[™NßB™[˜İ[ÛˆÛÛ\\™T˜[™ÙJ
+^ÂˆÛÛœİİ\Xİ\œ™[˜[™ÙJ
+NÂˆYŠÕ˜ÛÛ\\™OOOIÜ™]—Û[Û	Ê^ÂˆÛÛœİ›İÏ\İ\Ù•Ù^J
+NØÛÛœİİ\[™]È]J›İË™Ù][YX\Š
+K›İË™Ù][Û
 
-function num(v){const n=Number(v);return Number.isFinite(n)?n:0;}
-function getReach(m){return num(m?.reach);}
-function getImpressions(m){return num(m?.impressions);}
-function getEng(m){return num(m?.engagement);}
-function getLikes(m){return num(m?.like_count);}
-function getComments(m){return num(m?.comment_count);}
-function getShares(m){return num(m?.shares);}
-function getSaved(m){return num(m?.saved);}
-function getViews(m){return num(m?.views);}
-function summary(posts){
-  const s={posts:posts.length,reach:0,impressions:0,engagement:0,likes:0,comments:0,shares:0,saved:0,views:0};
-  posts.forEach(p=>{const m=p.metrics||{};s.reach+=getReach(m);s.impressions+=getImpressions(m);s.engagement+=getEng(m);s.likes+=getLikes(m);s.comments+=getComments(m);s.shares+=getShares(m);s.saved+=getSaved(m);s.views+=getViews(m);});
-  s.er=s.reach>0?s.engagement/s.reach*100:(s.impressions>0?s.engagement/s.impressions*100:0);return s;
-}
-function delta(cur,prev){if(prev===0)return cur===0?0:null;return (cur-prev)/prev*100;}
-function fmt(n){if(n===null||n===undefined||Number.isNaN(Number(n)))return'â€”';return Math.round(Number(n)).toLocaleString('pt-BR');}
-function fmtK(n){if(n===null||n===undefined||Number.isNaN(Number(n)))return'â€”';n=Number(n);if(Math.abs(n)>=1e6)return(n/1e6).toFixed(1).replace('.',',')+'M';if(Math.abs(n)>=1e3)return(n/1e3).toFixed(1).replace('.',',')+'K';return Math.round(n).toLocaleString('pt-BR');}
-function fmtPct(n,d=1){return Number(n||0).toFixed(d).replace('.',',')+'%';}
-function deltaHtml(d){if(d===null)return'<span class="kpi-delta na">sem base</span>';const cls=d>0?'up':d<0?'down':'na';const arrow=d>0?'â–²':d<0?'â–¼':'â€¢';return `<span class="kpi-delta ${cls}">${arrow} ${Math.abs(d).toFixed(1).replace('.',',')}%</span>`;}
+KLKJNØÛÛœİ[™[™]È]J›İË™Ù][YX\Š
+K›İË™Ù][Û
 
-function dayKey(date,gran='day'){
-  const d=new Date(date);if(gran==='month')return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-  if(gran==='week'){const x=new Date(d);const day=(x.getDay()+6)%7;x.setDate(x.getDate()-day);return isoDate(x);}
-  return isoDate(d);
-}
-function series(posts,metric,gran=ST.chartGran){
-  const out={};posts.forEach(p=>{if(!p.published_at)return;const k=dayKey(p.published_at,gran);out[k]=(out[k]||0)+metric(p.metrics||{});});return out;
-}
-function seriesValues(posts,metric,gran=ST.chartGran){const o=series(posts,metric,gran);return Object.keys(o).sort().map(k=>o[k]);}
+KJNÜ™]\›ˆÜİ\[™NÂˆBˆYŠÕ˜ÛÛ\\™OOOIÜØ[YWÜ™]‰Ê^ÂˆÛÛœİİ\[™]È]Jİ\‹œİ\
+K[™[™]È]Jİ\‹™[™
+NÜİ\œÙ][Û
+İ\™Ù][Û
 
-async function renderDashboard(){
-  if(!ST.clientId)return renderNoClients();
-  ST.module=null;restoreDashboardShell();updateClientHeader();await loadPosts();await loadAvailability();applyAvailability();
-  renderKPIs(ST.posts,ST.comparePosts);renderPerformanceChart(ST.posts);renderDonut(ST.posts);renderPlatformMetrics(ST.posts);renderTopContent(ST.posts);renderInsights(ST.posts);updateShareCard();
-  if(ST.activeTab!=='overview')renderTab(ST.activeTab);
-}
+KLJNÙ[™œÙ][Û
+[™™Ù][Û
 
-async function loadAvailability(){
-  const cid=encodeURIComponent(ST.clientId),available={organic:[],paid:[],content:false,audience:false,conversions:false};
-  const [history,ads,audience]=await Promise.all([
-    rest('posts?client_id=eq.'+cid+'&select=platform&limit=1000').catch(()=>[]),
-    rest('meta_ad_metrics?client_id=eq.'+cid+'&select=ad_id&limit=1').catch(()=>[]),
-    rest('account_snapshots?client_id=eq.'+cid+'&select=id&limit=1').catch(()=>[])
-  ]);
-  available.organic=[...new Set((history||[]).map(x=>x.platform).filter(Boolean))];
-  if((ads||[]).length)available.paid.push('meta_ads');
-  available.content=available.organic.length>0;available.audience=(audience||[]).length>0;
-  available.conversions=available.paid.length>0;ST.available=available;
-}
-function applyAvailability(){
-  const iconPlatforms=['instagram','facebook_organic','tiktok','youtube','google_my_business'];
-  qsa('.client-accounts .plat-icon').forEach((el,i)=>{const p=iconPlatforms[i];el.style.display=ST.available.organic.includes(p)?'flex':'none';});
-  const select=$('chart-plat-filter');
-  if(select){const current=ST.available.organic.includes(ST.platform)?ST.platform:'all';select.innerHTML='<option value="all">Todas as plataformas</option>'+ST.available.organic.map(p=>'<option value="'+esc(p)+'">'+esc(platformName(p))+'</option>').join('');select.value=current;ST.platform=current;}
-  const tabs=qsa('.dash-tab'),show=[true,ST.available.content,ST.available.paid.length>0,ST.available.audience,ST.available.conversions,false];
-  tabs.forEach((tab,i)=>tab.style.display=show[i]?'flex':'none');
-  if(!show[['overview','content','paid','audience','conversions','competitors'].indexOf(ST.activeTab)]){ST.activeTab='overview';tabs.forEach((t,i)=>t.classList.toggle('active',i===0));qsa('[id^="tab-"]').forEach(t=>t.style.display=t.id==='tab-overview'?'block':'none');}
-  const details=qs('.client-accounts .btn-details');if(details)details.style.display=(ST.available.organic.length||ST.available.paid.length)?'':'none';
-  const health=qs('.health-card');if(health)health.style.display='none';
-}
+KLJNÜ™]\›ˆÜİ\[™NÂˆBˆÛÛœİ^\ÏSX]›X^
+KX]œ›İ[™
 
-function updateClientHeader(){
-  const c=ST.clients.find(x=>String(x.id)===String(ST.clientId));if(!c)return;
-  const av=$('client-avatar');if(av){av.textContent=c.name?.[0]||'?';av.style.background='linear-gradient(135deg,#1B2B6B,#4361ee)';av.style.color='#fff';}
-  if($('client-name'))$('client-name').textContent=c.name;if($('client-meta'))$('client-meta').textContent=c.status||'Ativo';if($('share-client'))$('share-client').value=c.name;
-  ST.shareLink=null;if($('sc-link-url'))$('sc-link-url').textContent='Gere um link seguro';
-}
+İ\‹™[™Xİ\‹œİ\
+KÎ
+JNÜ™]\›ˆÜİ\˜Y^\Êİ\‹œİ\Y^\ÊK[™›™]È]Jİ\‹œİ\
+_NÂŸB‚˜\Ş[˜È[˜İ[ÛˆØYÜİÔ˜[™ÙJ˜[™ÙK]›Ü›OIØ[	Ê^ÂˆYŠTÕ˜ÛY[Y
+\™]\›–×NÂˆ]OIÜÜİÏØÛY[ÚYY\K‰ÊÙ[˜ÛÙUT’PÛÛ\Û™[
+Õ˜ÛY[Y
+JÉÉœX›\ÚYØ]YİK‰ÊÚ\ÛÑ]J˜[™ÙKœİ\
+JÉÉœX›\ÚYØ][‰ÊÚ\ÛÑ]J˜[™ÙK™[™
+JÉÉœÙ[XİZYXØÛİ[ÚY]›Ü›KYYXWİ\KYYXWİ\›[X›˜Z[İ\›\›X[[šËØ\[Û‹X›\ÚYØ]	›Ü™\\X›\ÚYØ]™\ØÉ›[Z]LL	ÎÂˆYŠ]›Ü›I‰œ]›Ü›HOOIØ[	Ê\JÏIÉœ]›Ü›OY\K‰ÊÙ[˜ÛÙUT’PÛÛ\Û™[
+]›Ü›JNÂˆÛÛœİÜİÏX]ØZ]™\İ
+J_×NÂˆYŠ\ÜİË›[™İ
+\™]\›ˆÜİÎÂˆÛÛœİYÏ\ÜİË›X\
+OœšY
+NÂˆÛÛœİ[O^ßNÂˆ›ÜŠ]OLÚOYË›[™İÚJÏM
+^ÂˆÛÛœİÚ[šÏZYËœÛXÙJKJÍ
+K›X\
+O‰È‰ÊÔİš[™ÊŠKœ™\XÙJÈ‹ÙË	×‰ÊJÉÈ‰ÊKš›Ú[Š	Ë	ÊNÂˆ^ÂˆÛÛœİY]ÏX]ØZ]™\İ
+	ÜÜİÛY]šXÜÏÜÜİÚYZ[‹Š	ÊÙ[˜ÛÙUT’PÛÛ\Û™[
+Ú[šÊJÉÊIœÙ[Xİ\ÜİÚY™XXÚ[\™\ÜÚ[ÛœË[™ØYÙ[Y[ZÙWØÛİ[ÛÛ[Y[ØÛİ[Ú\™\ËØ]™YšY]ÜËŞ[˜ÙYØ]	›Ü™\\Ş[˜ÙYØ]™\ØÉÊ_×NÂˆY]Ë™›Ü‘XXÚ
+OOÚYŠ[[VÛKœÜİÚYJ[[VÛKœÜİÚYO[NßJNÂˆXØ]Ú
+J^Âˆ^ÂˆÛÛœİY]ÏX]ØZ]™\İ
+	ÜÜİÛY]šXÜÏÜÜİÚYZ[‹Š	ÊØÚ[šÊÉÊIœÙ[Xİ\ÜİÚY™XXÚ[\™\ÜÚ[ÛœË[™ØYÙ[Y[ZÙWØÛİ[ÛÛ[Y[ØÛİ[Ú\™\ËØ]™YšY]ÜËŞ[˜ÙYØ]	›Ü™\\Ş[˜ÙYØ]™\ØÉÊ_×NÂˆY]Ë™›Ü‘XXÚ
+OOÚYŠ[[VÛKœÜİÚYJ[[VÛKœÜİÚYO[NßJNÂˆXØ]Ú
+\œŠ^ØÛÛœÛÛKØ\›Š	ÜÜİÛY]šXÜÉË\œŠNßBˆBˆBˆÜİË™›Ü‘XXÚ
+Oœ›Y]šXÜÏ[[VÜšY_ßJNÂˆ™]\›ˆÜİÎÂŸB‚˜\Ş[˜È[˜İ[ÛˆØYÜİÊ
+^ÂˆÕœ]›Ü›OI
+	ØÚ\\]Yš[\‰ÊOË˜[Y_Õœ]›Ü›_	Ø[	ÎÂˆ^ÂˆÛÛœİØİ\‹™]—OX]ØZ]›ÛZ\ÙK˜[
+ÛØYÜİÔ˜[™ÙJİ\œ™[˜[™ÙJ
+KÕœ]›Ü›JKØYÜİÔ˜[™ÙJÛÛ\\™T˜[™ÙJ
+KÕœ]›Ü›JWJNÂˆÕœÜİÏXİ\ÔÕ˜ÛÛ\\™TÜİÏ\™]Ü™]\›ˆİ\ÂˆXØ]Ú
+J^ØÛÛœÛÛK™\œ›ÜŠ	ÛØYÜİÉËJNÔÕœÜİÏV×NÔÕ˜ÛÛ\\™TÜİÏV×NİØ\İ
+	Ñ˜[H[ÈØ\œ™YØ\ˆYÜÎˆ	ÊÙK›Y\ÜØYÙK	Ù\œ›Ü‰ÊNÜ™]\›–×NßBŸB‚™[˜İ[Ûˆ[JŠ^ØÛÛœİS[X™\ŠŠNÜ™]\›ˆ[X™\‹š\Ñš[š]JŠOÛŒßB™[˜İ[ÛˆÙ]™XXÚ
+J^Ü™]\›ˆ[JOËœ™XXÚ
+NßB™[˜İ[ÛˆÙ][\™\ÜÚ[ÛœÊJ^Ü™]\›ˆ[JOËš[\™\ÜÚ[ÛœÊNßB™[˜İ[ÛˆÙ][™ÊJ^Ü™]\›ˆ[JOË™[™ØYÙ[Y[
+NßB™[˜İ[ÛˆÙ]ZÙ\ÊJ^Ü™]\›ˆ[JOË›ZÙWØÛİ[
+NßB™[˜İ[ÛˆÙ]ÛÛ[Y[ÊJ^Ü™]\›ˆ[JOË˜ÛÛ[Y[ØÛİ[
+NßB™[˜İ[ÛˆÙ]Ú\™\ÊJ^Ü™]\›ˆ[JOËœÚ\™\ÊNßB™[˜İ[ÛˆÙ]Ø]™Y
+J^Ü™]\›ˆ[JOËœØ]™Y
+NßB™[˜İ[ÛˆÙ]šY]ÜÊJ^Ü™]\›ˆ[JOËšY]ÜÊNßB™[˜İ[Ûˆİ[[X\JÜİÊ^ÂˆÛÛœİÏ^ÜÜİÎœÜİË›[™İ™XXÚŒ[\™\ÜÚ[ÛœÎŒ[™ØYÙ[Y[ŒZÙ\ÎŒÛÛ[Y[ÎŒÚ\™\ÎŒØ]™YŒšY]ÜÎŒNÂˆÜİË™›Ü‘XXÚ
+OØÛÛœİO\›Y]šXÜßßNÜËœ™XXÚ
+ÏYÙ]™XXÚ
+JNÜËš[\™\ÜÚ[ÛœÊÏYÙ][\™\ÜÚ[ÛœÊJNÜË™[™ØYÙ[Y[
+ÏYÙ][™ÊJNÜË›ZÙ\ÊÏYÙ]ZÙ\ÊJNÜË˜ÛÛ[Y[ÊÏYÙ]ÛÛ[Y[ÊJNÜËœÚ\™\ÊÏYÙ]Ú\™\ÊJNÜËœØ]™Y
+ÏYÙ]Ø]™Y
+JNÜËšY]ÜÊÏYÙ]šY]ÜÊJNßJNÂˆË™\\Ëœ™XXÚŒÜË™[™ØYÙ[Y[ÜËœ™XXÚ
+ŒLŠËš[\™\ÜÚ[ÛœÏŒÜË™[™ØYÙ[Y[ÜËš[\™\ÜÚ[ÛœÊŒLŒ
+NÜ™]\›ˆÎÂŸB™[˜İ[Ûˆ[Jİ\‹™]Š^ÚYŠ™]OOL
+\™]\›ˆİ\OOLÌ›[Ü™]\›ˆ
+İ\‹\™]ŠKÜ™]ŠŒLßB™[˜İ[Ûˆ›]
+Š^ÚYŠOO[[OO][™Yš[™Y[X™\‹š\Ó˜SŠ[X™\ŠŠJJ\™]\›‰ø %	ÎÜ™]\›ˆX]œ›İ[™
+[X™\ŠŠJKÓØØ[Tİš[™Ê	ÜP”‰ÊNßB™[˜İ[Ûˆ›]ÊŠ^ÚYŠOO[[OO][™Yš[™Y[X™\‹š\Ó˜SŠ[X™\ŠŠJJ\™]\›‰ø %	ÎÛS[X™\ŠŠNÚYŠX]˜XœÊŠOLYMŠ\™]\›Š‹ÌYMŠKÑš^Y
+JKœ™\XÙJ	Ë‰Ë	Ë	ÊJÉÓIÎÚYŠX]˜XœÊŠOLYLÊ\™]\›Š‹ÌYLÊKÑš^Y
+JKœ™\XÙJ	Ë‰Ë	Ë	ÊJÉÒÉÎÜ™]\›ˆX]œ›İ[™
+ŠKÓØØ[Tİš[™Ê	ÜP”‰ÊNßB™[˜İ[Ûˆ›]İ
+‹LJ^Ü™]\›ˆ[X™\ŠŸ
+KÑš^Y
+
+Kœ™\XÙJ	Ë‰Ë	Ë	ÊJÉÉIÎßB™[˜İ[Ûˆ[R[
+
+^ÚYŠOO[[
+\™]\›‰ÏÜ[ˆÛ\ÜÏHšÜKY[H˜HœÙ[H˜\ÙOÜÜ[‰ÎØÛÛœİÛÏYŒÉİ\	Î™ÉÙİÛ‰Î‰Û˜IÎØÛÛœİ\œ›İÏYŒÉø¥¬‰Î™Éø¥¯	Î‰ø (‰ÎÜ™]\›ˆÜ[ˆÛ\ÜÏHšÜKY[H	ØÛßH‰Ø\œ›İßH	ÓX]˜XœÊ
+KÑš^Y
+JKœ™\XÙJ	Ë‰Ë	Ë	Ê_IOÜÜ[˜ßB‚™[˜İ[Ûˆ^RÙ^J]KÜ˜[IÙ^IÊ^ÂˆÛÛœİ[™]È]J]JNÚYŠÜ˜[OOIÛ[Û	Ê\™]\›ˆ™Ù][YX\Š
+JÉËIÊÔİš[™Ê™Ù][Û
 
-function renderKPIs(posts,prevPosts){
-  const a=summary(posts),b=summary(prevPosts);
-  const defs=[
-    ['Posts publicados',a.posts,b.posts,'posts',m=>1],
-    ['Alcance',a.reach,b.reach,'reach',getReach],
-    ['ImpressÃµes',a.impressions,b.impressions,'impressions',getImpressions],
-    ['Engajamento',a.engagement,b.engagement,'engagement',getEng],
-    ['Salvamentos',a.saved,b.saved,'saved',getSaved],
-    ['Taxa de engajamento',a.er,b.er,'er',null]
-  ];
-  const g=$('kpi-row');if(!g)return;
-  g.innerHTML=defs.map((d,i)=>{
-    const dv=delta(d[1],d[2]);const value=d[3]==='er'?fmtPct(d[1]):fmtK(d[1]);
-    const accent=dv===null?'#6e7681':dv>0?'#22c55e':dv<0?'#ef4444':'#6e7681';
-    return `<div class="kpi-card" style="border-top:2px solid ${accent}"><div class="kpi-head"><span class="kpi-name">${d[0]}</span></div><div class="kpi-val">${value}</div><div class="kpi-footer">${deltaHtml(dv)}<span style="font-size:9px;color:var(--text3)">vs. comparaÃ§Ã£o</span><div class="kpi-sparkline"><canvas id="sp-${i}"></canvas></div></div></div>`;
-  }).join('');
-  defs.forEach((d,i)=>{
-    const ctx=$('sp-'+i);if(!ctx)return;if(ST.charts['sp'+i])ST.charts['sp'+i].destroy();
-    let vals=d[4]?seriesValues(posts,d[4],'day'):[];
-    if(d[3]==='er'){
-      const rr=series(posts,getReach,'day'),ee=series(posts,getEng,'day');const keys=[...new Set([...Object.keys(rr),...Object.keys(ee)])].sort();vals=keys.map(k=>rr[k]?ee[k]/rr[k]*100:0);
-    }
-    if(d[3]==='posts'){const by={};posts.forEach(p=>{const k=dayKey(p.published_at,'day');by[k]=(by[k]||0)+1;});vals=Object.keys(by).sort().map(k=>by[k]);}
-    if(!vals.length)vals=[0];
-    const dv=delta(d[1],d[2]);const col=dv>0?'#22c55e':dv<0?'#ef4444':'#4361ee';
-    ST.charts['sp'+i]=new Chart(ctx,{type:'line',data:{labels:vals.map((_,j)=>j),datasets:[{data:vals,borderColor:col,backgroundColor:col+'18',tension:.35,fill:true,pointRadius:0,borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}},animation:{duration:0}}});
-  });
-}
+JÌJKœYİ\
+‹	Ì	ÊNÂˆYŠÜ˜[OOIİÙYZÉÊ^ØÛÛœİ[™]È]J
+NØÛÛœİ^OJ™Ù]^J
+JÍŠIMÎŞœÙ]]J™Ù]]J
+KY^JNÜ™]\›ˆ\ÛÑ]J
+NßBˆ™]\›ˆ\ÛÑ]J
+NÂŸB™[˜İ[ÛˆÙ\šY\ÊÜİËY]šXËÜ˜[TÕ˜Ú\Ü˜[Š^ÂˆÛÛœİİ]^ßNÜÜİË™›Ü‘XXÚ
+OÚYŠ\œX›\ÚYØ]
+\™]\›ØÛÛœİÏY^RÙ^JœX›\ÚYØ]Ü˜[ŠNÛİ]Ú×OJİ]Ú×_
+JÛY]šXÊ›Y]šXÜßßJNßJNÜ™]\›ˆİ]ÂŸB™[˜İ[ÛˆÙ\šY\Õ˜[Y\ÊÜİËY]šXËÜ˜[TÕ˜Ú\Ü˜[Š^ØÛÛœİÏ\Ù\šY\ÊÜİËY]šXËÜ˜[ŠNÜ™]\›ˆØš™XİšÙ^\ÊÊKœÛÜ
 
-function renderPerformanceChart(posts){
-  const ctx=$('perf-chart');if(!ctx)return;if(ST.charts.perf)ST.charts.perf.destroy();
-  const metrics=[['Alcance',getReach,'#4361ee'],['Engajamento',getEng,'#22c55e'],['ImpressÃµes',getImpressions,'#8b5cf6']];
-  const maps=metrics.map(m=>series(posts,m[1],ST.chartGran));const keys=[...new Set(maps.flatMap(o=>Object.keys(o)))].sort();
-  qsa('#chart-legend .legend-item').forEach((el,i)=>{const txt=el.childNodes[1];if(txt)txt.textContent=metrics[i]?.[0]||'';});
-  if(!keys.length){ctx.style.display='none';let em=ctx.parentElement.querySelector('.real-empty');if(!em){em=document.createElement('div');em.className='empty-state real-empty';ctx.parentElement.appendChild(em);}em.innerHTML='<div class="empty-title">Sem dados no perÃ­odo</div><div class="empty-desc">Nenhuma publicaÃ§Ã£o com mÃ©tricas foi encontrada.</div>';return;}
-  ctx.style.display='block';ctx.parentElement.querySelector('.real-empty')?.remove();
-  ST.charts.perf=new Chart(ctx,{type:'line',data:{labels:keys.map(k=>k.slice(5)),datasets:metrics.map((m,i)=>({label:m[0],data:keys.map(k=>maps[i][k]||0),borderColor:m[2],backgroundColor:m[2]+'12',tension:.35,fill:i===0,pointRadius:0,pointHoverRadius:4,borderWidth:2,hidden:!ST.seriesVisible[i]}))},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(42,51,71,.35)'},ticks:{color:'#6e7681',maxTicksLimit:10}},y:{grid:{color:'rgba(42,51,71,.35)'},ticks:{color:'#6e7681',callback:v=>fmtK(v)}}}}});
-}
+K›X\
+ÏO›ÖÚ×JNßB‚˜\Ş[˜È[˜İ[Ûˆ™[™\‘\Ú›Ø\™
 
-function updatePerformanceChart(){ST.platform=$('chart-plat-filter')?.value||'all';renderDashboard();}
-function toggleSeries(idx,el){ST.seriesVisible[idx]=!ST.seriesVisible[idx];el?.classList.toggle('inactive');if(ST.charts.perf){ST.charts.perf.data.datasets[idx].hidden=!ST.seriesVisible[idx];ST.charts.perf.update();}}
-function setChartGran(gran,btn){ST.chartGran=gran;qsa('.ctrl-grp .ctrl-btn').forEach(b=>b.classList.remove('active'));btn?.classList.add('active');renderPerformanceChart(ST.posts);}
+^ÂˆYŠTÕ˜ÛY[Y
+\™]\›ˆ™[™\“›ĞÛY[Ê
+NÂˆÕ›[Ù[O[[Ü™\İÜ™Q\Ú›Ø\™Ú[
 
-function platformName(k){return ({instagram:'Instagram',facebook_organic:'Facebook',facebook:'Facebook',meta_ads:'Meta Ads',google_ads:'Google Ads',tiktok:'TikTok',tiktok_ads:'TikTok Ads',youtube:'YouTube',google_my_business:'Google Business',linkedin:'LinkedIn'}[k]||k||'â€”');}
-function platformColor(k){return ({instagram:'#e1306c',facebook_organic:'#1877f2',facebook:'#1877f2',meta_ads:'#1877f2',google_ads:'#4285f4',tiktok:'#69c9d0',tiktok_ads:'#25f4ee',youtube:'#ff0000',google_my_business:'#4285f4',linkedin:'#0a66c2'}[k]||'#4361ee');}
+Nİ\]PÛY[XY\Š
+NØ]ØZ]ØYÜİÊ
+NØ]ØZ]ØY]˜Z[Xš[]J
+NØ\P]˜Z[Xš[]J
+NÂˆ™[™\’Ô\ÊÕœÜİËÕ˜ÛÛ\\™TÜİÊNÜ™[™\”\™›Ü›X[˜ÙPÚ\
+ÕœÜİÊNÜ™[™\‘Û]
+ÕœÜİÊNÜ™[™\”]›Ü›SY]šXÜÊÕœÜİÊNÜ™[™\•ÜÛÛ[
+ÕœÜİÊNÜ™[™\’[œÚYÚÊÕœÜİÊNİ\]TÚ\™PØ\™
 
-function renderDonut(posts){
-  const by={};posts.forEach(p=>by[p.platform]=(by[p.platform]||0)+getReach(p.metrics));const entries=Object.entries(by).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);const total=entries.reduce((s,[,v])=>s+v,0);
-  if($('donut-center-val'))$('donut-center-val').textContent=fmtK(total);const ctx=$('donut-chart');if(ST.charts.donut)ST.charts.donut.destroy();
-  if(ctx&&total>0)ST.charts.donut=new Chart(ctx,{type:'doughnut',data:{labels:entries.map(([k])=>platformName(k)),datasets:[{data:entries.map(([,v])=>v),backgroundColor:entries.map(([k])=>platformColor(k)),borderWidth:0}]},options:{responsive:false,plugins:{legend:{display:false}},cutout:'70%'}});
-  if($('plat-list'))$('plat-list').innerHTML=entries.length?entries.map(([k,v])=>`<div class="plat-list-item" onclick="openPlatform('${esc(k)}')" style="cursor:pointer"><div class="plat-list-dot" style="background:${platformColor(k)}"></div><span class="plat-list-name">${esc(platformName(k))}</span><span class="plat-list-pct">${total?Math.round(v/total*100):0}%</span><span class="plat-list-abs">${fmtK(v)}</span></div>`).join(''):'<div style="text-align:center;color:var(--text2);font-size:11px;padding:10px">Sem alcance registrado no perÃ­odo</div>';
-}
+NÂˆYŠÕ˜Xİ]™UXˆOOIÛİ™\šY]ÉÊ\™[™\•XŠÕ˜Xİ]™UXŠNÂŸB‚˜\Ş[˜È[˜İ[ÛˆØY]˜Z[Xš[]J
+^ÂˆÛÛœİÚYY[˜ÛÙUT’PÛÛ\Û™[
+Õ˜ÛY[Y
+K]˜Z[X›O^ÛÜ™Ø[šXÎ–×KZY–×KÛÛ[™˜[ÙK]YY[˜ÙN™˜[ÙKÛÛ™\œÚ[ÛœÎ™˜[Ù_NÂˆÛÛœİÚ\İÜKYË]YY[˜ÙWOX]ØZ]›ÛZ\ÙK˜[
+Âˆ™\İ
+	ÜÜİÏØÛY[ÚYY\K‰ÊØÚY
+ÉÉœÙ[Xİ\]›Ü›I›[Z]LL	ÊK˜Ø]Ú
 
-function renderPlatformMetrics(posts){
-  const by={};posts.forEach(p=>{const k=p.platform||'desconhecido';if(!by[k])by[k]={posts:0,reach:0,impressions:0,eng:0,views:0,saved:0,shares:0};const d=by[k];d.posts++;d.reach+=getReach(p.metrics);d.impressions+=getImpressions(p.metrics);d.eng+=getEng(p.metrics);d.views+=getViews(p.metrics);d.saved+=getSaved(p.metrics);d.shares+=getShares(p.metrics);});
-  const entries=Object.entries(by).sort((a,b)=>b[1].reach-a[1].reach);const section=$('plat-metrics-section'),row=$('plat-metrics-row');if(!row)return;
-  if(!entries.length){if(section)section.style.display='none';row.innerHTML='';return;}if(section)section.style.display='';row.style.gridTemplateColumns='repeat('+Math.min(entries.length,5)+',1fr)';
-  row.innerHTML=entries.map(([k,d])=>{const er=d.reach?d.eng/d.reach*100:0;return `<div class="plat-metric-card" onclick="openPlatform('${esc(k)}')" style="cursor:pointer"><div class="pmcard-hdr"><div class="pmcard-icon" style="background:${platformColor(k)}"></div><span class="pmcard-name">${esc(platformName(k))}</span><span style="font-size:10px;color:var(--text3);margin-left:auto">${d.posts} posts</span></div><div class="pmcard-metrics"><div class="pmcard-row"><span class="pmcard-lbl">Alcance</span><div class="pmcard-val">${fmtK(d.reach)}</div></div><div class="pmcard-row"><span class="pmcard-lbl">ImpressÃµes</span><div class="pmcard-val">${fmtK(d.impressions)}</div></div><div class="pmcard-row"><span class="pmcard-lbl">Engajamento</span><div class="pmcard-val">${fmtPct(er)}</div></div></div><button class="pmcard-btn" style="background:${platformColor(k)}20;color:${platformColor(k)};border:1px solid ${platformColor(k)}30">Ver dados</button></div>`;}).join('');
-}
-function openPlatform(platform){const sel=$('chart-plat-filter');if(sel){if(![...sel.options].some(o=>o.value===platform)){const o=document.createElement('option');o.value=platform;o.textContent=platformName(platform);sel.appendChild(o);}sel.value=platform;}ST.platform=platform;ST.activeTab='overview';setTab('overview',qsa('.dash-tab')[0]);renderDashboard();}
 
-function renderTopContent(posts){
-  const el=$('top-content');if(!el)return;const sorted=[...posts].sort((a,b)=>getEng(b.metrics)-getEng(a.metrics)).slice(0,5);
-  if(!sorted.length){el.innerHTML='<div class="empty-state" style="height:120px"><div class="empty-desc">Nenhum conteÃºdo no perÃ­odo</div></div>';return;}
-  el.innerHTML=sorted.map((p,i)=>{const img=p.thumbnail_url||p.media_url,link=safeUrl(p.permalink),er=getReach(p.metrics)?getEng(p.metrics)/getReach(p.metrics)*100:0;return `<div class="tc-card" onclick="${link!=='#'?`window.open('${esc(link)}','_blank')`:''}" style="cursor:${link!=='#'?'pointer':'default'}"><div class="tc-thumb">${img?`<img src="${esc(safeUrl(img))}" alt="" loading="lazy" onerror="this.style.display='none'">`:'<span style="font-size:24px">â–§</span>'}<span class="tc-rank">#${i+1}</span><span class="tc-format">${esc(p.media_type||'Post')}</span></div><div class="tc-body"><div class="tc-title">${esc((p.caption||'Sem legenda').slice(0,45))}</div><div class="tc-metric">${fmtK(getReach(p.metrics))} alcance</div><div class="tc-sub">${fmtK(getEng(p.metrics))} interaÃ§Ãµes Â· ER ${fmtPct(er)}</div></div></div>`;}).join('');
-}
+OO–×JKˆ™\İ
+	ÛY]WØYÛY]šXÜÏØÛY[ÚYY\K‰ÊØÚY
+ÉÉœÙ[XİXYÚY	›[Z]LIÊK˜Ø]Ú
 
-function renderInsights(posts){
-  const el=$('insight-list');if(!el)return;const s=summary(posts),prev=summary(ST.comparePosts),ins=[];const dr=delta(s.reach,prev.reach),de=delta(s.engagement,prev.engagement);
-  if(dr!==null)ins.push({t:dr>=0?'op':'att',tag:dr>=0?'CRESCIMENTO':'ATENÃ‡ÃƒO',title:'Alcance vs. perÃ­odo comparado',desc:`O alcance dos conteÃºdos ${dr>=0?'cresceu':'caiu'} ${Math.abs(dr).toFixed(1).replace('.',',')}%.`,time:'dados reais'});
-  if(de!==null)ins.push({t:de>=0?'op':'att',tag:de>=0?'CRESCIMENTO':'ATENÃ‡ÃƒO',title:'Engajamento vs. perÃ­odo comparado',desc:`As interaÃ§Ãµes ${de>=0?'cresceram':'caÃ­ram'} ${Math.abs(de).toFixed(1).replace('.',',')}%.`,time:'dados reais'});
-  const groups={};posts.forEach(p=>{const k=p.media_type||'OUTRO';if(!groups[k])groups[k]={n:0,e:0};groups[k].n++;groups[k].e+=getEng(p.metrics);});const best=Object.entries(groups).map(([k,v])=>[k,v.n?v.e/v.n:0,v.n]).sort((a,b)=>b[1]-a[1])[0];
-  if(best)ins.push({t:'info',tag:'FORMATO',title:'Formato com maior mÃ©dia de engajamento',desc:`${best[0]}: ${fmt(best[1])} interaÃ§Ãµes mÃ©dias em ${best[2]} publicaÃ§Ã£o(Ãµes).`,time:'dados reais'});
-  if(!ins.length)ins.push({t:'info',tag:'INFORMAÃ‡ÃƒO',title:'Sem base comparÃ¡vel',desc:'Ainda nÃ£o hÃ¡ dados suficientes para calcular tendÃªncia com seguranÃ§a.',time:'dados reais'});
-  el.innerHTML=ins.slice(0,3).map(i=>`<div class="insight-item ${i.t}"><div class="insight-tag ${i.t}">${i.tag}</div><div class="insight-title">${i.title}</div><div class="insight-desc">${i.desc}</div><div class="insight-time">${i.time}</div></div>`).join('');
-}
 
-function setTab(tab,el){ST.activeTab=tab;qsa('.dash-tab').forEach(t=>t.classList.remove('active'));el?.classList.add('active');qsa('[id^="tab-"]').forEach(t=>t.style.display='none');const te=$('tab-'+tab);if(te)te.style.display='block';renderTab(tab);}
-function renderTab(tab){
-  if(tab==='overview')return;
-  if(tab==='content')return renderContentTab();
-  if(tab==='paid')return renderDataSourceTab('paid');
-  if(tab==='audience')return renderDataSourceTab('audience');
-  if(tab==='conversions')return renderDataSourceTab('conversions');
-  if(tab==='competitors')return renderDataSourceTab('competitors');
-}
-function renderContentTab(){
-  const el=$('tab-content');if(!el)return;const posts=[...ST.posts].sort((a,b)=>new Date(b.published_at)-new Date(a.published_at));
-  el.innerHTML=`<div class="section-card"><div class="section-hdr"><span class="section-title">ConteÃºdos publicados (${posts.length})</span><button class="btn-sm-ghost" onclick="exportCSV()">Exportar CSV</button></div>${posts.length?`<div style="overflow:auto"><table class="real-table"><thead><tr><th>Data</th><th>Plataforma</th><th>Formato</th><th>ConteÃºdo</th><th>Alcance</th><th>ImpressÃµes</th><th>Engajamento</th><th>ER</th></tr></thead><tbody>${posts.map(p=>{const r=getReach(p.metrics),e=getEng(p.metrics);return `<tr onclick="${p.permalink?`window.open('${esc(safeUrl(p.permalink))}','_blank')`:''}" style="cursor:${p.permalink?'pointer':'default'}"><td>${esc(new Date(p.published_at).toLocaleDateString('pt-BR'))}</td><td>${esc(platformName(p.platform))}</td><td>${esc(p.media_type||'â€”')}</td><td>${esc((p.caption||'Sem legenda').slice(0,80))}</td><td>${fmt(r)}</td><td>${fmt(getImpressions(p.metrics))}</td><td>${fmt(e)}</td><td>${fmtPct(r?e/r*100:0)}</td></tr>`;}).join('')}</tbody></table></div>`:'<div class="empty-state"><div class="empty-title">Sem conteÃºdos</div><div class="empty-desc">NÃ£o hÃ¡ registros para o perÃ­odo e plataforma selecionados.</div></div>'}</div>`;
-}
+OO–×JKˆ™\İ
+	ØXØÛİ[ÜÛ˜\ÚİÏØÛY[ÚYY\K‰ÊØÚY
+ÉÉœÙ[XİZY	›[Z]LIÊK˜Ø]Ú
 
-async function tryTable(names,query='limit=100'){
-  for(const n of names){try{const data=await rest(n+'?'+query);return {name:n,data:data||[]};}catch(e){if(!['42P01','PGRST205'].includes(e.code)&&e.status!==404)console.warn(n,e.message);}}
-  return null;
-}
-async function renderDataSourceTab(kind){
-  const map={paid:{id:'tab-paid',names:['campaign_metrics','ad_campaigns','paid_media_metrics'],title:'MÃ­dia Paga'},audience:{id:'tab-audience',names:['account_metrics','audience_metrics'],title:'AudiÃªncia'},conversions:{id:'tab-conversions',names:['conversion_metrics','conversions'],title:'ConversÃµes'},competitors:{id:'tab-competitors',names:['competitor_metrics','competitors'],title:'Concorrentes'}};
-  const cfg=map[kind],el=$(cfg.id);if(!el)return;el.innerHTML='<div class="empty-state"><div class="empty-title">Carregando dados reais...</div></div>';
-  const query='client_id=eq.'+encodeURIComponent(ST.clientId)+'&limit=100';const found=await tryTable(cfg.names,query);
-  if(!found||!found.data.length){el.innerHTML=`<div class="section-card"><div class="section-hdr"><span class="section-title">${cfg.title}</span></div><div class="empty-state"><div class="empty-title">Fonte de dados nÃ£o configurada</div><div class="empty-desc">Nenhum registro real foi localizado nas tabelas esperadas. O dashboard nÃ£o exibirÃ¡ dados fictÃ­cios.</div></div></div>`;return;}
-  el.innerHTML=`<div class="section-card"><div class="section-hdr"><span class="section-title">${cfg.title} Â· ${esc(found.name)}</span></div>${objectTable(found.data)}</div>`;
-}
-function objectTable(rows){if(!rows?.length)return'<div class="empty-state">Sem registros</div>';const cols=Object.keys(rows[0]).slice(0,10);return `<div style="overflow:auto"><table class="real-table"><thead><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${rows.slice(0,100).map(r=>`<tr>${cols.map(c=>`<td>${esc(formatCell(r[c]))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;}
-function formatCell(v){if(v===null||v===undefined)return'â€”';if(typeof v==='object')return JSON.stringify(v);return String(v);}
 
-function setPeriod(days,label){ST.period=days;ST.customStart=null;ST.customEnd=null;if($('tb-period-label'))$('tb-period-label').textContent=label;closeAllDrops();renderDashboard();}
-function applyCustomRange(){const start=$('date-start')?.value,end=$('date-end')?.value;if(!start||!end)return toast('Informe as duas datas.','error');if(start>end)return toast('A data inicial deve ser anterior Ã  final.','error');const days=Math.round((new Date(end)-new Date(start))/86400000)+1;if(days>365)return toast('O perÃ­odo mÃ¡ximo Ã© de 365 dias.','error');ST.customStart=start;ST.customEnd=end;if($('tb-period-label'))$('tb-period-label').textContent=new Date(start+'T12:00:00').toLocaleDateString('pt-BR')+' â€“ '+new Date(end+'T12:00:00').toLocaleDateString('pt-BR');closeAllDrops();renderDashboard();}
-function setCompare(val,name,e){ST.compare=val;if($('tb-compare-name'))$('tb-compare-name').textContent=name;qsa('#compare-drop .tb-drop-item').forEach(x=>x.classList.remove('active'));(e?.target||window.event?.target)?.classList.add('active');closeAllDrops();renderDashboard();}
-function buildClientDrop(){const drop=$('client-drop');if(!drop)return;drop.innerHTML=ST.clients.length?ST.clients.map(c=>`<div class="tb-drop-item${String(c.id)===String(ST.clientId)?' active':''}" onclick="selectClient('${esc(c.id)}','${esc(c.name)}',event)"><div class="item-av">${esc(c.name?.[0]||'?')}</div>${esc(c.name)}${c.is_agency?' (agÃªncia)':''}</div>`).join(''):'<div class="tb-drop-item">Nenhum cliente</div>';}
-function selectClient(id,name,e){e?.stopPropagation();ST.clientId=id;ST.clientName=name;if($('tb-client-name'))$('tb-client-name').textContent=name;closeAllDrops();buildClientDrop();applyClientCover();if(ST.module==='accounts'){ST.accountsFilter=String(id);showAccounts();}else renderDashboard();}
-function toggleDrop(id,e){e?.stopPropagation();const el=$(id);if(!el)return;const was=el.classList.contains('open');closeAllDrops();if(!was)el.classList.add('open');}
-function closeAllDrops(){qsa('.tb-drop,.user-menu').forEach(d=>d.classList.remove('open'));}
-function toggleUserMenu(e){$('user-menu')?.classList.toggle('open');(e||window.event)?.stopPropagation();}
+OO–×JBˆJNÂˆ]˜Z[X›K›Ü™Ø[šXÏVË‹‹›™]ÈÙ]
 
-function restoreDashboardShell(){
-  $('module-page')?.remove();['client-header'].forEach(id=>{if($(id))$(id).style.display='';});const tabs=qs('.dash-tabs');if(tabs)tabs.style.display='flex';qsa('[id^="tab-"]').forEach(t=>t.style.display=t.id==='tab-'+ST.activeTab?'block':'none');
-}
-function hideDashboardShell(){if($('client-header'))$('client-header').style.display='none';const tabs=qs('.dash-tabs');if(tabs)tabs.style.display='none';qsa('[id^="tab-"]').forEach(t=>t.style.display='none');}
-function showModulePage(title,body,showBack=true){hideDashboardShell();$('module-page')?.remove();const el=document.createElement('div');el.id='module-page';el.className='dash-content';el.innerHTML=`<div class="module-page-header">${showBack?'<button class="btn-sm-ghost module-back" onclick="nav(\'dashboard\')">â† Dashboard</button>':''}<h2>${esc(title)}</h2></div>${body}`;$('main-area')?.appendChild(el);}
+\İÜ_×JK›X\
+Oœ]›Ü›JK™š[\Š›ÛÛX[ŠJWNÂˆYŠ
+Yß×JK›[™İ
+X]˜Z[X›KœZYœ\Ú
+	ÛY]WØYÉÊNÂˆ]˜Z[X›K˜ÛÛ[X]˜Z[X›K›Ü™Ø[šXË›[™İŒØ]˜Z[X›K˜]YY[˜ÙOJ]YY[˜Ù_×JK›[™İŒÂˆ]˜Z[X›K˜ÛÛ™\œÚ[ÛœÏX]˜Z[X›KœZY›[™İŒÔÕ˜]˜Z[X›OX]˜Z[X›NÂŸB™[˜İ[Ûˆ\P]˜Z[Xš[]J
+^ÂˆÛÛœİXÛÛ”]›Ü›\ÏVÉÚ[œİYÜ˜[IË	Ù˜XÙX›ÛÚ×ÛÜ™Ø[šXÉË	İZİÚÉË	Ş[İ]X™IË	ÙÛÛÙÛWÛ^WØ\Ú[™\ÜÉ×NÂˆ\ØJ	Ë˜ÛY[XXØÛİ[Èœ]ZXÛÛ‰ÊK™›Ü‘XXÚ
 
-async function nav(page){
-  ST.module=page;closeAllDrops();
-  if(page==='dashboard'){ST.module=null;ST.activeTab='overview';restoreDashboardShell();qsa('.dash-tab').forEach((t,i)=>t.classList.toggle('active',i===0));await renderDashboard();return;}
-  if(page==='content'){restoreDashboardShell();const tab=qsa('.dash-tab')[1];setTab('content',tab);return;}
-  if(page==='reports')return showReports();if(page==='clients')return showClients();if(page==='new-client')return showNewClient();if(page==='accounts'){ST.accountsFilter='all';return showAccounts();}if(page==='settings')return showSettings();
-  return showGenericModule(page);
-}
+[JOOØÛÛœİZXÛÛ”]›Ü›\ÖÚWNÙ[œİ[K™\Ü^OTÕ˜]˜Z[X›K›Ü™Ø[šXËš[˜ÛY\Ê
+OÉÙ›^	Î‰Û›Û™IÎßJNÂˆÛÛœİÙ[XİI
+	ØÚ\\]Yš[\‰ÊNÂˆYŠÙ[Xİ
+^ØÛÛœİİ\œ™[TÕ˜]˜Z[X›K›Ü™Ø[šXËš[˜ÛY\ÊÕœ]›Ü›JOÔÕœ]›Ü›N‰Ø[	ÎÜÙ[Xİš[›™\’SIÏÜ[Ûˆ˜[YOH˜[•Ù\È\È]Y›Ü›X\ÏÛÜ[Û‰ÊÔÕ˜]˜Z[X›K›Ü™Ø[šXË›X\
+O‰ÏÜ[Ûˆ˜[YOH‰ÊÙ\ØÊ
+JÉÈ‰ÊÙ\ØÊ]›Ü›S˜[YJ
+JJÉÏÛÜ[Û‰ÊKš›Ú[Š	ÉÊNÜÙ[Xİ˜[YOXİ\œ™[ÔÕœ]›Ü›OXİ\œ™[ßBˆÛÛœİ[˜X›Y^Ûİ™\šY]ÎYK[œİYÜ˜[N”Õ˜]˜Z[X›K›Ü™Ø[šXËš[˜ÛY\Ê	Ú[œİYÜ˜[IÊK˜XÙX›ÛÚÎ”Õ˜]˜Z[X›K›Ü™Ø[šXËœÛÛYJOœOOIÙ˜XÙX›ÛÚ×ÛÜ™Ø[šXÉßOOIÙ˜XÙX›ÛÚÉÊKZY”Õ˜]˜Z[X›KœZY›[™İŒ]YY[˜ÙN”Õ˜]˜Z[X›K˜]YY[˜ÙKÛÛ™\œÚ[ÛœÎ”Õ˜]˜Z[X›K˜ÛÛ™\œÚ[ÛœßNÂˆÛÛœİXœÏ\\ØJ	Ë™\Ú]X–Ù]K]X—IÊNÂˆXœË™›Ü‘XXÚ
+XOX‹œİ[K™\Ü^OY[˜X›YİX‹™]\Ù]X—OÉÙ›^	Î‰Û›Û™IÊNÂˆYŠY[˜X›YÔÕ˜Xİ]™UX—J^ÔÕ˜Xİ]™UXIÛİ™\šY]ÉÎİXœË™›Ü‘XXÚ
+O˜Û\ÜÓ\İÙÙÛJ	ØXİ]™IË™]\Ù]XOOIÛİ™\šY]ÉÊJNÜ\ØJ	ÖÚYHX‹H—IÊK™›Ü‘XXÚ
+Oœİ[K™\Ü^O]šYOOIİX‹[İ™\šY]ÉÏÉØ›ØÚÉÎ‰Û›Û™IÊNßBˆÛÛœİ]Z[Ï\\Ê	Ë˜ÛY[XXØÛİ[È˜‹Y]Z[ÉÊNÚYŠ]Z[ÊY]Z[Ëœİ[K™\Ü^OJÕ˜]˜Z[X›K›Ü™Ø[šXË›[™İÕ˜]˜Z[X›KœZY›[™İ
+OÉÉÎ‰Û›Û™IÎÂˆÛÛœİX[\\Ê	ËšX[XØ\™	ÊNÚYŠX[
+ZX[œİ[K™\Ü^OIÛ›Û™IÎÂŸB‚™[˜İ[Ûˆ\]PÛY[XY\Š
+^ÂˆÛÛœİÏTÕ˜ÛY[Ë™š[™
+O”İš[™ÊšY
+OOOTİš[™ÊÕ˜ÛY[Y
+JNÚYŠXÊ\™]\›ÂˆÛÛœİ]I
+	ØÛY[X]˜]\‰ÊNÚYŠ]Š^Ø]‹^ÛÛ[XË›˜[YOË–Ì_	ÏÉÎØ]‹œİ[K˜˜XÚÙÜ›İ[™IÛ[™X\‹YÜ˜YY[
+LÍYYËÌPŒ‹ÍÍŒYYJIÎØ]‹œİ[K˜ÛÛÜIÈÙ™™‰ÎßBˆYŠ	
+	ØÛY[[˜[YIÊJI
+	ØÛY[[˜[YIÊK^ÛÛ[XË›˜[YNÚYŠ	
+	ØÛY[[Y]IÊJI
+	ØÛY[[Y]IÊK^ÛÛ[XËœİ]\ß	Ğ]]›ÉÎÚYŠ	
+	ÜÚ\™KXÛY[	ÊJI
+	ÜÚ\™KXÛY[	ÊK˜[YOXË›˜[YNÂˆÕœÚ\™S[šÏ[[ÚYŠ	
+	ÜØË[[šË]\›	ÊJI
+	ÜØË[[šË]\›	ÊK^ÛÛ[IÑÙ\™H[H[šÈÙYİ\›ÉÎÂŸB‚™[˜İ[Ûˆ™[™\’Ô\ÊÜİË™]”ÜİÊ^ÂˆÛÛœİO\İ[[X\JÜİÊK\İ[[X\J™]”ÜİÊNÂˆÛÛœİYœÏVÂˆÉÔÜİÈX›XØYÜÉËKœÜİË‹œÜİË	ÜÜİÉËOOŒWKˆÉĞ[Ø[˜ÙIËKœ™XXÚ‹œ™XXÚ	Ü™XXÚ	ËÙ]™XXÚKˆÉÒ[\™\ÜğíY\ÉËKš[\™\ÜÚ[ÛœË‹š[\™\ÜÚ[ÛœË	Ú[\™\ÜÚ[ÛœÉËÙ][\™\ÜÚ[Ûœ×KˆÉÑ[™ØZ˜[Y[ÉËK™[™ØYÙ[Y[‹™[™ØYÙ[Y[	Ù[™ØYÙ[Y[	ËÙ][™×KˆÉÔØ[˜[Y[ÜÉËKœØ]™Y‹œØ]™Y	ÜØ]™Y	ËÙ]Ø]™YKˆÉÕ^HH[™ØZ˜[Y[ÉËK™\‹‹™\‹	Ù\‰Ë[BˆNÂˆÛÛœİÏI
+	ÚÜK\›İÉÊNÚYŠYÊ\™]\›ÂˆËš[›™\’SYYœË›X\
 
-function showReports(){const s=summary(ST.posts),b=summary(ST.comparePosts);showModulePage('RelatÃ³rios',`<div class="section-card"><div class="section-hdr"><span class="section-title">Resumo do perÃ­odo</span><button class="btn-sm-prim" onclick="exportCSV()">Exportar dados</button></div><div class="real-grid"><div><small>Posts</small><strong>${fmt(s.posts)}</strong></div><div><small>Alcance</small><strong>${fmt(s.reach)}</strong></div><div><small>ImpressÃµes</small><strong>${fmt(s.impressions)}</strong></div><div><small>Engajamento</small><strong>${fmt(s.engagement)}</strong></div><div><small>ER</small><strong>${fmtPct(s.er)}</strong></div><div><small>Î” alcance</small><strong>${deltaHtml(delta(s.reach,b.reach))}</strong></div></div></div><div class="section-card"><div class="section-hdr"><span class="section-title">ConteÃºdo detalhado</span></div>${objectTable(ST.posts.map(p=>({published_at:p.published_at,platform:p.platform,media_type:p.media_type,reach:getReach(p.metrics),impressions:getImpressions(p.metrics),engagement:getEng(p.metrics),likes:getLikes(p.metrics),comments:getComments(p.metrics),shares:getShares(p.metrics),saved:getSaved(p.metrics),views:getViews(p.metrics)})))}</div>`);}
-function showClients(){showModulePage('Todos os clientes',`<div class="section-card"><div class="section-hdr"><span class="section-title">${ST.clients.length} cliente(s) acessÃ­vel(is)</span><button class="btn-sm-prim" onclick="nav('new-client')">Novo cliente</button></div>${ST.clients.length?`<div class="client-list-real">${ST.clients.map(c=>`<button class="client-real-row" onclick="selectClient('${esc(c.id)}','${esc(c.name)}');nav('dashboard')"><span class="item-av">${esc(c.name?.[0]||'?')}</span><span><strong>${esc(c.name)}</strong><small>${esc(c.status||'â€”')}</small></span><span>${c.is_agency?'AgÃªncia':'Cliente'}</span></button>`).join('')}</div>`:'<div class="empty-state">Nenhum cliente retornado pelo Supabase.</div>'}</div>`);}
-function showNewClient(){showModulePage('Novo cliente',`<div class="section-card" style="max-width:620px"><div class="f-grp"><label class="f-lbl">Nome</label><input class="f-inp" id="new-client-name" placeholder="Nome do cliente"></div><div class="f-grp"><label class="f-lbl">Slug</label><input class="f-inp" id="new-client-slug" placeholder="nome-do-cliente"></div><button class="btn-prim" onclick="createClient()">Cadastrar cliente</button><div id="new-client-msg" style="margin-top:10px;font-size:12px"></div></div>`);}
-async function createClient(){const name=$('new-client-name')?.value.trim(),slug=($('new-client-slug')?.value.trim()||name?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''));if(!name)return toast('Informe o nome do cliente.','error');try{await rest('clients',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({name,slug,status:'active',is_agency:false})});await loadClients();toast('Cliente cadastrado.');showClients();}catch(e){if($('new-client-msg'))$('new-client-msg').textContent='NÃ£o foi possÃ­vel cadastrar: '+e.message;}}
-function setAccountsFilter(value){ST.accountsFilter=value;showAccounts();}
-async function showAccounts(syncResult=null){
-  showModulePage('Contas conectadas','<div class="section-card"><div class="empty-state"><div class="empty-title">Carregando...</div></div></div>',false);
-  const [found,metaAssets]=await Promise.all([tryTable(['accounts'],'select=*&limit=500'),rest('meta_assets?select=*&order=asset_type,name').catch(()=>[])]),accounts=found?.data||[],all=ST.accountsFilter==='all';
-  const result=syncResult?`<div class="sync-result success" role="status"><strong>âœ“ SincronizaÃ§Ã£o concluÃ­da com sucesso</strong><span>${fmt(syncResult.posts||0)} publicaÃ§Ãµes processadas Â· ${fmt(syncResult.metrics||0)} mÃ©tricas atualizadas Â· ${fmt(syncResult.images||0)} imagens armazenadas</span><small>Dados recebidos do Windsor e gravados no Supabase.</small></div>`:'';
-  const options=['<option value="all">Todos os clientes</option>',...ST.clients.map(c=>`<option value="${esc(c.id)}" ${String(c.id)===String(ST.accountsFilter)?'selected':''}>${esc(c.name)}</option>`)].join('');
-  let rows;
-  if(all){rows=ST.clients.map(c=>{const linked=accounts.filter(a=>String(a.client_id)===String(c.id)),platforms=[...new Set(linked.map(a=>platformName(a.platform)))];return{cliente:c.name,situacao:linked.length?'Sincronizado':'NÃ£o sincronizado',contas_vinculadas:linked.length,plataformas:platforms.join(', ')||'â€”',ultima_atualizacao:linked.length?linked.map(a=>a.updated_at).filter(Boolean).sort().at(-1)||'â€”':'â€”'};});}
-  else rows=accounts.filter(a=>String(a.client_id)===String(ST.accountsFilter));
-  const connected=ST.clients.filter(c=>accounts.some(a=>String(a.client_id)===String(c.id))).length,pending=ST.clients.length-connected;
-  const summary=all?`<div class="accounts-summary"><div><strong>${ST.clients.length}</strong><span>Clientes</span></div><div class="ok"><strong>${connected}</strong><span>Sincronizados</span></div><div class="pending"><strong>${pending}</strong><span>Pendentes</span></div></div>`:'';
-  const empty='<div class="empty-state"><div class="empty-title">Nenhuma conta vinculada a este cliente</div><div class="empty-desc">O Windsor ainda nÃ£o retornou uma conta correspondente para este cliente.</div></div>';
-  const metaRows=(metaAssets||[]).map(a=>`<div class="meta-asset-row"><span class="meta-badge">${esc(a.asset_type==='ad_account'?'Meta Ads':a.asset_type==='instagram'?'Instagram':'Facebook')}</span><span><strong>${esc(a.name)}</strong><small>${esc(a.username?'@'+a.username:(a.ad_account_id||a.page_id||a.id))}</small></span><select onchange="assignMetaAsset('${esc(a.id)}',this.value)"><option value="">NÃ£o vinculado</option>${ST.clients.map(c=>`<option value="${esc(c.id)}" ${String(c.id)===String(a.client_id)?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>`).join('');
-  const meta=`<div class="section-card"><div class="section-hdr"><div><span class="section-title">IntegraÃ§Ã£o direta com a Meta</span><small class="section-subtitle">Facebook, Instagram e Meta Ads</small></div>${isSuperAdmin()?'<button class="btn-sm-prim sync-action" id="connect-meta-btn" onclick="connectMeta()">Conectar conta Meta</button>':''}</div><div id="meta-progress" class="sync-progress" aria-live="polite"></div>${metaRows?`<div class="meta-assets">${metaRows}</div>`:'<div class="empty-state"><div class="empty-title">Nenhuma conta Meta autorizada</div><div class="empty-desc">Conecte a conta empresarial para descobrir pÃ¡ginas, Instagrams e contas de anÃºncios.</div></div>'}</div>`;
-  showModulePage('Contas conectadas',`${result}${meta}<div class="section-card"><div class="section-hdr accounts-header"><div><span class="section-title">VisÃ£o das contas sincronizadas</span><select class="accounts-filter" onchange="setAccountsFilter(this.value)">${options}</select></div>${isSuperAdmin()?'<button class="btn-sm-ghost sync-action" id="sync-windsor-btn" onclick="syncWindsor()">Windsor (legado)</button>':''}</div><div id="sync-progress" class="sync-progress" aria-live="polite"></div>${summary}${rows.length?objectTable(rows):empty}</div>`,false);
-}
-async function connectMeta(){
-  if(!isSuperAdmin())return toast('Apenas o superadministrador pode conectar a Meta.','error');
-  const btn=$('connect-meta-btn'),progress=$('meta-progress');if(btn){btn.disabled=true;btn.textContent='Abrindo Metaâ€¦';}
-  if(progress){progress.className='sync-progress running';progress.innerHTML='<strong>Preparando autorizaÃ§Ã£o segura</strong><span>VocÃª serÃ¡ direcionado para a Meta.</span>';}
-  try{const r=await fetch(SB_URL+'/functions/v1/meta-auth',{method:'POST',headers:authHeaders()});const d=await r.json();if(!r.ok||!d.url)throw new Error(d.error||'NÃ£o foi possÃ­vel iniciar a conexÃ£o');location.href=d.url;}catch(e){if(btn){btn.disabled=false;btn.textContent='Conectar conta Meta';}if(progress){progress.className='sync-result error';progress.innerHTML=`<strong>Falha ao conectar</strong><span>${esc(e.message)}</span>`;}}
-}
-async function assignMetaAsset(id,clientId){
-  try{await rest('meta_assets?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({client_id:clientId||null,status:clientId?'connected':'discovered',updated_at:new Date().toISOString()})});toast(clientId?'Conta vinculada ao cliente.':'VÃ­nculo removido.');}
-  catch(e){toast('NÃ£o foi possÃ­vel salvar o vÃ­nculo: '+e.message,'error');showAccounts();}
-}
-async function syncWindsor(){
-  if(!isSuperAdmin())return toast('Apenas o superadministrador pode sincronizar.','error');
-  const btn=$('sync-windsor-btn'),progress=$('sync-progress');if(btn){btn.disabled=true;btn.textContent='Sincronizandoâ€¦';}if(progress){progress.className='sync-progress running';progress.innerHTML='<strong>SincronizaÃ§Ã£o em andamento</strong><span>Buscando publicaÃ§Ãµes e mÃ©tricas no Windsor e salvando no Supabase. Aguarde; isso pode levar cerca de um minuto.</span>';}
-  try{
-    const r=await fetch(SB_URL+'/functions/v1/windsor-sync',{method:'POST',headers:authHeaders(),body:JSON.stringify({days:30})});
-    const raw=await r.text();let d={};try{d=raw?JSON.parse(raw):{};}catch{d={};}if(!r.ok)throw new Error(d.error||d.message||`Falha na sincronizaÃ§Ã£o (HTTP ${r.status})`);
-    toast(`SincronizaÃ§Ã£o concluÃ­da: ${d.posts||0} publicaÃ§Ãµes, ${d.images||0} imagens.`);await showAccounts(d);
-  }catch(e){if(progress){progress.className='sync-result error';progress.innerHTML=`<strong>âœ• NÃ£o foi possÃ­vel sincronizar</strong><span>${esc(e.message)}</span><small>Nenhuma confirmaÃ§Ã£o de importaÃ§Ã£o foi recebida. Tente novamente.</small>`;}toast(e.message,'error');}finally{const current=$('sync-windsor-btn');if(current){current.disabled=false;current.textContent='Sincronizar Windsor agora';}}
-}
-function showSettings(){
-  const c=selectedClient(),admin=isSuperAdmin();
-  const branding=admin?`<div class="section-card"><div class="section-hdr"><span class="section-title">Identidade visual e capas</span></div><div class="brand-settings">
-    <div class="brand-panel"><h3>Capa anual do login</h3><p>Imagem institucional global. Atualize quando a ZF lanÃ§ar a identidade do novo ano.</p><div class="cover-preview" style="background-image:url('${esc(safeUrl(ST.branding.login_cover_url))}')"></div><div class="cover-actions"><label class="cover-label" for="global-cover-file">Trocar capa anual</label><input class="cover-file" id="global-cover-file" type="file" accept="image/png,image/jpeg,image/webp" onchange="saveGlobalCover(this)"></div><div class="cover-note">JPG, PNG ou WebP Â· mÃ¡ximo 5 MB Â· recomendado 1920 Ã— 1080 px</div></div>
-    <div class="brand-panel"><h3>Capa do cliente: ${esc(c?.name||'â€”')}</h3><p>Personaliza o dashboard selecionado. Sem imagem prÃ³pria, utiliza automaticamente a capa global.</p><div class="cover-preview" style="background-image:url('${esc(safeUrl(c?.cover_url||ST.branding.login_cover_url))}')"></div><div class="cover-actions"><label class="cover-label" for="client-cover-file">Trocar capa do cliente</label><input class="cover-file" id="client-cover-file" type="file" accept="image/png,image/jpeg,image/webp" onchange="saveClientCover(this)"><button class="btn-sm-ghost" onclick="resetClientCover()">Usar capa global</button></div><div class="cover-note">A personalizaÃ§Ã£o acompanha o cliente em qualquer acesso ou link compartilhado.</div></div>
-  </div></div>`:'';
-  showModulePage('ConfiguraÃ§Ãµes',`<div class="section-card"><div class="section-hdr"><span class="section-title">UsuÃ¡rio</span></div>${objectTable([{nome:PROFILE?.full_name||SESSION?.user?.email?.split('@')[0]||'â€”',email:SESSION?.user?.email||'â€”',perfil:PROFILE?.role||'â€”'}])}</div>${branding}`);
-}
-function showGenericModule(page){const labels={knowledge:'Base de conhecimento',diagnostic:'DiagnÃ³stico',market:'Mercado',competitors:'Concorrentes',trends:'Trends',benchmark:'Benchmark',swot:'SWOT',icp:'ICP',personas:'Personas',journey:'Jornada de compra',pains:'Dores, desejos e objeÃ§Ãµes',objectives:'Objetivos',cbva:'Matriz CBVA',offers:'Matriz de Ofertas',positioning:'Posicionamento',value:'Proposta de Valor',funnel:'Funil',channels:'Canais',strategy:'Plano EstratÃ©gico'};showModulePage(labels[page]||page,`<div class="section-card"><div class="empty-state"><div class="empty-title">MÃ³dulo acessÃ­vel, sem fonte de dados conectada</div><div class="empty-desc">Esta Ã¡rea estÃ¡ disponÃ­vel para implementaÃ§Ã£o, mas nÃ£o exibirÃ¡ conteÃºdo inventado. Conecte a fonte/tabela correspondente no Supabase para habilitar dados reais.</div></div></div>`);}
+JOOÂˆÛÛœİY[JÌWKÌ—JNØÛÛœİ˜[YOYÌ×OOOIÙ\‰ÏÙ›]İ
+ÌWJN™›]ÊÌWJNÂˆÛÛœİXØÙ[YOO[[ÉÈÍ™MÍIÎ™ŒÉÈÌŒ˜ÍMYIÎ™ÉÈÙY	Î‰ÈÍ™MÍIÎÂˆ™]\›ˆ]ˆÛ\ÜÏHšÜKXØ\™ˆİ[OH˜›Ü™\‹]ÜŒœÛÛY	ØXØÙ[H]ˆÛ\ÜÏHšÜKZXYÜ[ˆÛ\ÜÏHšÜK[˜[YH‰ÙÌ_OÜÜ[Ù]]ˆÛ\ÜÏHšÜK]˜[‰İ˜[Y_OÙ]]ˆÛ\ÜÏHšÜKY›Ûİ\ˆ‰Ù[R[
+Š_OÜ[ˆİ[OH™›Û\Ú^™N\ØÛÛÜ˜\ŠK]^ÊHœËˆÛÛ\\˜péğèÛÏÜÜ[]ˆÛ\ÜÏHšÜK\Ü\šÛ[™HØ[˜\ÈYHœÜIÚ_HØØ[˜\ÏÙ]Ù]Ù]˜ÂˆJKš›Ú[Š	ÉÊNÂˆYœË™›Ü‘XXÚ
 
-function exportCSV(){
-  const rows=ST.posts.map(p=>({data:p.published_at,plataforma:p.platform,formato:p.media_type,legenda:p.caption||'',alcance:getReach(p.metrics),impressoes:getImpressions(p.metrics),engajamento:getEng(p.metrics),curtidas:getLikes(p.metrics),comentarios:getComments(p.metrics),compartilhamentos:getShares(p.metrics),salvamentos:getSaved(p.metrics),visualizacoes:getViews(p.metrics),link:p.permalink||''}));
-  if(!rows.length)return toast('Sem dados para exportar.','error');const cols=Object.keys(rows[0]);const csv=[cols.join(';'),...rows.map(r=>cols.map(c=>'"'+String(r[c]??'').replace(/"/g,'""')+'"').join(';'))].join('\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`engaje-${ST.clientName||'cliente'}-${isoDate(new Date())}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-}
+JOOÂˆÛÛœİİI
+	ÜÜIÊÚJNÚYŠXİ
+\™]\›ÚYŠÕ˜Ú\ÖÉÜÜ	ÊÚWJTÕ˜Ú\ÖÉÜÜ	ÊÚWK™\İ›ŞJ
+NÂˆ]˜[ÏYÍOÜÙ\šY\Õ˜[Y\ÊÜİËÍK	Ù^IÊN–×NÂˆYŠÌ×OOOIÙ\‰Ê^ÂˆÛÛœİœ\Ù\šY\ÊÜİËÙ]™XXÚ	Ù^IÊKYO\Ù\šY\ÊÜİËÙ][™Ë	Ù^IÊNØÛÛœİÙ^\ÏVË‹‹›™]ÈÙ]
+Ë‹‹“Øš™XİšÙ^\ÊœŠK‹‹“Øš™XİšÙ^\ÊYJWJWKœÛÜ
 
-function openShareModal(){if($('share-modal'))$('share-modal').classList.add('open');if($('modal-link-result'))$('modal-link-result').classList.remove('show');const c=ST.clients.find(x=>String(x.id)===String(ST.clientId));if(c&&$('share-client'))$('share-client').value=c.name;}
-function closeModal(id){$(id)?.classList.remove('open');}
-function closeModalOutside(e,id){if(e.target?.id===id)closeModal(id);}
-function togglePerm(el){el?.classList.toggle('on');}
-function currentPermissions(){const p={};qsa('.perm-toggle').forEach(x=>p[x.dataset.perm]=x.classList.contains('on'));return p;}
-async function generateShareLink(){
-  if(!ST.clientId)return toast('Selecione um cliente.','error');
-  const btn=qs('.btn-gen');if(btn){btn.disabled=true;btn.textContent='Gerando...';}
-  try{
-    const out=await rest('rpc/create_share_link',{method:'POST',body:JSON.stringify({p_client_id:ST.clientId,p_permissions:currentPermissions()})});
-    const token=typeof out==='string'?out:(Array.isArray(out)?out[0]?.token:out?.token);if(!token)throw new Error('A funÃ§Ã£o nÃ£o retornou token.');
-    const c=ST.clients.find(x=>String(x.id)===String(ST.clientId));const slug=c?.slug||'cliente';ST.shareLink=location.origin+'/cliente/'+encodeURIComponent(slug)+'/'+encodeURIComponent(token);if($('sc-link-url'))$('sc-link-url').textContent=ST.shareLink;if($('modal-link-url'))$('modal-link-url').textContent=ST.shareLink;if($('modal-link-result'))$('modal-link-result').classList.add('show');
-  }catch(e){toast('Compartilhamento seguro nÃ£o configurado no Supabase: '+e.message,'error');if($('modal-link-result')){$('modal-link-result').classList.add('show');$('modal-link-result').innerHTML='<div style="font-size:11px;color:#ef4444">NÃ£o foi gerado link fictÃ­cio. Configure a funÃ§Ã£o <b>create_share_link</b> no Supabase.</div>';}}
-  finally{if(btn){btn.disabled=false;btn.textContent='Gerar link de acesso';}}
-}
-function updateShareCard(){if($('sc-link-url'))$('sc-link-url').textContent=ST.shareLink||'Gere um link seguro';}
-function copyShareLink(){if(ST.shareLink)navigator.clipboard?.writeText(ST.shareLink).then(()=>toast('Link copiado.'));else toast('Gere um link primeiro.','error');}
-function copyModalLink(){const l=$('modal-link-url')?.textContent;if(l)navigator.clipboard?.writeText(l).then(()=>toast('Link copiado.'));}
-function openShareLink(){if(ST.shareLink)window.open(ST.shareLink,'_blank','noopener');else toast('Gere um link seguro primeiro.','error');}
+Nİ˜[ÏZÙ^\Ë›X\
+ÏOœœ–Ú×OÙYVÚ×KÜœ–Ú×JŒLŒ
+NÂˆBˆYŠÌ×OOOIÜÜİÉÊ^ØÛÛœİO^ßNÜÜİË™›Ü‘XXÚ
+OØÛÛœİÏY^RÙ^JœX›\ÚYØ]	Ù^IÊNØVÚ×OJVÚ×_
+JÌNßJNİ˜[ÏSØš™XİšÙ^\ÊJKœÛÜ
 
-function toast(msg,type='ok'){const t=document.createElement('div');t.style.cssText=`position:fixed;bottom:20px;right:20px;background:${type==='error'?'#b91c1c':'#15803d'};color:#fff;padding:10px 14px;border-radius:7px;font-size:12px;font-weight:600;z-index:99999;max-width:420px;box-shadow:0 8px 30px rgba(0,0,0,.25)`;t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),4000);}
+K›X\
+ÏO˜VÚ×JNßBˆYŠ]˜[Ë›[™İ
+]˜[ÏVÌNÂˆÛÛœİY[JÌWKÌ—JNØÛÛœİÛÛYŒÉÈÌŒ˜ÍMYIÎ™ÉÈÙY	Î‰ÈÍÍŒYYIÎÂˆÕ˜Ú\ÖÉÜÜ	ÊÚWO[™]ÈÚ\
+İİ\N‰Û[™IË]NÛX™[Î˜[Ë›X\
 
-function wireSidebar(){
-  const map={'Base de conhecimento':'knowledge','DiagnÃ³stico':'diagnostic','Mercado':'market','Concorrentes':'competitors','Trends':'trends','Benchmark':'benchmark','SWOT':'swot','ICP':'icp','Personas':'personas','Jornada de compra':'journey','Dores, desejos e objeÃ§Ãµes':'pains','Objetivos':'objectives','Matriz CBVA':'cbva','Matriz de Ofertas':'offers','Posicionamento':'positioning','Proposta de Valor':'value','Funil':'funnel','Canais':'channels','Plano EstratÃ©gico':'strategy'};
-  qsa('.sb-item').forEach(el=>{const label=el.textContent.trim().replace(/\s+/g,' ');if(!el.getAttribute('onclick')&&map[label])el.addEventListener('click',()=>nav(map[label]));el.addEventListener('click',()=>{qsa('.sb-item').forEach(x=>x.classList.remove('active'));el.classList.add('active');});});
-  const exp=qs('.btn-export');if(exp)exp.addEventListener('click',exportCSV);
-}
-function injectStyles(){const s=document.createElement('style');s.textContent=`
-.real-table{width:100%;border-collapse:collapse;font-size:11px}.real-table th,.real-table td{padding:9px 10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;white-space:nowrap}.real-table th{color:var(--text2);font-weight:600;position:sticky;top:0;background:var(--surface)}.real-table td{color:var(--text)}.real-table tr:hover td{background:rgba(67,97,238,.05)}
-.real-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}.real-grid>div{padding:14px;border:1px solid var(--border);border-radius:8px;background:var(--surface2)}.real-grid small{display:block;color:var(--text2);margin-bottom:6px}.real-grid strong{font-size:18px}.client-list-real{display:flex;flex-direction:column;gap:6px}.client-real-row{display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:center;width:100%;border:1px solid var(--border);background:var(--surface2);color:var(--text);padding:10px;border-radius:8px;text-align:left;cursor:pointer}.client-real-row:hover{border-color:var(--blue)}.client-real-row span:nth-child(2){display:flex;flex-direction:column;gap:2px}.client-real-row small{color:var(--text2)}
-`;document.head.appendChild(s);}
+ËŠOOšŠK]\Ù]Î–ŞÙ]N˜[Ë›Ü™\ÛÛÜ˜ÛÛ˜XÚÙÜ›İ[™ÛÛÜ˜ÛÛ
+ÉÌN	Ë[œÚ[Û‹ŒÍKš[YKÚ[˜Y]\ÎŒ›Ü™\•ÚYŒK_W_KÜ[ÛœÎÜ™\ÜÛœÚ]™NYKXZ[Z[\ÜXİ˜][Î™˜[ÙKYÚ[œÎÛYÙ[™Ù\Ü^N™˜[Ù_KÛÛ\Ù[˜X›Y™˜[Ù__KØØ[\ÎŞÙ\Ü^N™˜[Ù_KNÙ\Ü^N™˜[Ù__K[š[X][ÛÙ\˜][ÛŒ__JNÂˆJNÂŸB‚™[˜İ[Ûˆ™[™\”\™›Ü›X[˜ÙPÚ\
+ÜİÊ^ÂˆÛÛœİİI
+	Ü\™‹XÚ\	ÊNÚYŠXİ
+\™]\›ÚYŠÕ˜Ú\Ëœ\™ŠTÕ˜Ú\Ëœ\™‹™\İ›ŞJ
+NÂˆÛÛœİY]šXÜÏVÖÉĞ[Ø[˜ÙIËÙ]™XXÚ	ÈÍÍŒYYI×KÉÑ[™ØZ˜[Y[ÉËÙ][™Ë	ÈÌŒ˜ÍMYI×KÉÒ[\™\ÜğíY\ÉËÙ][\™\ÜÚ[ÛœË	ÈÎXÙ‰×WNÂˆÛÛœİX\Ï[Y]šXÜË›X\
+OOœÙ\šY\ÊÜİËVÌWKÕ˜Ú\Ü˜[ŠJNØÛÛœİÙ^\ÏVË‹‹›™]ÈÙ]
+X\Ë™›]X\
+ÏO“Øš™XİšÙ^\ÊÊJJWKœÛÜ
 
-async function boot(){
-  injectStyles();wireSidebar();document.addEventListener('click',closeAllDrops);await loadBranding();
-  try{const s=await restoreSession();if(s?.user)await afterLogin(s.user);else{if($('app'))$('app').style.display='none';if($('auth-wrap'))$('auth-wrap').style.display='flex';}}catch(e){console.error('boot',e);doLogout();}
-}
+NÂˆ\ØJ	ÈØÚ\[YÙ[™›YÙ[™Z][IÊK™›Ü‘XXÚ
 
-document.addEventListener('keydown',e=>{if(e.key==='Escape')qsa('.modal-overlay').forEach(m=>m.classList.remove('open'));if(e.key==='Enter'&&$('auth-wrap')?.style.display!=='none')$('forgot-form')?.style.display!=='none'?doForgot():doLogin();});
-document.addEventListener('DOMContentLoaded',boot);
-setInterval(async()=>{if(SESSION&&ST.clientId&&!document.hidden)await renderDashboard();},5*60*1000);
+[JOOØÛÛœİY[˜Ú[›Ù\ÖÌWNÚYŠ
+]^ÛÛ[[Y]šXÜÖÚWOË–Ì_	ÉÎßJNÂˆYŠZÙ^\Ë›[™İ
+^Øİœİ[K™\Ü^OIÛ›Û™IÎÛ][OXİœ\™[[[Y[œ]Y\TÙ[XİÜŠ	Ëœ™X[Y[\IÊNÚYŠY[J^Ù[OYØİ[Y[˜Ü™X]Q[[Y[
+	Ù]‰ÊNÙ[K˜Û\ÜÓ˜[YOIÙ[\K\İ]H™X[Y[\IÎØİœ\™[[[Y[˜\[™Ú[
+[JNßY[Kš[›™\’SIÏ]ˆÛ\ÜÏH™[\K]]H”Ù[HYÜÈ›È\°ë[ÙÏÙ]]ˆÛ\ÜÏH™[\KY\ØÈ“™[š[XHX›XØpéğèÛÈÛÛHpê]šXØ\È›ÚH[˜ÛÛ˜YKÙ]‰ÎÜ™]\›ßBˆİœİ[K™\Ü^OIØ›ØÚÉÎØİœ\™[[[Y[œ]Y\TÙ[XİÜŠ	Ëœ™X[Y[\IÊOËœ™[[İ™J
+NÂˆÕ˜Ú\Ëœ\™[™]ÈÚ\
+İİ\N‰Û[™IË]NÛX™[ÎšÙ^\Ë›X\
+ÏOšËœÛXÙJJJK]\Ù]Î›Y]šXÜË›X\
+
+KJOOŠÛX™[›VÌK]NšÙ^\Ë›X\
+ÏO›X\ÖÚWVÚ×_
+K›Ü™\ÛÛÜ›VÌ—K˜XÚÙÜ›İ[™ÛÛÜ›VÌ—JÉÌL‰Ë[œÚ[Û‹ŒÍKš[šOOOLÚ[˜Y]\ÎŒÚ[İ™\”˜Y]\Î›Ü™\•ÚYŒ‹Y[ˆTÕœÙ\šY\Õš\ÚX›VÚW_JJ_KÜ[ÛœÎÜ™\ÜÛœÚ]™NYKXZ[Z[\ÜXİ˜][Î™˜[ÙK[\˜Xİ[ÛÛ[ÙN‰Ú[™^	Ë[\œÙXİ™˜[Ù_KYÚ[œÎÛYÙ[™Ù\Ü^N™˜[Ù__KØØ[\ÎŞÙÜšYØÛÛÜ‰Ü™Ø˜J‹LKÌKŒÍJIßKXÚÜÎØÛÛÜ‰ÈÍ™MÍIËX^XÚÜÓ[Z]ŒL_KNÙÜšYØÛÛÜ‰Ü™Ø˜J‹LKÌKŒÍJIßKXÚÜÎØÛÛÜ‰ÈÍ™MÍIËØ[˜XÚÎO™›]ÊŠ_____JNÂŸB‚™[˜İ[Ûˆ\]T\™›Ü›X[˜ÙPÚ\
+
+^ÔÕœ]›Ü›OI
+	ØÚ\\]Yš[\‰ÊOË˜[Y_	Ø[	ÎÜ™[™\‘\Ú›Ø\™
+
+NßB™[˜İ[ÛˆÙÙÛTÙ\šY\ÊY[
+^ÔÕœÙ\šY\Õš\ÚX›VÚYOHTÕœÙ\šY\Õš\ÚX›VÚYNÙ[Ë˜Û\ÜÓ\İÙÙÛJ	Ú[˜Xİ]™IÊNÚYŠÕ˜Ú\Ëœ\™Š^ÔÕ˜Ú\Ëœ\™‹™]K™]\Ù]ÖÚYKšY[HTÕœÙ\šY\Õš\ÚX›VÚYNÔÕ˜Ú\Ëœ\™‹\]J
+Nß_B™[˜İ[ÛˆÙ]Ú\Ü˜[ŠÜ˜[‹Š^ÔÕ˜Ú\Ü˜[YÜ˜[Ü\ØJ	Ë˜İ›YÜœ˜İ›X‰ÊK™›Ü‘XXÚ
+O˜‹˜Û\ÜÓ\İœ™[[İ™J	ØXİ]™IÊJNØË˜Û\ÜÓ\İ˜Y
+	ØXİ]™IÊNÜ™[™\”\™›Ü›X[˜ÙPÚ\
+ÕœÜİÊNßB‚™[˜İ[Ûˆ]›Ü›S˜[YJÊ^Ü™]\›ˆ
+Ú[œİYÜ˜[N‰Ò[œİYÜ˜[IË˜XÙX›ÛÚ×ÛÜ™Ø[šXÎ‰Ñ˜XÙX›ÛÚÉË˜XÙX›ÛÚÎ‰Ñ˜XÙX›ÛÚÉËY]WØYÎ‰ÓY]HYÉËÛÛÙÛWØYÎ‰ÑÛÛÙÛHYÉËZİÚÎ‰ÕZÕÚÉËZİÚ×ØYÎ‰ÕZÕÚÈYÉË[İ]X™N‰Ö[İUX™IËÛÛÙÛWÛ^WØ\Ú[™\ÜÎ‰ÑÛÛÙÛH\Ú[™\ÜÉË[šÙY[‰Ó[šÙY[‰ßVÚ×_ß	ø %	ÊNßB™[˜İ[Ûˆ]›Ü›PÛÛÜŠÊ^Ü™]\›ˆ
+Ú[œİYÜ˜[N‰ÈÙLLÌ˜ÉË˜XÙX›ÛÚ×ÛÜ™Ø[šXÎ‰ÈÌNÍÙŒ‰Ë˜XÙX›ÛÚÎ‰ÈÌNÍÙŒ‰ËY]WØYÎ‰ÈÌNÍÙŒ‰ËÛÛÙÛWØYÎ‰ÈÍY	ËZİÚÎ‰ÈÍXÎY	ËZİÚ×ØYÎ‰ÈÌYYIË[İ]X™N‰ÈÙ™Œ	ËÛÛÙÛWÛ^WØ\Ú[™\ÜÎ‰ÈÍY	Ë[šÙY[‰ÈÌM˜Ì‰ßVÚ×_	ÈÍÍŒYYIÊNßB‚™[˜İ[Ûˆ™[™\‘Û]
+ÜİÊ^ÂˆÛÛœİO^ßNÜÜİË™›Ü‘XXÚ
+O˜VÜœ]›Ü›WOJVÜœ]›Ü›W_
+JÙÙ]™XXÚ
+›Y]šXÜÊJNØÛÛœİ[šY\ÏSØš™Xİ™[šY\ÊJK™š[\Š
+Ë—JOOŒ
+KœÛÜ
+
+KŠOO˜–ÌWKXVÌWJNØÛÛœİİ[Y[šY\Ëœ™YXÙJ
+ËË—JOOœÊİ‹
+NÂˆYŠ	
+	ÙÛ]XÙ[\‹]˜[	ÊJI
+	ÙÛ]XÙ[\‹]˜[	ÊK^ÛÛ[Y›]Êİ[
+NØÛÛœİİI
+	ÙÛ]XÚ\	ÊNÚYŠÕ˜Ú\Ë™Û]
+TÕ˜Ú\Ë™Û]™\İ›ŞJ
+NÂˆYŠİ	‰İ[Œ
+TÕ˜Ú\Ë™Û][™]ÈÚ\
+İİ\N‰ÙİYÚ]	Ë]NÛX™[Î™[šY\Ë›X\
+
+Ú×JOOœ]›Ü›S˜[YJÊJK]\Ù]Î–ŞÙ]N™[šY\Ë›X\
+
+Ë—JOOŠK˜XÚÙÜ›İ[™ÛÛÜ™[šY\Ë›X\
+
+Ú×JOOœ]›Ü›PÛÛÜŠÊJK›Ü™\•ÚYŒW_KÜ[ÛœÎÜ™\ÜÛœÚ]™N™˜[ÙKYÚ[œÎÛYÙ[™Ù\Ü^N™˜[Ù__Kİ]İ]‰ÍÌ	Iß_JNÂˆYŠ	
+	Ü][\İ	ÊJI
+	Ü][\İ	ÊKš[›™\’SY[šY\Ë›[™İÙ[šY\Ë›X\
+
+ÚË—JOO˜]ˆÛ\ÜÏHœ][\İZ][HˆÛ˜ÛXÚÏH›Ü[”]›Ü›J	ÉÙ\ØÊÊ_IÊHˆİ[OH˜İ\œÛÜœÚ[\ˆ]ˆÛ\ÜÏHœ][\İYİˆİ[OH˜˜XÚÙÜ›İ[™‰Ü]›Ü›PÛÛÜŠÊ_HÙ]Ü[ˆÛ\ÜÏHœ][\İ[˜[YH‰Ù\ØÊ]›Ü›S˜[YJÊJ_OÜÜ[Ü[ˆÛ\ÜÏHœ][\İ\İ‰İİ[ÓX]œ›İ[™
+‹İİ[
+ŒL
+NŒIOÜÜ[Ü[ˆÛ\ÜÏHœ][\İXXœÈ‰Ù›]ÊŠ_OÜÜ[Ù]˜
+Kš›Ú[Š	ÉÊN‰Ï]ˆİ[OH^X[YÛ˜Ù[\ØÛÛÜ˜\ŠK]^ŠNÙ›Û\Ú^™NŒL\ÜY[™ÎŒL”Ù[H[Ø[˜ÙH™YÚ\İ˜YÈ›È\°ë[ÙÏÙ]‰ÎÂŸB‚™[˜İ[Ûˆ™[™\”]›Ü›SY]šXÜÊÜİÊ^ÂˆÛÛœİO^ßNÜÜİË™›Ü‘XXÚ
+OØÛÛœİÏ\œ]›Ü›_	Ù\ØÛÛšXÚYÉÎÚYŠXVÚ×JXVÚ×O^ÜÜİÎŒ™XXÚŒ[\™\ÜÚ[ÛœÎŒ[™ÎŒšY]ÜÎŒØ]™YŒÚ\™\ÎŒNØÛÛœİXVÚ×NÙœÜİÊÊÎÙœ™XXÚ
+ÏYÙ]™XXÚ
+›Y]šXÜÊNÙš[\™\ÜÚ[ÛœÊÏYÙ][\™\ÜÚ[ÛœÊ›Y]šXÜÊNÙ™[™ÊÏYÙ][™Ê›Y]šXÜÊNÙšY]ÜÊÏYÙ]šY]ÜÊ›Y]šXÜÊNÙœØ]™Y
+ÏYÙ]Ø]™Y
+›Y]šXÜÊNÙœÚ\™\ÊÏYÙ]Ú\™\Ê›Y]šXÜÊNßJNÂˆÛÛœİ[šY\ÏSØš™Xİ™[šY\ÊJKœÛÜ
+
+KŠOO˜–ÌWKœ™XXÚXVÌWKœ™XXÚ
+NØÛÛœİÙXİ[ÛI
+	Ü][Y]šXÜË\ÙXİ[Û‰ÊK›İÏI
+	Ü][Y]šXÜË\›İÉÊNÚYŠ\›İÊ\™]\›ÂˆYŠY[šY\Ë›[™İ
+^ÚYŠÙXİ[ÛŠ\ÙXİ[Û‹œİ[K™\Ü^OIÛ›Û™IÎÜ›İËš[›™\’SIÉÎÜ™]\›ßZYŠÙXİ[ÛŠ\ÙXİ[Û‹œİ[K™\Ü^OIÉÎÜ›İËœİ[K™ÜšY[\]PÛÛ[[œÏIÜ™\X]
+	ÊÓX]›Z[Š[šY\Ë›[™İJJÉËYœŠIÎÂˆ›İËš[›™\’SY[šY\Ë›X\
+
+ÚËJOOØÛÛœİ\Yœ™XXÚÙ™[™ËÙœ™XXÚ
+ŒLŒÜ™]\›ˆ]ˆÛ\ÜÏHœ][Y]šXËXØ\™ˆÛ˜ÛXÚÏH›Ü[”]›Ü›J	ÉÙ\ØÊÊ_IÊHˆİ[OH˜İ\œÛÜœÚ[\ˆ]ˆÛ\ÜÏHœXØ\™Zˆ]ˆÛ\ÜÏHœXØ\™ZXÛÛˆˆİ[OH˜˜XÚÙÜ›İ[™‰Ü]›Ü›PÛÛÜŠÊ_HÙ]Ü[ˆÛ\ÜÏHœXØ\™[˜[YH‰Ù\ØÊ]›Ü›S˜[YJÊJ_OÜÜ[Ü[ˆİ[OH™›Û\Ú^™NŒLØÛÛÜ˜\ŠK]^ÊNÛX\™Ú[‹[Y˜]]È‰ÙœÜİßHÜİÏÜÜ[Ù]]ˆÛ\ÜÏHœXØ\™[Y]šXÜÈ]ˆÛ\ÜÏHœXØ\™\›İÈÜ[ˆÛ\ÜÏHœXØ\™[›[Ø[˜ÙOÜÜ[]ˆÛ\ÜÏHœXØ\™]˜[‰Ù›]Êœ™XXÚ
+_OÙ]Ù]]ˆÛ\ÜÏHœXØ\™\›İÈÜ[ˆÛ\ÜÏHœXØ\™[›’[\™\ÜğíY\ÏÜÜ[]ˆÛ\ÜÏHœXØ\™]˜[‰Ù›]Êš[\™\ÜÚ[ÛœÊ_OÙ]Ù]]ˆÛ\ÜÏHœXØ\™\›İÈÜ[ˆÛ\ÜÏHœXØ\™[›‘[™ØZ˜[Y[ÏÜÜ[]ˆÛ\ÜÏHœXØ\™]˜[‰Ù›]İ
+\Š_OÙ]Ù]Ù]]ÛˆÛ\ÜÏHœXØ\™Xˆˆİ[OH˜˜XÚÙÜ›İ[™‰Ü]›Ü›PÛÛÜŠÊ_LŒØÛÛÜ‰Ü]›Ü›PÛÛÜŠÊ_NØ›Ü™\Œ\ÛÛY	Ü]›Ü›PÛÛÜŠÊ_LÌ•™\ˆYÜÏØ]ÛÙ]˜ßJKš›Ú[Š	ÉÊNÂŸB™[˜İ[ÛˆÜ[”]›Ü›J]›Ü›J^ØÛÛœİÙ[I
+	ØÚ\\]Yš[\‰ÊNÚYŠÙ[
+^ÚYŠVË‹‹œÙ[›Ü[Ûœ×KœÛÛYJÏO›Ë˜[YOOO\]›Ü›JJ^ØÛÛœİÏYØİ[Y[˜Ü™X]Q[[Y[
+	ÛÜ[Û‰ÊNÛË˜[YO\]›Ü›NÛË^ÛÛ[\]›Ü›S˜[YJ]›Ü›JNÜÙ[˜\[™Ú[
+ÊNß\Ù[˜[YO\]›Ü›NßTÕœ]›Ü›O\]›Ü›NÔÕ˜Xİ]™UXIÛİ™\šY]ÉÎÜÙ]XŠ	Ûİ™\šY]ÉË\ØJ	Ë™\Ú]X‰ÊVÌJNÜ™[™\‘\Ú›Ø\™
+
+NßB‚™[˜İ[Ûˆ™[™\•ÜÛÛ[
+ÜİÊ^ÂˆÛÛœİ[I
+	İÜXÛÛ[	ÊNÚYŠY[
+\™]\›ØÛÛœİÛÜYVË‹‹œÜİ×KœÛÜ
+
+KŠOO™Ù][™Ê‹›Y]šXÜÊKYÙ][™ÊK›Y]šXÜÊJKœÛXÙJJNÂˆYŠ\ÛÜY›[™İ
+^Ù[š[›™\’SIÏ]ˆÛ\ÜÏH™[\K\İ]Hˆİ[OHšZYÚŒLŒ]ˆÛ\ÜÏH™[\KY\ØÈ“™[š[HÛÛpî™È›È\°ë[ÙÏÙ]Ù]‰ÎÜ™]\›ßBˆ[š[›™\’S\ÛÜY›X\
+
+JOOØÛÛœİ[YÏ\[X›˜Z[İ\››YYXWİ\›[šÏ\ØY™U\›
+œ\›X[[šÊK\YÙ]™XXÚ
+›Y]šXÜÊOÙÙ][™Ê›Y]šXÜÊKÙÙ]™XXÚ
+›Y]šXÜÊJŒLŒÜ™]\›ˆ]ˆÛ\ÜÏHËXØ\™ˆÛ˜ÛXÚÏH‰Û[šÈOOIÈÉÏØÚ[™İË›Ü[Š	ÉÙ\ØÊ[šÊ_IË	×Ø›[šÉÊX‰ÉßHˆİ[OH˜İ\œÛÜ‰Û[šÈOOIÈÉÏÉÜÚ[\‰Î‰ÙY˜][	ßH]ˆÛ\ÜÏHË][Xˆ‰Ú[YÏØ[YÈÜ˜ÏH‰Ù\ØÊØY™U\›
+[YÊJ_Hˆ[HˆˆØY[™ÏH›^HˆÛ™\œ›ÜH\Ëœİ[K™\Ü^OIÛ›Û™IÈ˜‰ÏÜ[ˆİ[OH™›Û\Ú^™NŒ¸¥©ÏÜÜ[‰ßOÜ[ˆÛ\ÜÏHË\˜[šÈˆÉÚJÌ_OÜÜ[Ü[ˆÛ\ÜÏHËY›Ü›X]‰Ù\ØÊ›YYXWİ\_	ÔÜİ	Ê_OÜÜ[Ù]]ˆÛ\ÜÏHËX›ÙH]ˆÛ\ÜÏHË]]H‰Ù\ØÊ
+˜Ø\[ÛŸ	ÔÙ[HYÙ[™IÊKœÛXÙJJJ_OÙ]]ˆÛ\ÜÏHË[Y]šXÈ‰Ù›]ÊÙ]™XXÚ
+›Y]šXÜÊJ_H[Ø[˜ÙOÙ]]ˆÛ\ÜÏHË\İXˆ‰Ù›]ÊÙ][™Ê›Y]šXÜÊJ_H[\˜péğíY\È0­ÈTˆ	Ù›]İ
+\Š_OÙ]Ù]Ù]˜ßJKš›Ú[Š	ÉÊNÂŸB‚™[˜İ[Ûˆ™[™\’[œÚYÚÊÜİÊ^ÂˆÛÛœİ[I
+	Ú[œÚYÚ[\İ	ÊNÚYŠY[
+\™]\›ØÛÛœİÏ\İ[[X\JÜİÊK™]\İ[[X\JÕ˜ÛÛ\\™TÜİÊK[œÏV×NØÛÛœİY[JËœ™XXÚ™]‹œ™XXÚ
+KOY[JË™[™ØYÙ[Y[™]‹™[™ØYÙ[Y[
+NÂˆYŠˆOO[[
+Z[œËœ\Ú
+İ™LÉÛÜ	Î‰Ø]	ËYÎ™LÉĞÔ‘TĞÒSQS•ÉÎ‰ĞUS°áğàÓÉË]N‰Ğ[Ø[˜ÙHœËˆ\°ë[ÙÈÛÛ\\˜YÉË\ØÎ˜È[Ø[˜ÙHÜÈÛÛpî™ÜÈ	ÙLÉØÜ™\ØÙ]IÎ‰ØØZ]IßH	ÓX]˜XœÊŠKÑš^Y
+JKœ™\XÙJ	Ë‰Ë	Ë	Ê_IK˜[YN‰ÙYÜÈ™XZ\ÉßJNÂˆYŠHOO[[
+Z[œËœ\Ú
+İ™OLÉÛÜ	Î‰Ø]	ËYÎ™OLÉĞÔ‘TĞÒSQS•ÉÎ‰ĞUS°áğàÓÉË]N‰Ñ[™ØZ˜[Y[ÈœËˆ\°ë[ÙÈÛÛ\\˜YÉË\ØÎ˜\È[\˜péğíY\È	ÙOLÉØÜ™\ØÙ\˜[IÎ‰ØØpë\˜[IßH	ÓX]˜XœÊJKÑš^Y
+JKœ™\XÙJ	Ë‰Ë	Ë	Ê_IK˜[YN‰ÙYÜÈ™XZ\ÉßJNÂˆÛÛœİÜ›İ\Ï^ßNÜÜİË™›Ü‘XXÚ
+OØÛÛœİÏ\›YYXWİ\_	ÓÕU“ÉÎÚYŠYÜ›İ\ÖÚ×JYÜ›İ\ÖÚ×O^ÛŒNŒNÙÜ›İ\ÖÚ×K›ŠÊÎÙÜ›İ\ÖÚ×K™JÏYÙ][™Ê›Y]šXÜÊNßJNØÛÛœİ™\İSØš™Xİ™[šY\ÊÜ›İ\ÊK›X\
+
+ÚË—JOO–ÚË‹›İ‹™Kİ‹›Œ‹›—JKœÛÜ
+
+KŠOO˜–ÌWKXVÌWJVÌNÂˆYŠ™\İ
+Z[œËœ\Ú
+İ‰Ú[™›ÉËYÎ‰Ñ“Ô“PUÉË]N‰Ñ›Ü›X]ÈÛÛHXZ[ÜˆpêYXHH[™ØZ˜[Y[ÉË\ØÎ˜	Ø™\İÌ_Nˆ	Ù›]
+™\İÌWJ_H[\˜péğíY\ÈpêYX\È[H	Ø™\İÌ—_HX›XØpéğèÛÊ0íY\ÊK˜[YN‰ÙYÜÈ™XZ\ÉßJNÂˆYŠZ[œË›[™İ
+Z[œËœ\Ú
+İ‰Ú[™›ÉËYÎ‰ÒS‘“Ô“PpáğàÓÉË]N‰ÔÙ[H˜\ÙHÛÛ\\°è]™[	Ë\ØÎ‰ĞZ[™H°èÛÈ0èHYÜÈİYšXÚY[\È\˜HØ[İ[\ˆ[™0ê›˜ÚXHÛÛHÙYİ\˜[°éØK‰Ë[YN‰ÙYÜÈ™XZ\ÉßJNÂˆ[š[›™\’SZ[œËœÛXÙJÊK›X\
+OO˜]ˆÛ\ÜÏHš[œÚYÚZ][H	ÚKH]ˆÛ\ÜÏHš[œÚYÚ]YÈ	ÚKH‰ÚKYßOÙ]]ˆÛ\ÜÏHš[œÚYÚ]]H‰ÚK]_OÙ]]ˆÛ\ÜÏHš[œÚYÚY\ØÈ‰ÚK™\ØßOÙ]]ˆÛ\ÜÏHš[œÚYÚ][YH‰ÚK[Y_OÙ]Ù]˜
+Kš›Ú[Š	ÉÊNÂŸB‚™[˜İ[ÛˆÙ]XŠX‹[
+^ÔÕ˜Xİ]™UX]XÜ\ØJ	Ë™\Ú]X‰ÊK™›Ü‘XXÚ
+O˜Û\ÜÓ\İœ™[[İ™J	ØXİ]™IÊJNÙ[Ë˜Û\ÜÓ\İ˜Y
+	ØXİ]™IÊNÜ\ØJ	ÖÚYHX‹H—IÊK™›Ü‘XXÚ
+Oœİ[K™\Ü^OIÛ›Û™IÊNØÛÛœİOI
+	İX‹IÊİXŠNÚYŠJ]Kœİ[K™\Ü^OIØ›ØÚÉÎÜ™[™\•XŠXŠNßB™[˜İ[Ûˆ™[™\•XŠXŠ^ÂˆYŠXOOIÛİ™\šY]ÉÊ\™]\›ÂˆYŠXOOIÚ[œİYÜ˜[IÊ\™]\›ˆ™[™\“Ü™Ø[šXÕXŠ	Ú[œİYÜ˜[IË	İX‹Z[œİYÜ˜[IÊNÂˆYŠXOOIÙ˜XÙX›ÛÚÉÊ\™]\›ˆ™[™\“Ü™Ø[šXÕXŠ	Ù˜XÙX›ÛÚ×ÛÜ™Ø[šXÉË	İX‹Y˜XÙX›ÛÚÉÊNÂˆYŠXOOIÜZY	Ê\™]\›ˆ™[™\”ZYXŠ˜[ÙJNÂˆYŠXOOIØ]YY[˜ÙIÊ\™]\›ˆ™[™\]YY[˜ÙUXŠ
+NÂˆYŠXOOIØÛÛ™\œÚ[ÛœÉÊ\™]\›ˆ™[™\”ZYXŠYJNÂŸB˜\Ş[˜È[˜İ[Ûˆ™[™\“Ü™Ø[šXÕXŠ]›Ü›KY
+^ÂˆÛÛœİ[I
+Y
+NÚYŠY[
+\™]\›Ù[š[›™\’SIÏ]ˆÛ\ÜÏH™[\K\İ]H]ˆÛ\ÜÏH™[\K]]HØ\œ™YØ[™Ë‹‹Ù]Ù]‰ÎÂˆÛÛœİÜİÏX]ØZ]ØYÜİÔ˜[™ÙJİ\œ™[˜[™ÙJ
+K]›Ü›JNØÛÛœİÏ\İ[[X\JÜİÊK]O\]›Ü›S˜[YJ]›Ü›JNÂˆÛÛœİØ\™Ï\ÜİË›X\
+OØÛÛœİ[YÏ\[X›˜Z[İ\››YYXWİ\›YÙ]™XXÚ
+›Y]šXÜÊKOYÙ][™Ê›Y]šXÜÊK[šÏ\ØY™U\›
+œ\›X[[šÊNÜ™]\›ˆ\XÛHÛ\ÜÏH›Ü™Ø[šXËXØ\™‰Û[šÈOOIÈÉÏØÛ˜ÛXÚÏHÚ[™İË›Ü[Š	ÉÙ\ØÊ[šÊ_IË	×Ø›[šÉÊH˜‰ÉßO‰Ú[YÏØ[YÈÜ˜ÏH‰Ù\ØÊØY™U\›
+[YÊJ_Hˆ[HÜšX]]›ÈH	Ù\ØÊ]J_HˆØY[™ÏH›^HˆÛ™\œ›ÜH\Ë˜ÛÜÙ\İ
+	Ë›Ü™Ø[šXËXØ\™	ÊK˜Û\ÜÓ\İ˜Y
+	Ú[XYÙKY\œ›Ü‰ÊNİ\Ëœ™[[İ™J
+H˜‰Ï]ˆÛ\ÜÏH›Ü™Ø[šXË\XÙZÛ\ˆ”Ù[H[XYÙ[H\ÜÛ°ë]™[Ù]‰ßO]ˆÛ\ÜÏH›Ü™Ø[šXËX›ÙH]ˆÛ\ÜÏH›Ü™Ø[šXË[Y]H‰Ù\ØÊ™]È]JœX›\ÚYØ]
+KÓØØ[Q]Tİš[™Ê	ÜP”‰ÊJ_H0­È	Ù\ØÊ›YYXWİ\_	ÔÜİ	Ê_OÙ]]ˆÛ\ÜÏH›Ü™Ø[šXËXØ\[Ûˆ‰Ù\ØÊ
+˜Ø\[ÛŸ	ÔÙ[HYÙ[™IÊKœÛXÙJLŒ
+J_OÙ]]ˆÛ\ÜÏH›Ü™Ø[šXË\İ]ÈÜ[‰Ù›]ÊŠ_OØˆ[Ø[˜ÙOÜÜ[Ü[‰Ù›]ÊÙ][\™\ÜÚ[ÛœÊ›Y]šXÜÊJ_OØˆ[\™\ÜğíY\ÏÜÜ[Ü[‰Ù›]ÊJ_OØˆ[\˜péğíY\ÏÜÜ[Ü[‰Ù›]İ
+ÙKÜŠŒLŒ
+_OØˆTÜÜ[Ù]Ù]Ø\XÛO˜ßJKš›Ú[Š	ÉÊNÂˆ[š[›™\’SX]ˆÛ\ÜÏHœ]›Ü›K\İ[[X\H]ÛX[Ø[˜[ÜÛX[İ›Û™Ï‰Ù\ØÊ]J_OÜİ›Û™ÏÙ]]ÛX[”X›XØpéğíY\ÏÜÛX[İ›Û™Ï‰Ù›]
+ËœÜİÊ_OÜİ›Û™ÏÙ]]ÛX[[Ø[˜ÙOÜÛX[İ›Û™Ï‰Ù›]ÊËœ™XXÚ
+_OÜİ›Û™ÏÙ]]ÛX[’[\™\ÜğíY\ÏÜÛX[İ›Û™Ï‰Ù›]ÊËš[\™\ÜÚ[ÛœÊ_OÜİ›Û™ÏÙ]]ÛX[’[\˜péğíY\ÏÜÛX[İ›Û™Ï‰Ù›]ÊË™[™ØYÙ[Y[
+_OÜİ›Û™ÏÙ]]ÛX[•^HH[™ØZ˜[Y[ÏÜÛX[İ›Û™Ï‰Ù›]İ
+Ë™\Š_OÜİ›Û™ÏÙ]Ù]]ˆÛ\ÜÏHœÙXİ[Û‹XØ\™]ˆÛ\ÜÏHœÙXİ[Û‹ZˆÜ[ˆÛ\ÜÏHœÙXİ[Û‹]]HÛÛpî™ÜÈX›XØYÜÈ
+	ÜÜİË›[™İJOÜÜ[Ù]‰ÜÜİË›[™İØ]ˆÛ\ÜÏH›Ü™Ø[šXËYÜšY‰ØØ\™ßOÙ]˜‰Ï]ˆÛ\ÜÏH™[\K\İ]H]ˆÛ\ÜÏH™[\K]]H”Ù[HÛÛpî™È›È\°ë[ÙÏÙ]]ˆÛ\ÜÏH™[\KY\ØÈH]Y›Ü›XHÜÜİZH\İ0ìÜšXÛËX\È°èÛÈ0èHX›XØpéğíY\È™\İH[\˜[ËÙ]Ù]‰ßOÙ]˜ÂŸB‚˜\Ş[˜È[˜İ[Ûˆ™[™\”ZYXŠÛÛ™\œÚ[ÛœÓÛ›OY˜[ÙJ^ÂˆÛÛœİYXÛÛ™\œÚ[ÛœÓÛ›OÉİX‹XÛÛ™\œÚ[ÛœÉÎ‰İX‹\ZY	Ë[I
+Y
+NÚYŠY[
+\™]\›Ù[š[›™\’SIÏ]ˆÛ\ÜÏH™[\K\İ]H]ˆÛ\ÜÏH™[\K]]HØ\œ™YØ[™ÈY]HYË‹‹Ù]Ù]‰ÎÂˆÛÛœİ˜[™ÙOXİ\œ™[˜[™ÙJ
+KOIÛY]WØYÛY]šXÜÏØÛY[ÚYY\K‰ÊÙ[˜ÛÙUT’PÛÛ\Û™[
+Õ˜ÛY[Y
+JÉÉ™]WÜİ\YİK‰ÊÚ\ÛÑ]J˜[™ÙKœİ\
+JÉÉ™]WÜİ\[‰ÊÚ\ÛÑ]J˜[™ÙK™[™
+JÉÉœÙ[XİJ‰›Ü™\Y]WÜİ\™\ØÉ›[Z]LL	ÎÂˆ^ØÛÛœİ›İÜÏX]ØZ]™\İ
+J_×NÚYŠ\›İÜË›[™İ
+^Ù[š[›™\’SIÏ]ˆÛ\ÜÏHœÙXİ[Û‹XØ\™]ˆÛ\ÜÏH™[\K\İ]H]ˆÛ\ÜÏH™[\K]]H”Ù[HYÜÈHY]HYÏÙ]]ˆÛ\ÜÏH™[\KY\ØÈÛÛ™XİHHš[˜İ[H[XHÛÛHH[°î›˜Ú[ÜÈY]HH\İHÛY[KÙ]Ù]Ù]‰ÎÜ™]\›ßXÛÛœİİ[ZÏOœ›İÜËœ™YXÙJ
+‹ŠOO›ŠÛ[J–Ú×JK
+KÜ[™]İ[
+	ÜÜ[™	ÊK™\İ[Ï]İ[
+	Ü™\İ[ÉÊK[\™\ÜÚ[ÛœÏ]İ[
+	Ú[\™\ÜÚ[ÛœÉÊKÛXÚÜÏ]İ[
+	ØÛXÚÜÉÊNØÛÛœİ]OXÛÛ™\œÚ[ÛœÓÛ›OÜ›İÜË™š[\ŠO›[J‹œ™\İ[ÊOŒ
+Nœ›İÜÎÙ[š[›™\’SX]ˆÛ\ÜÏHœ]›Ü›K\İ[[X\H]ÛX[’[™\İ[Y[ÏÜÛX[İ›Û™Ï‰ÜÜ[™ÓØØ[Tİš[™Ê	ÜP”‰ËÜİ[N‰Øİ\œ™[˜ŞIËİ\œ™[˜ŞN‰Ğ”“	ßJ_OÜİ›Û™ÏÙ]]ÛX[”™\İ[YÜÏÜÛX[İ›Û™Ï‰Ù›]
+™\İ[Ê_OÜİ›Û™ÏÙ]]ÛX[’[\™\ÜğíY\ÏÜÛX[İ›Û™Ï‰Ù›]Ê[\™\ÜÚ[ÛœÊ_OÜİ›Û™ÏÙ]]ÛX[Û\]Y\ÏÜÛX[İ›Û™Ï‰Ù›]ÊÛXÚÜÊ_OÜİ›Û™ÏÙ]]ÛX[İ\İÈÜˆ™\İ[YÏÜÛX[İ›Û™Ï‰Ü™\İ[ÏÊÜ[™Ü™\İ[ÊKÓØØ[Tİš[™Ê	ÜP”‰ËÜİ[N‰Øİ\œ™[˜ŞIËİ\œ™[˜ŞN‰Ğ”“	ßJN‰ø %	ßOÜİ›Û™ÏÙ]Ù]]ˆÛ\ÜÏHœÙXİ[Û‹XØ\™‰ÛØš™XİX›J]J_OÙ]˜ßXØ]Ú
+J^Ù[š[›™\’SIÏ]ˆÛ\ÜÏH™[\K\İ]H]ˆÛ\ÜÏH™[\K]]H‘˜[H[ÈØ\œ™YØ\ˆY]HYÏÙ]]ˆÛ\ÜÏH™[\KY\ØÈ‰ÊÙ\ØÊK›Y\ÜØYÙJJÉÏÙ]Ù]‰ÎßBŸB‚˜\Ş[˜È[˜İ[Ûˆ™[™\]YY[˜ÙUXŠ
+^ÂˆÛÛœİ[I
+	İX‹X]YY[˜ÙIÊNÚYŠY[
+\™]\›ØÛÛœİ˜[™ÙOXİ\œ™[˜[™ÙJ
+NÙ[š[›™\’SIÏ]ˆÛ\ÜÏH™[\K\İ]H]ˆÛ\ÜÏH™[\K]]HØ\œ™YØ[™È]Ypê›˜ÚXK‹‹Ù]Ù]‰ÎÂˆ^ØÛÛœİ›İÜÏX]ØZ]™\İ
+	ØXØÛİ[ÜÛ˜\ÚİÏØÛY[ÚYY\K‰ÊÙ[˜ÛÙUT’PÛÛ\Û™[
+Õ˜ÛY[Y
+JÉÉœÛ˜\ÚİÙ]OYİK‰ÊÚ\ÛÑ]J˜[™ÙKœİ\
+JÉÉœÛ˜\ÚİÙ]O[‰ÊÚ\ÛÑ]J˜[™ÙK™[™
+JÉÉœÙ[XİJ‰›Ü™\\Û˜\ÚİÙ]K™\ØÉ›[Z]LL	Ê_×NÙ[š[›™\’S\›İÜË›[™İØ]ˆÛ\ÜÏHœÙXİ[Û‹XØ\™]ˆÛ\ÜÏHœÙXİ[Û‹ZˆÜ[ˆÛ\ÜÏHœÙXİ[Û‹]]H‘]›ÛpéğèÛÈH]Ypê›˜ÚXOÜÜ[Ù]‰ÛØš™XİX›J›İÜÊ_OÙ]˜‰Ï]ˆÛ\ÜÏHœÙXİ[Û‹XØ\™]ˆÛ\ÜÏH™[\K\İ]H]ˆÛ\ÜÏH™[\K]]H”Ù[HYÜÈH]Ypê›˜ÚXOÙ]]ˆÛ\ÜÏH™[\KY\ØÈZ[™H°èÛÈ^\İ[HÛ˜\ÚİÈHÙYİZYÜ™\È\˜H\İHÛY[KÙ]Ù]Ù]‰ÎßXØ]Ú
+J^Ù[š[›™\’SIÏ]ˆÛ\ÜÏH™[\K\İ]H]ˆÛ\ÜÏH™[\K]]H‘˜[H[ÈØ\œ™YØ\ˆ]Ypê›˜ÚXOÙ]]ˆÛ\ÜÏH™[\KY\ØÈ‰ÊÙ\ØÊK›Y\ÜØYÙJJÉÏÙ]Ù]‰ÎßBŸB‚˜\Ş[˜È[˜İ[ÛˆUX›J˜[Y\Ë]Y\OIÛ[Z]LL	Ê^Âˆ›ÜŠÛÛœİˆÙˆ˜[Y\Ê^İ^ØÛÛœİ]OX]ØZ]™\İ
+ŠÉÏÉÊÜ]Y\JNÜ™]\›ˆÛ˜[YN›‹]N™]_×_NßXØ]Ú
+J^ÚYŠVÉÍ”IË	ÔÔ”ÕŒI×Kš[˜ÛY\ÊK˜ÛÙJI‰™Kœİ]\ÈOOM
+XÛÛœÛÛKØ\›Š‹K›Y\ÜØYÙJNß_Bˆ™]\›ˆ[ÂŸB˜\Ş[˜È[˜İ[Ûˆ™[™\‘]TÛİ\˜ÙUXŠÚ[™
+^ÂˆÛÛœİX\^ÜZYÚY‰İX‹\ZY	Ë˜[Y\Î–ÉØØ[\ZYÛ—ÛY]šXÜÉË	ØYØØ[\ZYÛœÉË	ÜZYÛYYXWÛY]šXÜÉ×K]N‰ÓpëYXHYØIßK]YY[˜ÙNÚY‰İX‹X]YY[˜ÙIË˜[Y\Î–ÉØXØÛİ[ÛY]šXÜÉË	Ø]YY[˜ÙWÛY]šXÜÉ×K]N‰Ğ]Ypê›˜ÚXIßKÛÛ™\œÚ[ÛœÎÚY‰İX‹XÛÛ™\œÚ[ÛœÉË˜[Y\Î–ÉØÛÛ™\œÚ[Û—ÛY]šXÜÉË	ØÛÛ™\œÚ[ÛœÉ×K]N‰ĞÛÛ™\œğíY\ÉßKÛÛ\]]ÜœÎÚY‰İX‹XÛÛ\]]ÜœÉË˜[Y\Î–ÉØÛÛ\]]Ü—ÛY]šXÜÉË	ØÛÛ\]]ÜœÉ×K]N‰ĞÛÛ˜ÛÜœ™[\Éß_NÂˆÛÛœİÙ™Ï[X\ÚÚ[™K[I
+Ù™ËšY
+NÚYŠY[
+\™]\›Ù[š[›™\’SIÏ]ˆÛ\ÜÏH™[\K\İ]H]ˆÛ\ÜÏH™[\K]]HØ\œ™YØ[™ÈYÜÈ™XZ\Ë‹‹Ù]Ù]‰ÎÂˆÛÛœİ]Y\OIØÛY[ÚYY\K‰ÊÙ[˜ÛÙUT’PÛÛ\Û™[
+Õ˜ÛY[Y
+JÉÉ›[Z]LL	ÎØÛÛœİ›İ[™X]ØZ]UX›JÙ™Ë›˜[Y\Ë]Y\JNÂˆYŠY›İ[™Y›İ[™™]K›[™İ
+^Ù[š[›™\’SX]ˆÛ\ÜÏHœÙXİ[Û‹XØ\™]ˆÛ\ÜÏHœÙXİ[Û‹ZˆÜ[ˆÛ\ÜÏHœÙXİ[Û‹]]H‰ØÙ™Ë]_OÜÜ[Ù]]ˆÛ\ÜÏH™[\K\İ]H]ˆÛ\ÜÏH™[\K]]H‘›ÛHHYÜÈ°èÛÈÛÛ™šYİ\˜YOÙ]]ˆÛ\ÜÏH™[\KY\ØÈ“™[š[H™YÚ\İ›È™X[›ÚHØØ[^˜YÈ˜\ÈX™[\È\Ü\˜Y\ËˆÈ\Ú›Ø\™°èÛÈ^Xš\°èHYÜÈšXİ0ëXÚ[ÜËÙ]Ù]Ù]˜Ü™]\›ßBˆ[š[›™\’SX]ˆÛ\ÜÏHœÙXİ[Û‹XØ\™]ˆÛ\ÜÏHœÙXİ[Û‹ZˆÜ[ˆÛ\ÜÏHœÙXİ[Û‹]]H‰ØÙ™Ë]_H0­È	Ù\ØÊ›İ[™›˜[YJ_OÜÜ[Ù]‰ÛØš™XİX›J›İ[™™]J_OÙ]˜ÂŸB™[˜İ[ÛˆØš™XİX›J›İÜÊ^ÚYŠ\›İÜÏË›[™İ
+\™]\›‰Ï]ˆÛ\ÜÏH™[\K\İ]H”Ù[H™YÚ\İ›ÜÏÙ]‰ÎØÛÛœİÛÛÏSØš™XİšÙ^\Ê›İÜÖÌJKœÛXÙJL
+NÜ™]\›ˆ]ˆİ[OH›İ™\™›İÎ˜]]ÈX›HÛ\ÜÏHœ™X[]X›HXY‰ØÛÛË›X\
+ÏO˜‰Ù\ØÊÊ_Oİ˜
+Kš›Ú[Š	ÉÊ_OİİXY›ÙO‰Ü›İÜËœÛXÙJL
+K›X\
+O˜‰ØÛÛË›X\
+ÏO˜‰Ù\ØÊ›Ü›X]Ù[
+–Ø×JJ_Oİ˜
+Kš›Ú[Š	ÉÊ_Oİ˜
+Kš›Ú[Š	ÉÊ_Oİ›ÙOİX›OÙ]˜ßB™[˜İ[Ûˆ›Ü›X]Ù[
+Š^ÚYŠOO[[OO][™Yš[™Y
+\™]\›‰ø %	ÎÚYŠ\[ÙˆOOIÛØš™Xİ	Ê\™]\›ˆ”ÓÓ‹œİš[™ÚYJŠNÜ™]\›ˆİš[™ÊŠNßB‚™[˜İ[ÛˆÙ]\š[Ù
+^\ËX™[
+^ÔÕœ\š[ÙY^\ÎÔÕ˜İ\İÛTİ\[[ÔÕ˜İ\İÛQ[™[[ÚYŠ	
+	İ‹\\š[Ù[X™[	ÊJI
+	İ‹\\š[Ù[X™[	ÊK^ÛÛ[[X™[ØÛÜÙP[›ÜÊ
+NÜ™[™\‘\Ú›Ø\™
+
+NßB™[˜İ[Ûˆ\Pİ\İÛT˜[™ÙJ
+^ØÛÛœİİ\I
+	Ù]K\İ\	ÊOË˜[YK[™I
+	Ù]KY[™	ÊOË˜[YNÚYŠ\İ\Y[™
+\™]\›ˆØ\İ
+	Ò[™›Ü›YH\ÈX\È]\Ë‰Ë	Ù\œ›Ü‰ÊNÚYŠİ\™[™
+\™]\›ˆØ\İ
+	ĞH]H[šXÚX[]™HÙ\ˆ[\š[Üˆ0èš[˜[‰Ë	Ù\œ›Ü‰ÊNØÛÛœİ^\ÏSX]œ›İ[™
+
+™]È]J[™
+K[™]È]Jİ\
+JKÎ
+JÌNÚYŠ^\ÏŒÍJ\™]\›ˆØ\İ
+	ÓÈ\°ë[ÙÈpè^[[È0êHHÍHX\Ë‰Ë	Ù\œ›Ü‰ÊNÔÕ˜İ\İÛTİ\\İ\ÔÕ˜İ\İÛQ[™Y[™ÚYŠ	
+	İ‹\\š[Ù[X™[	ÊJI
+	İ‹\\š[Ù[X™[	ÊK^ÛÛ[[™]È]Jİ\
+ÉÕLŒŒ	ÊKÓØØ[Q]Tİš[™Ê	ÜP”‰ÊJÉÈ8 $È	ÊÛ™]È]J[™
+ÉÕLŒŒ	ÊKÓØØ[Q]Tİš[™Ê	ÜP”‰ÊNØÛÜÙP[›ÜÊ
+NÜ™[™\‘\Ú›Ø\™
+
+NßB™[˜İ[ÛˆÙ]ÛÛ\\™J˜[˜[YKJ^ÔÕ˜ÛÛ\\™O]˜[ÚYŠ	
+	İ‹XÛÛ\\™K[˜[YIÊJI
+	İ‹XÛÛ\\™K[˜[YIÊK^ÛÛ[[˜[YNÜ\ØJ	ÈØÛÛ\\™KY›Ü‹Y›ÜZ][IÊK™›Ü‘XXÚ
+O˜Û\ÜÓ\İœ™[[İ™J	ØXİ]™IÊJNÊOË\™Ù]Ú[™İË™]™[Ë\™Ù]
+OË˜Û\ÜÓ\İ˜Y
+	ØXİ]™IÊNØÛÜÙP[›ÜÊ
+NÜ™[™\‘\Ú›Ø\™
+
+NßB™[˜İ[ÛˆZ[ÛY[›Ü
+
+^ØÛÛœİ›ÜI
+	ØÛY[Y›Ü	ÊNÚYŠY›Ü
+\™]\›Ù›Üš[›™\’STÕ˜ÛY[Ë›[™İÔÕ˜ÛY[Ë›X\
+ÏO˜]ˆÛ\ÜÏH‹Y›ÜZ][IÔİš[™ÊËšY
+OOOTİš[™ÊÕ˜ÛY[Y
+OÉÈXİ]™IÎ‰ÉßHˆÛ˜ÛXÚÏHœÙ[XİÛY[
+	ÉÙ\ØÊËšY
+_IË	ÉÙ\ØÊË›˜[YJ_IË]™[
+H]ˆÛ\ÜÏHš][KX]ˆ‰Ù\ØÊË›˜[YOË–Ì_	ÏÉÊ_OÙ]‰Ù\ØÊË›˜[YJ_IØËš\×ØYÙ[˜ŞOÉÈ
+Yğê›˜ÚXJIÎ‰ÉßOÙ]˜
+Kš›Ú[Š	ÉÊN‰Ï]ˆÛ\ÜÏH‹Y›ÜZ][H“™[š[HÛY[OÙ]‰ÎßB™[˜İ[ÛˆÙ[XİÛY[
+Y˜[YKJ^ÙOËœİÜ›ÜYØ][ÛŠ
+NÔÕ˜ÛY[YZYÔÕ˜ÛY[˜[YO[˜[YNÚYŠ	
+	İ‹XÛY[[˜[YIÊJI
+	İ‹XÛY[[˜[YIÊK^ÛÛ[[˜[YNØÛÜÙP[›ÜÊ
+NØZ[ÛY[›Ü
+
+NØ\PÛY[Ûİ™\Š
+NÚYŠÕ›[Ù[OOOIØXØÛİ[ÉÊ^ÔÕ˜XØÛİ[Ñš[\Tİš[™ÊY
+NÜÚİĞXØÛİ[Ê
+NßY[ÙH™[™\‘\Ú›Ø\™
+
+NßB™[˜İ[ÛˆÙÙÛQ›Ü
+YJ^ÙOËœİÜ›ÜYØ][ÛŠ
+NØÛÛœİ[I
+Y
+NÚYŠY[
+\™]\›ØÛÛœİØ\ÏY[˜Û\ÜÓ\İ˜ÛÛZ[œÊ	ÛÜ[‰ÊNØÛÜÙP[›ÜÊ
+NÚYŠ]Ø\ÊY[˜Û\ÜÓ\İ˜Y
+	ÛÜ[‰ÊNßB™[˜İ[ÛˆÛÜÙP[›ÜÊ
+^Ü\ØJ	Ë‹Y›Ü\Ù\‹[Y[IÊK™›Ü‘XXÚ
+O™˜Û\ÜÓ\İœ™[[İ™J	ÛÜ[‰ÊJNßB™[˜İ[ÛˆÙÙÛU\Ù\“Y[JJ^É
+	İ\Ù\‹[Y[IÊOË˜Û\ÜÓ\İÙÙÛJ	ÛÜ[‰ÊNÊ_Ú[™İË™]™[
+OËœİÜ›ÜYØ][ÛŠ
+NßB‚™[˜İ[Ûˆ™\İÜ™Q\Ú›Ø\™Ú[
+
+^Âˆ	
+	Û[Ù[K\YÙIÊOËœ™[[İ™J
+NÖÉØÛY[ZXY\‰×K™›Ü‘XXÚ
+YOÚYŠ	
+Y
+JI
+Y
+Kœİ[K™\Ü^OIÉÎßJNØÛÛœİXœÏ\\Ê	Ë™\Ú]XœÉÊNÚYŠXœÊ]XœËœİ[K™\Ü^OIÙ›^	ÎÜ\ØJ	ÖÚYHX‹H—IÊK™›Ü‘XXÚ
+Oœİ[K™\Ü^O]šYOOIİX‹IÊÔÕ˜Xİ]™UXÉØ›ØÚÉÎ‰Û›Û™IÊNÂŸB™[˜İ[ÛˆYQ\Ú›Ø\™Ú[
+
+^ÚYŠ	
+	ØÛY[ZXY\‰ÊJI
+	ØÛY[ZXY\‰ÊKœİ[K™\Ü^OIÛ›Û™IÎØÛÛœİXœÏ\\Ê	Ë™\Ú]XœÉÊNÚYŠXœÊ]XœËœİ[K™\Ü^OIÛ›Û™IÎÜ\ØJ	ÖÚYHX‹H—IÊK™›Ü‘XXÚ
+Oœİ[K™\Ü^OIÛ›Û™IÊNßB™[˜İ[ÛˆÚİÓ[Ù[TYÙJ]K›ÙKÚİĞ˜XÚÏ]YJ^ÚYQ\Ú›Ø\™Ú[
+
+NÉ
+	Û[Ù[K\YÙIÊOËœ™[[İ™J
+NØÛÛœİ[YØİ[Y[˜Ü™X]Q[[Y[
+	Ù]‰ÊNÙ[šYIÛ[Ù[K\YÙIÎÙ[˜Û\ÜÓ˜[YOIÙ\ÚXÛÛ[	ÎÙ[š[›™\’SX]ˆÛ\ÜÏH›[Ù[K\YÙKZXY\ˆ‰ÜÚİĞ˜XÚÏÉÏ]ÛˆÛ\ÜÏH˜‹\ÛKYÚÜİ[Ù[KX˜XÚÈˆÛ˜ÛXÚÏH›˜]Š	Ù\Ú›Ø\™	ÊH¸¡¤\Ú›Ø\™Ø]Û‰Î‰ÉßO‰Ù\ØÊ]J_OÚÙ]‰Ø›Ù_XÉ
+	ÛXZ[‹X\™XIÊOË˜\[™Ú[
+[
+NßB‚˜\Ş[˜È[˜İ[Ûˆ˜]ŠYÙJ^ÂˆÕ›[Ù[O\YÙNØÛÜÙP[›ÜÊ
+NÂˆYŠYÙOOOIÙ\Ú›Ø\™	Ê^ÔÕ›[Ù[O[[ÔÕ˜Xİ]™UXIÛİ™\šY]ÉÎÜ™\İÜ™Q\Ú›Ø\™Ú[
+
+NÜ\ØJ	Ë™\Ú]X‰ÊK™›Ü‘XXÚ
+
+JOO˜Û\ÜÓ\İÙÙÛJ	ØXİ]™IËOOOL
+JNØ]ØZ]™[™\‘\Ú›Ø\™
+
+NÜ™]\›ßBˆYŠYÙOOOIØÛÛ[	Ê^Ü™\İÜ™Q\Ú›Ø\™Ú[
+
+NØÛÛœİ˜[YOTÕ˜]˜Z[X›K›Ü™Ø[šXËš[˜ÛY\Ê	Ú[œİYÜ˜[IÊOÉÚ[œİYÜ˜[IÎ‰Ù˜XÙX›ÛÚÉÎØÛÛœİX\\Ê	Ë™\Ú]X–Ù]K]XH‰ÊÛ˜[YJÉÈ—IÊNÜÙ]XŠ˜[YKXŠNÜ™]\›ßBˆYŠYÙOOOIÜ™\ÜÉÊ\™]\›ˆÚİÔ™\ÜÊ
+NÚYŠYÙOOOIØÛY[ÉÊ\™]\›ˆÚİĞÛY[Ê
+NÚYŠYÙOOOIÛ™]ËXÛY[	Ê\™]\›ˆÚİÓ™]ĞÛY[
+
+NÚYŠYÙOOOIØXØÛİ[ÉÊ^ÔÕ˜XØÛİ[Ñš[\IØ[	ÎÜ™]\›ˆÚİĞXØÛİ[Ê
+NßZYŠYÙOOOIÜÙ][™ÜÉÊ\™]\›ˆÚİÔÙ][™ÜÊ
+NÂˆ™]\›ˆÚİÑÙ[™\šXÓ[Ù[JYÙJNÂŸB‚™[˜İ[ÛˆÚİÔ™\ÜÊ
+^ØÛÛœİÏ\İ[[X\JÕœÜİÊK\İ[[X\JÕ˜ÛÛ\\™TÜİÊNÜÚİÓ[Ù[TYÙJ	Ô™[]0ìÜš[ÜÉË]ˆÛ\ÜÏHœÙXİ[Û‹XØ\™]ˆÛ\ÜÏHœÙXİ[Û‹ZˆÜ[ˆÛ\ÜÏHœÙXİ[Û‹]]H”™\İ[[ÈÈ\°ë[ÙÏÜÜ[]ÛˆÛ\ÜÏH˜‹\ÛK\š[HˆÛ˜ÛXÚÏH™^ÜÔÕŠ
+H‘^Ü\ˆYÜÏØ]ÛÙ]]ˆÛ\ÜÏHœ™X[YÜšY]ÛX[”ÜİÏÜÛX[İ›Û™Ï‰Ù›]
+ËœÜİÊ_OÜİ›Û™ÏÙ]]ÛX[[Ø[˜ÙOÜÛX[İ›Û™Ï‰Ù›]
+Ëœ™XXÚ
+_OÜİ›Û™ÏÙ]]ÛX[’[\™\ÜğíY\ÏÜÛX[İ›Û™Ï‰Ù›]
+Ëš[\™\ÜÚ[ÛœÊ_OÜİ›Û™ÏÙ]]ÛX[‘[™ØZ˜[Y[ÏÜÛX[İ›Û™Ï‰Ù›]
+Ë™[™ØYÙ[Y[
+_OÜİ›Û™ÏÙ]]ÛX[‘TÜÛX[İ›Û™Ï‰Ù›]İ
+Ë™\Š_OÜİ›Û™ÏÙ]]ÛX[³¥[Ø[˜ÙOÜÛX[İ›Û™Ï‰Ù[R[
+[JËœ™XXÚ‹œ™XXÚ
+J_OÜİ›Û™ÏÙ]Ù]Ù]]ˆÛ\ÜÏHœÙXİ[Û‹XØ\™]ˆÛ\ÜÏHœÙXİ[Û‹ZˆÜ[ˆÛ\ÜÏHœÙXİ[Û‹]]HÛÛpî™È][YÏÜÜ[Ù]‰ÛØš™XİX›JÕœÜİË›X\
+OŠÜX›\ÚYØ]œœX›\ÚYØ]]›Ü›Nœœ]›Ü›KYYXWİ\Nœ›YYXWİ\K™XXÚ™Ù]™XXÚ
+›Y]šXÜÊK[\™\ÜÚ[ÛœÎ™Ù][\™\ÜÚ[ÛœÊ›Y]šXÜÊK[™ØYÙ[Y[™Ù][™Ê›Y]šXÜÊKZÙ\Î™Ù]ZÙ\Ê›Y]šXÜÊKÛÛ[Y[Î™Ù]ÛÛ[Y[Ê›Y]šXÜÊKÚ\™\Î™Ù]Ú\™\Ê›Y]šXÜÊKØ]™Y™Ù]Ø]™Y
+›Y]šXÜÊKšY]ÜÎ™Ù]šY]ÜÊ›Y]šXÜÊ_JJJ_OÙ]˜
+NßB™[˜İ[ÛˆÚİĞÛY[Ê
+^ÜÚİÓ[Ù[TYÙJ	ÕÙÜÈÜÈÛY[\ÉË]ˆÛ\ÜÏHœÙXİ[Û‹XØ\™]ˆÛ\ÜÏHœÙXİ[Û‹ZˆÜ[ˆÛ\ÜÏHœÙXİ[Û‹]]H‰ÔÕ˜ÛY[Ë›[™İHÛY[JÊHXÙ\Üğë]™[
+\ÊOÜÜ[]ÛˆÛ\ÜÏH˜‹\ÛK\š[HˆÛ˜ÛXÚÏH›˜]Š	Û™]ËXÛY[	ÊH“›İ›ÈÛY[OØ]ÛÙ]‰ÔÕ˜ÛY[Ë›[™İØ]ˆÛ\ÜÏH˜ÛY[[\İ\™X[‰ÔÕ˜ÛY[Ë›X\
+ÏO˜]ÛˆÛ\ÜÏH˜ÛY[\™X[\›İÈˆÛ˜ÛXÚÏHœÙ[XİÛY[
+	ÉÙ\ØÊËšY
+_IË	ÉÙ\ØÊË›˜[YJ_IÊNÛ˜]Š	Ù\Ú›Ø\™	ÊHÜ[ˆÛ\ÜÏHš][KX]ˆ‰Ù\ØÊË›˜[YOË–Ì_	ÏÉÊ_OÜÜ[Ü[İ›Û™Ï‰Ù\ØÊË›˜[YJ_OÜİ›Û™ÏÛX[‰Ù\ØÊËœİ]\ß	ø %	Ê_OÜÛX[ÜÜ[Ü[‰ØËš\×ØYÙ[˜ŞOÉĞYğê›˜ÚXIÎ‰ĞÛY[IßOÜÜ[Ø]Û˜
+Kš›Ú[Š	ÉÊ_OÙ]˜‰Ï]ˆÛ\ÜÏH™[\K\İ]H“™[š[HÛY[H™]Ü›˜YÈ[Èİ\X˜\ÙKÙ]‰ßOÙ]˜
+NßB™[˜İ[ÛˆÚİÓ™]ĞÛY[
+
+^ÜÚİÓ[Ù[TYÙJ	Ó›İ›ÈÛY[IË]ˆÛ\ÜÏHœÙXİ[Û‹XØ\™ˆİ[OH›X^]ÚYŒŒ]ˆÛ\ÜÏH™‹YÜœX™[Û\ÜÏH™‹[›“›ÛYOÛX™[[œ]Û\ÜÏH™‹Z[œˆYH›™]ËXÛY[[˜[YHˆXÙZÛ\H“›ÛYHÈÛY[HÙ]]ˆÛ\ÜÏH™‹YÜœX™[Û\ÜÏH™‹[›”ÛYÏÛX™[[œ]Û\ÜÏH™‹Z[œˆYH›™]ËXÛY[\ÛYÈˆXÙZÛ\H››ÛYKYËXÛY[HÙ]]ÛˆÛ\ÜÏH˜‹\š[HˆÛ˜ÛXÚÏH˜Ü™X]PÛY[
+
+HØY\İ˜\ˆÛY[OØ]Û]ˆYH›™]ËXÛY[[\ÙÈˆİ[OH›X\™Ú[‹]ÜŒLÙ›Û\Ú^™NŒLœÙ]Ù]˜
+NßB˜\Ş[˜È[˜İ[ÛˆÜ™X]PÛY[
+
+^ØÛÛœİ˜[YOI
+	Û™]ËXÛY[[˜[YIÊOË˜[YKš[J
+KÛYÏJ	
+	Û™]ËXÛY[\ÛYÉÊOË˜[YKš[J
+_˜[YOËÓİÙ\Ø\ÙJ
+K››Ü›X[^™J	Ó‘‘	ÊKœ™\XÙJÖ×LÌWLÍ™—KÙË	ÉÊKœ™\XÙJÖ×˜K^ŒNWJËÙË	ËIÊKœ™\XÙJ×‹_IÙË	ÉÊJNÚYŠ[˜[YJ\™]\›ˆØ\İ
+	Ò[™›Ü›YHÈ›ÛYHÈÛY[K‰Ë	Ù\œ›Ü‰ÊNİ^Ø]ØZ]™\İ
+	ØÛY[ÉËÛY]Ù‰ÔÔÕ	ËXY\œÎÔ™Y™\‰Ü™]\›\™\™\Ù[][Û‰ßK›ÙN’”ÓÓ‹œİš[™ÚYJÛ˜[YKÛYËİ]\Î‰ØXİ]™IË\×ØYÙ[˜ŞN™˜[Ù_J_JNØ]ØZ]ØYÛY[Ê
+NİØ\İ
+	ĞÛY[HØY\İ˜YË‰ÊNÜÚİĞÛY[Ê
+NßXØ]Ú
+J^ÚYŠ	
+	Û™]ËXÛY[[\ÙÉÊJI
+	Û™]ËXÛY[[\ÙÉÊK^ÛÛ[IÓ°èÛÈ›ÚHÜÜğë]™[ØY\İ˜\ˆ	ÊÙK›Y\ÜØYÙNß_B™[˜İ[ÛˆÙ]XØÛİ[Ñš[\Š˜[YJ^ÔÕ˜XØÛİ[Ñš[\]˜[YNÜÚİĞXØÛİ[Ê
+NßB˜\Ş[˜È[˜İ[ÛˆÚİĞXØÛİ[ÊŞ[˜Ô™\İ[[[
+^ÂˆÚİÓ[Ù[TYÙJ	ĞÛÛ\ÈÛÛ™XİY\ÉË	Ï]ˆÛ\ÜÏHœÙXİ[Û‹XØ\™]ˆÛ\ÜÏH™[\K\İ]H]ˆÛ\ÜÏH™[\K]]HØ\œ™YØ[™Ë‹‹Ù]Ù]Ù]‰Ë˜[ÙJNÂˆÛÛœİÙ›İ[™Y]P\ÜÙ]×OX]ØZ]›ÛZ\ÙK˜[
+İUX›JÉØXØÛİ[É×K	ÜÙ[XİJ‰›[Z]ML	ÊK™\İ
+	ÛY]WØ\ÜÙ]ÏÜÙ[XİJ‰›Ü™\X\ÜÙ]İ\K˜[YIÊK˜Ø]Ú
+
+
+OO–×JWJKXØÛİ[ÏY›İ[™Ë™]_×K[TÕ˜XØÛİ[Ñš[\OOIØ[	ÎÂˆÛÛœİ™\İ[\Ş[˜Ô™\İ[Ø]ˆÛ\ÜÏHœŞ[˜Ë\™\İ[İXØÙ\ÜÈˆ›ÛOHœİ]\Èİ›Û™Ï¸§$ÈÚ[˜Ü›Ûš^˜péğèÛÈÛÛ˜ÛpëYHÛÛHİXÙ\ÜÛÏÜİ›Û™ÏÜ[‰Ù›]
+Ş[˜Ô™\İ[œÜİß
+_HX›XØpéğíY\È›ØÙ\ÜØY\È0­È	Ù›]
+Ş[˜Ô™\İ[›Y]šXÜß
+_Hpê]šXØ\È]X[^˜Y\È0­È	Ù›]
+Ş[˜Ô™\İ[š[XYÙ\ß
+_H[XYÙ[œÈ\›X^™[˜Y\ÏÜÜ[ÛX[‘YÜÈ™XÙXšYÜÈÈÚ[™ÛÜˆHÜ˜]˜YÜÈ›Èİ\X˜\ÙKÜÛX[Ù]˜‰ÉÎÂˆÛÛœİÜ[ÛœÏVÉÏÜ[Ûˆ˜[YOH˜[•ÙÜÈÜÈÛY[\ÏÛÜ[Û‰Ë‹‹”Õ˜ÛY[Ë›X\
+ÏO˜Ü[Ûˆ˜[YOH‰Ù\ØÊËšY
+_Hˆ	Ôİš[™ÊËšY
+OOOTİš[™ÊÕ˜XØÛİ[Ñš[\ŠOÉÜÙ[XİY	Î‰ÉßO‰Ù\ØÊË›˜[YJ_OÛÜ[Û˜
+WKš›Ú[Š	ÉÊNÂˆ]›İÜÎÂˆYŠ[
+^Ü›İÜÏTÕ˜ÛY[Ë›X\
+ÏOØÛÛœİ[šÙYXXØÛİ[Ë™š[\ŠOO”İš[™ÊK˜ÛY[ÚY
+OOOTİš[™ÊËšY
+JK]›Ü›\ÏVË‹‹›™]ÈÙ]
+[šÙY›X\
+OOœ]›Ü›S˜[YJKœ]›Ü›JJJWNÜ™]\›ØÛY[N˜Ë›˜[YKÚ]XXØ[Î›[šÙY›[™İÉÔÚ[˜Ü›Ûš^˜YÉÎ‰Ó°èÛÈÚ[˜Ü›Ûš^˜YÉËÛÛ\×İš[˜İ[Y\Î›[šÙY›[™İ]Y›Ü›X\Îœ]›Ü›\Ëš›Ú[Š	Ë	Ê_	ø %	Ë[[XWØ]X[^˜XØ[Î›[šÙY›[™İÛ[šÙY›X\
+OO˜K\]YØ]
+K™š[\Š›ÛÛX[ŠKœÛÜ
+
+K˜]
+LJ_	ø %	Î‰ø %	ßNßJNßBˆ[ÙH›İÜÏXXØÛİ[Ë™š[\ŠOO”İš[™ÊK˜ÛY[ÚY
+OOOTİš[™ÊÕ˜XØÛİ[Ñš[\ŠJNÂˆÛÛœİÛÛ›™XİYTÕ˜ÛY[Ë™š[\ŠÏO˜XØÛİ[ËœÛÛYJOO”İš[™ÊK˜ÛY[ÚY
+OOOTİš[™ÊËšY
+JJK›[™İ[™[™ÏTÕ˜ÛY[Ë›[™İXÛÛ›™XİYÂˆÛÛœİİ[[X\OX[Ø]ˆÛ\ÜÏH˜XØÛİ[Ë\İ[[X\H]İ›Û™Ï‰ÔÕ˜ÛY[Ë›[™İOÜİ›Û™ÏÜ[ÛY[\ÏÜÜ[Ù]]ˆÛ\ÜÏH›ÚÈİ›Û™Ï‰ØÛÛ›™XİYOÜİ›Û™ÏÜ[”Ú[˜Ü›Ûš^˜YÜÏÜÜ[Ù]]ˆÛ\ÜÏHœ[™[™Èİ›Û™Ï‰Ü[™[™ßOÜİ›Û™ÏÜ[”[™[\ÏÜÜ[Ù]Ù]˜‰ÉÎÂˆÛÛœİ[\OIÏ]ˆÛ\ÜÏH™[\K\İ]H]ˆÛ\ÜÏH™[\K]]H“™[š[XHÛÛHš[˜İ[YHH\İHÛY[OÙ]]ˆÛ\ÜÏH™[\KY\ØÈ“ÈÚ[™ÛÜˆZ[™H°èÛÈ™]Ü››İH[XHÛÛHÛÜœ™\ÜÛ™[H\˜H\İHÛY[KÙ]Ù]‰ÎÂˆÛÛœİY]T›İÜÏJY]P\ÜÙ]ß×JK›X\
+OO˜]ˆÛ\ÜÏH›Y]KX\ÜÙ]\›İÈÜ[ˆÛ\ÜÏH›Y]KX˜YÙH‰Ù\ØÊK˜\ÜÙ]İ\OOOIØYØXØÛİ[	ÏÉÓY]HYÉÎ˜K˜\ÜÙ]İ\OOOIÚ[œİYÜ˜[IÏÉÒ[œİYÜ˜[IÎ‰Ñ˜XÙX›ÛÚÉÊ_OÜÜ[Ü[İ›Û™Ï‰Ù\ØÊK›˜[YJ_OÜİ›Û™ÏÛX[‰Ù\ØÊK\Ù\›˜[YOÉĞ	ÊØK\Ù\›˜[YNŠK˜YØXØÛİ[ÚYKœYÙWÚYKšY
+J_OÜÛX[ÜÜ[Ù[XİÛ˜Ú[™ÙOH˜\ÜÚYÛ“Y]P\ÜÙ]
+	ÉÙ\ØÊKšY
+_IË\Ë˜[YJHÜ[Ûˆ˜[YOHˆ“°èÛÈš[˜İ[YÏÛÜ[Û‰ÔÕ˜ÛY[Ë›X\
+ÏO˜Ü[Ûˆ˜[YOH‰Ù\ØÊËšY
+_Hˆ	Ôİš[™ÊËšY
+OOOTİš[™ÊK˜ÛY[ÚY
+OÉÜÙ[XİY	Î‰ÉßO‰Ù\ØÊË›˜[YJ_OÛÜ[Û˜
+Kš›Ú[Š	ÉÊ_OÜÙ[XİÙ]˜
+Kš›Ú[Š	ÉÊNÂˆÛÛœİY]OX]ˆÛ\ÜÏHœÙXİ[Û‹XØ\™]ˆÛ\ÜÏHœÙXİ[Û‹Zˆ]Ü[ˆÛ\ÜÏHœÙXİ[Û‹]]H’[YÜ˜péğèÛÈ\™]HÛÛHHY]OÜÜ[ÛX[Û\ÜÏHœÙXİ[Û‹\İX]H‘˜XÙX›ÛÚË[œİYÜ˜[HHY]HYÏÜÛX[Ù]‰Ú\Ôİ\\YZ[Š
+OÉÏ]ÛˆÛ\ÜÏH˜‹\ÛK\š[HŞ[˜ËXXİ[ÛˆˆYH˜ÛÛ›™Xİ[Y]KXˆˆÛ˜ÛXÚÏH˜ÛÛ›™XİY]J
+HÛÛ™Xİ\ˆÛÛHY]OØ]Û‰Î‰ÉßOÙ]]ˆYH›Y]K\›ÙÜ™\ÜÈˆÛ\ÜÏHœŞ[˜Ë\›ÙÜ™\ÜÈˆ\šXK[]™OHœÛ]HÙ]‰ÛY]T›İÜÏØ]ˆÛ\ÜÏH›Y]KX\ÜÙ]È‰ÛY]T›İÜßOÙ]˜‰Ï]ˆÛ\ÜÏH™[\K\İ]H]ˆÛ\ÜÏH™[\K]]H“™[š[XHÛÛHY]H]]Üš^˜YOÙ]]ˆÛ\ÜÏH™[\KY\ØÈÛÛ™XİHHÛÛH[\™\Ø\šX[\˜H\ØÛØœš\ˆ0èYÚ[˜\Ë[œİYÜ˜[\ÈHÛÛ\ÈH[°î›˜Ú[ÜËÙ]Ù]‰ßOÙ]˜ÂˆÚİÓ[Ù[TYÙJ	ĞÛÛ\ÈÛÛ™XİY\ÉË	Ü™\İ[IÛY]_O]ˆÛ\ÜÏHœÙXİ[Û‹XØ\™]ˆÛ\ÜÏHœÙXİ[Û‹ZˆXØÛİ[ËZXY\ˆ]Ü[ˆÛ\ÜÏHœÙXİ[Û‹]]H•š\ğèÛÈ\ÈÛÛ\ÈÚ[˜Ü›Ûš^˜Y\ÏÜÜ[Ù[XİÛ\ÜÏH˜XØÛİ[ËYš[\ˆˆÛ˜Ú[™ÙOHœÙ]XØÛİ[Ñš[\Š\Ë˜[YJH‰ÛÜ[ÛœßOÜÙ[XİÙ]‰Ú\Ôİ\\YZ[Š
+OÉÏ]ÛˆÛ\ÜÏH˜‹\ÛKYÚÜİŞ[˜ËXXİ[ÛˆˆYHœŞ[˜Ë]Ú[™ÛÜ‹XˆˆÛ˜ÛXÚÏHœŞ[˜ÕÚ[™ÛÜŠ
+H•Ú[™ÛÜˆ
+YØYÊOØ]Û‰Î‰ÉßOÙ]]ˆYHœŞ[˜Ë\›ÙÜ™\ÜÈˆÛ\ÜÏHœŞ[˜Ë\›ÙÜ™\ÜÈˆ\šXK[]™OHœÛ]HÙ]‰Üİ[[X\_IÜ›İÜË›[™İÛØš™XİX›J›İÜÊN™[\_OÙ]˜˜[ÙJNÂŸB˜\Ş[˜È[˜İ[ÛˆÛÛ›™XİY]J
+^ÂˆYŠZ\Ôİ\\YZ[Š
+J\™]\›ˆØ\İ
+	Ğ\[˜\ÈÈİ\\˜YZ[š\İ˜YÜˆÙHÛÛ™Xİ\ˆHY]K‰Ë	Ù\œ›Ü‰ÊNÂˆÛÛœİI
+	ØÛÛ›™Xİ[Y]KX‰ÊK›ÙÜ™\ÜÏI
+	ÛY]K\›ÙÜ™\ÜÉÊNÚYŠŠ^Ø‹™\ØX›Y]YNØ‹^ÛÛ[IĞXœš[™ÈY]x )‰ÎßBˆYŠ›ÙÜ™\ÜÊ^Ü›ÙÜ™\ÜË˜Û\ÜÓ˜[YOIÜŞ[˜Ë\›ÙÜ™\ÜÈ[›š[™ÉÎÜ›ÙÜ™\ÜËš[›™\’SIÏİ›Û™Ï”™\\˜[™È]]Üš^˜péğèÛÈÙYİ\˜OÜİ›Û™ÏÜ[•›ØğêˆÙ\°èH\™XÚ[Û˜YÈ\˜HHY]KÜÜ[‰ÎßBˆ^ØÛÛœİX]ØZ]™]Ú
+Ğ—ÕT“
+ÉËÙ[˜İ[ÛœËİŒKÛY]KX]]	ËÛY]Ù‰ÔÔÕ	ËXY\œÎ˜]]XY\œÊ
+_JNØÛÛœİX]ØZ]‹šœÛÛŠ
+NÚYŠ\‹›ÚßY\›
+]›İÈ™]È\œ›ÜŠ™\œ›ÜŸ	Ó°èÛÈ›ÚHÜÜğë]™[[šXÚX\ˆHÛÛ™^0èÛÉÊNÛØØ][Û‹š™YY\›ßXØ]Ú
+J^ÚYŠŠ^Ø‹™\ØX›YY˜[ÙNØ‹^ÛÛ[IĞÛÛ™Xİ\ˆÛÛHY]IÎßZYŠ›ÙÜ™\ÜÊ^Ü›ÙÜ™\ÜË˜Û\ÜÓ˜[YOIÜŞ[˜Ë\™\İ[\œ›Ü‰ÎÜ›ÙÜ™\ÜËš[›™\’SXİ›Û™Ï‘˜[H[ÈÛÛ™Xİ\Üİ›Û™ÏÜ[‰Ù\ØÊK›Y\ÜØYÙJ_OÜÜ[˜ß_BŸB˜\Ş[˜È[˜İ[Ûˆ\ÜÚYÛ“Y]P\ÜÙ]
+YÛY[Y
+^Âˆ^Ø]ØZ]™\İ
+	ÛY]WØ\ÜÙ]ÏÚYY\K‰ÊÙ[˜ÛÙUT’PÛÛ\Û™[
+Y
+KÛY]Ù‰ÔUÒ	ËXY\œÎÔ™Y™\‰Ü™]\›[Z[š[X[	ßK›ÙN’”ÓÓ‹œİš[™ÚYJØÛY[ÚY˜ÛY[Y[İ]\Î˜ÛY[YÉØÛÛ›™XİY	Î‰Ù\ØÛİ™\™Y	Ë\]YØ]›™]È]J
+KÒTÓÔİš[™Ê
+_J_JNİØ\İ
+ÛY[YÉĞÛÛHš[˜İ[YH[ÈÛY[K‰Î‰Õ°ë[˜İ[È™[[İšYË‰ÊNßBˆØ]Ú
+J^İØ\İ
+	Ó°èÛÈ›ÚHÜÜğë]™[Ø[˜\ˆÈ°ë[˜İ[Îˆ	ÊÙK›Y\ÜØYÙK	Ù\œ›Ü‰ÊNÜÚİĞXØÛİ[Ê
+NßBŸB˜\Ş[˜È[˜İ[ÛˆŞ[˜ÕÚ[™ÛÜŠ
+^ÂˆYŠZ\Ôİ\\YZ[Š
+J\™]\›ˆØ\İ
+	Ğ\[˜\ÈÈİ\\˜YZ[š\İ˜YÜˆÙHÚ[˜Ü›Ûš^˜\‹‰Ë	Ù\œ›Ü‰ÊNÂˆÛÛœİI
+	ÜŞ[˜Ë]Ú[™ÛÜ‹X‰ÊK›ÙÜ™\ÜÏI
+	ÜŞ[˜Ë\›ÙÜ™\ÜÉÊNÚYŠŠ^Ø‹™\ØX›Y]YNØ‹^ÛÛ[IÔÚ[˜Ü›Ûš^˜[™ø )‰ÎßZYŠ›ÙÜ™\ÜÊ^Ü›ÙÜ™\ÜË˜Û\ÜÓ˜[YOIÜŞ[˜Ë\›ÙÜ™\ÜÈ[›š[™ÉÎÜ›ÙÜ™\ÜËš[›™\’SIÏİ›Û™Ï”Ú[˜Ü›Ûš^˜péğèÛÈ[H[™[Y[ÏÜİ›Û™ÏÜ[\ØØ[™ÈX›XØpéğíY\ÈHpê]šXØ\È›ÈÚ[™ÛÜˆHØ[˜[™È›Èİ\X˜\ÙKˆYİX\™NÈ\ÜÛÈÙH]˜\ˆÙ\˜ØHH[HZ[]ËÜÜ[‰ÎßBˆ^ÂˆÛÛœİX]ØZ]™]Ú
+Ğ—ÕT“
+ÉËÙ[˜İ[ÛœËİŒKİÚ[™ÛÜ‹\Ş[˜ÉËÛY]Ù‰ÔÔÕ	ËXY\œÎ˜]]XY\œÊ
+K›ÙN’”ÓÓ‹œİš[™ÚYJÙ^\ÎŒÌJ_JNÂˆÛÛœİ˜]ÏX]ØZ]‹^
+
+NÛ]^ßNİ^Ù\˜]ÏÒ”ÓÓ‹œ\œÙJ˜]ÊNßNßXØ]ÚÙ^ßNßZYŠ\‹›ÚÊ]›İÈ™]È\œ›ÜŠ™\œ›ÜŸ›Y\ÜØYÙ_˜[H˜HÚ[˜Ü›Ûš^˜péğèÛÈ
+	Ü‹œİ]\ßJX
+NÂˆØ\İ
+Ú[˜Ü›Ûš^˜péğèÛÈÛÛ˜ÛpëYNˆ	ÙœÜİßHX›XØpéğíY\Ë	Ùš[XYÙ\ßH[XYÙ[œË˜
+NØ]ØZ]ÚİĞXØÛİ[Ê
+NÂˆXØ]Ú
+J^ÚYŠ›ÙÜ™\ÜÊ^Ü›ÙÜ™\ÜË˜Û\ÜÓ˜[YOIÜŞ[˜Ë\™\İ[\œ›Ü‰ÎÜ›ÙÜ™\ÜËš[›™\’SXİ›Û™Ï¸§%H°èÛÈ›ÚHÜÜğë]™[Ú[˜Ü›Ûš^˜\Üİ›Û™ÏÜ[‰Ù\ØÊK›Y\ÜØYÙJ_OÜÜ[ÛX[“™[š[XHÛÛ™š\›XpéğèÛÈH[\ÜpéğèÛÈ›ÚH™XÙXšYKˆ[H›İ˜[Y[KÜÛX[˜ß]Ø\İ
+K›Y\ÜØYÙK	Ù\œ›Ü‰ÊNßYš[˜[^ØÛÛœİİ\œ™[I
+	ÜŞ[˜Ë]Ú[™ÛÜ‹X‰ÊNÚYŠİ\œ™[
+^Øİ\œ™[™\ØX›YY˜[ÙNØİ\œ™[^ÛÛ[IÔÚ[˜Ü›Ûš^˜\ˆÚ[™ÛÜˆYÛÜ˜IÎß_BŸB™[˜İ[ÛˆÚİÔÙ][™ÜÊ
+^ÂˆÛÛœİÏ\Ù[XİYÛY[
+
+KYZ[Z\Ôİ\\YZ[Š
+NÂˆÛÛœİœ˜[™[™ÏXYZ[Ø]ˆÛ\ÜÏHœÙXİ[Û‹XØ\™]ˆÛ\ÜÏHœÙXİ[Û‹ZˆÜ[ˆÛ\ÜÏHœÙXİ[Û‹]]H’Y[YYHš\İX[HØ\\ÏÜÜ[Ù]]ˆÛ\ÜÏH˜œ˜[™\Ù][™ÜÈ‚ˆ]ˆÛ\ÜÏH˜œ˜[™\[™[ÏØ\H[X[ÈÙÚ[ÚÏ’[XYÙ[H[œİ]XÚ[Û˜[ÛØ˜[ˆ]X[^™H]X[™ÈH‘ˆ[°éØ\ˆHY[YYHÈ›İ›È[›ËÜ]ˆÛ\ÜÏH˜Ûİ™\‹\™]šY]Èˆİ[OH˜˜XÚÙÜ›İ[™Z[XYÙN\›
+	ÉÙ\ØÊØY™U\›
+Õ˜œ˜[™[™Ë›ÙÚ[—ØÛİ™\—İ\›
+J_IÊHÙ]]ˆÛ\ÜÏH˜Ûİ™\‹XXİ[ÛœÈX™[Û\ÜÏH˜Ûİ™\‹[X™[ˆ›ÜH™ÛØ˜[XÛİ™\‹Yš[H•›ØØ\ˆØ\H[X[ÛX™[[œ]Û\ÜÏH˜Ûİ™\‹Yš[HˆYH™ÛØ˜[XÛİ™\‹Yš[Hˆ\OH™š[HˆXØÙ\Hš[XYÙKÜ™Ë[XYÙKÚœYË[XYÙKİÙXœˆÛ˜Ú[™ÙOHœØ]™QÛØ˜[Ûİ™\Š\ÊHÙ]]ˆÛ\ÜÏH˜Ûİ™\‹[›İH’”Ë‘ÈİHÙX”0­Èpè^[[ÈHPˆ0­È™XÛÛY[™YÈNLŒ0åÈLÙ]Ù]‚ˆ]ˆÛ\ÜÏH˜œ˜[™\[™[ÏØ\HÈÛY[Nˆ	Ù\ØÊÏË›˜[Y_	ø %	Ê_OÚÏ”\œÛÛ˜[^˜HÈ\Ú›Ø\™Ù[XÚ[Û˜YËˆÙ[H[XYÙ[H°ìÜšXK][^˜H]]ÛX]XØ[Y[HHØ\HÛØ˜[Ü]ˆÛ\ÜÏH˜Ûİ™\‹\™]šY]Èˆİ[OH˜˜XÚÙÜ›İ[™Z[XYÙN\›
+	ÉÙ\ØÊØY™U\›
+ÏË˜Ûİ™\—İ\›Õ˜œ˜[™[™Ë›ÙÚ[—ØÛİ™\—İ\›
+J_IÊHÙ]]ˆÛ\ÜÏH˜Ûİ™\‹XXİ[ÛœÈX™[Û\ÜÏH˜Ûİ™\‹[X™[ˆ›ÜH˜ÛY[XÛİ™\‹Yš[H•›ØØ\ˆØ\HÈÛY[OÛX™[[œ]Û\ÜÏH˜Ûİ™\‹Yš[HˆYH˜ÛY[XÛİ™\‹Yš[Hˆ\OH™š[HˆXØÙ\Hš[XYÙKÜ™Ë[XYÙKÚœYË[XYÙKİÙXœˆÛ˜Ú[™ÙOHœØ]™PÛY[Ûİ™\Š\ÊH]ÛˆÛ\ÜÏH˜‹\ÛKYÚÜİˆÛ˜ÛXÚÏHœ™\Ù]ÛY[Ûİ™\Š
+H•\Ø\ˆØ\HÛØ˜[Ø]ÛÙ]]ˆÛ\ÜÏH˜Ûİ™\‹[›İHH\œÛÛ˜[^˜péğèÛÈXÛÛ\[šHÈÛY[H[H]X[]Y\ˆXÙ\ÜÛÈİH[šÈÛÛ\\[YËÙ]Ù]‚ˆÙ]Ù]˜‰ÉÎÂˆÚİÓ[Ù[TYÙJ	ĞÛÛ™šYİ\˜péğíY\ÉË]ˆÛ\ÜÏHœÙXİ[Û‹XØ\™]ˆÛ\ÜÏHœÙXİ[Û‹ZˆÜ[ˆÛ\ÜÏHœÙXİ[Û‹]]H•\İpè\š[ÏÜÜ[Ù]‰ÛØš™XİX›JŞÛ›ÛYN”“Ñ’SOË™[Û˜[Y_ÑTÔÒSÓË\Ù\Ë™[XZ[ËœÜ]
+	Ğ	ÊVÌ_	ø %	Ë[XZ[”ÑTÔÒSÓË\Ù\Ë™[XZ[	ø %	Ë\™š[”“Ñ’SOËœ›Û_	ø %	ßWJ_OÙ]‰Øœ˜[™[™ßX
+NÂŸB™[˜İ[ÛˆÚİÑÙ[™\šXÓ[Ù[JYÙJ^ØÛÛœİX™[Ï^ÚÛ›İÛYÙN‰Ğ˜\ÙHHÛÛšXÚ[Y[ÉËXYÛ›ÜİXÎ‰ÑXYÛ°ìÜİXÛÉËX\šÙ]‰ÓY\˜ØYÉËÛÛ\]]ÜœÎ‰ĞÛÛ˜ÛÜœ™[\ÉË™[™Î‰Õ™[™ÉË™[˜ÚX\šÎ‰Ğ™[˜ÚX\šÉËİÛİ‰ÔÕÓÕ	ËXÜ‰ÒPÔ	Ë\œÛÛ˜\Î‰Ô\œÛÛ˜\ÉË›İ\›™^N‰Ò›Ü›˜YHHÛÛ\˜IËZ[œÎ‰ÑÜ™\Ë\ÙZ›ÜÈHØš™péğíY\ÉËØš™Xİ]™\Î‰ÓØš™]]›ÜÉËØ˜N‰ÓX]š^ˆĞ•IËÙ™™\œÎ‰ÓX]š^ˆHÙ™\\ÉËÜÚ][Ûš[™Î‰ÔÜÚXÚ[Û˜[Y[ÉË˜[YN‰Ô›ÜÜİHH˜[Ü‰Ë[›™[‰Ñ[š[	ËÚ[›™[Î‰ĞØ[˜Z\ÉËİ˜]YŞN‰Ô[›È\İ˜]0êYÚXÛÉßNÜÚİÓ[Ù[TYÙJX™[ÖÜYÙW_YÙK]ˆÛ\ÜÏHœÙXİ[Û‹XØ\™]ˆÛ\ÜÏH™[\K\İ]H]ˆÛ\ÜÏH™[\K]]H“pìÙ[ÈXÙ\Üğë]™[Ù[H›ÛHHYÜÈÛÛ™XİYOÙ]]ˆÛ\ÜÏH™[\KY\ØÈ‘\İH0è\™XH\İ0èH\ÜÛ°ë]™[\˜H[\[Y[péğèÛËX\È°èÛÈ^Xš\°èHÛÛpî™È[™[YËˆÛÛ™XİHH›ÛKİX™[HÛÜœ™\ÜÛ™[H›Èİ\X˜\ÙH\˜HXš[]\ˆYÜÈ™XZ\ËÙ]Ù]Ù]˜
+NßB‚™[˜İ[Ûˆ^ÜÔÕŠ
+^ÂˆÛÛœİ›İÜÏTÕœÜİË›X\
+OŠÙ]NœœX›\ÚYØ]]Y›Ü›XNœœ]›Ü›K›Ü›X]Îœ›YYXWİ\KYÙ[™Nœ˜Ø\[ÛŸ	ÉË[Ø[˜ÙN™Ù]™XXÚ
+›Y]šXÜÊK[\™\ÜÛÙ\Î™Ù][\™\ÜÚ[ÛœÊ›Y]šXÜÊK[™ØZ˜[Y[Î™Ù][™Ê›Y]šXÜÊKİ\Y\Î™Ù]ZÙ\Ê›Y]šXÜÊKÛÛY[\š[ÜÎ™Ù]ÛÛ[Y[Ê›Y]šXÜÊKÛÛ\\[[Y[ÜÎ™Ù]Ú\™\Ê›Y]šXÜÊKØ[˜[Y[ÜÎ™Ù]Ø]™Y
+›Y]šXÜÊKš\İX[^˜XÛÙ\Î™Ù]šY]ÜÊ›Y]šXÜÊK[šÎœœ\›X[[šß	ÉßJJNÂˆYŠ\›İÜË›[™İ
+\™]\›ˆØ\İ
+	ÔÙ[HYÜÈ\˜H^Ü\‹‰Ë	Ù\œ›Ü‰ÊNØÛÛœİÛÛÏSØš™XİšÙ^\Ê›İÜÖÌJNØÛÛœİÜİVØÛÛËš›Ú[Š	ÎÉÊK‹‹œ›İÜË›X\
+O˜ÛÛË›X\
+ÏO‰È‰ÊÔİš[™Ê–Ø×OÏÉÉÊKœ™\XÙJÈ‹ÙË	Èˆ‰ÊJÉÈ‰ÊKš›Ú[Š	ÎÉÊJWKš›Ú[Š	×‰ÊNØÛÛœİ›Ø[™]È›ØŠÉ×Y™Y™‰ÊØÜİ—Kİ\N‰İ^ØÜİØÚ\œÙ]]]‹N	ßJNØÛÛœİOYØİ[Y[˜Ü™X]Q[[Y[
+	ØIÊNØKš™YUT“˜Ü™X]SØš™XİT“
+›ØŠNØK™İÛ›ØYX[™ØZ™KIÔÕ˜ÛY[˜[Y_	ØÛY[IßKIÚ\ÛÑ]J™]È]J
+J_K˜Üİ˜ØK˜ÛXÚÊ
+NÜÙ][Y[İ]
+
+
+OO•T“œ™]›ÚÙSØš™XİT“
+Kš™YŠKL
+NÂŸB‚™[˜İ[ÛˆÜ[”Ú\™S[Ù[
+
+^ÚYŠ	
+	ÜÚ\™K[[Ù[	ÊJI
+	ÜÚ\™K[[Ù[	ÊK˜Û\ÜÓ\İ˜Y
+	ÛÜ[‰ÊNÚYŠ	
+	Û[Ù[[[šË\™\İ[	ÊJI
+	Û[Ù[[[šË\™\İ[	ÊK˜Û\ÜÓ\İœ™[[İ™J	ÜÚİÉÊNØÛÛœİÏTÕ˜ÛY[Ë™š[™
+O”İš[™ÊšY
+OOOTİš[™ÊÕ˜ÛY[Y
+JNÚYŠÉ‰‰
+	ÜÚ\™KXÛY[	ÊJI
+	ÜÚ\™KXÛY[	ÊK˜[YOXË›˜[YNßB™[˜İ[ÛˆÛÜÙS[Ù[
+Y
+^É
+Y
+OË˜Û\ÜÓ\İœ™[[İ™J	ÛÜ[‰ÊNßB™[˜İ[ÛˆÛÜÙS[Ù[İ]ÚYJKY
+^ÚYŠK\™Ù]ËšYOOZY
+XÛÜÙS[Ù[
+Y
+NßB™[˜İ[ÛˆÙÙÛT\›J[
+^Ù[Ë˜Û\ÜÓ\İÙÙÛJ	ÛÛ‰ÊNßB™[˜İ[Ûˆİ\œ™[\›Z\ÜÚ[ÛœÊ
+^ØÛÛœİ^ßNÜ\ØJ	Ëœ\›K]ÙÙÛIÊK™›Ü‘XXÚ
+OœŞ™]\Ù]œ\›WO^˜Û\ÜÓ\İ˜ÛÛZ[œÊ	ÛÛ‰ÊJNÜ™]\›ˆßB˜\Ş[˜È[˜İ[ÛˆÙ[™\˜]TÚ\™S[šÊ
+^ÂˆYŠTÕ˜ÛY[Y
+\™]\›ˆØ\İ
+	ÔÙ[XÚ[Û™H[HÛY[K‰Ë	Ù\œ›Ü‰ÊNÂˆÛÛœİ\\Ê	Ë˜‹YÙ[‰ÊNÚYŠŠ^Ø‹™\ØX›Y]YNØ‹^ÛÛ[IÑÙ\˜[™Ë‹‹‰ÎßBˆ^ÂˆÛÛœİİ]X]ØZ]™\İ
+	ÜœËØÜ™X]WÜÚ\™WÛ[šÉËÛY]Ù‰ÔÔÕ	Ë›ÙN’”ÓÓ‹œİš[™ÚYJÜØÛY[ÚY”Õ˜ÛY[YÜ\›Z\ÜÚ[ÛœÎ˜İ\œ™[\›Z\ÜÚ[ÛœÊ
+_J_JNÂˆÛÛœİÚÙ[]\[Ùˆİ]OOIÜİš[™ÉÏÛİ]Š\œ˜^Kš\Ğ\œ˜^Jİ]
+OÛİ]ÌOËÚÙ[›İ]ËÚÙ[ŠNÚYŠ]ÚÙ[Š]›İÈ™]È\œ›ÜŠ	ĞH[°éğèÛÈ°èÛÈ™]Ü››İHÚÙ[‹‰ÊNÂˆÛÛœİÏTÕ˜ÛY[Ë™š[™
+O”İš[™ÊšY
+OOOTİš[™ÊÕ˜ÛY[Y
+JNØÛÛœİÛYÏXÏËœÛYß	ØÛY[IÎÔÕœÚ\™S[šÏ[ØØ][Û‹›ÜšYÚ[ŠÉËØÛY[KÉÊÙ[˜ÛÙUT’PÛÛ\Û™[
+ÛYÊJÉËÉÊÙ[˜ÛÙUT’PÛÛ\Û™[
+ÚÙ[ŠNÚYŠ	
+	ÜØË[[šË]\›	ÊJI
+	ÜØË[[šË]\›	ÊK^ÛÛ[TÕœÚ\™S[šÎÚYŠ	
+	Û[Ù[[[šË]\›	ÊJI
+	Û[Ù[[[šË]\›	ÊK^ÛÛ[TÕœÚ\™S[šÎÚYŠ	
+	Û[Ù[[[šË\™\İ[	ÊJI
+	Û[Ù[[[šË\™\İ[	ÊK˜Û\ÜÓ\İ˜Y
+	ÜÚİÉÊNÂˆXØ]Ú
+J^İØ\İ
+	ĞÛÛ\\[[Y[ÈÙYİ\›È°èÛÈÛÛ™šYİ\˜YÈ›Èİ\X˜\ÙNˆ	ÊÙK›Y\ÜØYÙK	Ù\œ›Ü‰ÊNÚYŠ	
+	Û[Ù[[[šË\™\İ[	ÊJ^É
+	Û[Ù[[[šË\™\İ[	ÊK˜Û\ÜÓ\İ˜Y
+	ÜÚİÉÊNÉ
+	Û[Ù[[[šË\™\İ[	ÊKš[›™\’SIÏ]ˆİ[OH™›Û\Ú^™NŒL\ØÛÛÜˆÙY“°èÛÈ›ÚHÙ\˜YÈ[šÈšXİ0ëXÚ[ËˆÛÛ™šYİ\™HH[°éğèÛÈ˜Ü™X]WÜÚ\™WÛ[šÏØˆ›Èİ\X˜\ÙKÙ]‰Îß_Bˆš[˜[^ÚYŠŠ^Ø‹™\ØX›YY˜[ÙNØ‹^ÛÛ[IÑÙ\˜\ˆ[šÈHXÙ\ÜÛÉÎß_BŸB™[˜İ[Ûˆ\]TÚ\™PØ\™
+
+^ÚYŠ	
+	ÜØË[[šË]\›	ÊJI
+	ÜØË[[šË]\›	ÊK^ÛÛ[TÕœÚ\™S[šß	ÑÙ\™H[H[šÈÙYİ\›ÉÎßB™[˜İ[ÛˆÛÜTÚ\™S[šÊ
+^ÚYŠÕœÚ\™S[šÊ[˜]šYØ]Ü‹˜Û\›Ø\™ËÜš]U^
+ÕœÚ\™S[šÊK[Š
+
+OOØ\İ
+	Ó[šÈÛÜXYË‰ÊJNÙ[ÙHØ\İ
+	ÑÙ\™H[H[šÈš[YZ\›Ë‰Ë	Ù\œ›Ü‰ÊNßB™[˜İ[ÛˆÛÜS[Ù[[šÊ
+^ØÛÛœİI
+	Û[Ù[[[šË]\›	ÊOË^ÛÛ[ÚYŠ
+[˜]šYØ]Ü‹˜Û\›Ø\™ËÜš]U^
+
+K[Š
+
+OOØ\İ
+	Ó[šÈÛÜXYË‰ÊJNßB™[˜İ[ÛˆÜ[”Ú\™S[šÊ
+^ÚYŠÕœÚ\™S[šÊ]Ú[™İË›Ü[ŠÕœÚ\™S[šË	×Ø›[šÉË	Û›ÛÜ[™\‰ÊNÙ[ÙHØ\İ
+	ÑÙ\™H[H[šÈÙYİ\›Èš[YZ\›Ë‰Ë	Ù\œ›Ü‰ÊNßB‚™[˜İ[ÛˆØ\İ
+\ÙË\OIÛÚÉÊ^ØÛÛœİYØİ[Y[˜Ü™X]Q[[Y[
+	Ù]‰ÊNİœİ[K˜ÜÜÕ^XÜÚ][Û™š^YØ›İÛNŒŒÜšYÚŒŒØ˜XÚÙÜ›İ[™‰İ\OOOIÙ\œ›Ü‰ÏÉÈØLXÌXÉÎ‰ÈÌMNÙ	ßNØÛÛÜˆÙ™™ÜY[™ÎŒLMØ›Ü™\‹\˜Y]\ÎÜÙ›Û\Ú^™NŒLœÙ›Û]ÙZYÚŒŞ‹Z[™^NNNNNÛX^]ÚYŒØ›Ş\ÚYİÎŒÌ™Ø˜JŒJXİ^ÛÛ[[\ÙÎÙØİ[Y[˜›ÙK˜\[™Ú[
+
+NÜÙ][Y[İ]
+
+
+OOœ™[[İ™J
+K
+NßB‚™[˜İ[ÛˆÚ\™TÚYX˜\Š
+^ÂˆÛÛœİX\^ÉĞ˜\ÙHHÛÛšXÚ[Y[ÉÎ‰ÚÛ›İÛYÙIË	ÑXYÛ°ìÜİXÛÉÎ‰ÙXYÛ›ÜİXÉË	ÓY\˜ØYÉÎ‰ÛX\šÙ]	Ë	ĞÛÛ˜ÛÜœ™[\ÉÎ‰ØÛÛ\]]ÜœÉË	Õ™[™ÉÎ‰İ™[™ÉË	Ğ™[˜ÚX\šÉÎ‰Ø™[˜ÚX\šÉË	ÔÕÓÕ	Î‰ÜİÛİ	Ë	ÒPÔ	Î‰ÚXÜ	Ë	Ô\œÛÛ˜\ÉÎ‰Ü\œÛÛ˜\ÉË	Ò›Ü›˜YHHÛÛ\˜IÎ‰Ú›İ\›™^IË	ÑÜ™\Ë\ÙZ›ÜÈHØš™péğíY\ÉÎ‰ÜZ[œÉË	ÓØš™]]›ÜÉÎ‰ÛØš™Xİ]™\ÉË	ÓX]š^ˆĞ•IÎ‰ØØ˜IË	ÓX]š^ˆHÙ™\\ÉÎ‰ÛÙ™™\œÉË	ÔÜÚXÚ[Û˜[Y[ÉÎ‰ÜÜÚ][Ûš[™ÉË	Ô›ÜÜİHH˜[Ü‰Î‰İ˜[YIË	Ñ[š[	Î‰Ù[›™[	Ë	ĞØ[˜Z\ÉÎ‰ØÚ[›™[ÉË	Ô[›È\İ˜]0êYÚXÛÉÎ‰Üİ˜]YŞIßNÂˆ\ØJ	ËœØ‹Z][IÊK™›Ü‘XXÚ
+[OØÛÛœİX™[Y[^ÛÛ[š[J
+Kœ™\XÙJ×ÊËÙË	È	ÊNÚYŠY[™Ù]]šX]J	ÛÛ˜ÛXÚÉÊI‰›X\ÛX™[JY[˜Y]™[\İ[™\Š	ØÛXÚÉË
+
+OO›˜]ŠX\ÛX™[JJNÙ[˜Y]™[\İ[™\Š	ØÛXÚÉË
+
+OOÜ\ØJ	ËœØ‹Z][IÊK™›Ü‘XXÚ
+O˜Û\ÜÓ\İœ™[[İ™J	ØXİ]™IÊJNÙ[˜Û\ÜÓ\İ˜Y
+	ØXİ]™IÊNßJNßJNÂˆÛÛœİ^\\Ê	Ë˜‹Y^Ü	ÊNÚYŠ^
+Y^˜Y]™[\İ[™\Š	ØÛXÚÉË^ÜÔÕŠNÂŸB™[˜İ[Ûˆ[š™Xİİ[\Ê
+^ØÛÛœİÏYØİ[Y[˜Ü™X]Q[[Y[
+	Üİ[IÊNÜË^ÛÛ[X‹œ™X[]X›^İÚYŒL	NØ›Ü™\‹XÛÛ\ÙN˜ÛÛ\ÙNÙ›Û\Ú^™NŒL\Kœ™X[]X›Hœ™X[]X›HÜY[™Î\LØ›Ü™\‹X›İÛNŒ\ÛÛY˜\ŠKX›Ü™\ŠNİ^X[YÛ›Yİ™\XØ[X[YÛÜİÚ]K\ÜXÙN››İÜ˜\Kœ™X[]X›HØÛÛÜ˜\ŠK]^ŠNÙ›Û]ÙZYÚŒÜÜÚ][ÛœİXÚŞNİÜŒØ˜XÚÙÜ›İ[™˜\ŠK\İ\™˜XÙJ_Kœ™X[]X›HØÛÛÜ˜\ŠK]^
+_Kœ™X[]X›Hšİ™\ˆØ˜XÚÙÜ›İ[™œ™Ø˜JËMËŒÎŒJ_B‹œ™X[YÜšYÙ\Ü^N™ÜšYÙÜšY][\]KXÛÛ[[œÎœ™\X]
+]]ËYš]Z[›X^
+LÌYœŠJNÙØ\ŒLKœ™X[YÜšY™]ÜY[™ÎŒMØ›Ü™\Œ\ÛÛY˜\ŠKX›Ü™\ŠNØ›Ü™\‹\˜Y]\ÎØ˜XÚÙÜ›İ[™˜\ŠK\İ\™˜XÙLŠ_Kœ™X[YÜšYÛX[Ù\Ü^N˜›ØÚÎØÛÛÜ˜\ŠK]^ŠNÛX\™Ú[‹X›İÛNœKœ™X[YÜšYİ›Û™ŞÙ›Û\Ú^™NŒNK˜ÛY[[\İ\™X[Ù\Ü^N™›^Ù›^Y\™Xİ[Û˜ÛÛ[[ÙØ\œK˜ÛY[\™X[\›İŞÙ\Ü^N™ÜšYÙÜšY][\]KXÛÛ[[œÎŒÌœYœˆ]]ÎÙØ\ŒLØ[YÛ‹Z][\Î˜Ù[\İÚYŒL	NØ›Ü™\Œ\ÛÛY˜\ŠKX›Ü™\ŠNØ˜XÚÙÜ›İ[™˜\ŠK\İ\™˜XÙLŠNØÛÛÜ˜\ŠK]^
+NÜY[™ÎŒLØ›Ü™\‹\˜Y]\Îİ^X[YÛ›YØİ\œÛÜœÚ[\ŸK˜ÛY[\™X[\›İÎšİ™\Ø›Ü™\‹XÛÛÜ˜\ŠKX›YJ_K˜ÛY[\™X[\›İÈÜ[›XÚ[
+Š^Ù\Ü^N™›^Ù›^Y\™Xİ[Û˜ÛÛ[[ÙØ\ŒœK˜ÛY[\™X[\›İÈÛX[ØÛÛÜ˜\ŠK]^Š_B˜ÙØİ[Y[šXY˜\[™Ú[
+ÊNßB‚˜\Ş[˜È[˜İ[Ûˆ›Ûİ
+
+^Âˆ[š™Xİİ[\Ê
+NİÚ\™TÚYX˜\Š
+NÙØİ[Y[˜Y]™[\İ[™\Š	ØÛXÚÉËÛÜÙP[›ÜÊNØ]ØZ]ØYœ˜[™[™Ê
+NÂˆ^ØÛÛœİÏX]ØZ]™\İÜ™TÙ\ÜÚ[ÛŠ
+NÚYŠÏË\Ù\ŠX]ØZ]Y\“ÙÚ[ŠË\Ù\ŠNÙ[Ù^ÚYŠ	
+	Ø\	ÊJI
+	Ø\	ÊKœİ[K™\Ü^OIÛ›Û™IÎÚYŠ	
+	Ø]]]Ü˜\	ÊJI
+	Ø]]]Ü˜\	ÊKœİ[K™\Ü^OIÙ›^	Îß_XØ]Ú
+J^ØÛÛœÛÛK™\œ›ÜŠ	Ø›Ûİ	ËJNÙÓÙÛİ]
+
+NßBŸB‚™Øİ[Y[˜Y]™[\İ[™\Š	ÚÙ^YİÛ‰ËOOÚYŠKšÙ^OOOIÑ\ØØ\IÊ\\ØJ	Ë›[Ù[[İ™\›^IÊK™›Ü‘XXÚ
+OO›K˜Û\ÜÓ\İœ™[[İ™J	ÛÜ[‰ÊJNÚYŠKšÙ^OOOIÑ[\‰É‰‰
+	Ø]]]Ü˜\	ÊOËœİ[K™\Ü^HOOIÛ›Û™IÊI
+	Ù›Ü™ÛİY›Ü›IÊOËœİ[K™\Ü^HOOIÛ›Û™IÏÙÑ›Ü™Ûİ
+
+N™ÓÙÚ[Š
+NßJNÂ™Øİ[Y[˜Y]™[\İ[™\Š	ÑÓPÛÛ[ØYY	Ë›Ûİ
+NÂœÙ][\˜[
+\Ş[˜Ê
+OOÚYŠÑTÔÒSÓ‰‰”Õ˜ÛY[Y	‰ˆYØİ[Y[šY[ŠX]ØZ]™[™\‘\Ú›Ø\™
+
+NßKJŒ
+ŒL
+NÂ
