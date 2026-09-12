@@ -215,7 +215,7 @@ async function loadPostsRange(range,platform='all'){
 async function loadPosts(){
   ST.platform=$('chart-plat-filter')?.value||ST.platform||'all';
   try{
-    const [cur,prev]=await Promise.all([loadPostsRange(currentRange(),ST.platform),loadPostsRange(compareRange(),ST.platform)]);
+    const [cur,prev]=await Promise.all([loadPostsRange(currentRange(),ST.platform),ST.compare==='none'?Promise.resolve([]):loadPostsRange(compareRange(),ST.platform)]);
     ST.posts=cur;ST.comparePosts=prev;return cur;
   }catch(e){console.error('loadPosts',e);ST.posts=[];ST.comparePosts=[];toast('Falha ao carregar dados: '+e.message,'error');return[];}
 }
@@ -234,11 +234,11 @@ function summary(posts){
   posts.forEach(p=>{const m=p.metrics||{};s.reach+=getReach(m);s.impressions+=getImpressions(m);s.engagement+=getEng(m);s.likes+=getLikes(m);s.comments+=getComments(m);s.shares+=getShares(m);s.saved+=getSaved(m);s.views+=getViews(m);});
   s.er=s.reach>0?s.engagement/s.reach*100:(s.impressions>0?s.engagement/s.impressions*100:0);return s;
 }
-function delta(cur,prev){if(prev===0)return cur===0?0:null;return (cur-prev)/prev*100;}
+function delta(cur,prev){if(ST.compare==='none')return null;if(prev===0)return cur===0?0:null;return (cur-prev)/prev*100;}
 function fmt(n){if(n===null||n===undefined||Number.isNaN(Number(n)))return'—';return Math.round(Number(n)).toLocaleString('pt-BR');}
 function fmtK(n){if(n===null||n===undefined||Number.isNaN(Number(n)))return'—';n=Number(n);if(Math.abs(n)>=1e6)return(n/1e6).toFixed(1).replace('.',',')+'M';if(Math.abs(n)>=1e3)return(n/1e3).toFixed(1).replace('.',',')+'K';return Math.round(n).toLocaleString('pt-BR');}
 function fmtPct(n,d=1){return Number(n||0).toFixed(d).replace('.',',')+'%';}
-function deltaHtml(d){if(d===null)return'<span class="kpi-delta na">sem base</span>';const cls=d>0?'up':d<0?'down':'na';const arrow=d>0?'▲':d<0?'▼':'•';return `<span class="kpi-delta ${cls}">${arrow} ${Math.abs(d).toFixed(1).replace('.',',')}%</span>`;}
+function deltaHtml(d){if(ST.compare==='none')return '';if(d===null)return'<span class="kpi-delta na">sem base</span>';const cls=d>0?'up':d<0?'down':'na';const arrow=d>0?'▲':d<0?'▼':'•';return `<span class="kpi-delta ${cls}">${arrow} ${Math.abs(d).toFixed(1).replace('.',',')}%</span>`;}
 
 function dayKey(date,gran='day'){
   const d=new Date(date);if(gran==='month')return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
@@ -304,7 +304,7 @@ function renderKPIs(posts,prevPosts){
   g.innerHTML=defs.map((d,i)=>{
     const dv=delta(d[1],d[2]);const value=d[3]==='er'?fmtPct(d[1]):fmtK(d[1]);
     const accent=dv===null?'#6e7681':dv>0?'#22c55e':dv<0?'#ef4444':'#6e7681';
-    return `<div class="kpi-card" style="border-top:2px solid ${accent}"><div class="kpi-head"><span class="kpi-name">${d[0]}</span></div><div class="kpi-val">${value}</div><div class="kpi-footer">${deltaHtml(dv)}<span style="font-size:9px;color:var(--text3)">vs. comparação</span><div class="kpi-sparkline"><canvas id="sp-${i}"></canvas></div></div></div>`;
+    return `<div class="kpi-card" style="border-top:2px solid ${accent}"><div class="kpi-head"><span class="kpi-name">${d[0]}</span></div><div class="kpi-val">${value}</div><div class="kpi-footer">${ST.compare==='none'?'':deltaHtml(dv)+'<span style="font-size:9px;color:var(--text3)">vs. comparação</span>'}<div class="kpi-sparkline"><canvas id="sp-${i}"></canvas></div></div></div>`;
   }).join('');
   defs.forEach((d,i)=>{
     const ctx=$('sp-'+i);if(!ctx)return;if(ST.charts['sp'+i])ST.charts['sp'+i].destroy();
@@ -432,7 +432,7 @@ async function nav(page){
   return showGenericModule(page);
 }
 
-function showReports(){const s=summary(ST.posts),b=summary(ST.comparePosts);showModulePage('Relatórios',`<div class="section-card"><div class="section-hdr"><span class="section-title">Resumo do período</span><button class="btn-sm-prim" onclick="exportCSV()">Exportar dados</button></div><div class="real-grid"><div><small>Posts</small><strong>${fmt(s.posts)}</strong></div><div><small>Alcance</small><strong>${fmt(s.reach)}</strong></div><div><small>Impressões</small><strong>${fmt(s.impressions)}</strong></div><div><small>Engajamento</small><strong>${fmt(s.engagement)}</strong></div><div><small>ER</small><strong>${fmtPct(s.er)}</strong></div><div><small>Δ alcance</small><strong>${deltaHtml(delta(s.reach,b.reach))}</strong></div></div></div><div class="section-card"><div class="section-hdr"><span class="section-title">Conteúdo detalhado</span></div>${objectTable(ST.posts.map(p=>({published_at:p.published_at,platform:p.platform,media_type:p.media_type,reach:getReach(p.metrics),impressions:getImpressions(p.metrics),engagement:getEng(p.metrics),likes:getLikes(p.metrics),comments:getComments(p.metrics),shares:getShares(p.metrics),saved:getSaved(p.metrics),views:getViews(p.metrics)})))}</div>`);}
+function showReports(){const s=summary(ST.posts),b=summary(ST.comparePosts);showModulePage('Relatórios',`<div class="section-card"><div class="section-hdr"><span class="section-title">Resumo do período</span><button class="btn-sm-prim" onclick="exportCSV()">Exportar dados</button></div><div class="real-grid"><div><small>Posts</small><strong>${fmt(s.posts)}</strong></div><div><small>Alcance</small><strong>${fmt(s.reach)}</strong></div><div><small>Impressões</small><strong>${fmt(s.impressions)}</strong></div><div><small>Engajamento</small><strong>${fmt(s.engagement)}</strong></div><div><small>ER</small><strong>${fmtPct(s.er)}</strong></div>${ST.compare==='none'?'':'<div><small>Δ alcance</small><strong>'+deltaHtml(delta(s.reach,b.reach))+'</strong></div>'}</div></div><div class="section-card"><div class="section-hdr"><span class="section-title">Conteúdo detalhado</span></div>${objectTable(ST.posts.map(p=>({published_at:p.published_at,platform:p.platform,media_type:p.media_type,reach:getReach(p.metrics),impressions:getImpressions(p.metrics),engagement:getEng(p.metrics),likes:getLikes(p.metrics),comments:getComments(p.metrics),shares:getShares(p.metrics),saved:getSaved(p.metrics),views:getViews(p.metrics)})))}</div>`);}
 function showClients(){showModulePage('Todos os clientes',`<div class="section-card"><div class="section-hdr"><span class="section-title">${ST.clients.length} cliente(s) acessível(is)</span><button class="btn-sm-prim" onclick="nav('new-client')">Novo cliente</button></div>${ST.clients.length?`<div class="client-list-real">${ST.clients.map(c=>`<button class="client-real-row" onclick="selectClient('${esc(c.id)}','${esc(c.name)}');nav('dashboard')"><span class="item-av">${esc(c.name?.[0]||'?')}</span><span><strong>${esc(c.name)}</strong><small>${esc(c.status||'—')}</small></span><span>${c.is_agency?'Agência':'Cliente'}</span></button>`).join('')}</div>`:'<div class="empty-state">Nenhum cliente retornado pelo Supabase.</div>'}</div>`);}
 function showNewClient(){showModulePage('Novo cliente',`<div class="section-card" style="max-width:620px"><div class="f-grp"><label class="f-lbl">Nome</label><input class="f-inp" id="new-client-name" placeholder="Nome do cliente"></div><div class="f-grp"><label class="f-lbl">Slug</label><input class="f-inp" id="new-client-slug" placeholder="nome-do-cliente"></div><button class="btn-prim" onclick="createClient()">Cadastrar cliente</button><div id="new-client-msg" style="margin-top:10px;font-size:12px"></div></div>`);}
 async function createClient(){const name=$('new-client-name')?.value.trim(),slug=($('new-client-slug')?.value.trim()||name?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''));if(!name)return toast('Informe o nome do cliente.','error');try{await rest('clients',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({name,slug,status:'active',is_agency:false})});await loadClients();toast('Cliente cadastrado.');showClients();}catch(e){if($('new-client-msg'))$('new-client-msg').textContent='Não foi possível cadastrar: '+e.message;}}
@@ -508,6 +508,18 @@ function openShareLink(){if(ST.shareLink)window.open(ST.shareLink,'_blank','noop
 
 function toast(msg,type='ok'){const t=document.createElement('div');t.style.cssText=`position:fixed;bottom:20px;right:20px;background:${type==='error'?'#b91c1c':'#15803d'};color:#fff;padding:10px 14px;border-radius:7px;font-size:12px;font-weight:600;z-index:99999;max-width:420px;box-shadow:0 8px 30px rgba(0,0,0,.25)`;t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),4000);}
 
+function wireCompare(){
+  const drop=$('compare-drop');if(!drop)return;
+  const options=[['none','Não comparar'],['prev_period','Período anterior'],['same_prev','Mesmo período anterior'],['prev_month','Mês anterior']];
+  drop.replaceChildren();
+  options.forEach(([value,label])=>{
+    const item=document.createElement('div');
+    item.className='tb-drop-item'+(ST.compare===value?' active':'');
+    item.textContent=label;
+    item.addEventListener('click',e=>{e.stopPropagation();setCompare(value,label,e);});
+    drop.appendChild(item);
+  });
+}
 function wireSidebar(){
   const map={'Base de conhecimento':'knowledge','Diagnóstico':'diagnostic','Mercado':'market','Concorrentes':'competitors','Trends':'trends','Benchmark':'benchmark','SWOT':'swot','ICP':'icp','Personas':'personas','Jornada de compra':'journey','Dores, desejos e objeções':'pains','Objetivos':'objectives','Matriz CBVA':'cbva','Matriz de Ofertas':'offers','Posicionamento':'positioning','Proposta de Valor':'value','Funil':'funnel','Canais':'channels','Plano Estratégico':'strategy'};
   qsa('.sb-item').forEach(el=>{const label=el.textContent.trim().replace(/\s+/g,' ');if(!el.getAttribute('onclick')&&map[label])el.addEventListener('click',()=>nav(map[label]));el.addEventListener('click',()=>{qsa('.sb-item').forEach(x=>x.classList.remove('active'));el.classList.add('active');});});
@@ -519,7 +531,7 @@ function injectStyles(){const s=document.createElement('style');s.textContent=`
 `;document.head.appendChild(s);}
 
 async function boot(){
-  injectStyles();wireSidebar();document.addEventListener('click',closeAllDrops);await loadBranding();
+  injectStyles();wireSidebar();wireCompare();document.addEventListener('click',closeAllDrops);await loadBranding();
   try{const s=await restoreSession();if(s?.user)await afterLogin(s.user);else{if($('app'))$('app').style.display='none';if($('auth-wrap'))$('auth-wrap').style.display='flex';}}catch(e){console.error('boot',e);doLogout();}
 }
 
