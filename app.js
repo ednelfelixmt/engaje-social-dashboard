@@ -5,7 +5,8 @@ let SESSION=null,PROFILE=null;
 
 const ST={
   period:30,compare:'prev_period',clientId:null,clientName:'',clients:[],accounts:[],posts:[],comparePosts:[],charts:{},
-  activeTab:'overview',chartGran:'day',seriesVisible:[true,true,true],shareLink:null,platform:'all',module:null
+  activeTab:'overview',chartGran:'day',seriesVisible:[true,true,true],shareLink:null,platform:'all',module:null,
+  branding:{login_cover_url:'/assets/zf-cover-2026.png',login_cover_year:2026,platform_name:'Engaje Mídia Hub'}
 };
 
 const $=id=>document.getElementById(id);
@@ -29,6 +30,50 @@ async function rest(path,opts={},useSession=true){
   if(r.status===204)return null;
   const text=await r.text();
   return text?JSON.parse(text):null;
+}
+
+function publicAssetUrl(path){return SB_URL+'/storage/v1/object/public/brand-assets/'+path;}
+function isSuperAdmin(){return PROFILE?.role==='super_admin';}
+async function loadBranding(){
+  try{const rows=await rest('app_settings?id=eq.branding&select=value',{},false);if(rows?.[0]?.value)ST.branding={...ST.branding,...rows[0].value};}catch(e){console.warn('branding',e);}
+  applyLoginCover();
+}
+function applyLoginCover(){const el=$('auth-cover');if(el)el.style.backgroundImage=`url("${safeUrl(ST.branding.login_cover_url||'/assets/zf-cover-2026.png')}")`;}
+function selectedClient(){return ST.clients.find(c=>String(c.id)===String(ST.clientId));}
+function applyClientCover(){
+  const el=$('client-cover'),c=selectedClient();if(!el)return;
+  const url=c?.cover_url||ST.branding.login_cover_url||'/assets/zf-cover-2026.png';
+  el.style.backgroundImage=`url("${safeUrl(url)}")`;el.style.backgroundPosition=c?.cover_position||'center';
+}
+async function uploadBrandAsset(file,path){
+  if(!file)throw new Error('Selecione uma imagem.');
+  if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw new Error('Use JPG, PNG ou WebP.');
+  if(file.size>5*1024*1024)throw new Error('A imagem deve ter no máximo 5 MB.');
+  const r=await fetch(SB_URL+'/storage/v1/object/brand-assets/'+path,{method:'POST',headers:{apikey:SB_ANON,Authorization:'Bearer '+SESSION.access_token,'Content-Type':file.type,'x-upsert':'true'},body:file});
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.message||'Falha no upload.');}
+  return publicAssetUrl(path)+'?v='+Date.now();
+}
+async function saveGlobalCover(input){
+  if(!isSuperAdmin())return toast('Apenas o superadministrador pode alterar capas.','error');
+  const file=input?.files?.[0];if(!file)return;try{
+    const year=new Date().getFullYear(),ext=file.type.split('/')[1].replace('jpeg','jpg');
+    const url=await uploadBrandAsset(file,`global/login-${year}.${ext}`);
+    ST.branding={...ST.branding,login_cover_url:url,login_cover_year:year};
+    await rest('app_settings?id=eq.branding',{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({value:ST.branding,updated_at:new Date().toISOString(),updated_by:SESSION.user.id})});
+    applyLoginCover();toast('Capa anual atualizada.');showSettings();
+  }catch(e){toast(e.message,'error');}finally{input.value='';}
+}
+async function saveClientCover(input){
+  if(!isSuperAdmin())return toast('Apenas o superadministrador pode alterar capas.','error');
+  const file=input?.files?.[0],c=selectedClient();if(!file||!c)return;try{
+    const ext=file.type.split('/')[1].replace('jpeg','jpg'),url=await uploadBrandAsset(file,`clients/${c.id}/cover.${ext}`);
+    await rest('clients?id=eq.'+encodeURIComponent(c.id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({cover_url:url,updated_at:new Date().toISOString()})});
+    c.cover_url=url;applyClientCover();toast('Capa do cliente atualizada.');showSettings();
+  }catch(e){toast(e.message,'error');}finally{input.value='';}
+}
+async function resetClientCover(){
+  if(!isSuperAdmin())return toast('Apenas o superadministrador pode alterar capas.','error');const c=selectedClient();if(!c)return;
+  try{await rest('clients?id=eq.'+encodeURIComponent(c.id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({cover_url:null,updated_at:new Date().toISOString()})});c.cover_url=null;applyClientCover();toast('Capa global restaurada para o cliente.');showSettings();}catch(e){toast(e.message,'error');}
 }
 
 async function authRequest(path,opts={}){
@@ -109,12 +154,13 @@ async function afterLogin(user){
 
 async function loadClients(){
   try{
-    ST.clients=await rest('clients?order=name.asc&select=id,name,slug,status,is_agency')||[];
+    ST.clients=await rest('clients?order=name.asc&select=id,name,slug,status,is_agency,cover_url,cover_position')||[];
     buildClientDrop();
     if(ST.clients.length&&!ST.clientId){
       const first=ST.clients.find(c=>!c.is_agency)||ST.clients[0];
       ST.clientId=first.id;ST.clientName=first.name;if($('tb-client-name'))$('tb-client-name').textContent=first.name;
     }
+    applyClientCover();
   }catch(e){console.error('loadClients',e);ST.clients=[];buildClientDrop();}
 }
 
@@ -322,7 +368,7 @@ function formatCell(v){if(v===null||v===undefined)return'—';if(typeof v==='obj
 function cyclePeriod(){const ps=[7,14,30,90],labels=['Últimos 7 dias','Últimos 14 dias','Últimos 30 dias','Últimos 90 dias'];const i=ps.indexOf(ST.period),n=(i+1)%ps.length;ST.period=ps[n];if($('tb-period-label'))$('tb-period-label').textContent=labels[n];renderDashboard();}
 function setCompare(val,name,e){ST.compare=val;if($('tb-compare-name'))$('tb-compare-name').textContent=name;qsa('#compare-drop .tb-drop-item').forEach(x=>x.classList.remove('active'));(e?.target||window.event?.target)?.classList.add('active');closeAllDrops();renderDashboard();}
 function buildClientDrop(){const drop=$('client-drop');if(!drop)return;drop.innerHTML=ST.clients.length?ST.clients.map(c=>`<div class="tb-drop-item${String(c.id)===String(ST.clientId)?' active':''}" onclick="selectClient('${esc(c.id)}','${esc(c.name)}',event)"><div class="item-av">${esc(c.name?.[0]||'?')}</div>${esc(c.name)}${c.is_agency?' (agência)':''}</div>`).join(''):'<div class="tb-drop-item">Nenhum cliente</div>';}
-function selectClient(id,name,e){e?.stopPropagation();ST.clientId=id;ST.clientName=name;if($('tb-client-name'))$('tb-client-name').textContent=name;closeAllDrops();buildClientDrop();renderDashboard();}
+function selectClient(id,name,e){e?.stopPropagation();ST.clientId=id;ST.clientName=name;if($('tb-client-name'))$('tb-client-name').textContent=name;closeAllDrops();buildClientDrop();applyClientCover();renderDashboard();}
 function toggleDrop(id,e){e?.stopPropagation();const el=$(id);if(!el)return;const was=el.classList.contains('open');closeAllDrops();if(!was)el.classList.add('open');}
 function closeAllDrops(){qsa('.tb-drop,.user-menu').forEach(d=>d.classList.remove('open'));}
 function toggleUserMenu(e){$('user-menu')?.classList.toggle('open');(e||window.event)?.stopPropagation();}
@@ -346,7 +392,14 @@ function showClients(){showModulePage('Todos os clientes',`<div class="section-c
 function showNewClient(){showModulePage('Novo cliente',`<div class="section-card" style="max-width:620px"><div class="f-grp"><label class="f-lbl">Nome</label><input class="f-inp" id="new-client-name" placeholder="Nome do cliente"></div><div class="f-grp"><label class="f-lbl">Slug</label><input class="f-inp" id="new-client-slug" placeholder="nome-do-cliente"></div><button class="btn-prim" onclick="createClient()">Cadastrar cliente</button><div id="new-client-msg" style="margin-top:10px;font-size:12px"></div></div>`);}
 async function createClient(){const name=$('new-client-name')?.value.trim(),slug=($('new-client-slug')?.value.trim()||name?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''));if(!name)return toast('Informe o nome do cliente.','error');try{await rest('clients',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({name,slug,status:'active',is_agency:false})});await loadClients();toast('Cliente cadastrado.');showClients();}catch(e){if($('new-client-msg'))$('new-client-msg').textContent='Não foi possível cadastrar: '+e.message;}}
 async function showAccounts(){showModulePage('Contas conectadas','<div class="section-card"><div class="empty-state"><div class="empty-title">Carregando...</div></div></div>');const found=await tryTable(['platform_accounts','social_accounts','accounts'],'client_id=eq.'+encodeURIComponent(ST.clientId)+'&limit=100');showModulePage('Contas conectadas',`<div class="section-card"><div class="section-hdr"><span class="section-title">Contas do cliente atual</span></div>${found?.data?.length?objectTable(found.data):'<div class="empty-state"><div class="empty-title">Nenhuma conta retornada</div><div class="empty-desc">Não há tabela compatível ou não existem registros acessíveis para este cliente.</div></div>'}</div>`);}
-function showSettings(){showModulePage('Configurações',`<div class="section-card"><div class="section-hdr"><span class="section-title">Usuário</span></div>${objectTable([{nome:PROFILE?.full_name||SESSION?.user?.email?.split('@')[0]||'—',email:SESSION?.user?.email||'—',perfil:PROFILE?.role||'—'}])}</div>`);}
+function showSettings(){
+  const c=selectedClient(),admin=isSuperAdmin();
+  const branding=admin?`<div class="section-card"><div class="section-hdr"><span class="section-title">Identidade visual e capas</span></div><div class="brand-settings">
+    <div class="brand-panel"><h3>Capa anual do login</h3><p>Imagem institucional global. Atualize quando a ZF lançar a identidade do novo ano.</p><div class="cover-preview" style="background-image:url('${esc(safeUrl(ST.branding.login_cover_url))}')"></div><div class="cover-actions"><label class="cover-label" for="global-cover-file">Trocar capa anual</label><input class="cover-file" id="global-cover-file" type="file" accept="image/png,image/jpeg,image/webp" onchange="saveGlobalCover(this)"></div><div class="cover-note">JPG, PNG ou WebP · máximo 5 MB · recomendado 1920 × 1080 px</div></div>
+    <div class="brand-panel"><h3>Capa do cliente: ${esc(c?.name||'—')}</h3><p>Personaliza o dashboard selecionado. Sem imagem própria, utiliza automaticamente a capa global.</p><div class="cover-preview" style="background-image:url('${esc(safeUrl(c?.cover_url||ST.branding.login_cover_url))}')"></div><div class="cover-actions"><label class="cover-label" for="client-cover-file">Trocar capa do cliente</label><input class="cover-file" id="client-cover-file" type="file" accept="image/png,image/jpeg,image/webp" onchange="saveClientCover(this)"><button class="btn-sm-ghost" onclick="resetClientCover()">Usar capa global</button></div><div class="cover-note">A personalização acompanha o cliente em qualquer acesso ou link compartilhado.</div></div>
+  </div></div>`:'';
+  showModulePage('Configurações',`<div class="section-card"><div class="section-hdr"><span class="section-title">Usuário</span></div>${objectTable([{nome:PROFILE?.full_name||SESSION?.user?.email?.split('@')[0]||'—',email:SESSION?.user?.email||'—',perfil:PROFILE?.role||'—'}])}</div>${branding}`);
+}
 function showGenericModule(page){const labels={knowledge:'Base de conhecimento',diagnostic:'Diagnóstico',market:'Mercado',competitors:'Concorrentes',trends:'Trends',benchmark:'Benchmark',swot:'SWOT',icp:'ICP',personas:'Personas',journey:'Jornada de compra',pains:'Dores, desejos e objeções',objectives:'Objetivos',cbva:'Matriz CBVA',offers:'Matriz de Ofertas',positioning:'Posicionamento',value:'Proposta de Valor',funnel:'Funil',channels:'Canais',strategy:'Plano Estratégico'};showModulePage(labels[page]||page,`<div class="section-card"><div class="empty-state"><div class="empty-title">Módulo acessível, sem fonte de dados conectada</div><div class="empty-desc">Esta área está disponível para implementação, mas não exibirá conteúdo inventado. Conecte a fonte/tabela correspondente no Supabase para habilitar dados reais.</div></div></div>`);}
 
 function exportCSV(){
@@ -387,7 +440,7 @@ function injectStyles(){const s=document.createElement('style');s.textContent=`
 `;document.head.appendChild(s);}
 
 async function boot(){
-  injectStyles();wireSidebar();document.addEventListener('click',closeAllDrops);
+  injectStyles();wireSidebar();document.addEventListener('click',closeAllDrops);await loadBranding();
   try{const s=await restoreSession();if(s?.user)await afterLogin(s.user);else{if($('app'))$('app').style.display='none';if($('auth-wrap'))$('auth-wrap').style.display='flex';}}catch(e){console.error('boot',e);doLogout();}
 }
 
