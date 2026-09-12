@@ -1,5 +1,5 @@
 const SB_URL='https://ityidnsfhgotucgvcifq.supabase.co';
-const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJpdHlpZG5zZmhnb3R1Y2d2Y2lmcSIsInJlZiI6Iml0eWlkbnNmaGdvdHVjZ3ZjaWZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwMDYwOSwiZXhwIjoyMTA0NTgyMDA5fQ.IByuvnSlhNYeO-mipYk_xFWizcGWVaQmbK_w9H7ohBw';
+const SB_ANON='sb_publishable_uSek4JLn4bAUje-gnfES4g_XVJB3Why';
 const SESSION_KEY='engaje_session_v2';
 let SESSION=null,PROFILE=null;
 
