@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ENGAJE Marketing Hub</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<!-- ═══════════════════════ AUTH ═══════════════════════ -->
+<div id="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="auth-logo">
+        <div class="auth-logo-icon">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M3 13L8 3L13 13M5.5 9.5H10.5" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <div>
+          <div class="auth-logo-text">ENGAJE</div>
+          <div class="auth-logo-sub">MARKETING HUB</div>
+        </div>
+      </div>
+    </div>
+    <div id="login-form">
+      <div class="auth-title">Entrar na plataforma</div>
+      <div class="auth-sub">Acesse com seu e-mail e senha</div>
+      <div class="auth-err" id="l-err"></div>
+      <div class="f-grp"><label class="f-lbl">E-mail</label><input class="f-inp" type="email" id="l-email" placeholder="seu@email.com" autocomplete="email"></div>
+      <div class="f-grp"><label class="f-lbl">Senha</label><input class="f-inp" type="password" id="l-pass" placeholder="••••••••" autocomplete="current-password"></div>
+      <div class="f-forgot"><a href="#" onclick="showForgot();return false">Esqueceu a senha?</a></div>
+      <button class="btn-prim" id="l-btn" onclick="doLogin()">Entrar</button>
+    </div>
+    <div id="forgot-form" style="display:none">
+      <div class="auth-title">Recuperar senha</div>
+      <div class="auth-sub">Enviaremos um link de recuperação</div>
+      <div class="auth-err" id="f-err"></div>
+      <div class="auth-ok" id="f-ok"></div>
+      <div class="f-grp"><label class="f-lbl">E-mail</label><input class="f-inp" type="email" id="f-email" placeholder="seu@email.com"></div>
+      <button class="btn-prim" id="f-btn" onclick="doForgot()">Enviar link</button>
+      <div class="auth-div"></div>
+      <div class="auth-back"><a href="#" onclick="showLogin();return false">← Voltar ao login</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ APP ═══════════════════════ -->
+<div id="app">
+<div class="app-layout">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-logo">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M3 13L8 3L13 13M5.5 9.5H10.5" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div>
+        <div class="topbar-brand-name">ENGAJE</div>
+        <div class="topbar-brand-sub">MARKETING HUB</div>
+      </div>
+    </div>
+
+    <div class="topbar-center">
+      <span class="topbar-label">Cliente atual</span>
+      <div class="tb-sel" onclick="toggleDrop('client-drop',event)">
+        <span id="tb-client-name">Carregando...</span>
+        <span class="caret">▾</span>
+        <div class="tb-drop" id="client-drop"></div>
+      </div>
+      <div class="tb-sep"></div>
+      <span class="topbar-label">Comparar com</span>
+      <div class="tb-sel" onclick="toggleDrop('compare-drop',event)">
+        <span id="tb-compare-name">Período anterior</span>
+        <span class="caret">▾</span>
+        <div class="tb-drop" id="compare-drop">
+          <div class="tb-drop-item active" onclick="setCompare('prev_period','Período anterior')">Período anterior</div>
+          <div class="tb-drop-item" onclick="setCompare('same_prev','Mesmo período anterior')">Mesmo período anterior</div>
+          <div class="tb-drop-item" onclick="setCompare('prev_month','Mês anterior')">Mês anterior</div>
+        </div>
+      </div>
+      <div class="tb-sep"></div>
+      <div class="date-range" onclick="cyclePeriod()">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M5 1v2h6V1h1v2h2a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h2V1h1zm8 5H3v7h10V6zM5 8h2v2H5V8zm4 0h2v2H9V8z"/></svg>
+        <span id="tb-period-label">Últimos 30 dias</span>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <button class="btn-share" onclick="openShareModal()">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M13 5.5a2.5 2.5 0 1 0-2.5 2.5c.4 0 .8-.09 1.14-.25L13 9.5v1l-1.36 1.75a2.5 2.5 0 1 0 .77.69L14 11v-1.5l-1.38-1.87A2.5 2.5 0 0 0 13 5.5zM10.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM4.5 9a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z"/></svg>
+        Compartilhar com cliente
+      </button>
+      <button class="btn-export">
+        <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12"><path d="M8 1v8M5 6l3 3 3-3M3 11v2h10v-2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+        Exportar
+        <span style="font-size:9px">▾</span>
+      </button>
+      <div class="btn-icon-sm">···</div>
+      <div style="position:relative">
+        <div class="user-av" id="user-av" onclick="toggleUserMenu()"><span id="user-initials">EZ</span></div>
+        <div class="user-menu" id="user-menu">
+          <div class="um-head"><div class="um-name" id="um-name">Carregando</div><div class="um-email" id="um-email"></div></div>
+          <div class="um-item" onclick="nav('settings')">⚙ Configurações</div>
+          <div class="um-item danger" onclick="doLogout()">→ Sair</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sb-section-label">Visão Geral</div>
+    <div class="sb-item active" onclick="nav('dashboard')">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h5v5H2V2zm0 7h5v5H2V9zm7-7h5v5H9V2zm0 7h5v5H9V9z"/></svg>
+      Dashboard
+    </div>
+    <div class="sb-item" onclick="nav('reports')">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm1 2v8h8V4H4zm1 2h6v1H5V6zm0 2h4v1H5V8z"/></svg>
+      Relatórios
+    </div>
+    <hr class="sb-divider">
+    <div class="sb-section-label">Clientes</div>
+    <div class="sb-item" onclick="nav('clients')">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a3 3 0 1 0 0 6A3 3 0 0 0 8 1zm5 13H3a5 5 0 0 1 10 0z"/></svg>
+      Todos os clientes
+    </div>
+    <div class="sb-item" onclick="nav('new-client')">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 0 1 1 1v4h4a1 1 0 0 1 0 2H9v4a1 1 0 0 1-2 0V9H3a1 1 0 0 1 0-2h4V3a1 1 0 0 1 1-1z"/></svg>
+      Novo cliente
+    </div>
+    <div class="sb-item" onclick="nav('accounts')">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3zm2 1v8h10V4H3z"/></svg>
+      Contas conectadas
+    </div>
+    <div class="sb-item" onclick="openShareModal()">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M13 5.5a2.5 2.5 0 1 0-2.5 2.5A2.5 2.5 0 0 0 13 5.5zM4.5 9A2.5 2.5 0 1 0 7 11.5 2.5 2.5 0 0 0 4.5 9zm7 .5a2.5 2.5 0 1 0 2.5 2.5A2.5 2.5 0 0 0 11.5 9.5z" opacity=".7"/></svg>
+      Compartilhamento
+    </div>
+    <div class="sb-item">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm-.5 3h1v5h-1V4zm.5 7.5a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5z"/></svg>
+      Base de conhecimento
+    </div>
+    <hr class="sb-divider">
+    <div class="sb-section-label">Inteligência</div>
+    <div class="sb-item"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 1 1 0 14A7 7 0 0 1 8 1zm0 3a.75.75 0 0 0 0 1.5h-.75v5h1.5V5.5H8V4z" opacity=".5"/><path d="M8 11a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>Diagnóstico</div>
+    <div class="sb-item"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 11L5 7l3 3 3-4 3 2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>Mercado</div>
+    <div class="sb-item"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 3a1 1 0 0 1 1 1v1h1a1 1 0 0 1 0 2H9v4H7V7H6a1 1 0 0 1 0-2h1V4a1 1 0 0 1 1-1z" opacity=".5"/><circle cx="5" cy="4" r="2" opacity=".7"/><circle cx="11" cy="4" r="2" opacity=".7"/></svg>Concorrentes</div>
+    <div class="sb-item"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 12l3-4 2 2 3-5 3 4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Trends</div>
+    <div class="sb-item"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 14V9h2v5H3zm4 0V5h2v9H7zm4 0V2h2v12h-2z"/></svg>Benchmark</div>
+    <div class="sb-item"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2.5 5 5.5.8-4 3.9.9 5.5L8 13.7l-4.9 2.5.9-5.5L0 6.8l5.5-.8z" opacity=".7"/></svg>SWOT</div>
+    <hr class="sb-divider">
+    <div class="sb-section-label">Público</div>
+    <div class="sb-item"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a3 3 0 1 1 0 6 3 3 0 0 1 0-6zm0 8c-3.3 0-6 1.3-6 3v1h12v-1c0-1.7-2.7-3-6-3z" opacity=".6"/></svg>ICP</div>
+    <div class="sb-item"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M5 4a3 3 0 1 1 6 0 3 3 0 0 1-6 0zm-2 9c0-2.2 2.2-4 5-4s5 1.8 5 4" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>Personas</div>
+    <div class="sb-item"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 8h12M8 2v12" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>Jornada de compra</div>
+    <div class="sb-item"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 0 1 0 2A4 4 0 0 0 4 8a4 4 0 0 0 4 4 1 1 0 0 1 0 2A6 6 0 0 1 2 8a6 6 0 0 1 6-6z" opacity=".5"/></svg>Dores, desejos e objeções</div>
+    <hr class="sb-divider">
+    <div class="sb-section-label">Estratégia</div>
+    <div class="sb-item"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2l1.5 5H15l-4.5 3.3 1.7 5.2L8 12.8l-4.2 2.7 1.7-5.2L1 7h5.5z" opacity=".6"/></svg>Objetivos</div>
+    <div class="sb-item"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h5v5H2zm7 0h5v5H9zm-7 7h5v5H2zm7 7h5v-5H9z" opacity=".6"/></svg>Matriz CBVA</div>
+    <div class="sb-item"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 2a5 5 0 1 1 0 10A5 5 0 0 1 8 3z" opacity=".6"/></svg>Matriz de Ofertas</div>
+    <div class="sb-item"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 5h5L11 9l2 5-5-3-5 3 2-5L1 6h5z" opacity=".6"/></svg>Posicionamento</div>
+    <div class="sb-item"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 10l6-7 6 7H2z" opacity=".6"/></svg>Proposta de Valor</div>
+    <div class="sb-item"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1c3.3 0 6 1.3 6 3v8c0 1.7-2.7 3-6 3S2 13.7 2 12V4c0-1.7 2.7-3 6-3z" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".6"/></svg>Funil</div>
+    <div class="sb-item"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 8h12M2 4h12M2 12h8" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>Canais</div>
+    <div class="sb-item"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12v2H2V3zm0 4h12v2H2V7zm0 4h7v2H2v-2z" opacity=".6"/></svg>Plano Estratégico</div>
+
+    <div class="sb-footer">
+      <div class="sb-ai">
+        <div class="sb-ai-icon">✦</div>
+        <div>
+          <div class="sb-ai-text">Engaje AI</div>
+          <div class="sb-ai-sub">Seu estrategista de marketing</div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <div class="main-area" id="main-area">
+
+    <!-- CLIENT HEADER -->
+    <div class="client-header" id="client-header">
+      <div class="client-avatar" id="client-avatar">?</div>
+      <div class="client-info">
+        <div class="client-name" id="client-name">Carregando...</div>
+        <div class="client-meta" id="client-meta">—</div>
+      </div>
+      <div class="client-accounts">
+        <span class="accounts-label">Contas conectadas</span>
+        <div class="plat-icon connected" style="background:rgba(225,48,108,.15)" data-tip="Instagram">
+          <svg viewBox="0 0 24 24" fill="var(--ig)"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+        </div>
+        <div class="plat-icon connected" style="background:rgba(24,119,242,.15)" data-tip="Facebook">
+          <svg viewBox="0 0 24 24" fill="var(--fb)"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        </div>
+        <div class="plat-icon connected" style="background:rgba(105,201,208,.15)" data-tip="TikTok">
+          <svg viewBox="0 0 24 24" fill="var(--tt)"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.98a8.28 8.28 0 004.83 1.54V7.07a4.85 4.85 0 01-1.06-.38z"/></svg>
+        </div>
+        <div class="plat-icon connected" style="background:rgba(255,0,0,.1)" data-tip="YouTube">
+          <svg viewBox="0 0 24 24" fill="var(--yt)"><path d="M23.495 6.205a3.007 3.007 0 00-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 00.527 6.205a31.247 31.247 0 00-.522 5.805 31.247 31.247 0 00.522 5.783 3.007 3.007 0 002.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 002.088-2.088 31.247 31.247 0 00.5-5.783 31.247 31.247 0 00-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg>
+        </div>
+        <div class="plat-icon connected" style="background:rgba(66,133,244,.15)" data-tip="Google Meu Negócio">
+          <svg viewBox="0 0 24 24" fill="var(--gmb)"><path d="M12 11.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5zM12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+        </div>
+        <button class="btn-details">Ver detalhes ›</button>
+      </div>
+      <div class="health-card">
+        <div class="health-label">Saúde do Marketing <span style="cursor:help;color:var(--text3)">ⓘ</span></div>
+        <div class="health-body">
+          <div class="health-ring">
+            <svg width="48" height="48" viewBox="0 0 48 48">
+              <circle class="health-ring-track" cx="24" cy="24" r="20"/>
+              <circle class="health-ring-fill" id="health-ring-fill" cx="24" cy="24" r="20"
+                stroke="#22c55e"
+                stroke-dasharray="125.66"
+                stroke-dashoffset="27.65"/>
+            </svg>
+            <div class="health-score-text" id="health-score-text">78</div>
+          </div>
+          <div>
+            <div class="health-desc" id="health-desc">Boa performance</div>
+            <div class="health-sub" id="health-sub">+12 pts no período</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="dash-tabs">
+      <div class="dash-tab active" onclick="setTab('overview',this)">Visão Geral</div>
+      <div class="dash-tab" onclick="setTab('content',this)">Conteúdo</div>
+      <div class="dash-tab" onclick="setTab('paid',this)">Mídia Paga</div>
+      <div class="dash-tab" onclick="setTab('audience',this)">Audiência</div>
+      <div class="dash-tab" onclick="setTab('conversions',this)">Conversões</div>
+      <div class="dash-tab" onclick="setTab('competitors',this)">Concorrentes</div>
+    </div>
+
+    <!-- OVERVIEW TAB -->
+    <div id="tab-overview" class="dash-content">
+
+      <!-- KPI ROW -->
+      <div class="kpi-row" id="kpi-row">
+        <div class="kpi-card kpi-blue"><div class="skel" style="height:72px"></div></div>
+        <div class="kpi-card kpi-green"><div class="skel" style="height:72px"></div></div>
+        <div class="kpi-card kpi-red"><div class="skel" style="height:72px"></div></div>
+        <div class="kpi-card kpi-purple"><div class="skel" style="height:72px"></div></div>
+        <div class="kpi-card kpi-yellow"><div class="skel" style="height:72px"></div></div>
+        <div class="kpi-card kpi-teal"><div class="skel" style="height:72px"></div></div>
+      </div>
+
+      <!-- CHARTS ROW -->
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-hdr">
+            <div class="chart-title">Desempenho ao longo do tempo</div>
+            <div class="chart-controls">
+              <div class="ctrl-grp">
+                <button class="ctrl-btn" onclick="setChartGran('day',this)">Dia</button>
+                <button class="ctrl-btn" onclick="setChartGran('week',this)">Semana</button>
+                <button class="ctrl-btn active" onclick="setChartGran('month',this)">Mês</button>
+              </div>
+              <select class="ctrl-sel" id="chart-plat-filter" onchange="updatePerformanceChart()">
+                <option value="all">Todas as plataformas</option>
+                <option value="instagram">Instagram</option>
+                <option value="facebook_organic">Facebook</option>
+              </select>
+            </div>
+          </div>
+          <div class="chart-legend" id="chart-legend">
+            <div class="legend-item" onclick="toggleSeries(0,this)" data-series="0">
+              <div class="legend-dot" style="background:#4361ee"></div>Alcance
+            </div>
+            <div class="legend-item" onclick="toggleSeries(1,this)" data-series="1">
+              <div class="legend-dot" style="background:#22c55e"></div>Engajamento
+            </div>
+            <div class="legend-item" onclick="toggleSeries(2,this)" data-series="2">
+              <div class="legend-dot" style="background:#8b5cf6"></div>Cliques
+            </div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="perf-chart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-hdr">
+            <div class="chart-title">Distribuição por plataforma</div>
+          </div>
+          <div class="donut-wrap">
+            <canvas id="donut-chart" width="180" height="160" style="max-width:180px"></canvas>
+            <div class="donut-center">
+              <div class="donut-center-val" id="donut-center-val">—</div>
+              <div class="donut-center-lbl">Alcance total</div>
+            </div>
+          </div>
+          <div class="plat-list" id="plat-list">
+            <div class="plat-list-item"><div class="plat-list-dot" style="background:var(--ig)"></div><span class="plat-list-name">Instagram</span><span class="plat-list-pct">—</span><span class="plat-list-abs">—</span></div>
+            <div class="plat-list-item"><div class="plat-list-dot" style="background:var(--fb)"></div><span class="plat-list-name">Facebook</span><span class="plat-list-pct">—</span><span class="plat-list-abs">—</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PLATFORM METRICS -->
+      <div id="plat-metrics-section">
+      <div class="section-hdr" style="margin-bottom:8px">
+        <span class="section-title" style="font-size:12px;font-weight:600">Métricas por plataforma</span>
+      </div>
+      <div class="plat-metrics-row" id="plat-metrics-row">
+        <div class="plat-metric-card"><div class="skel" style="height:100px"></div></div>
+        <div class="plat-metric-card"><div class="skel" style="height:100px"></div></div>
+        <div class="plat-metric-card"><div class="skel" style="height:100px"></div></div>
+        <div class="plat-metric-card"><div class="skel" style="height:100px"></div></div>
+        <div class="plat-metric-card"><div class="skel" style="height:100px"></div></div>
+      </div>
+      </div><!-- /plat-metrics-section -->
+
+      <!-- BOTTOM ROW -->
+      <div class="bottom-row">
+
+        <!-- TOP CONTENT -->
+        <div class="section-card">
+          <div class="section-hdr">
+            <span class="section-title">Melhores conteúdos <span style="font-weight:400;color:var(--text2)">(últimos 30 dias)</span></span>
+            <span class="section-link" onclick="nav('content')">Ver todos</span>
+          </div>
+          <div class="top-content-list" id="top-content"></div>
+        </div>
+
+        <!-- INSIGHTS -->
+        <div class="section-card">
+          <div class="section-hdr">
+            <span class="section-title">Insights e oportunidades</span>
+            <span class="section-link">Ver todos</span>
+          </div>
+          <div class="insight-list" id="insight-list">
+            <div class="skel" style="height:64px;border-radius:var(--r)"></div>
+            <div class="skel" style="height:64px;border-radius:var(--r)"></div>
+            <div class="skel" style="height:64px;border-radius:var(--r)"></div>
+          </div>
+        </div>
+
+        <!-- CLIENT SHARE CARD -->
+        <div class="share-card">
+          <div class="sc-status">
+            <span class="sc-status-label">Acesso do cliente</span>
+            <span class="sc-badge"><span class="sc-dot"></span>Ativo</span>
+          </div>
+          <div style="font-size:10px;color:var(--text2);margin-bottom:4px;font-weight:500">Link para compartilhamento</div>
+          <div class="sc-link-wrap">
+            <span class="sc-link" id="sc-link-url">—</span>
+            <button class="sc-copy" onclick="copyShareLink()" title="Copiar">⎘</button>
+          </div>
+          <div class="sc-row"><span>Validade</span><span style="color:var(--text)">Indeterminado</span></div>
+          <div class="sc-perms" id="sc-perms">
+            <div class="sc-perms-item"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M13 4.5L6 12 3 9" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Visualizar dashboard</div>
+            <div class="sc-perms-item"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M13 4.5L6 12 3 9" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Visualizar relatórios</div>
+            <div class="sc-perms-item"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M13 4.5L6 12 3 9" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Ver conteúdos publicados</div>
+          </div>
+          <div class="sc-actions">
+            <button class="btn-sm-ghost" onclick="openShareModal()">Gerenciar acesso</button>
+            <button class="btn-sm-prim" onclick="openShareLink()">Abrir link do cliente</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tab-overview -->
+
+    <!-- OTHER TABS (placeholders) -->
+    <div id="tab-content" class="dash-content" style="display:none">
+      <div class="empty-state" style="margin-top:60px">
+        <div class="empty-icon">📄</div>
+        <div class="empty-title">Conteúdo em breve</div>
+        <div class="empty-desc">A análise detalhada de conteúdo estará disponível nesta aba.</div>
+      </div>
+    </div>
+    <div id="tab-paid" class="dash-content" style="display:none">
+      <div class="empty-state" style="margin-top:60px">
+        <div class="empty-icon">💰</div>
+        <div class="empty-title">Mídia Paga em breve</div>
+        <div class="empty-desc">Conecte suas contas de anúncio para ver dados de mídia paga.</div>
+      </div>
+    </div>
+    <div id="tab-audience" class="dash-content" style="display:none">
+      <div class="empty-state" style="margin-top:60px">
+        <div class="empty-icon">👥</div>
+        <div class="empty-title">Audiência em breve</div>
+        <div class="empty-desc">Dados de audiência e segmentação estarão disponíveis aqui.</div>
+      </div>
+    </div>
+    <div id="tab-conversions" class="dash-content" style="display:none">
+      <div class="empty-state" style="margin-top:60px">
+        <div class="empty-icon">🎯</div>
+        <div class="empty-title">Conversões em breve</div>
+        <div class="empty-desc">Métricas de conversão e funil estarão disponíveis aqui.</div>
+      </div>
+    </div>
+    <div id="tab-competitors" class="dash-content" style="display:none">
+      <div class="empty-state" style="margin-top:60px">
+        <div class="empty-icon">🏆</div>
+        <div class="empty-title">Concorrentes em breve</div>
+        <div class="empty-desc">Análise competitiva estará disponível após configuração.</div>
+      </div>
+    </div>
+
+  </div><!-- /main-area -->
+</div>
+</div><!-- /app -->
+
+<!-- SHARE MODAL -->
+<div class="modal-overlay" id="share-modal" onclick="closeModalOutside(event,'share-modal')">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <div class="modal-title">Compartilhar com cliente</div>
+      <button class="modal-close" onclick="closeModal('share-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section">
+        <div class="modal-section-title">Configurações</div>
+        <div class="modal-row">
+          <div class="f-grp" style="margin:0">
+            <label class="f-lbl">Cliente</label>
+            <input class="f-inp" id="share-client" readonly>
+          </div>
+          <div class="f-grp" style="margin:0">
+            <label class="f-lbl">Validade</label>
+            <select class="f-inp" id="share-expiry">
+              <option value="0">Indeterminado</option>
+              <option value="7">7 dias</option>
+              <option value="30">30 dias</option>
+              <option value="90">90 dias</option>
+            </select>
+          </div>
+        </div>
+        <div class="f-grp">
+          <label class="f-lbl">Senha de acesso (opcional)</label>
+          <input class="f-inp" type="password" id="share-password" placeholder="Deixe em branco para acesso livre">
+        </div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Permissões</div>
+        <div class="perm-list">
+          <div class="perm-item"><span>Visualizar dashboard</span><div class="perm-toggle on" data-perm="dashboard" onclick="togglePerm(this)"></div></div>
+          <div class="perm-item"><span>Visualizar relatórios</span><div class="perm-toggle on" data-perm="reports" onclick="togglePerm(this)"></div></div>
+          <div class="perm-item"><span>Ver conteúdos publicados</span><div class="perm-toggle on" data-perm="content" onclick="togglePerm(this)"></div></div>
+          <div class="perm-item"><span>Visualizar métricas internas</span><div class="perm-toggle" data-perm="internal_metrics" onclick="togglePerm(this)"></div></div>
+          <div class="perm-item"><span>Visualizar planejamento</span><div class="perm-toggle" data-perm="planning" onclick="togglePerm(this)"></div></div>
+          <div class="perm-item"><span>Visualizar mídia paga</span><div class="perm-toggle" data-perm="paid_media" onclick="togglePerm(this)"></div></div>
+          <div class="perm-item"><span>Visualizar dados financeiros</span><div class="perm-toggle" data-perm="financial" onclick="togglePerm(this)"></div></div>
+        </div>
+      </div>
+      <div class="modal-link-result" id="modal-link-result">
+        <div style="font-size:11px;font-weight:600;color:var(--green);margin-bottom:6px">✓ Link gerado com sucesso</div>
+        <div class="modal-link-url" id="modal-link-url"></div>
+        <button class="btn-prim" onclick="copyModalLink()" style="font-size:11px;padding:7px">Copiar link</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('share-modal')">Cancelar</button>
+      <button class="btn-gen" onclick="generateShareLink()">Gerar link de acesso</button>
+    </div>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
