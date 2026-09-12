@@ -41,6 +41,13 @@ Deno.serve(async(req)=>{
     const payload=await wr.json();const rows=Array.isArray(payload.data)?payload.data:[];
     const {data:accounts}=await admin.from("accounts").select("id,client_id");
     const accountMap=new Map((accounts||[]).map((a:any)=>[String(a.id),a.client_id]));
+    const incomingIds=rows.map((r:any)=>String(r.post_id||"")).filter(Boolean);
+    const {data:existingPosts}=incomingIds.length
+      ?await admin.from("posts").select("id,thumbnail_url").in("id",incomingIds)
+      :{data:[]};
+    const storedThumbs=new Map((existingPosts||[])
+      .filter((p:any)=>String(p.thumbnail_url||"").includes("/storage/v1/object/public/social-media/"))
+      .map((p:any)=>[String(p.id),p.thumbnail_url]));
     const {data:log}=await admin.from("sync_log").insert({platform:"facebook_organic",sync_type:"manual",status:"running",started_at:started}).select("id").single();
     logId=log?.id;
     let posts=0,metrics=0,images=0,skipped=0;
@@ -49,8 +56,8 @@ Deno.serve(async(req)=>{
       const postId=String(r.post_id||"");if(!clientId||!postId){skipped++;continue;}
       const published=r.post_created_time||r.created_time||new Date().toISOString();
       const thumb=r.post_full_picture||r.full_picture||r.post_picture||r.picture||null;
-      let permanent:string|null=null;
-      if(thumb){
+      let permanent:string|null=storedThumbs.get(postId)||null;
+      if(thumb&&!permanent){
         try{
           const ir=await fetch(thumb);if(ir.ok){
             const blob=await ir.blob(),ext=(blob.type.split("/")[1]||"jpg").replace("jpeg","jpg");

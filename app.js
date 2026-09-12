@@ -401,7 +401,7 @@ async function syncWindsor(){
   const btn=$('sync-windsor-btn'),progress=$('sync-progress');if(btn){btn.disabled=true;btn.textContent='Sincronizando…';}if(progress){progress.className='sync-progress running';progress.innerHTML='<strong>Sincronização em andamento</strong><span>Buscando publicações e métricas no Windsor e salvando no Supabase. Aguarde; isso pode levar cerca de um minuto.</span>';}
   try{
     const r=await fetch(SB_URL+'/functions/v1/windsor-sync',{method:'POST',headers:authHeaders(),body:JSON.stringify({days:30})});
-    const d=await r.json();if(!r.ok)throw new Error(d.error||'Falha na sincronização');
+    const raw=await r.text();let d={};try{d=raw?JSON.parse(raw):{};}catch{d={};}if(!r.ok)throw new Error(d.error||d.message||`Falha na sincronização (HTTP ${r.status})`);
     toast(`Sincronização concluída: ${d.posts||0} publicações, ${d.images||0} imagens.`);await showAccounts(d);
   }catch(e){if(progress){progress.className='sync-result error';progress.innerHTML=`<strong>✕ Não foi possível sincronizar</strong><span>${esc(e.message)}</span><small>Nenhuma confirmação de importação foi recebida. Tente novamente.</small>`;}toast(e.message,'error');}finally{const current=$('sync-windsor-btn');if(current){current.disabled=false;current.textContent='Sincronizar Windsor agora';}}
 }
