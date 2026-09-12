@@ -29,8 +29,8 @@ input,select{font-family:inherit}
 .auth-card{position:relative;width:360px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:36px}
 .auth-brand{text-align:center;margin-bottom:28px}
 .auth-logo{display:inline-flex;align-items:center;gap:8px;margin-bottom:4px}
-.auth-logo-icon{width:28px;height:28px;background:var(--blue);border-radius:6px;display:flex;align-items:center;justify-content:center}
-.auth-logo-icon svg{width:16px;height:16px}
+.auth-logo-icon{width:34px;height:34px;background:#fff;border-radius:7px;display:flex;align-items:center;justify-content:center;padding:4px}
+.auth-logo-icon img{width:100%;height:100%;object-fit:contain}
 .auth-logo-text{font-size:16px;font-weight:800;letter-spacing:-.3px}
 .auth-logo-sub{font-size:9px;color:var(--text2);letter-spacing:.5px;margin-top:-2px;font-weight:500}
 .auth-title{font-size:17px;font-weight:700;margin-bottom:4px;text-align:left}
@@ -62,8 +62,8 @@ input,select{font-family:inherit}
 ═══════════════════════════════════════ */
 .topbar{grid-column:1/-1;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:10px;z-index:50}
 .topbar-brand{display:flex;align-items:center;gap:7px;width:var(--sidebar-w);padding-right:16px;border-right:1px solid var(--border);height:100%;flex-shrink:0}
-.topbar-logo{width:24px;height:24px;background:var(--blue);border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.topbar-logo svg{width:13px;height:13px}
+.topbar-logo{width:28px;height:28px;background:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:3px}
+.topbar-logo img{width:100%;height:100%;object-fit:contain}
 .topbar-brand-name{font-size:13px;font-weight:800;letter-spacing:-.3px;line-height:1.1}
 .topbar-brand-sub{font-size:8px;color:var(--text2);letter-spacing:.3px;font-weight:500}
 .topbar-center{flex:1;display:flex;align-items:center;gap:8px;padding:0 10px;overflow:hidden}
@@ -114,6 +114,7 @@ input,select{font-family:inherit}
 .sb-ai-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--blue),var(--purple));border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
 .sb-ai-text{font-size:11px;font-weight:600;color:var(--text)}
 .sb-ai-sub{font-size:9px;color:var(--text2)}
+.sb-owner{padding:5px 8px 1px;text-align:center;color:var(--text3);font-size:8px;line-height:1.35}
 
 /* ═══════════════════════════════════════
    MAIN AREA
