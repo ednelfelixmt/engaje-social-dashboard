@@ -1,6 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
-import postgres from "npm:postgres@3.4.7";
 
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, apikey, content-type"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
@@ -19,13 +18,10 @@ Deno.serve(async(req)=>{
   if(!profile?.is_active||profile.role!=="super_admin")return json({error:"Acesso restrito ao superadministrador"},403);
 
   const admin=createClient(url,service);
-  const sql=postgres(Deno.env.get("SUPABASE_DB_URL")!,{prepare:false,max:1});
   const started=new Date().toISOString();
   let logId:number|undefined;
   try{
-    const secret=await sql`select decrypted_secret from vault.decrypted_secrets where name='windsor_api_key' limit 1`;
-    await sql.end();
-    const key=secret[0]?.decrypted_secret;
+    const key=Deno.env.get("WINDSOR_API_KEY");
     if(!key)throw new Error("Credencial Windsor não configurada");
     const body=await req.json().catch(()=>({}));
     const days=Math.min(Math.max(Number(body.days)||30,1),90);
@@ -78,7 +74,6 @@ Deno.serve(async(req)=>{
     if(logId)await admin.from("sync_log").update({status:"success",finished_at:new Date().toISOString(),records_synced:posts,records_created:posts,records_updated:metrics}).eq("id",logId);
     return json({ok:true,received:rows.length,posts,metrics,images,skipped});
   }catch(e){
-    try{await sql.end();}catch{}
     if(logId)await admin.from("sync_log").update({status:"error",finished_at:new Date().toISOString(),error_message:String(e)}).eq("id",logId);
     return json({error:e instanceof Error?e.message:String(e)},500);
   }
