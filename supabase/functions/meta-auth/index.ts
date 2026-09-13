@@ -74,7 +74,7 @@ Deno.serve(async(req)=>{
     const auth=new URL("https://www.facebook.com/v26.0/dialog/oauth");
     auth.searchParams.set("client_id",appId);auth.searchParams.set("redirect_uri",REDIRECT);auth.searchParams.set("state",state);
     auth.searchParams.set("response_type","code");
-    auth.searchParams.set("scope","business_management,ads_read,pages_show_list,pages_read_engagement,read_insights,instagram_basic,instagram_manage_insights");
+    auth.searchParams.set("scope","business_management,ads_read,pages_show_list,pages_read_engagement,instagram_basic");
     return json({url:auth.toString()});
   }catch(e){console.error(e);return current.pathname.endsWith("/callback")?Response.redirect(APP_URL+"/?meta=error",302):json({error:e instanceof Error?e.message:String(e)},500);}
 });
