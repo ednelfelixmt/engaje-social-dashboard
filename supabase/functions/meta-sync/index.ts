@@ -36,11 +36,13 @@ Deno.serve(async(req)=>{
       while(next){
         const r=await fetch(next);const payload=await r.json();if(!r.ok||payload.error)throw new Error(payload.error?.message||`Meta HTTP ${r.status}`);
         const rows=Array.isArray(payload.data)?payload.data:[];totalRows+=rows.length;
-        for(const x of rows){const actions=Array.isArray(x.actions)?x.actions:[];const rec={ad_id:String(x.ad_id),ad_name:x.ad_name||null,adset_id:x.adset_id||null,adset_name:x.adset_name||null,campaign_id:x.campaign_id||null,campaign_name:x.campaign_name||null,account_id:String(x.account_id||asset.ad_account_id),client_id:clientId,date_start:x.date_start,date_stop:x.date_stop,impressions:num(x.impressions),reach:num(x.reach),clicks:num(x.clicks),spend:num(x.spend),cpm:num(x.cpm),cpc:num(x.cpc),ctr:num(x.ctr),frequency:num(x.frequency),results:resultFrom(actions),actions,synced_at:new Date().toISOString()};const {error}=await admin.from("meta_ad_metrics").upsert(rec,{onConflict:"ad_id,date_start,date_stop"});if(!error)totalUpserts++;}
+        for(const x of rows){const actions=Array.isArray(x.actions)?x.actions:[];const rec={ad_id:String(x.ad_id),ad_name:x.ad_name||null,adset_id:x.adset_id||null,adset_name:x.adset_name||null,campaign_id:x.campaign_id||null,campaign_name:x.campaign_name||null,account_id:String(x.account_id||asset.ad_account_id),client_id:clientId,source_provider:"meta_direct",date_start:x.date_start,date_stop:x.date_stop,impressions:num(x.impressions),reach:num(x.reach),clicks:num(x.clicks),spend:num(x.spend),cpm:num(x.cpm),cpc:num(x.cpc),ctr:num(x.ctr),frequency:num(x.frequency),results:resultFrom(actions),actions,synced_at:new Date().toISOString()};const {error}=await admin.from("meta_ad_metrics").upsert(rec,{onConflict:"ad_id,date_start,date_stop"});if(!error)totalUpserts++;}
         next=payload.paging?.next||"";
       }
       await admin.from("meta_assets").update({last_synced_at:new Date().toISOString(),last_error:null,status:"active"}).eq("id",asset.id);
     }
-    return json({ok:true,client_id:clientId,received:totalRows,upserted:totalUpserts,since,until});
+    const finished=new Date().toISOString();
+    await admin.from("data_source_routes").update({last_sync_at:finished,last_error:null,updated_at:finished}).eq("client_id",clientId).eq("platform","meta_ads").eq("data_domain","paid").eq("provider_id","meta_direct");
+    return json({ok:true,client_id:clientId,received:totalRows,upserted:totalUpserts,since,until,provider:"meta_direct"});
   }catch(e){console.error(e);return json({error:e instanceof Error?e.message:String(e)},500)}
 });
