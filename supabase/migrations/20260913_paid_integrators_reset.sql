@@ -72,8 +72,8 @@ create policy paid_media_metrics_read on public.paid_media_metrics for select to
 
 insert into public.integration_providers(id,name,provider_type,status,capabilities,is_active,updated_at)
 values
-('meta_ads','Meta Ads','integrator','available','{"platforms":["meta_ads"],"domains":["paid"],"engine":"windsor","connector":"facebook"}'::jsonb,true,now()),
-('google_ads','Google Ads','integrator','available','{"platforms":["google_ads"],"domains":["paid"],"engine":"windsor","connector":"google_ads"}'::jsonb,true,now())
+('meta_ads','Meta Ads','aggregator','available','{"platforms":["meta_ads"],"domains":["paid"],"engine":"windsor","connector":"facebook"}'::jsonb,true,now()),
+('google_ads','Google Ads','aggregator','available','{"platforms":["google_ads"],"domains":["paid"],"engine":"windsor","connector":"google_ads"}'::jsonb,true,now())
 on conflict(id) do update set name=excluded.name,provider_type=excluded.provider_type,status=excluded.status,capabilities=excluded.capabilities,is_active=true,updated_at=now();
 
 update public.integration_providers set is_active=false,updated_at=now() where id in ('meta_direct','google_direct','tiktok_direct','linkedin_direct','microsoft_direct','stract');
