@@ -50,10 +50,10 @@ Deno.serve(async(req)=>{
       .map((p:any)=>[String(p.id),p.thumbnail_url]));
     const {data:log}=await admin.from("sync_log").insert({platform:"facebook_organic",sync_type:"manual",status:"running",started_at:started}).select("id").single();
     logId=log?.id;
-    let posts=0,metrics=0,images=0,skipped=0;
+    let posts=0,metrics=0,images=0,skipped=0;const touchedClients=new Set<string>();
     for(const r of rows){
       const accountId=String(r.account_id||"");const clientId=accountMap.get(accountId);
-      const postId=String(r.post_id||"");if(!clientId||!postId){skipped++;continue;}
+      const postId=String(r.post_id||"");if(!clientId||!postId){skipped++;continue;}touchedClients.add(String(clientId));
       const published=r.post_created_time||r.created_time||new Date().toISOString();
       const thumb=r.post_full_picture||r.full_picture||r.post_picture||r.picture||null;
       let permanent:string|null=storedThumbs.get(postId)||null;
@@ -67,19 +67,21 @@ Deno.serve(async(req)=>{
           }
         }catch{}
       }
-      const post={id:postId,account_id:accountId,client_id:clientId,platform:"facebook_organic",
+      const post={id:postId,account_id:accountId,client_id:clientId,platform:"facebook_organic",source_provider:"windsor",
         media_type:r.post_type||"post",media_url:r.source||null,thumbnail_url:permanent||thumb,
         permalink:r.post_permalink_url||r.permalink_url||null,caption:r.post_message||r.message||"",
         published_at:published,updated_at:new Date().toISOString()};
       const pu=await admin.from("posts").upsert(post,{onConflict:"id"});if(!pu.error)posts++;
-      const metric={post_id:postId,account_id:accountId,client_id:clientId,synced_at:new Date().toISOString(),
+      const metric={post_id:postId,account_id:accountId,client_id:clientId,source_provider:"windsor",synced_at:new Date().toISOString(),
         reach:n(r.post_impressions_unique??r.impressions_unique),impressions:n(r.post_impressions??r.impressions),
         engagement:n(r.post_engaged_users??r.engaged_users),like_count:n(r.post_reactions_like_total??r.reactions_like_total),
         comment_count:n(r.post_comments??r.comments),shares:n(r.post_shares??r.shares)};
       const mu=await admin.from("post_metrics").insert(metric);if(!mu.error)metrics++;
     }
-    if(logId)await admin.from("sync_log").update({status:"success",finished_at:new Date().toISOString(),records_synced:posts,records_created:posts,records_updated:metrics}).eq("id",logId);
-    return json({ok:true,received:rows.length,posts,metrics,images,skipped});
+    const finished=new Date().toISOString();
+    for(const clientId of touchedClients)await admin.from("data_source_routes").update({last_sync_at:finished,last_error:null,updated_at:finished}).eq("client_id",clientId).eq("platform","facebook_organic").eq("data_domain","organic").eq("provider_id","windsor");
+    if(logId)await admin.from("sync_log").update({status:"success",finished_at:finished,records_synced:posts,records_created:posts,records_updated:metrics}).eq("id",logId);
+    return json({ok:true,received:rows.length,posts,metrics,images,skipped,provider:"windsor"});
   }catch(e){
     if(logId)await admin.from("sync_log").update({status:"error",finished_at:new Date().toISOString(),error_message:String(e)}).eq("id",logId);
     return json({error:e instanceof Error?e.message:String(e)},500);
