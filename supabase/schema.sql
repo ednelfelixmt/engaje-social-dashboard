@@ -8,7 +8,7 @@ grant usage on schema private to authenticated, service_role;
 
 create type public.member_role as enum ('super_admin','client_admin','editor','viewer');
 create type public.organization_status as enum ('active','paused');
-create type public.integration_provider as enum ('meta_ads','facebook_organic','instagram_organic','google_ads','google_business','youtube','tiktok_ads','tiktok_organic','hubspot','rd_station','generic_crm','windsor');
+create type public.integration_provider as enum ('meta_ads','facebook_organic','instagram_organic','google_ads','google_business','youtube','tiktok_ads','tiktok_organic','hubspot','rd_station','generic_crm','windsor','stract');
 create type public.integration_status as enum ('disconnected','pending','connected','syncing','error','expired');
 create type public.revenue_source as enum ('crm','spreadsheet');
 create type public.upload_status as enum ('pending','processing','completed','failed');
@@ -252,6 +252,7 @@ create index metrics_ads_integration on public.metrics_ads(organization_id,integ
 create index metrics_crm_period on public.metrics_crm(organization_id,metric_date,source);
 create index metrics_crm_integration on public.metrics_crm(organization_id,integration_id);
 create index metrics_crm_upload on public.metrics_crm(organization_id,spreadsheet_upload_id);
+create index spreadsheet_uploads_uploaded_by_idx on public.spreadsheet_uploads(uploaded_by);
 create index metrics_organic_period on public.metrics_organic(organization_id,metric_date,platform);
 create index metrics_organic_integration on public.metrics_organic(organization_id,integration_id);
 create index creatives_period on public.creatives(organization_id,published_at desc);

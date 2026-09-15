@@ -638,7 +638,7 @@ export type Database = {
     };
     Enums: {
       creative_kind: "image" | "video" | "carousel" | "text";
-      integration_provider: "meta_ads" | "facebook_organic" | "instagram_organic" | "google_ads" | "google_business" | "youtube" | "tiktok_ads" | "tiktok_organic" | "hubspot" | "rd_station" | "generic_crm" | "windsor";
+      integration_provider: "meta_ads" | "facebook_organic" | "instagram_organic" | "google_ads" | "google_business" | "youtube" | "tiktok_ads" | "tiktok_organic" | "hubspot" | "rd_station" | "generic_crm" | "windsor" | "stract";
       integration_status: "disconnected" | "pending" | "connected" | "syncing" | "error" | "expired";
       member_role: "super_admin" | "client_admin" | "editor" | "viewer";
       organization_status: "active" | "paused";

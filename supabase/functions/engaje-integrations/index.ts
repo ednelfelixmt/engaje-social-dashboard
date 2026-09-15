@@ -7,6 +7,7 @@ const cors={'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Headers':
 const json=(value:unknown,status=200)=>new Response(JSON.stringify(value),{status,headers:{...cors,'Content-Type':'application/json'}});
 const graphVersion=Deno.env.get('META_GRAPH_VERSION')||'v26.0';
 const metaId=Deno.env.get('META_APP_ID'),metaSecret=Deno.env.get('META_APP_SECRET');
+const windsorKey=Deno.env.get('WINDSOR_API_KEY');
 type Integration={id:string;organization_id:string;provider:string;external_account_id:string;config:Record<string,unknown>;status:string;account_name:string};
 async function check<T>(result:{data:T;error:unknown}):Promise<T>{if(result.error)throw new Error('Falha ao gravar no Supabase.');return result.data;}
 async function hmac(text:string){if(!metaSecret)throw new Error('Configure META_APP_SECRET.');const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(metaSecret),{name:'HMAC',hash:'SHA-256'},false,['sign']);return Array.from(new Uint8Array(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(text)))).map(n=>n.toString(16).padStart(2,'0')).join('');}
@@ -15,7 +16,33 @@ async function pages(path:string,token:string,params:Record<string,string>={}){c
 async function allowed(req:Request,org:string){const auth=req.headers.get('Authorization');if(!auth)throw new Error('Sessão necessária.');const client=createClient(base,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:auth}},auth:{persistSession:false}});const {data:{user}}=await client.auth.getUser();if(!user)throw new Error('Sessão expirada.');const {data:superAdmin}=await client.rpc('is_super_admin');if(!superAdmin){const {data:member}=await service.from('organization_members').select('role,is_active,organizations!inner(status)').eq('organization_id',org).eq('user_id',user.id).single();if(!member?.is_active||!['client_admin','editor'].includes(member.role)||(member.organizations as any)?.status!=='active')throw new Error('Sem permissão para gerenciar integrações.');}return user;}
 async function setToken(id:string,token:string){await check(await service.rpc('store_integration_token',{p_id:id,p_token:token}));}
 function actionValue(actions:any[]|undefined,...keys:string[]):number|null{if(!actions)return null;for(const key of keys){const item=actions.find(a=>a.action_type===key);if(item)return Number(item.value);}return 0;}
-async function sync(i:Integration){const token=await check(await service.rpc('integration_token',{p_id:i.id}));if(!token)throw new Error('Conta sem autorização. Reconecte.');let rows=0,creativeCount=0;
+function numeric(value:unknown){const result=Number(value);return Number.isFinite(result)?result:0;}
+function isoDate(date:Date){return date.toISOString().slice(0,10);}
+async function syncWindsor(i:Integration){
+ const source=String(i.config.source_platform||'');
+ if(source!=='google_ads')throw new Error('A importação Windsor para esta fonte será ativada após definir o mapeamento de campos. Use Google Ads nesta etapa.');
+ if(!windsorKey)throw new Error('Configure WINDSOR_API_KEY nos Secrets do Supabase.');
+ const to=new Date(),from=new Date(to);from.setUTCDate(from.getUTCDate()-30);
+ const endpoint=new URL('https://connectors.windsor.ai/google_ads');
+ endpoint.searchParams.set('api_key',windsorKey);
+ endpoint.searchParams.set('date_from',isoDate(from));
+ endpoint.searchParams.set('date_to',isoDate(to));
+ endpoint.searchParams.set('fields','date,account_id,account_name,campaign_id,campaign,spend,impressions,clicks,conversions,conversion_value,currency');
+ const response=await fetch(endpoint,{signal:AbortSignal.timeout(30000)});
+ const payload=await response.json().catch(()=>({}));
+ if(!response.ok)throw new Error('Windsor recusou a consulta (HTTP '+response.status+').');
+ const received=Array.isArray(payload.data)?payload.data:Array.isArray(payload)?payload:[];
+ const accountId=String(i.config.source_account_id||i.external_account_id).trim();
+ const sourceRows=received.filter((row:any)=>!accountId||String(row.account_id||'').trim()===accountId);
+ const facts=sourceRows.map((row:any)=>{
+  const campaignId=String(row.campaign_id||row.campaign||'sem-campanha');
+  return {organization_id:i.organization_id,integration_id:i.id,platform:'google_ads',metric_date:String(row.date||isoDate(to)).slice(0,10),currency:String(row.currency||i.config.currency||'BRL').toUpperCase().slice(0,3),account_id:String(row.account_id||accountId),campaign_id:campaignId,campaign_name:String(row.campaign||row.campaign_name||campaignId),adset_id:null,ad_id:campaignId+':aggregate',spend:numeric(row.spend),revenue:row.conversion_value==null?null:numeric(row.conversion_value),impressions:numeric(row.impressions),clicks:numeric(row.clicks),page_views:null,leads:null,checkouts:null,purchases:numeric(row.conversions),attribution_window:'windsor_source',synced_at:new Date().toISOString()};
+ });
+ for(let n=0;n<facts.length;n+=200)await check(await service.from('metrics_ads').upsert(facts.slice(n,n+200),{onConflict:'organization_id,platform,account_id,campaign_id,ad_id,metric_date,currency'}));
+ await check(await service.from('integrations').update({status:'connected',is_enabled:true,last_synced_at:new Date().toISOString(),last_error:null}).eq('id',i.id));
+ return {message:`Sincronização Windsor concluída: ${facts.length} métricas do Google Ads gravadas no Supabase.`,rows:facts.length,creatives:0};
+}
+async function sync(i:Integration){if(i.provider==='windsor')return syncWindsor(i);const token=await check(await service.rpc('integration_token',{p_id:i.id}));if(!token)throw new Error('Conta sem autorização. Reconecte.');let rows=0,creativeCount=0;
  if(i.provider==='meta_ads'){
   const data=await pages(i.external_account_id+'/insights',token,{level:'ad',date_preset:'last_30d',time_increment:'1',action_attribution_windows:'["7d_click"]',fields:'account_id,account_currency,campaign_id,campaign_name,adset_id,ad_id,date_start,spend,impressions,clicks,actions,action_values'});
   const facts=data.map(d=>({organization_id:i.organization_id,integration_id:i.id,platform:'meta_ads',metric_date:d.date_start,currency:d.account_currency,account_id:String(d.account_id),campaign_id:String(d.campaign_id),campaign_name:d.campaign_name,adset_id:d.adset_id,ad_id:String(d.ad_id),spend:Number(d.spend),revenue:actionValue(d.action_values,'omni_purchase','purchase','offsite_conversion.fb_pixel_purchase'),impressions:d.impressions==null?null:Number(d.impressions),clicks:d.clicks==null?null:Number(d.clicks),page_views:actionValue(d.actions,'landing_page_view'),leads:actionValue(d.actions,'lead','offsite_conversion.fb_pixel_lead'),checkouts:actionValue(d.actions,'initiate_checkout','offsite_conversion.fb_pixel_initiate_checkout'),purchases:actionValue(d.actions,'omni_purchase','purchase','offsite_conversion.fb_pixel_purchase'),attribution_window:'7d_click',synced_at:new Date().toISOString()}));
@@ -46,8 +73,21 @@ Deno.serve(async(req:Request)=>{
   }
   if(req.method!=='POST')return json({message:'Método inválido.'},405);
   const body=await req.json();const org=String(body.organizationId||'');if(!/^[0-9a-f-]{36}$/.test(org))throw new Error('Cliente inválido.');const actor=await allowed(req,org);
+  if(body.action==='configure_extractor'){
+   const provider=String(body.provider||'');
+   const source=String(body.sourcePlatform||'');
+   const accountName=String(body.accountName||'').trim();
+   const sourceAccountId=String(body.externalAccountId||'').trim();
+   const allowedSources:Record<string,string[]>={windsor:['google_ads','google_business','youtube'],stract:['google_ads','google_business','youtube','meta_ads','facebook_organic','instagram_organic','tiktok_ads','tiktok_organic']};
+   if(!allowedSources[provider]?.includes(source))throw new Error('Combinação de extrator e fonte inválida.');
+   if(accountName.length<2||accountName.length>160||sourceAccountId.length<1||sourceAccountId.length>180)throw new Error('Informe nome e ID válidos para a conta.');
+   if(provider==='windsor'&&!windsorKey)throw new Error('Configure WINDSOR_API_KEY nos Secrets do Supabase antes de cadastrar contas.');
+   const status=provider==='windsor'?'connected':'pending';
+   await check(await service.from('integrations').upsert({organization_id:org,provider,external_account_id:source+':'+sourceAccountId,account_name:accountName,status,is_enabled:true,config:{source_platform:source,source_account_id:sourceAccountId,configured_by:actor.id},last_error:null},{onConflict:'organization_id,provider,external_account_id'}));
+   return json({message:provider==='windsor'?'Conta Windsor vinculada. Use “Sincronizar agora” na lista de contas.':'Fonte Stract registrada. Configure a carga no painel Stract; o status mudará após a primeira importação.'});
+  }
   if(body.action==='connect'){
-   if(!['meta_ads','facebook_organic','instagram_organic'].includes(body.provider))return json({message:body.provider==='google_ads'?'Google Ads: adaptador ainda não implementado nesta versão.':body.provider==='tiktok_ads'?'TikTok Ads: requer aplicativo aprovado, TIKTOK_APP_ID e TIKTOK_APP_SECRET.':'Windsor: seleção de contas e adaptador Google ainda não habilitados nesta versão.'});
+   if(!['meta_ads','facebook_organic','instagram_organic'].includes(body.provider))return json({message:body.provider==='tiktok_ads'||body.provider==='tiktok_organic'?'TikTok: o conector está preparado, mas requer aplicativo aprovado e as credenciais TIKTOK_APP_ID e TIKTOK_APP_SECRET.':'Use o formulário do extrator para cadastrar esta fonte.'});
    if(!metaId||!metaSecret)return json({message:'Configure META_APP_ID e META_APP_SECRET no Supabase.'});
    const nonce=crypto.randomUUID();const pending=await check(await service.from('integrations').insert({organization_id:org,provider:body.provider,external_account_id:'pending:'+nonce,account_name:'Autorização em andamento',status:'pending',config:{nonce,user_id:actor.id}}).select('id').single());
    const signed=[pending.id,Date.now()+600000,nonce].join('.');const state=signed+'.'+await hmac(signed);const scopes=body.provider==='meta_ads'?'ads_read':body.provider==='facebook_organic'?'pages_show_list,pages_read_engagement':'pages_show_list,pages_read_engagement,instagram_basic';
