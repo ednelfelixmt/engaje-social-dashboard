@@ -75,6 +75,30 @@ Deno.serve(async(req:Request)=>{
   }
   if(req.method!=='POST')return json({message:'Método inválido.'},405);
   const body=await req.json();const org=String(body.organizationId||'');if(!/^[0-9a-f-]{36}$/.test(org))throw new Error('Cliente inválido.');const actor=await allowed(req,org);
+  if(body.action==='diagnose'){
+   const {data:integrations,error:integrationsError}=await service.from('integrations').select('id,provider,external_account_id,status,is_enabled,config').eq('organization_id',org);
+   if(integrationsError)throw new Error('Não foi possível concluir o diagnóstico.');
+   const list=integrations||[];
+   const accounts=(providers:string[])=>list.filter((item:any)=>providers.includes(item.provider)&&!['pending:','foundation:','catalog:'].some(prefix=>String(item.external_account_id||'').startsWith(prefix)));
+   const byProviders=(providers:string[])=>list.filter((item:any)=>providers.includes(item.provider));
+   const metaAccounts=accounts(['meta_ads','facebook_organic','instagram_organic']);
+   const windsorAccounts=accounts(['windsor']);
+   const stractAccounts=accounts(['stract']);
+   const stractSources=byProviders(['stract']);
+   const stractEndpoint=stractSources.some((item:any)=>typeof item.config?.ingest_key_hash==='string');
+   const crmSources=byProviders(['hubspot','rd_station','generic_crm']);
+   const crmEndpoint=crmSources.some((item:any)=>item.provider==='generic_crm'&&typeof item.config?.ingest_key_hash==='string');
+   const count=async(table:string,ids:string[])=>{if(!ids.length)return 0;const {count,error}=await service.from(table).select('id',{head:true,count:'exact'}).eq('organization_id',org).in('integration_id',ids);if(error)throw new Error('Não foi possível contar os dados importados.');return count||0;};
+   const metaIds=metaAccounts.map((item:any)=>item.id),windsorIds=windsorAccounts.map((item:any)=>item.id),stractIds=stractSources.map((item:any)=>item.id),crmIds=crmSources.map((item:any)=>item.id);
+   const [metaAds,metaOrganic,metaCreatives,windsorRows,stractAds,stractOrganic,stractCreatives,crmRows]=await Promise.all([count('metrics_ads',metaIds),count('metrics_organic',metaIds),count('creatives',metaIds),count('metrics_ads',windsorIds),count('metrics_ads',stractIds),count('metrics_organic',stractIds),count('creatives',stractIds),count('metrics_crm',crmIds)]);
+   const item=(key:string,label:string,configured:boolean,accountCount:number,rowCount:number,next:string)=>({key,label,configured,account_count:accountCount,row_count:rowCount,status:rowCount>0?'receiving':accountCount>0&&configured?'ready':configured?'credentials_ready':'blocked',next});
+   return json({checked_at:new Date().toISOString(),items:[
+    item('meta','Meta Ads + orgânico',Boolean(metaId&&metaSecret),metaAccounts.length,metaAds+metaOrganic+metaCreatives,!metaId||!metaSecret?'Configurar META_APP_ID e META_APP_SECRET.':metaAccounts.length?'Sincronizar as contas Meta cadastradas.':'Conectar Meta e escolher as contas do cliente.'),
+    item('windsor','Windsor / serviços Google',Boolean(windsorKey),windsorAccounts.length,windsorRows,!windsorKey?'Configurar WINDSOR_API_KEY.':windsorAccounts.length?'Sincronizar a conta Google Ads cadastrada.':'Cadastrar o ID da conta Google no extrator Windsor.'),
+    item('stract','Stract',stractEndpoint,stractAccounts.length,stractAds+stractOrganic+stractCreatives,stractEndpoint?'Enviar a primeira carga normalizada pelo endpoint criado.':'Cadastrar a fonte Stract e gerar a chave de ingestão.'),
+    item('crm','CRM e receita real',crmEndpoint,crmSources.length,crmRows,crmEndpoint?'Enviar a primeira carga conciliada de receita.':'Preparar CRM genérico e gerar a chave, ou homologar OAuth do CRM escolhido.'),
+   ]});
+  }
   if(body.action==='prepare_connector'){
    const provider=String(body.provider||'');
    const definitions:Record<string,{name:string;mode:string;requirements:string[]}>= {

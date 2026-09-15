@@ -7,6 +7,7 @@ import {IntegrationControls} from '@/components/integration-controls';
 import {ExtractorSetup} from '@/components/extractor-setup';
 import {FoundationConnector} from '@/components/foundation-connector';
 import {IngestEndpoint} from '@/components/ingest-endpoint';
+import {IntegrationDiagnostics} from '@/components/integration-diagnostics';
 
 const statusLabels: Record<string, string> = {connected: 'Conectada', syncing: 'Sincronizando', pending: 'Base preparada', disconnected: 'Desconectada', error: 'Com erro', expired: 'Autorização expirada'};
 const icons: Record<string, ReactNode> = {
@@ -60,6 +61,8 @@ export default async function Page({params, searchParams}: {params: {organizatio
       <header><p className="eyebrow mb-2">{org.name}</p><h1 className="text-3xl font-semibold">Central de integradores</h1><p className="muted mt-2 max-w-3xl">Conectores organizados por estágio real. Toda conta pertence exclusivamente a este workspace e os segredos permanecem no backend do Supabase.</p></header>
       {searchParams.connected ? <Card className="border-emerald-500/40 bg-emerald-500/5 text-emerald-300">Autorização recebida. {searchParams.connected} conta(s) encontrada(s). Ative cada conta pela lista inferior.</Card> : null}
       {searchParams.error ? <Card className="border-red-500/40 bg-red-500/5 text-red-300">A conexão não foi concluída. Verifique permissões e credenciais.</Card> : null}
+
+      <IntegrationDiagnostics organizationId={org.id} />
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Card className="flex items-center gap-4 p-4"><Cable className="text-primary" /><div><strong className="text-xl">{integrations.length}</strong><p className="muted text-xs">registros de integração</p></div></Card>
