@@ -36,7 +36,7 @@ export default async function Page({params, searchParams}: {params: {organizatio
   const {db, org} = await tenant(params.organizationSlug);
   const {data, error} = await db
     .from('integrations')
-    .select('id,provider,account_name,status,last_synced_at,last_error,config')
+    .select('id,provider,account_name,status,is_enabled,last_synced_at,last_error,config')
     .eq('organization_id', org.id)
     .order('created_at', {ascending: false});
 
@@ -132,7 +132,7 @@ export default async function Page({params, searchParams}: {params: {organizatio
                         {item.last_error && <p className="text-red-300 text-xs mt-2">{item.last_error}</p>}
                       </div>
                     </div>
-                    {item.status !== 'pending' && <IntegrationControls organizationId={org.id} integrationId={item.id} />}
+                    {item.status !== 'pending' && <IntegrationControls organizationId={org.id} integrationId={item.id} enabled={item.is_enabled} />}
                   </div>
                 </Card>
               );
