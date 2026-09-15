@@ -5,14 +5,29 @@ import {useRouter} from 'next/navigation';
 import {browserClient} from '@/lib/supabase/browser';
 import {Button} from '@/components/ui/button';
 
-export function IntegrationControls({organizationId, provider, integrationId, enabled = true}: {organizationId: string; provider?: string; integrationId?: string; enabled?: boolean}) {
+type IntegrationControlsProps = {
+  organizationId: string;
+  provider?: string;
+  integrationId?: string;
+  enabled?: boolean;
+  reconnect?: boolean;
+};
+
+export function IntegrationControls({organizationId, provider, integrationId, enabled = true, reconnect = false}: IntegrationControlsProps) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const router = useRouter();
 
-  const buttonLabel = integrationId
-    ? enabled ? 'Sincronizar agora' : 'Ativar e sincronizar'
-    : 'Conectar conta';
+  const reconnectLabel = provider === 'facebook_organic'
+    ? 'Reconectar Facebook'
+    : provider === 'instagram_organic'
+      ? 'Reconectar Instagram'
+      : 'Reconectar conta';
+  const buttonLabel = reconnect
+    ? reconnectLabel
+    : integrationId
+      ? enabled ? 'Sincronizar agora' : 'Ativar e sincronizar'
+      : 'Conectar conta';
 
   return (
     <div>
@@ -24,7 +39,7 @@ export function IntegrationControls({organizationId, provider, integrationId, en
           setMessage('');
           try {
             const {data, error} = await browserClient().functions.invoke('engaje-integrations', {
-              body: {action: integrationId ? 'sync' : 'connect', organizationId, provider, integrationId},
+              body: {action: reconnect || !integrationId ? 'connect' : 'sync', organizationId, provider, integrationId},
             });
             if (error) {
               const context = (error as {context?: Response}).context;
