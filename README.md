@@ -30,6 +30,7 @@ Crie o primeiro usuário no Supabase Auth, uma organização com `is_agency=true
 - Configuração de páginas, métricas e ordem dos quatro blocos principais.
 - CSV transacional para receita real, validação e detecção de arquivo duplicado. Modelo em `public/modelo-receita.csv`.
 - Meta OAuth, seleção de conta pela sincronização individual, Ads por anúncio/dia e criativos. Facebook/Instagram importam conteúdos e imagens.
+- Catálogo de integrações por cliente com estágio explícito. Meta e Windsor/Google Ads aparecem como operacionais; TikTok Ads, TikTok orgânico, HubSpot, RD Station, CRM genérico e Stract podem ter sua base registrada sem expor segredos no navegador.
 
 ## Meta
 
@@ -43,9 +44,17 @@ A view `daily_performance` agrega cada origem separadamente por organização/di
 
 Ao importar planilha, o lote substitui atomicamente todos os registros de planilha nos dias/moedas presentes. Só confirme conciliação completa quando cobrir integralmente esses dias.
 
+## Estágio dos integradores
+
+- Operacionais: Meta Ads, Facebook orgânico, Instagram orgânico e Google Ads via Windsor.
+- Base preparada: TikTok Ads, TikTok orgânico, HubSpot, RD Station, CRM genérico e Stract.
+- Mapeamento pendente: Google Business Profile e YouTube via Windsor.
+
+“Base preparada” cria o vínculo isolado com a organização e registra o modo e os requisitos do conector. Isso não é apresentado como conta conectada: OAuth, credenciais e adaptador de sincronização ainda precisam ser homologados.
+
 ## Limitações desta versão
 
-Google Ads, Google Business, YouTube, Windsor, TikTok e conectores CRM ainda precisam de implementação e credenciais próprias. Métricas orgânicas diárias não são sincronizadas pelo conector Meta atual; conteúdos e contadores acumulados de curtidas/comentários, e reações/compartilhamentos quando retornados pela API. Os acumulados são exibidos por post e não entram nas séries diárias. As metas são armazenadas, mas ainda não têm alertas de acompanhamento. Favicon enviado ainda não é aplicado aos metadados. Não há convites automáticos de usuários nem recuperação de senha na interface. URLs de imagens da Meta podem expirar e exigem nova sincronização; não são copiadas para Storage. Essas capacidades não devem ser apresentadas como prontas para produção.
+Google Business, YouTube, TikTok, Stract e conectores CRM ainda precisam dos respectivos adaptadores e credenciais. Métricas orgânicas diárias não são sincronizadas pelo conector Meta atual; conteúdos e contadores acumulados de curtidas/comentários, e reações/compartilhamentos quando retornados pela API. Os acumulados são exibidos por post e não entram nas séries diárias. As metas são armazenadas, mas ainda não têm alertas de acompanhamento. Favicon enviado ainda não é aplicado aos metadados. Não há convites automáticos de usuários nem recuperação de senha na interface. URLs de imagens da Meta podem expirar e exigem nova sincronização; não são copiadas para Storage. Essas capacidades não devem ser apresentadas como prontas para produção.
 
 ## Deploy
 

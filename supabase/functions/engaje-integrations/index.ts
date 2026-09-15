@@ -73,6 +73,26 @@ Deno.serve(async(req:Request)=>{
   }
   if(req.method!=='POST')return json({message:'Método inválido.'},405);
   const body=await req.json();const org=String(body.organizationId||'');if(!/^[0-9a-f-]{36}$/.test(org))throw new Error('Cliente inválido.');const actor=await allowed(req,org);
+  if(body.action==='prepare_connector'){
+   const provider=String(body.provider||'');
+   const definitions:Record<string,{name:string;mode:string;requirements:string[]}>= {
+    tiktok_ads:{name:'TikTok Ads',mode:'oauth',requirements:['TIKTOK_APP_ID','TIKTOK_APP_SECRET']},
+    tiktok_organic:{name:'TikTok orgânico',mode:'oauth',requirements:['TIKTOK_APP_ID','TIKTOK_APP_SECRET']},
+    hubspot:{name:'HubSpot',mode:'oauth',requirements:['HUBSPOT_CLIENT_ID','HUBSPOT_CLIENT_SECRET']},
+    rd_station:{name:'RD Station',mode:'oauth',requirements:['RD_CLIENT_ID','RD_CLIENT_SECRET']},
+    generic_crm:{name:'CRM genérico',mode:'api',requirements:[]},
+   };
+   const definition=definitions[provider];
+   if(!definition)throw new Error('Este conector não pode ser preparado por esta ação.');
+   const {data:existing}=await service.from('integrations').select('id').eq('organization_id',org).eq('provider',provider).like('external_account_id','foundation:%').limit(1).maybeSingle();
+   if(existing)return json({message:'A base deste conector já está preparada para o cliente.'});
+   await check(await service.from('integrations').upsert({
+    organization_id:org,provider,external_account_id:'foundation:v1',
+    account_name:definition.name+' — configuração pendente',status:'pending',is_enabled:false,
+    config:{setup_stage:'credentials',connector_mode:definition.mode,required_secrets:definition.requirements,configured_by:actor.id},last_error:null,
+   },{onConflict:'organization_id,provider,external_account_id'}));
+   return json({message:'Base de '+definition.name+' preparada. Na próxima etapa serão configuradas credenciais, OAuth e mapeamento de dados.'});
+  }
   if(body.action==='configure_extractor'){
    const provider=String(body.provider||'');
    const source=String(body.sourcePlatform||'');
