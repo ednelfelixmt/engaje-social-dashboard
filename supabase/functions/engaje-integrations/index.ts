@@ -157,8 +157,9 @@ Deno.serve(async(req:Request)=>{
   if(body.action==='connect'){
    if(!['meta_ads','facebook_organic','instagram_organic'].includes(body.provider))return json({message:body.provider==='tiktok_ads'||body.provider==='tiktok_organic'?'TikTok: o conector está preparado, mas requer aplicativo aprovado e as credenciais TIKTOK_APP_ID e TIKTOK_APP_SECRET.':'Use o formulário do extrator para cadastrar esta fonte.'});
    if(!metaId||!metaSecret)return json({message:'Configure META_APP_ID e META_APP_SECRET no Supabase.'});
+   await check(await service.from('integrations').delete().eq('organization_id',org).eq('provider',body.provider).eq('status','pending').like('external_account_id','pending:%'));
    const nonce=crypto.randomUUID();const pending=await check(await service.from('integrations').insert({organization_id:org,provider:body.provider,external_account_id:'pending:'+nonce,account_name:'Autorização em andamento',status:'pending',config:{nonce,user_id:actor.id}}).select('id').single());
-   const signed=[pending.id,Date.now()+600000,nonce].join('.');const state=signed+'.'+await hmac(signed);const scopes=body.provider==='meta_ads'?'ads_read':body.provider==='facebook_organic'?'pages_show_list,pages_read_engagement'+(advancedInsights?',read_insights':''):'pages_show_list,pages_read_engagement,instagram_basic'+(advancedInsights?',instagram_manage_insights':'');
+   const signed=[pending.id,Date.now()+600000,nonce].join('.');const state=signed+'.'+await hmac(signed);const scopes=body.provider==='meta_ads'?'ads_read':body.provider==='facebook_organic'?'pages_show_list,pages_read_engagement,pages_read_user_content'+(advancedInsights?',read_insights':''):'pages_show_list,pages_read_engagement,instagram_basic'+(advancedInsights?',instagram_manage_insights':'');
    const login=new URL('https://www.facebook.com/'+graphVersion+'/dialog/oauth');login.search=new URLSearchParams({client_id:metaId,redirect_uri:callback,state,scope:scopes,response_type:'code'}).toString();return json({url:login.href});
   }
   if(body.action==='sync'){
