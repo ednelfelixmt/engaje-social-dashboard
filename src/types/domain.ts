@@ -3,7 +3,7 @@ import type { Database, Row } from './database.types';
 export const dashboardPages = [
   'overview', 'paid', 'meta_ads', 'google_ads', 'tiktok_ads', 'funnel',
   'organic', 'facebook_organic', 'instagram_organic', 'tiktok_organic',
-  'creatives', 'external',
+  'youtube', 'google_business', 'creatives', 'external',
 ] as const;
 export type DashboardPage = typeof dashboardPages[number];
 export type Platform = Database['public']['Enums']['integration_provider'];

@@ -26,7 +26,8 @@ Crie o primeiro usuário no Supabase Auth, uma organização com `is_agency=true
 - Administração de clientes, pausa e vínculos de usuários existentes.
 - Branding por organização e uploads privados de logo, favicon e fundos. A imagem de login fica disponível por slug antes da autenticação.
 - Visão geral, tráfego pago, funil, orgânico, galeria e receita externa; filtros de datas, moeda e Não comparar.
-- Abas de plataformas com dados; Facebook e Instagram filtrados separadamente.
+- Páginas dedicadas por plataforma, habilitadas automaticamente somente quando há dados: Meta Ads, Google Ads, TikTok Ads, Facebook orgânico, Instagram orgânico, TikTok orgânico, YouTube e Google Business.
+- Comparação por período também nas páginas específicas, com KPIs próprios, ranking de campanhas, linha do tempo e galeria filtrada.
 - Configuração de páginas, métricas e ordem dos quatro blocos principais.
 - CSV transacional para receita real, validação e detecção de arquivo duplicado. Modelo em `public/modelo-receita.csv`.
 - Meta OAuth, seleção de conta pela sincronização individual, Ads por anúncio/dia e criativos. Facebook/Instagram importam conteúdos e imagens.
