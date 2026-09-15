@@ -1,0 +1,1 @@
+import Link from 'next/link';export default function NotFound(){return <main className='p-12'><h1 className='text-2xl'>Página indisponível</h1><p className='muted my-4'>O endereço não existe ou você não tem acesso.</p><Link href='/'>Voltar ao início</Link></main>;}

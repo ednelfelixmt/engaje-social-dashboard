@@ -1,0 +1,1 @@
+import {requireAdmin} from '@/lib/auth/session';import {Navigation} from '@/components/navigation';export default async function Layout({children}:{children:React.ReactNode}){await requireAdmin();return <><Navigation admin/><main className='lg:ml-60 p-6 lg:p-10 max-w-[1800px]'>{children}</main></>;}

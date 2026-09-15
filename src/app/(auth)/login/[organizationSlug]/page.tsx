@@ -1,0 +1,1 @@
+import {BrandedLogin} from '@/components/auth/branded-login';export default function Login({params}:{params:{organizationSlug:string}}){return <BrandedLogin slug={params.organizationSlug}/>;}

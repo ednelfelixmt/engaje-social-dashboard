@@ -1,0 +1,1 @@
+'use client';import {Button} from '@/components/ui/button';export default function ErrorPage({reset}:{reset:()=>void}){return <div className='p-10 space-y-4'><h1 className='text-2xl'>Não foi possível carregar esta área.</h1><p className='muted'>Tente novamente. Se persistir, verifique a conexão e as permissões.</p><Button onClick={reset}>Tentar novamente</Button></div>;}

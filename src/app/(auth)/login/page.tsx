@@ -1,0 +1,1 @@
+import {BrandedLogin} from '@/components/auth/branded-login';export default function Login(){return <BrandedLogin slug='engaje'/>;}
