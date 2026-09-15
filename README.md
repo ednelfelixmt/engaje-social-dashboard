@@ -45,8 +45,10 @@ Ao importar planilha, o lote substitui atomicamente todos os registros de planil
 
 ## Limitações desta versão
 
-Google Ads, Google Business, YouTube, Windsor, TikTok e conectores CRM ainda precisam de implementação e credenciais próprias. Métricas orgânicas diárias não são sincronizadas pelo conector Meta atual; somente conteúdos. As metas são armazenadas, mas ainda não têm alertas de acompanhamento. Favicon enviado ainda não é aplicado aos metadados. Não há convites automáticos de usuários nem recuperação de senha na interface. URLs de imagens da Meta podem expirar e exigem nova sincronização; não são copiadas para Storage. Essas capacidades não devem ser apresentadas como prontas para produção.
+Google Ads, Google Business, YouTube, Windsor, TikTok e conectores CRM ainda precisam de implementação e credenciais próprias. Métricas orgânicas diárias não são sincronizadas pelo conector Meta atual; conteúdos e contadores acumulados de curtidas/comentários, e reações/compartilhamentos quando retornados pela API. Os acumulados são exibidos por post e não entram nas séries diárias. As metas são armazenadas, mas ainda não têm alertas de acompanhamento. Favicon enviado ainda não é aplicado aos metadados. Não há convites automáticos de usuários nem recuperação de senha na interface. URLs de imagens da Meta podem expirar e exigem nova sincronização; não são copiadas para Storage. Essas capacidades não devem ser apresentadas como prontas para produção.
 
 ## Deploy
 
 O repositório está ligado à Vercel. `vercel.json` seleciona Next.js e build padrão. A branch main publica produção. Validar login, RLS, conta real e importação após configurar o projeto.
+
+Em bancos já instalados antes desta atualização, execute `supabase/organic-counters.sql` uma única vez. Em novos bancos, a coluna já consta do schema.

@@ -212,6 +212,7 @@ create table public.creatives (
   permalink text,
   published_at timestamptz,
   url_expires_at timestamptz,
+  lifetime_metrics jsonb not null default '{}'::jsonb check (jsonb_typeof(lifetime_metrics)='object'),
   synced_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),

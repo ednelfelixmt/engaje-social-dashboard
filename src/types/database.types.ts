@@ -72,6 +72,7 @@ export type Database = {
           permalink: string | null;
           published_at: string | null;
           url_expires_at: string | null;
+          lifetime_metrics: Json;
           synced_at: string;
           created_at: string;
           updated_at: string;
@@ -93,6 +94,7 @@ export type Database = {
           permalink?: string | null;
           published_at?: string | null;
           url_expires_at?: string | null;
+          lifetime_metrics?: Json;
           synced_at?: string;
           created_at?: string;
           updated_at?: string;
@@ -114,6 +116,7 @@ export type Database = {
           permalink?: string | null;
           published_at?: string | null;
           url_expires_at?: string | null;
+          lifetime_metrics?: Json;
           synced_at?: string;
           created_at?: string;
           updated_at?: string;
