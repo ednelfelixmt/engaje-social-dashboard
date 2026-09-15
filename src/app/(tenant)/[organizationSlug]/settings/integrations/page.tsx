@@ -6,6 +6,7 @@ import {Card} from '@/components/ui/card';
 import {IntegrationControls} from '@/components/integration-controls';
 import {ExtractorSetup} from '@/components/extractor-setup';
 import {FoundationConnector} from '@/components/foundation-connector';
+import {IngestEndpoint} from '@/components/ingest-endpoint';
 
 const statusLabels: Record<string, string> = {connected: 'Conectada', syncing: 'Sincronizando', pending: 'Base preparada', disconnected: 'Desconectada', error: 'Com erro', expired: 'Autorização expirada'};
 const icons: Record<string, ReactNode> = {
@@ -91,7 +92,9 @@ export default async function Page({params, searchParams}: {params: {organizatio
           const sourceKey = typeof config.source_platform === 'string' ? config.source_platform : null;
           const source = sourceKey ? connectorByProvider.get(sourceKey as never)?.name ?? sourceKey : null;
           const definition = connectorByProvider.get(item.provider);
-          return <Card key={item.id} className="p-4"><div className="flex flex-wrap items-center justify-between gap-4"><div className="flex min-w-0 items-start gap-3"><StatusIcon status={item.status} /><div className="min-w-0"><h3 className="truncate font-semibold">{item.account_name}</h3><p className="muted mt-1 text-xs">{definition?.name ?? item.provider}{source ? ` · ${source}` : ''} · {statusLabels[item.status] ?? item.status}</p><p className="muted mt-1 text-xs">Última sincronização: {item.last_synced_at ? new Date(item.last_synced_at).toLocaleString('pt-BR') : 'ainda não realizada'}</p>{item.last_error ? <p className="mt-2 text-xs text-red-300">{item.last_error}</p> : null}</div></div>{item.status !== 'pending' ? <IntegrationControls organizationId={org.id} integrationId={item.id} enabled={item.is_enabled} /> : <span className="connector-badge connector-badge-foundation">Aguardando credenciais</span>}</div></Card>;
+          const supportsIngest = item.provider === 'stract' || item.provider === 'generic_crm';
+          const ingestConfigured = typeof config.ingest_key_hash === 'string';
+          return <Card key={item.id} className="p-4"><div className="flex flex-wrap items-center justify-between gap-4"><div className="flex min-w-0 items-start gap-3"><StatusIcon status={item.status} /><div className="min-w-0"><h3 className="truncate font-semibold">{item.account_name}</h3><p className="muted mt-1 text-xs">{definition?.name ?? item.provider}{source ? ` · ${source}` : ''} · {statusLabels[item.status] ?? item.status}</p><p className="muted mt-1 text-xs">Última sincronização: {item.last_synced_at ? new Date(item.last_synced_at).toLocaleString('pt-BR') : 'ainda não realizada'}</p>{item.last_error ? <p className="mt-2 text-xs text-red-300">{item.last_error}</p> : null}{supportsIngest ? <IngestEndpoint organizationId={org.id} integrationId={item.id} configured={ingestConfigured} /> : null}</div></div>{item.status !== 'pending' && !supportsIngest ? <IntegrationControls organizationId={org.id} integrationId={item.id} enabled={item.is_enabled} /> : <span className="connector-badge connector-badge-foundation">{ingestConfigured ? 'Endpoint preparado' : 'Aguardando credenciais'}</span>}</div></Card>;
         })}</div> : <Card className="border-dashed text-center"><p>Nenhuma integração preparada neste cliente.</p><p className="muted mt-2 text-sm">Conecte uma conta operacional ou prepare um dos conectores acima.</p></Card>}
       </section>
     </div>

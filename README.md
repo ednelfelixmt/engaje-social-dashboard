@@ -31,6 +31,7 @@ Crie o primeiro usuário no Supabase Auth, uma organização com `is_agency=true
 - CSV transacional para receita real, validação e detecção de arquivo duplicado. Modelo em `public/modelo-receita.csv`.
 - Meta OAuth, seleção de conta pela sincronização individual, Ads por anúncio/dia e criativos. Facebook/Instagram importam conteúdos e imagens.
 - Catálogo de integrações por cliente com estágio explícito. Meta e Windsor/Google Ads aparecem como operacionais; TikTok Ads, TikTok orgânico, HubSpot, RD Station, CRM genérico e Stract podem ter sua base registrada sem expor segredos no navegador.
+- Endpoint autenticado por chave própria para cargas normalizadas de Stract e CRM genérico. Aceita anúncios, CRM, criativos e métricas orgânicas; contrato em `docs/integracoes-ingestao.md`.
 
 ## Meta
 

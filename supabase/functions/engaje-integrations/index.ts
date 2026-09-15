@@ -11,6 +11,8 @@ const windsorKey=Deno.env.get('WINDSOR_API_KEY');
 type Integration={id:string;organization_id:string;provider:string;external_account_id:string;config:Record<string,unknown>;status:string;account_name:string};
 async function check<T>(result:{data:T;error:unknown}):Promise<T>{if(result.error)throw new Error('Falha ao gravar no Supabase.');return result.data;}
 async function hmac(text:string){if(!metaSecret)throw new Error('Configure META_APP_SECRET.');const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(metaSecret),{name:'HMAC',hash:'SHA-256'},false,['sign']);return Array.from(new Uint8Array(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(text)))).map(n=>n.toString(16).padStart(2,'0')).join('');}
+async function sha256(text:string){return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))).map(n=>n.toString(16).padStart(2,'0')).join('');}
+function randomKey(){const bytes=crypto.getRandomValues(new Uint8Array(32));return Array.from(bytes).map(n=>n.toString(16).padStart(2,'0')).join('');}
 async function graph(path:string,token:string,params:Record<string,string>={}){const url=new URL('https://graph.facebook.com/'+graphVersion+'/'+path);for(const [k,v]of Object.entries(params))url.searchParams.set(k,v);const r=await fetch(url,{headers:{Authorization:'Bearer '+token},signal:AbortSignal.timeout(25000)});const body=await r.json();if(!r.ok||body.error)throw new Error('Meta recusou a consulta (código '+String(body.error?.code||r.status)+'). Confira permissões e validade da conexão.');return body;}
 async function pages(path:string,token:string,params:Record<string,string>={}){const result:Record<string,any>[]=[];let after:string|undefined;for(let page=0;page<50;page++){const r=await graph(path,token,{...params,limit:'100',...(after?{after}:{})});result.push(...(r.data||[]));if(!r.paging?.next)return result;after=r.paging.cursors?.after;if(!after)throw new Error('A paginação da Meta não pôde ser concluída.');}throw new Error('Volume excede a sincronização interativa; reduza o período.');}
 async function allowed(req:Request,org:string){const auth=req.headers.get('Authorization');if(!auth)throw new Error('Sessão necessária.');const client=createClient(base,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:auth}},auth:{persistSession:false}});const {data:{user}}=await client.auth.getUser();if(!user)throw new Error('Sessão expirada.');const {data:superAdmin}=await client.rpc('is_super_admin');if(!superAdmin){const {data:member}=await service.from('organization_members').select('role,is_active,organizations!inner(status)').eq('organization_id',org).eq('user_id',user.id).single();if(!member?.is_active||!['client_admin','editor'].includes(member.role)||(member.organizations as any)?.status!=='active')throw new Error('Sem permissão para gerenciar integrações.');}return user;}
@@ -92,6 +94,16 @@ Deno.serve(async(req:Request)=>{
     config:{setup_stage:'credentials',connector_mode:definition.mode,required_secrets:definition.requirements,configured_by:actor.id},last_error:null,
    },{onConflict:'organization_id,provider,external_account_id'}));
    return json({message:'Base de '+definition.name+' preparada. Na próxima etapa serão configuradas credenciais, OAuth e mapeamento de dados.'});
+  }
+  if(body.action==='create_ingest_key'){
+   const integrationId=String(body.integrationId||'');
+   if(!/^[0-9a-f-]{36}$/.test(integrationId))throw new Error('Integração inválida.');
+   const {data:i}=await service.from('integrations').select('id,provider,config').eq('id',integrationId).eq('organization_id',org).single();
+   if(!i||!['stract','generic_crm'].includes(i.provider))throw new Error('Esta integração não aceita ingestão externa.');
+   const key=randomKey();
+   const config={...(i.config||{}),ingest_key_hash:await sha256(key),ingest_contract_version:1,ingest_key_rotated_at:new Date().toISOString(),configured_by:actor.id};
+   await check(await service.from('integrations').update({config,is_enabled:true,status:'pending',last_error:null}).eq('id',integrationId).eq('organization_id',org));
+   return json({endpoint:base+'/functions/v1/engaje-ingest?integration_id='+integrationId,key,message:'Chave de ingestão criada.'});
   }
   if(body.action==='configure_extractor'){
    const provider=String(body.provider||'');
