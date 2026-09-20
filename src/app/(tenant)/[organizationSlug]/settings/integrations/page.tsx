@@ -47,7 +47,7 @@ function ConnectorCard({connector, organizationId, prepared}: {connector: Connec
 
 export default async function Page({params, searchParams}: {params: {organizationSlug: string}; searchParams: Record<string, string | undefined>}) {
   const {db, org} = await tenant(params.organizationSlug);
-  const {data, error} = await db.from('integrations').select('id,provider,account_name,status,is_enabled,last_synced_at,last_error,config').eq('organization_id', org.id).order('created_at', {ascending: false});
+  const {data, error} = await db.from('integrations').select('id,provider,external_account_id,account_name,status,is_enabled,last_synced_at,last_error,config,updated_at').eq('organization_id', org.id).order('created_at', {ascending: false});
   if (error) throw error;
   const integrations = data ?? [];
   const connected = integrations.filter((item) => item.status === 'connected').length;
@@ -97,12 +97,15 @@ export default async function Page({params, searchParams}: {params: {organizatio
           const definition = connectorByProvider.get(item.provider);
           const supportsIngest = item.provider === 'stract' || item.provider === 'generic_crm';
           const ingestConfigured = typeof config.ingest_key_hash === 'string';
-          const requiresReconnect = item.status === 'expired' || (
+          const staleOauth = item.status === 'pending'
+            && item.external_account_id.startsWith('pending:')
+            && Date.now() - new Date(item.updated_at).getTime() > 10 * 60 * 1000;
+          const requiresReconnect = staleOauth || item.status === 'expired' || (
             item.status === 'error'
             && item.provider === 'facebook_organic'
             && item.last_error?.includes('pages_read_user_content')
           );
-          return <Card key={item.id} className="p-4"><div className="flex flex-wrap items-center justify-between gap-4"><div className="flex min-w-0 items-start gap-3"><StatusIcon status={item.status} /><div className="min-w-0"><h3 className="truncate font-semibold">{item.account_name}</h3><p className="muted mt-1 text-xs">{definition?.name ?? item.provider}{source ? ` · ${source}` : ''} · {statusLabels[item.status] ?? item.status}</p><p className="muted mt-1 text-xs">Última sincronização: {item.last_synced_at ? new Date(item.last_synced_at).toLocaleString('pt-BR') : 'ainda não realizada'}</p>{item.last_error ? <p className="mt-2 text-xs text-red-300">{item.last_error}</p> : null}{supportsIngest ? <IngestEndpoint organizationId={org.id} integrationId={item.id} configured={ingestConfigured} /> : null}</div></div>{item.status !== 'pending' && !supportsIngest ? <IntegrationControls organizationId={org.id} provider={item.provider} integrationId={item.id} enabled={item.is_enabled} reconnect={requiresReconnect} /> : <span className="connector-badge connector-badge-foundation">{ingestConfigured ? 'Endpoint preparado' : 'Aguardando credenciais'}</span>}</div></Card>;
+          return <Card key={item.id} className="p-4"><div className="flex flex-wrap items-center justify-between gap-4"><div className="flex min-w-0 items-start gap-3"><StatusIcon status={staleOauth ? 'expired' : item.status} /><div className="min-w-0"><h3 className="truncate font-semibold">{item.account_name}</h3><p className="muted mt-1 text-xs">{definition?.name ?? item.provider}{source ? ` · ${source}` : ''} · {staleOauth ? 'Autorização expirada' : statusLabels[item.status] ?? item.status}</p><p className="muted mt-1 text-xs">Última sincronização: {item.last_synced_at ? new Date(item.last_synced_at).toLocaleString('pt-BR') : 'ainda não realizada'}</p>{item.last_error ? <p className="mt-2 text-xs text-red-300">{item.last_error}</p> : null}{supportsIngest ? <IngestEndpoint organizationId={org.id} integrationId={item.id} configured={ingestConfigured} /> : null}</div></div>{!supportsIngest && (item.status !== 'pending' || staleOauth) ? <IntegrationControls organizationId={org.id} provider={item.provider} integrationId={item.id} enabled={item.is_enabled} reconnect={requiresReconnect} /> : <span className="connector-badge connector-badge-foundation">{ingestConfigured ? 'Endpoint preparado' : 'Aguardando credenciais'}</span>}</div></Card>;
         })}</div> : <Card className="border-dashed text-center"><p>Nenhuma integração preparada neste cliente.</p><p className="muted mt-2 text-sm">Conecte uma conta operacional ou prepare um dos conectores acima.</p></Card>}
       </section>
     </div>
