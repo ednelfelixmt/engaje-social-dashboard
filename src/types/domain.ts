@@ -25,12 +25,21 @@ export type CampaignPerformance = {
   currency: string;
   spend: number;
   revenue: number | null;
+  impressions: number | null;
+  clicks: number | null;
+  pageViews: number | null;
+  leads: number | null;
+  checkouts: number | null;
   revenueSource: 'crm' | 'spreadsheet' | 'ads' | 'mixed' | 'unavailable';
   purchases: number | null;
   roas: number | null;
   roi: number | null;
+  cpm: number | null;
+  cpc: number | null;
+  cpl: number | null;
   ctr: number | null;
   cpa: number | null;
+  conversionRate: number | null;
 };
 export type SyncResult = {
   integrationId: string;

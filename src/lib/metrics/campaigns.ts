@@ -1,1 +1,77 @@
-import type {Row} from '@/types/database.types';import type {CampaignPerformance} from '@/types/domain';import {sum} from './query';export function campaigns(ads:Row<'metrics_ads'>[],crm:Row<'metrics_crm'>[],preferred:'crm'|'spreadsheet'):CampaignPerformance[]{const groups=new Map<string,Row<'metrics_ads'>[]>();for(const a of ads){const key=[a.platform,a.account_id,a.campaign_id].join(':');groups.set(key,[...(groups.get(key)||[]),a]);}return [...groups.values()].map(rows=>{const a=rows[0],spend=sum(rows,'spend')||0;const byDay=new Map<string,Row<'metrics_ads'>[]>();rows.forEach(r=>byDay.set(r.metric_date,[...(byDay.get(r.metric_date)||[]),r]));let revenue:number|null=0,purchases:number|null=0;const sources=new Set<string>();for(const [day,daily] of byDay){const actual=crm.filter(c=>c.metric_date===day&&c.channel===a.platform&&c.account_id===a.account_id&&c.campaign_id===a.campaign_id&&c.is_complete&&c.revenue!=null);const chosen=actual.find(c=>c.source===preferred)||actual[0];const amount=chosen?chosen.revenue:sum(daily,'revenue'),count=chosen?chosen.purchases:sum(daily,'purchases');revenue=amount==null||revenue==null?null:revenue+amount;purchases=count==null||purchases==null?null:purchases+count;sources.add(chosen?.source||'ads');}const impressions=sum(rows,'impressions'),clicks=sum(rows,'clicks');return {organizationId:a.organization_id,platform:a.platform,accountId:a.account_id,campaignId:a.campaign_id,campaignName:a.campaign_name,currency:a.currency,spend,revenue,revenueSource:revenue==null?'unavailable':sources.size===1?[...sources][0] as CampaignPerformance['revenueSource']:'mixed',purchases,roas:spend&&revenue!=null?revenue/spend:null,roi:spend&&revenue!=null?(revenue-spend)/spend*100:null,cpa:purchases?spend/purchases:null,ctr:impressions&&clicks!=null?clicks/impressions*100:null};});}
+import type {Row} from '@/types/database.types';
+import type {CampaignPerformance} from '@/types/domain';
+import {sum} from './query';
+
+export function campaigns(
+  ads: Row<'metrics_ads'>[],
+  crm: Row<'metrics_crm'>[],
+  preferred: 'crm' | 'spreadsheet',
+): CampaignPerformance[] {
+  const groups = new Map<string, Row<'metrics_ads'>[]>();
+  for (const ad of ads) {
+    const key = [ad.platform, ad.account_id, ad.campaign_id].join(':');
+    groups.set(key, [...(groups.get(key) || []), ad]);
+  }
+
+  return [...groups.values()].map((rows) => {
+    const first = rows[0];
+    const spend = sum(rows, 'spend') || 0;
+    const byDay = new Map<string, Row<'metrics_ads'>[]>();
+    rows.forEach((row) => byDay.set(row.metric_date, [...(byDay.get(row.metric_date) || []), row]));
+
+    let revenue: number | null = 0;
+    let purchases: number | null = 0;
+    const sources = new Set<string>();
+
+    for (const [day, daily] of byDay) {
+      const actual = crm.filter((row) => row.metric_date === day
+        && row.channel === first.platform
+        && row.account_id === first.account_id
+        && row.campaign_id === first.campaign_id
+        && row.is_complete
+        && row.revenue != null);
+      const chosen = actual.find((row) => row.source === preferred) || actual[0];
+      const amount = chosen ? chosen.revenue : sum(daily, 'revenue');
+      const count = chosen ? chosen.purchases : sum(daily, 'purchases');
+      revenue = amount == null || revenue == null ? null : revenue + amount;
+      purchases = count == null || purchases == null ? null : purchases + count;
+      sources.add(chosen?.source || 'ads');
+    }
+
+    const impressions = sum(rows, 'impressions');
+    const clicks = sum(rows, 'clicks');
+    const pageViews = sum(rows, 'page_views');
+    const leads = sum(rows, 'leads');
+    const checkouts = sum(rows, 'checkouts');
+
+    return {
+      organizationId: first.organization_id,
+      platform: first.platform,
+      accountId: first.account_id,
+      campaignId: first.campaign_id,
+      campaignName: first.campaign_name,
+      currency: first.currency,
+      spend,
+      revenue,
+      impressions,
+      clicks,
+      pageViews,
+      leads,
+      checkouts,
+      revenueSource: revenue == null
+        ? 'unavailable'
+        : sources.size === 1
+          ? [...sources][0] as CampaignPerformance['revenueSource']
+          : 'mixed',
+      purchases,
+      roas: spend && revenue != null ? revenue / spend : null,
+      roi: spend && revenue != null ? (revenue - spend) / spend * 100 : null,
+      cpm: impressions ? spend / impressions * 1000 : null,
+      cpc: clicks ? spend / clicks : null,
+      cpl: leads ? spend / leads : null,
+      cpa: purchases ? spend / purchases : null,
+      ctr: impressions && clicks != null ? clicks / impressions * 100 : null,
+      conversionRate: clicks && purchases != null ? purchases / clicks * 100 : null,
+    };
+  });
+}
