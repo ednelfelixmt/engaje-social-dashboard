@@ -30,8 +30,9 @@ export function IntegrationControls({organizationId, provider, integrationId, en
       : 'Conectar conta';
 
   return (
-    <div>
+    <div className="w-full md:w-[190px]">
       <Button
+        className="w-full whitespace-nowrap"
         variant="outline"
         disabled={busy}
         onClick={async () => {
@@ -63,7 +64,7 @@ export function IntegrationControls({organizationId, provider, integrationId, en
       >
         {busy ? 'Processando…' : buttonLabel}
       </Button>
-      {message && <p role="status" className="text-sm text-amber-300 mt-3">{message}</p>}
+      {message && <p role="status" className="mt-3 break-words text-xs leading-5 text-amber-300">{message}</p>}
     </div>
   );
 }

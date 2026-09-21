@@ -8,6 +8,7 @@ import {ExtractorSetup} from '@/components/extractor-setup';
 import {FoundationConnector} from '@/components/foundation-connector';
 import {IngestEndpoint} from '@/components/ingest-endpoint';
 import {IntegrationDiagnostics} from '@/components/integration-diagnostics';
+import {MetaAccountSelector} from '@/components/meta-account-selector';
 
 const statusLabels: Record<string, string> = {connected: 'Conectada', syncing: 'Sincronizando', pending: 'Base preparada', disconnected: 'Desconectada', error: 'Com erro', expired: 'Autorização expirada'};
 const icons: Record<string, ReactNode> = {
@@ -50,8 +51,15 @@ export default async function Page({params, searchParams}: {params: {organizatio
   const {data, error} = await db.from('integrations').select('id,provider,external_account_id,account_name,status,is_enabled,last_synced_at,last_error,config,updated_at').eq('organization_id', org.id).order('created_at', {ascending: false});
   if (error) throw error;
   const integrations = data ?? [];
-  const connected = integrations.filter((item) => item.status === 'connected').length;
-  const attention = integrations.filter((item) => ['error', 'expired'].includes(item.status)).length;
+  const configOf = (item: typeof integrations[number]) => item.config && typeof item.config === 'object' && !Array.isArray(item.config) ? item.config as Record<string, unknown> : {};
+  const candidates = integrations.filter((item) => configOf(item).selection_pending === true);
+  const candidateGroups = Array.from(new Set(candidates.map((item) => item.provider))).map((provider) => ({
+    provider,
+    candidates: candidates.filter((item) => item.provider === provider),
+  }));
+  const visibleIntegrations = integrations.filter((item) => configOf(item).selection_pending !== true && configOf(item).hidden !== true);
+  const connected = visibleIntegrations.filter((item) => item.status === 'connected').length;
+  const attention = visibleIntegrations.filter((item) => ['error', 'expired'].includes(item.status)).length;
   const preparedProviders = new Set(integrations.map((item) => item.provider));
   const official = connectorCatalog.filter((item) => item.group === 'official');
   const crms = connectorCatalog.filter((item) => item.group === 'crm');
@@ -59,13 +67,20 @@ export default async function Page({params, searchParams}: {params: {organizatio
   return (
     <div className="space-y-8">
       <header><p className="eyebrow mb-2">{org.name}</p><h1 className="text-3xl font-semibold">Central de integradores</h1><p className="muted mt-2 max-w-3xl">Conectores organizados por estágio real. Toda conta pertence exclusivamente a este workspace e os segredos permanecem no backend do Supabase.</p></header>
-      {searchParams.connected ? <Card className="border-emerald-500/40 bg-emerald-500/5 text-emerald-300">Autorização recebida. {searchParams.connected} conta(s) encontrada(s). Ative cada conta pela lista inferior.</Card> : null}
+      {searchParams.connected ? <Card className="border-emerald-500/40 bg-emerald-500/5 text-emerald-300">Autorização recebida. {searchParams.connected} conta(s) encontrada(s). Selecione explicitamente quais pertencem a {org.name}.</Card> : null}
       {searchParams.error ? <Card className="border-red-500/40 bg-red-500/5 text-red-300">A conexão não foi concluída. Verifique permissões e credenciais.</Card> : null}
 
       <IntegrationDiagnostics organizationId={org.id} />
 
+      {candidateGroups.map((group) => <MetaAccountSelector
+        key={group.provider}
+        organizationId={org.id}
+        provider={group.provider}
+        candidates={group.candidates.map((item) => ({id: item.id, accountName: item.account_name, externalAccountId: item.external_account_id}))}
+      />)}
+
       <div className="grid gap-3 sm:grid-cols-3">
-        <Card className="flex items-center gap-4 p-4"><Cable className="text-primary" /><div><strong className="text-xl">{integrations.length}</strong><p className="muted text-xs">registros de integração</p></div></Card>
+        <Card className="flex items-center gap-4 p-4"><Cable className="text-primary" /><div><strong className="text-xl">{visibleIntegrations.length}</strong><p className="muted text-xs">registros de integração</p></div></Card>
         <Card className="flex items-center gap-4 p-4"><CheckCircle2 className="text-emerald-400" /><div><strong className="text-xl">{connected}</strong><p className="muted text-xs">contas conectadas</p></div></Card>
         <Card className="flex items-center gap-4 p-4"><TriangleAlert className={attention ? 'text-red-300' : 'text-zinc-500'} /><div><strong className="text-xl">{attention}</strong><p className="muted text-xs">exigem atenção</p></div></Card>
       </div>
@@ -90,7 +105,7 @@ export default async function Page({params, searchParams}: {params: {organizatio
 
       <section className="space-y-4">
         <div><h2 className="text-xl font-semibold">Contas e bases deste cliente</h2><p className="muted mt-1 text-sm">Somente integrações desta lista podem alimentar o dashboard de {org.name}.</p></div>
-        {integrations.length ? <div className="grid gap-3">{integrations.map((item) => {
+        {visibleIntegrations.length ? <div className="grid gap-3">{visibleIntegrations.map((item) => {
           const config = item.config && typeof item.config === 'object' && !Array.isArray(item.config) ? item.config as Record<string, unknown> : {};
           const sourceKey = typeof config.source_platform === 'string' ? config.source_platform : null;
           const source = sourceKey ? connectorByProvider.get(sourceKey as never)?.name ?? sourceKey : null;
@@ -105,7 +120,7 @@ export default async function Page({params, searchParams}: {params: {organizatio
             && item.provider === 'facebook_organic'
             && item.last_error?.includes('pages_read_user_content')
           );
-          return <Card key={item.id} className="p-4"><div className="flex flex-wrap items-center justify-between gap-4"><div className="flex min-w-0 items-start gap-3"><StatusIcon status={staleOauth ? 'expired' : item.status} /><div className="min-w-0"><h3 className="truncate font-semibold">{item.account_name}</h3><p className="muted mt-1 text-xs">{definition?.name ?? item.provider}{source ? ` · ${source}` : ''} · {staleOauth ? 'Autorização expirada' : statusLabels[item.status] ?? item.status}</p><p className="muted mt-1 text-xs">Última sincronização: {item.last_synced_at ? new Date(item.last_synced_at).toLocaleString('pt-BR') : 'ainda não realizada'}</p>{item.last_error ? <p className="mt-2 text-xs text-red-300">{item.last_error}</p> : null}{supportsIngest ? <IngestEndpoint organizationId={org.id} integrationId={item.id} configured={ingestConfigured} /> : null}</div></div>{!supportsIngest && (item.status !== 'pending' || staleOauth) ? <IntegrationControls organizationId={org.id} provider={item.provider} integrationId={item.id} enabled={item.is_enabled} reconnect={requiresReconnect} /> : <span className="connector-badge connector-badge-foundation">{ingestConfigured ? 'Endpoint preparado' : 'Aguardando credenciais'}</span>}</div></Card>;
+          return <Card key={item.id} className="p-4"><div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_190px]"><div className="flex min-w-0 items-start gap-3"><StatusIcon status={staleOauth ? 'expired' : item.status} /><div className="min-w-0"><h3 className="truncate font-semibold">{item.account_name}</h3><p className="muted mt-1 text-xs">{definition?.name ?? item.provider}{source ? ` · ${source}` : ''} · {staleOauth ? 'Autorização expirada' : statusLabels[item.status] ?? item.status}</p><p className="muted mt-1 text-xs">Última sincronização: {item.last_synced_at ? new Date(item.last_synced_at).toLocaleString('pt-BR') : 'ainda não realizada'}</p>{item.last_error ? <p className="mt-2 break-words text-xs text-red-300">{item.last_error}</p> : null}{supportsIngest ? <IngestEndpoint organizationId={org.id} integrationId={item.id} configured={ingestConfigured} /> : null}</div></div><div className="w-full md:w-[190px]">{!supportsIngest && (item.status !== 'pending' || staleOauth) ? <IntegrationControls organizationId={org.id} provider={item.provider} integrationId={item.id} enabled={item.is_enabled} reconnect={requiresReconnect} /> : <span className="connector-badge connector-badge-foundation block text-center">{ingestConfigured ? 'Endpoint preparado' : 'Aguardando credenciais'}</span>}</div></div></Card>;
         })}</div> : <Card className="border-dashed text-center"><p>Nenhuma integração preparada neste cliente.</p><p className="muted mt-2 text-sm">Conecte uma conta operacional ou prepare um dos conectores acima.</p></Card>}
       </section>
     </div>

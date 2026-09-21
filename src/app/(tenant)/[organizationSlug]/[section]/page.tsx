@@ -53,6 +53,17 @@ export default async function Page({params, searchParams}: {params: {organizatio
 
   const f = filters(searchParams, org.timezone, org.currency);
   const data = await dashboardData(org.slug, f);
+  const funnelSpend = sum(data.days, 'spend');
+  const funnelLeads = sum(data.days, 'leads');
+  const funnelMessageLeads = sum(data.days, 'message_leads');
+  const funnelSteps = [
+    {label:'Impressões',value:sum(data.days,'impressions'),costLabel:'CPM',cost:sum(data.days,'impressions') ? Number(funnelSpend) / Number(sum(data.days,'impressions')) * 1000 : null},
+    {label:'Cliques',value:sum(data.days,'clicks'),costLabel:'CPC',cost:sum(data.days,'clicks') ? Number(funnelSpend) / Number(sum(data.days,'clicks')) : null},
+    {label:'Visitas',value:sum(data.days,'page_views'),costLabel:'CPV',cost:sum(data.days,'page_views') ? Number(funnelSpend) / Number(sum(data.days,'page_views')) : null},
+    {label:'Leads',value:funnelLeads,costLabel:'CPL',cost:funnelLeads ? Number(funnelSpend) / Number(funnelLeads) : null,detail:funnelMessageLeads == null ? null : `${Number(funnelMessageLeads).toLocaleString('pt-BR')} por mensagens`},
+    {label:'Checkouts',value:sum(data.days,'checkouts'),costLabel:'CPCO',cost:sum(data.days,'checkouts') ? Number(funnelSpend) / Number(sum(data.days,'checkouts')) : null},
+    {label:'Compras',value:sum(data.days,'purchases'),costLabel:'CPA',cost:sum(data.days,'purchases') ? Number(funnelSpend) / Number(sum(data.days,'purchases')) : null},
+  ];
   const sectionGroup = platformPage?.group ?? (params.section === 'paid' || params.section === 'organic' ? params.section : null);
   const visibleChecks = await Promise.all(platformDashboards.filter((item) => item.group === sectionGroup).map(async (item) => {
     const table = item.group === 'paid' ? 'metrics_ads' : 'metrics_organic';
@@ -90,18 +101,12 @@ export default async function Page({params, searchParams}: {params: {organizatio
     {params.section === 'overview' ? <div className="space-y-5">
       {!campaignsWithMovement.length && latestMovement?.metric_date ? <Card className="border-amber-400/20 bg-amber-400/[0.05] !py-4"><p className="text-sm text-amber-100">Não houve veiculação no intervalo selecionado. O último investimento registrado foi em <strong>{latestMovement.metric_date.split('-').reverse().join('/')}</strong>.</p></Card> : null}
       <CampaignOverview rows={campaignsWithMovement} currency={f.currency} />
+      <Card><div><p className="eyebrow">Jornada completa</p><h2 className="mt-2 text-lg font-semibold">Funil geral de campanhas</h2><p className="muted mt-2 text-sm">Inclui leads de formulários e conversas iniciadas por mensagens.</p></div><Funnel currency={f.currency} steps={funnelSteps} /></Card>
     </div> : null}
 
     {sectionGroup === 'paid' ? <CampaignWorkspace rows={currentCampaigns} previousRows={f.compare === 'none' ? [] : previousCampaigns} timeline={timelineRows(ads)} currency={f.currency} showPlatforms={!platformPage && !chosen} /> : null}
 
-    {params.section === 'funnel' ? <Card><h2 className="font-semibold">Da descoberta à compra</h2><p className="muted mt-2 text-sm">Taxas entre eventos; sem identificação de usuários, não representam uma coorte individual.</p><Funnel currency={f.currency} steps={(() => {const spend=sum(data.days,'spend'); const leads=sum(data.days,'leads'); const messageLeads=sum(data.days,'message_leads'); return [
-      {label:'Impressões',value:sum(data.days,'impressions'),costLabel:'CPM',cost:sum(data.days,'impressions') ? Number(spend) / Number(sum(data.days,'impressions')) * 1000 : null},
-      {label:'Cliques',value:sum(data.days,'clicks'),costLabel:'CPC',cost:sum(data.days,'clicks') ? Number(spend) / Number(sum(data.days,'clicks')) : null},
-      {label:'Visitas',value:sum(data.days,'page_views'),costLabel:'CPV',cost:sum(data.days,'page_views') ? Number(spend) / Number(sum(data.days,'page_views')) : null},
-      {label:'Leads',value:leads,costLabel:'CPL',cost:leads ? Number(spend) / Number(leads) : null,detail:messageLeads == null ? null : `${Number(messageLeads).toLocaleString('pt-BR')} por mensagens`},
-      {label:'Checkouts',value:sum(data.days,'checkouts'),costLabel:'CPCO',cost:sum(data.days,'checkouts') ? Number(spend) / Number(sum(data.days,'checkouts')) : null},
-      {label:'Compras',value:sum(data.days,'purchases'),costLabel:'CPA',cost:sum(data.days,'purchases') ? Number(spend) / Number(sum(data.days,'purchases')) : null},
-    ];})()} /></Card> : null}
+    {params.section === 'funnel' ? <Card><h2 className="font-semibold">Da descoberta à compra</h2><p className="muted mt-2 text-sm">Taxas entre eventos; sem identificação de usuários, não representam uma coorte individual.</p><Funnel currency={f.currency} steps={funnelSteps} /></Card> : null}
 
     {sectionGroup === 'organic' ? <><Card><p className="muted text-sm">Métricas diárias da plataforma selecionada. Os cards dos conteúdos exibem os contadores acumulados até a última sincronização.</p></Card><OrganicKpis current={organic} previous={f.compare === 'none' ? undefined : previousOrganic} /><Card><h2 className="font-semibold">Funil orgânico</h2><Funnel values={[sum(organic, 'impressions'), sum(organic, 'clicks'), sum(organic, 'page_views'), null, null, null]} /></Card></> : null}
 

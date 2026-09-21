@@ -88,12 +88,25 @@ Deno.serve(async(req:Request)=>{
    const result=await graph('oauth/access_token',null,{client_id:metaId!,client_secret:metaSecret!,redirect_uri:callback,code},'a troca do código OAuth');let token=result.access_token;if(!token)throw new Error('Token não recebido.');
    const long=await graph('oauth/access_token',null,{grant_type:'fb_exchange_token',client_id:metaId!,client_secret:metaSecret!,fb_exchange_token:token},'a renovação do token');token=long.access_token||token;
    const ads=pending.provider==='meta_ads';const instagram=pending.provider==='instagram_organic';const accountFields=ads?'id,name,currency':instagram?'id,name,access_token,instagram_business_account{id,username}':'id,name,access_token';const accounts=await pages(ads?'me/adaccounts':'me/accounts',token,{fields:accountFields});
-   let imported=0;for(const a of accounts){const ig=pending.provider==='instagram_organic';if(ig&&!a.instagram_business_account)continue;const accountId=ig?a.instagram_business_account.id:a.id;const name=ig?a.instagram_business_account.username:a.name;const saved=await check(await service.from('integrations').upsert({organization_id:pending.organization_id,provider:pending.provider,external_account_id:accountId,account_name:name,status:'connected',is_enabled:false,config:{currency:a.currency||null},last_error:null},{onConflict:'organization_id,provider,external_account_id'}).select('id').single());await setToken(saved.id,ads?token:a.access_token||token);imported++;}
+   let imported=0;for(const a of accounts){const ig=pending.provider==='instagram_organic';if(ig&&!a.instagram_business_account)continue;const accountId=ig?a.instagram_business_account.id:a.id;const name=ig?a.instagram_business_account.username:a.name;
+    const {data:assigned}=await service.from('integrations').select('id,organization_id').eq('provider',pending.provider).eq('external_account_id',accountId).eq('status','connected').neq('organization_id',pending.organization_id).limit(1).maybeSingle();
+    if(assigned)continue;
+    const saved=await check(await service.from('integrations').upsert({organization_id:pending.organization_id,provider:pending.provider,external_account_id:accountId,account_name:name,status:'pending',is_enabled:false,config:{currency:a.currency||null,selection_pending:true,batch_id:pending.id},last_error:null},{onConflict:'organization_id,provider,external_account_id'}).select('id').single());await setToken(saved.id,ads?token:a.access_token||token);imported++;}
    await check(await service.from('integrations').delete().eq('id',id));
    return Response.redirect(origin+'/'+org.slug+'/settings/integrations?connected='+imported,303);
   }
   if(req.method!=='POST')return json({message:'Método inválido.'},405);
   const body=await req.json();const org=String(body.organizationId||'');if(!/^[0-9a-f-]{36}$/.test(org))throw new Error('Cliente inválido.');const actor=await allowed(req,org);
+  if(body.action==='assign_accounts'){
+   const provider=String(body.provider||'');const requested=Array.isArray(body.integrationIds)?body.integrationIds.map(String):[];
+   if(!['meta_ads','facebook_organic','instagram_organic'].includes(provider)||!requested.length)throw new Error('Selecione ao menos uma conta válida.');
+   const {data:rows,error}=await service.from('integrations').select('id,config').eq('organization_id',org).eq('provider',provider);
+   if(error)throw new Error('Não foi possível validar as contas descobertas.');
+   const candidates=(rows||[]).filter((row:any)=>row.config?.selection_pending===true);const candidateIds=new Set(candidates.map((row:any)=>String(row.id)));
+   if(requested.some((id:string)=>!candidateIds.has(id)))throw new Error('Uma conta selecionada não pertence a este cliente.');
+   for(const row of candidates){const config={...(row.config||{})};delete config.selection_pending;delete config.batch_id;if(requested.includes(row.id)){await check(await service.from('integrations').update({status:'connected',is_enabled:false,config,last_error:null}).eq('id',row.id).eq('organization_id',org));}else{const removed=await service.from('integrations').delete().eq('id',row.id).eq('organization_id',org);if(removed.error)await check(await service.from('integrations').update({status:'disconnected',is_enabled:false,config:{...config,hidden:true}}).eq('id',row.id).eq('organization_id',org));}}
+   return json({message:`${requested.length} conta(s) vinculada(s) exclusivamente a este cliente.`});
+  }
   if(body.action==='diagnose'){
    const {data:integrations,error:integrationsError}=await service.from('integrations').select('id,provider,external_account_id,status,is_enabled,config').eq('organization_id',org);
    if(integrationsError)throw new Error('Não foi possível concluir o diagnóstico.');
