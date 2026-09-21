@@ -67,7 +67,7 @@ export default async function Page({params, searchParams}: {params: {organizatio
   return (
     <div className="space-y-8">
       <header><p className="eyebrow mb-2">{org.name}</p><h1 className="text-3xl font-semibold">Central de integradores</h1><p className="muted mt-2 max-w-3xl">Conectores organizados por estágio real. Toda conta pertence exclusivamente a este workspace e os segredos permanecem no backend do Supabase.</p></header>
-      {searchParams.connected ? <Card className="border-emerald-500/40 bg-emerald-500/5 text-emerald-300">Autorização recebida. {searchParams.connected} conta(s) encontrada(s). Selecione explicitamente quais pertencem a {org.name}.</Card> : null}
+      {searchParams.select_accounts && !candidates.length ? <Card className="border-amber-500/40 bg-amber-500/5 text-amber-200">A autorização foi concluída, mas nenhuma conta disponível foi encontrada. Verifique se as contas já pertencem a outro cliente ou se o usuário Meta possui acesso.</Card> : null}
       {searchParams.error ? <Card className="border-red-500/40 bg-red-500/5 text-red-300">A conexão não foi concluída. Verifique permissões e credenciais.</Card> : null}
 
       <IntegrationDiagnostics organizationId={org.id} />

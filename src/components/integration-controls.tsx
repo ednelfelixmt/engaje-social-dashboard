@@ -19,15 +19,15 @@ export function IntegrationControls({organizationId, provider, integrationId, en
   const router = useRouter();
 
   const reconnectLabel = provider === 'facebook_organic'
-    ? 'Reconectar Facebook'
+    ? 'Reconectar e selecionar'
     : provider === 'instagram_organic'
-      ? 'Reconectar Instagram'
-      : 'Reconectar conta';
+      ? 'Reconectar e selecionar'
+      : 'Reconectar e selecionar';
   const buttonLabel = reconnect
     ? reconnectLabel
     : integrationId
       ? enabled ? 'Sincronizar agora' : 'Ativar e sincronizar'
-      : 'Conectar conta';
+      : 'Conectar e selecionar';
 
   return (
     <div className="w-full md:w-[190px]">

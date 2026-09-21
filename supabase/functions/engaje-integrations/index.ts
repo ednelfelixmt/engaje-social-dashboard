@@ -93,7 +93,7 @@ Deno.serve(async(req:Request)=>{
     if(assigned)continue;
     const saved=await check(await service.from('integrations').upsert({organization_id:pending.organization_id,provider:pending.provider,external_account_id:accountId,account_name:name,status:'pending',is_enabled:false,config:{currency:a.currency||null,selection_pending:true,batch_id:pending.id},last_error:null},{onConflict:'organization_id,provider,external_account_id'}).select('id').single());await setToken(saved.id,ads?token:a.access_token||token);imported++;}
    await check(await service.from('integrations').delete().eq('id',id));
-   return Response.redirect(origin+'/'+org.slug+'/settings/integrations?connected='+imported,303);
+   return Response.redirect(origin+'/'+org.slug+'/settings/integrations?select_accounts=1&found='+imported,303);
   }
   if(req.method!=='POST')return json({message:'Método inválido.'},405);
   const body=await req.json();const org=String(body.organizationId||'');if(!/^[0-9a-f-]{36}$/.test(org))throw new Error('Cliente inválido.');const actor=await allowed(req,org);
