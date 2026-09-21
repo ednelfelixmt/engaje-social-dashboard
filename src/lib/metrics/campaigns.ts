@@ -42,6 +42,7 @@ export function campaigns(
     const clicks = sum(rows, 'clicks');
     const pageViews = sum(rows, 'page_views');
     const leads = sum(rows, 'leads');
+    const messageLeads = sum(rows, 'message_leads');
     const checkouts = sum(rows, 'checkouts');
 
     return {
@@ -57,6 +58,7 @@ export function campaigns(
       clicks,
       pageViews,
       leads,
+      messageLeads,
       checkouts,
       revenueSource: revenue == null
         ? 'unavailable'

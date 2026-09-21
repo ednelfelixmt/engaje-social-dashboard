@@ -11,6 +11,7 @@ import {
 import {Card} from '@/components/ui/card';
 import {Timeline} from '@/components/dashboard/charts';
 import {Ranking} from '@/components/dashboard/ranking';
+import {Funnel} from '@/components/dashboard/funnel';
 import {money, number} from '@/lib/utils';
 import type {CampaignPerformance, Platform} from '@/types/domain';
 
@@ -34,6 +35,8 @@ function metrics(rows: CampaignPerformance[]) {
   const clicks = total(rows, 'clicks');
   const pageViews = total(rows, 'pageViews');
   const leads = total(rows, 'leads');
+  const messageRows = rows.filter((row) => row.platform === 'meta_ads' && row.messageLeads != null);
+  const messageLeads = messageRows.length ? messageRows.reduce((value, row) => value + Number(row.messageLeads), 0) : null;
   const checkouts = total(rows, 'checkouts');
   const purchases = total(rows, 'purchases');
 
@@ -44,6 +47,7 @@ function metrics(rows: CampaignPerformance[]) {
     clicks,
     pageViews,
     leads,
+    messageLeads,
     checkouts,
     purchases,
     ctr: impressions && clicks != null ? clicks / impressions * 100 : null,
@@ -100,31 +104,16 @@ function TrafficFunnel({rows, currency}: {rows: CampaignPerformance[]; currency:
     {label: 'Impressões', value: summary.impressions, cost: summary.cpm, costLabel: 'CPM'},
     {label: 'Cliques', value: summary.clicks, cost: summary.cpc, costLabel: 'CPC'},
     {label: 'Page views', value: summary.pageViews, cost: summary.pageViews && summary.spend != null ? summary.spend / summary.pageViews : null, costLabel: 'CPV'},
-    {label: 'Leads', value: summary.leads, cost: summary.cpl, costLabel: 'CPL'},
+    {label: 'Leads', value: summary.leads, cost: summary.cpl, costLabel: 'CPL', detail: summary.messageLeads == null ? null : `${number(summary.messageLeads)} por mensagens`},
     {label: 'Checkouts', value: summary.checkouts, cost: summary.checkouts && summary.spend != null ? summary.spend / summary.checkouts : null, costLabel: 'CPCO'},
     {label: 'Compras', value: summary.purchases, cost: summary.cpa, costLabel: 'CPA'},
   ];
-  const firstAvailable = steps.find((step) => step.value != null && step.value > 0)?.value || 1;
-
   return <Card className="h-full">
     <div className="flex items-center justify-between gap-4">
       <div><p className="eyebrow">Jornada de conversão</p><h2 className="mt-2 text-lg font-semibold">Funil de campanhas</h2></div>
       <Target className="text-primary" size={20} />
     </div>
-    <div className="mt-6 space-y-3">
-      {steps.map((step, index) => {
-        const prior = index ? steps[index - 1].value : null;
-        const rate = prior && step.value != null ? step.value / prior * 100 : null;
-        const width = step.value == null ? 0 : Math.max(12, Math.min(100, step.value / firstAvailable * 100));
-        return <div className="grid grid-cols-[86px_1fr_76px] items-center gap-3" key={step.label}>
-          <div><p className="text-xs text-zinc-400">{step.label}</p>{index > 0 ? <p className="mt-1 text-[10px] text-zinc-600">{rate == null ? '—' : `${number(rate, 1)}%`}</p> : null}</div>
-          <div className="h-9 overflow-hidden rounded-lg bg-white/[0.04]">
-            <div className="flex h-full items-center rounded-lg bg-gradient-to-r from-primary/55 to-primary px-3 text-xs font-bold text-black transition-all" style={{width: `${width}%`}}>{number(step.value)}</div>
-          </div>
-          <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-1.5 text-right"><p className="text-[9px] text-zinc-500">{step.costLabel}</p><strong className="text-[11px]">{money(step.cost, currency)}</strong></div>
-        </div>;
-      })}
-    </div>
+    <Funnel steps={steps} currency={currency} />
   </Card>;
 }
 
@@ -225,6 +214,7 @@ export function CampaignWorkspace({
     {label: 'Impressões', value: current.impressions, previous: previous.impressions, format: (value: number | null) => number(value), icon: Eye},
     {label: 'Cliques', value: current.clicks, previous: previous.clicks, format: (value: number | null) => number(value), icon: MousePointerClick},
     {label: 'Leads', value: current.leads, previous: previous.leads, format: (value: number | null) => number(value), icon: Users},
+    {label: 'Leads por mensagens', value: current.messageLeads, previous: previous.messageLeads, format: (value: number | null) => number(value), icon: Users},
     {label: 'CTR', value: current.ctr, previous: previous.ctr, format: (value: number | null) => value == null ? '—' : `${number(value, 2)}%`, icon: TrendingUp},
     {label: 'CPC', value: current.cpc, previous: previous.cpc, format: (value: number | null) => money(value, currency), inverse: true, icon: Gauge},
     {label: 'CPL', value: current.cpl, previous: previous.cpl, format: (value: number | null) => money(value, currency), inverse: true, icon: Target},

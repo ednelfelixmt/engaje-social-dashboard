@@ -257,6 +257,7 @@ export type Database = {
           clicks: number | null;
           page_views: number | null;
           leads: number | null;
+          message_leads: number | null;
           checkouts: number | null;
           purchases: number | null;
           attribution_window: string;
@@ -282,6 +283,7 @@ export type Database = {
           clicks?: number | null;
           page_views?: number | null;
           leads?: number | null;
+          message_leads?: number | null;
           checkouts?: number | null;
           purchases?: number | null;
           attribution_window: string;
@@ -307,6 +309,7 @@ export type Database = {
           clicks?: number | null;
           page_views?: number | null;
           leads?: number | null;
+          message_leads?: number | null;
           checkouts?: number | null;
           purchases?: number | null;
           attribution_window?: string;
@@ -619,6 +622,7 @@ export type Database = {
           clicks: number | null;
           page_views: number | null;
           leads: number | null;
+          message_leads: number | null;
           checkouts: number | null;
           ads_synced_at: string | null;
           real_synced_at: string | null;

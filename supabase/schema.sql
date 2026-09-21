@@ -154,6 +154,7 @@ create table public.metrics_ads (
   clicks bigint check (clicks >= 0),
   page_views bigint check (page_views >= 0),
   leads bigint check (leads >= 0),
+  message_leads bigint check (message_leads >= 0),
   checkouts bigint check (checkouts >= 0),
   purchases bigint check (purchases >= 0),
   attribution_window text not null,
@@ -379,6 +380,7 @@ with ads as (
     case when count(clicks)=count(*) then sum(clicks) end as clicks,
     case when count(page_views)=count(*) then sum(page_views) end as page_views,
     case when count(leads)=count(*) then sum(leads) end as ad_leads,
+    case when count(message_leads)=count(*) then sum(message_leads) end as message_leads,
     case when count(checkouts)=count(*) then sum(checkouts) end as ad_checkouts,
     max(synced_at) as ads_synced_at
   from public.metrics_ads group by organization_id,metric_date,currency
@@ -401,7 +403,7 @@ with ads as (
     coalesce(r.real_revenue,a.ad_revenue) as revenue,
     case when r.organization_id is not null then r.source::text when a.ad_revenue is not null then 'ads' else 'unavailable' end as revenue_source,
     case when r.organization_id is not null then r.real_purchases else a.ad_purchases end as purchases,
-    a.impressions,a.clicks,a.page_views,
+    a.impressions,a.clicks,a.page_views,a.message_leads,
     case when r.organization_id is not null then r.real_leads else a.ad_leads end as leads,
     case when r.organization_id is not null then r.real_checkouts else a.ad_checkouts end as checkouts,
     a.ads_synced_at,r.real_synced_at
