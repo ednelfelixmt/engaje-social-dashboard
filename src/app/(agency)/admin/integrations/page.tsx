@@ -21,7 +21,7 @@ export default async function Page() {
   const {db} = await requireAdmin();
   const [{data: organizations, error: organizationsError}, {data: integrations, error: integrationsError}] = await Promise.all([
     db.from('organizations').select('id,name,slug,status').eq('is_agency', false).order('name'),
-    db.from('integrations').select('id,organization_id,provider,account_name,status,last_synced_at,last_error,updated_at').order('updated_at', {ascending: false}),
+    db.from('integrations').select('id,organization_id,provider,account_name,status,is_enabled,last_synced_at,last_error,config,updated_at').order('updated_at', {ascending: false}),
   ]);
 
   if (organizationsError) throw organizationsError;
@@ -37,8 +37,11 @@ export default async function Page() {
 
       <div className="grid gap-4 xl:grid-cols-2">
         {organizations?.map((organization) => {
-          const accounts = integrations?.filter((item) => item.organization_id === organization.id) ?? [];
-          const connected = accounts.filter((item) => item.status === 'connected').length;
+          const accounts = integrations?.filter((item) => {
+            const config = item.config && typeof item.config === 'object' && !Array.isArray(item.config) ? item.config as Record<string, unknown> : {};
+            return item.organization_id === organization.id && config.selection_pending !== true && config.hidden !== true;
+          }) ?? [];
+          const connected = accounts.filter((item) => item.status === 'connected' && item.is_enabled).length;
           const errors = accounts.filter((item) => item.status === 'error' || item.status === 'expired').length;
 
           return (

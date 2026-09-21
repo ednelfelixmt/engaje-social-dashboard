@@ -93,21 +93,32 @@ Deno.serve(async(req:Request)=>{
     if(assigned)continue;
     const saved=await check(await service.from('integrations').upsert({organization_id:pending.organization_id,provider:pending.provider,external_account_id:accountId,account_name:name,status:'pending',is_enabled:false,config:{currency:a.currency||null,selection_pending:true,batch_id:pending.id},last_error:null},{onConflict:'organization_id,provider,external_account_id'}).select('id').single());await setToken(saved.id,ads?token:a.access_token||token);imported++;}
    await check(await service.from('integrations').delete().eq('id',id));
-   return Response.redirect(origin+'/'+org.slug+'/settings/integrations?select_accounts=1&found='+imported,303);
+   return Response.redirect(origin+'/'+org.slug+'/settings/integrations?select_accounts=1&provider='+encodeURIComponent(pending.provider)+'&batch='+encodeURIComponent(pending.id)+'&found='+imported,303);
   }
   if(req.method!=='POST')return json({message:'Método inválido.'},405);
   const body=await req.json();const org=String(body.organizationId||'');if(!/^[0-9a-f-]{36}$/.test(org))throw new Error('Cliente inválido.');const actor=await allowed(req,org);
   if(body.action==='assign_accounts'){
-   const provider=String(body.provider||'');const requested=Array.isArray(body.integrationIds)?body.integrationIds.map(String):[];
+   const provider=String(body.provider||'');const requested=Array.isArray(body.integrationIds)?body.integrationIds.map(String):[];const batchId=String(body.batchId||'');
    const selectableProviders=['meta_ads','facebook_organic','instagram_organic','tiktok_ads','tiktok_organic','windsor','stract','hubspot','rd_station','generic_crm'];
    if(!selectableProviders.includes(provider)||!requested.length)throw new Error('Selecione ao menos uma conta válida.');
+   if(batchId&&!/^[0-9a-f-]{36}$/.test(batchId))throw new Error('Lote de autorização inválido.');
    const {data:rows,error}=await service.from('integrations').select('id,config').eq('organization_id',org).eq('provider',provider);
    if(error)throw new Error('Não foi possível validar as contas descobertas.');
-   const candidates=(rows||[]).filter((row:any)=>row.config?.selection_pending===true);const candidateIds=new Set(candidates.map((row:any)=>String(row.id)));
+   const candidates=(rows||[]).filter((row:any)=>row.config?.selection_pending===true&&(batchId?row.config?.batch_id===batchId:!row.config?.batch_id));const candidateIds=new Set(candidates.map((row:any)=>String(row.id)));
    if(requested.some((id:string)=>!candidateIds.has(id)))throw new Error('Uma conta selecionada não pertence a este cliente.');
    const readyToConnect=['meta_ads','facebook_organic','instagram_organic','windsor'];
    for(const row of candidates){const config={...(row.config||{})};delete config.selection_pending;delete config.batch_id;if(requested.includes(row.id)){await check(await service.from('integrations').update({status:readyToConnect.includes(provider)?'connected':'pending',is_enabled:false,config:{...config,assignment_confirmed_at:new Date().toISOString(),assignment_confirmed_by:actor.id},last_error:null}).eq('id',row.id).eq('organization_id',org));}else{const removed=await service.from('integrations').delete().eq('id',row.id).eq('organization_id',org);if(removed.error)await check(await service.from('integrations').update({status:'disconnected',is_enabled:false,config:{...config,hidden:true}}).eq('id',row.id).eq('organization_id',org));}}
    return json({message:`${requested.length} conta(s) vinculada(s) exclusivamente a este cliente.`});
+  }
+  if(body.action==='disconnect'){
+   const integrationId=String(body.integrationId||'');
+   if(!/^[0-9a-f-]{36}$/.test(integrationId))throw new Error('Integração inválida.');
+   const {data:integration,error:integrationError}=await service.from('integrations').select('id,provider,account_name,status').eq('id',integrationId).eq('organization_id',org).single();
+   if(integrationError||!integration)throw new Error('Esta conta não pertence ao cliente selecionado.');
+   if(integration.status==='syncing')throw new Error('A conta está sincronizando. Aguarde a conclusão antes de desconectar.');
+   const result=await check(await service.rpc('disconnect_integration',{p_organization_id:org,p_integration_id:integrationId}));
+   console.info('[integration-disconnect]',{organization_id:org,integration_id:integrationId,provider:integration.provider,account_name:integration.account_name,actor_id:actor.id});
+   return json({message:`${integration.account_name} foi desconectada. Os dados vinculados a esta conta foram removidos deste cliente.`,removed:result});
   }
   if(body.action==='diagnose'){
    const {data:integrations,error:integrationsError}=await service.from('integrations').select('id,provider,external_account_id,status,is_enabled,config').eq('organization_id',org);

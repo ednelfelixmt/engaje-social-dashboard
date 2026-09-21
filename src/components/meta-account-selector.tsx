@@ -21,9 +21,10 @@ const providerLabels: Record<string, string> = {
   generic_crm: 'CRM genérico',
 };
 
-export function MetaAccountSelector({organizationId, provider, candidates}: {
+export function MetaAccountSelector({organizationId, provider, batchId, candidates}: {
   organizationId: string;
   provider: string;
+  batchId?: string;
   candidates: Candidate[];
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -49,7 +50,7 @@ export function MetaAccountSelector({organizationId, provider, candidates}: {
     <div className="mt-5 flex flex-col-reverse gap-4 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-2 text-xs text-zinc-400"><ShieldCheck size={16} className="text-emerald-400" /> Isolamento exclusivo por cliente</div><div className="flex flex-wrap items-center gap-4"><Button className="min-w-[220px]" disabled={busy || !selected.size} onClick={async () => {
       setBusy(true); setMessage('');
       try {
-        const {data, error} = await browserClient().functions.invoke('engaje-integrations', {body: {action: 'assign_accounts', organizationId, provider, integrationIds: [...selected]}});
+        const {data, error} = await browserClient().functions.invoke('engaje-integrations', {body: {action: 'assign_accounts', organizationId, provider, batchId, integrationIds: [...selected]}});
         if (error) {const context=(error as {context?:Response}).context; const body=context?await context.json().catch(()=>null):null; throw new Error(body?.message||error.message);}
         setMessage(data.message || 'Contas vinculadas.');
         router.replace(window.location.pathname);

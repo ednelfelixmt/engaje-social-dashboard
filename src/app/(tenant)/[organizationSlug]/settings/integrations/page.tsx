@@ -54,12 +54,16 @@ export default async function Page({params, searchParams}: {params: {organizatio
   const integrations = data ?? [];
   const configOf = (item: typeof integrations[number]) => item.config && typeof item.config === 'object' && !Array.isArray(item.config) ? item.config as Record<string, unknown> : {};
   const candidates = integrations.filter((item) => configOf(item).selection_pending === true);
-  const candidateGroups = Array.from(new Set(candidates.map((item) => item.provider))).map((provider) => ({
-    provider,
-    candidates: candidates.filter((item) => item.provider === provider),
-  }));
+  const candidateGroups = Array.from(new Set(candidates.map((item) => `${item.provider}:${String(configOf(item).batch_id ?? 'unbatched')}`))).map((key) => {
+    const [provider, batchValue] = key.split(':');
+    return {
+      provider,
+      batchId: batchValue === 'unbatched' ? undefined : batchValue,
+      candidates: candidates.filter((item) => item.provider === provider && String(configOf(item).batch_id ?? 'unbatched') === batchValue),
+    };
+  });
   const visibleIntegrations = integrations.filter((item) => configOf(item).selection_pending !== true && configOf(item).hidden !== true);
-  const connected = visibleIntegrations.filter((item) => item.status === 'connected').length;
+  const connected = visibleIntegrations.filter((item) => item.status === 'connected' && item.is_enabled).length;
   const attention = visibleIntegrations.filter((item) => ['error', 'expired'].includes(item.status)).length;
   const preparedProviders = new Set(integrations.map((item) => item.provider));
   const official = connectorCatalog.filter((item) => item.group === 'official');
@@ -74,9 +78,10 @@ export default async function Page({params, searchParams}: {params: {organizatio
       <IntegrationDiagnostics organizationId={org.id} />
 
       {candidateGroups.map((group) => <MetaAccountSelector
-        key={group.provider}
+        key={`${group.provider}:${group.batchId ?? 'unbatched'}`}
         organizationId={org.id}
         provider={group.provider}
+        batchId={group.batchId}
         candidates={group.candidates.map((item) => ({id: item.id, accountName: item.account_name, externalAccountId: item.external_account_id}))}
       />)}
 
@@ -121,7 +126,7 @@ export default async function Page({params, searchParams}: {params: {organizatio
             && item.provider === 'facebook_organic'
             && item.last_error?.includes('pages_read_user_content')
           );
-          return <Card key={item.id} className="p-4"><div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_190px]"><div className="flex min-w-0 items-start gap-3"><StatusIcon status={staleOauth ? 'expired' : item.status} /><div className="min-w-0"><h3 className="truncate font-semibold">{item.account_name}</h3><p className="muted mt-1 text-xs">{definition?.name ?? item.provider}{source ? ` · ${source}` : ''} · {staleOauth ? 'Autorização expirada' : statusLabels[item.status] ?? item.status}</p><p className="muted mt-1 text-xs">Última sincronização: {item.last_synced_at ? new Date(item.last_synced_at).toLocaleString('pt-BR') : 'ainda não realizada'}</p>{item.last_error ? <p className="mt-2 break-words text-xs text-red-300">{item.last_error}</p> : null}{supportsIngest ? <IngestEndpoint organizationId={org.id} integrationId={item.id} configured={ingestConfigured} /> : null}</div></div><div className="w-full md:w-[190px]">{!supportsIngest && (item.status !== 'pending' || staleOauth) ? <IntegrationControls organizationId={org.id} provider={item.provider} integrationId={item.id} enabled={item.is_enabled} reconnect={requiresReconnect} /> : <span className="connector-badge connector-badge-foundation block text-center">{ingestConfigured ? 'Endpoint preparado' : 'Aguardando credenciais'}</span>}</div></div></Card>;
+          return <Card key={item.id} className="p-4"><div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_210px]"><div className="flex min-w-0 items-start gap-3"><StatusIcon status={staleOauth ? 'expired' : item.status} /><div className="min-w-0"><h3 className="truncate font-semibold">{item.account_name}</h3><p className="muted mt-1 text-xs">{definition?.name ?? item.provider}{source ? ` · ${source}` : ''} · {staleOauth ? 'Autorização expirada' : statusLabels[item.status] ?? item.status}</p><p className="muted mt-1 text-xs">Última sincronização: {item.last_synced_at ? new Date(item.last_synced_at).toLocaleString('pt-BR') : 'ainda não realizada'}</p>{item.last_error ? <p className="mt-2 break-words text-xs text-red-300">{item.last_error}</p> : null}{supportsIngest ? <IngestEndpoint organizationId={org.id} integrationId={item.id} configured={ingestConfigured} /> : null}</div></div><div className="w-full md:w-[210px]">{!supportsIngest && (item.status !== 'pending' || staleOauth) ? <IntegrationControls organizationId={org.id} provider={item.provider} integrationId={item.id} enabled={item.is_enabled} reconnect={requiresReconnect} accountName={item.account_name} allowDisconnect /> : <div className="space-y-2"><span className="connector-badge connector-badge-foundation block text-center">{ingestConfigured ? 'Endpoint preparado' : 'Aguardando credenciais'}</span><IntegrationControls organizationId={org.id} provider={item.provider} integrationId={item.id} enabled={item.is_enabled} accountName={item.account_name} allowDisconnect disconnectOnly /></div>}</div></div></Card>;
         })}</div> : <Card className="border-dashed text-center"><p>Nenhuma integração preparada neste cliente.</p><p className="muted mt-2 text-sm">Conecte uma conta operacional ou prepare um dos conectores acima.</p></Card>}
       </section>
     </div>
