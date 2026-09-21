@@ -38,7 +38,7 @@ export function IntegrationAccountCard({organizationId, item, providerName, sour
   const staleOauth = item.status === 'pending' && item.external_account_id.startsWith('pending:') && Date.now() - new Date(item.updated_at).getTime() > 10 * 60 * 1000;
   const permissionRequired = missingPermissions.length > 0 || technicalError?.code === '10' || technicalError?.code === '200' || item.last_error?.includes('pages_read_user_content');
   const tokenExpired = staleOauth || item.status === 'expired' || technicalError?.code === '190';
-  const connected = !staleOauth && !['disconnected', 'pending'].includes(item.status);
+  const connected = !tokenExpired && !['disconnected', 'pending'].includes(item.status);
   const syncing = item.status === 'syncing';
   const synchronized = item.status === 'connected' && Boolean(item.last_synced_at);
   const syncError = item.status === 'error' && !permissionRequired;

@@ -128,9 +128,37 @@ Deno.serve(async(req:Request)=>{
    if(error)throw new Error('Não foi possível validar as contas descobertas.');
    const candidates=(rows||[]).filter((row:any)=>row.config?.selection_pending===true&&(batchId?row.config?.batch_id===batchId:!row.config?.batch_id));const candidateIds=new Set(candidates.map((row:any)=>String(row.id)));
    if(requested.some((id:string)=>!candidateIds.has(id)))throw new Error('Uma conta selecionada não pertence a este cliente.');
-   const readyToConnect=['meta_ads','facebook_organic','instagram_organic','windsor'];let synchronized=0,blocked=0,failed=0;
-   for(const row of candidates){const config={...(row.config||{})};delete config.selection_pending;delete config.batch_id;if(requested.includes(row.id)){const diagnostics=config.diagnostics&&typeof config.diagnostics==='object'&&!Array.isArray(config.diagnostics)?config.diagnostics as Record<string,unknown>:{};const missing=Array.isArray(diagnostics.missingPermissions)?diagnostics.missingPermissions.map(String):[];const assignedConfig=diagnosticConfig({...config,assignment_confirmed_at:new Date().toISOString(),assignment_confirmed_by:actor.id},{accountSelected:true,syncStatus:missing.length?'blocked':'syncing'});if(readyToConnect.includes(provider)&&missing.length){blocked++;await check(await service.from('integrations').update({status:'error',is_enabled:false,config:assignedConfig,last_error:'A Meta não concedeu todas as permissões necessárias para sincronizar esta conta.'}).eq('id',row.id).eq('organization_id',org));}else if(readyToConnect.includes(provider)){await check(await service.from('integrations').update({status:'syncing',is_enabled:true,last_sync_started_at:new Date().toISOString(),config:assignedConfig,last_error:null}).eq('id',row.id).eq('organization_id',org));try{await sync({...row,config:assignedConfig,status:'syncing'} as Integration);synchronized++;}catch(syncError){failed++;const details=syncError instanceof MetaGraphError?syncError.details:null;const failureConfig=diagnosticConfig(assignedConfig,{syncStatus:'error',lastError:details});await service.from('integrations').update({status:details?.code==='190'?'expired':'error',is_enabled:false,config:failureConfig,last_error:syncError instanceof Error?syncError.message:'Não foi possível concluir a primeira sincronização.'}).eq('id',row.id);}}else{await check(await service.from('integrations').update({status:'pending',is_enabled:false,config:assignedConfig,last_error:null}).eq('id',row.id).eq('organization_id',org));}}else{const removed=await service.from('integrations').delete().eq('id',row.id).eq('organization_id',org);if(removed.error)await check(await service.from('integrations').update({status:'disconnected',is_enabled:false,config:{...config,hidden:true}}).eq('id',row.id).eq('organization_id',org));}}
-   const detail=blocked?` ${blocked} exige(m) correção de permissões.`:failed?` ${failed} apresentou(aram) erro na primeira sincronização.`:` ${synchronized} sincronizada(s) automaticamente.`;return json({message:`${requested.length} conta(s) vinculada(s) exclusivamente a este cliente.${detail}`});
+   const readyToConnect=['meta_ads','facebook_organic','instagram_organic','windsor'];let blocked=0;
+   const syncQueue:{row:any;config:Record<string,unknown>}[]=[];
+   for(const row of candidates){
+    const config={...(row.config||{})};delete config.selection_pending;delete config.batch_id;
+    if(requested.includes(row.id)){
+     const diagnostics=config.diagnostics&&typeof config.diagnostics==='object'&&!Array.isArray(config.diagnostics)?config.diagnostics as Record<string,unknown>:{};
+     const missing=Array.isArray(diagnostics.missingPermissions)?diagnostics.missingPermissions.map(String):[];
+     const shouldSync=readyToConnect.includes(provider)&&!missing.length;
+     const assignedConfig=diagnosticConfig({...config,assignment_confirmed_at:new Date().toISOString(),assignment_confirmed_by:actor.id},{accountSelected:true,syncStatus:missing.length?'blocked':shouldSync?'queued':'ready'});
+     if(missing.length){
+      blocked++;
+      await check(await service.from('integrations').update({status:'error',is_enabled:false,config:assignedConfig,last_error:'A Meta não concedeu todas as permissões necessárias para sincronizar esta conta.'}).eq('id',row.id).eq('organization_id',org));
+     }else{
+      await check(await service.from('integrations').update({status:shouldSync?'connected':'pending',is_enabled:shouldSync,config:assignedConfig,last_error:null}).eq('id',row.id).eq('organization_id',org));
+      if(shouldSync)syncQueue.push({row,config:assignedConfig});
+     }
+    }else{
+     const removed=await service.from('integrations').delete().eq('id',row.id).eq('organization_id',org);
+     if(removed.error)await check(await service.from('integrations').update({status:'disconnected',is_enabled:false,config:{...config,hidden:true}}).eq('id',row.id).eq('organization_id',org));
+    }
+   }
+   if(syncQueue.length){
+    const background=Promise.allSettled(syncQueue.map(async({row,config})=>{
+     await check(await service.from('integrations').update({status:'syncing',last_sync_started_at:new Date().toISOString(),config:diagnosticConfig(config,{syncStatus:'syncing'})}).eq('id',row.id).eq('organization_id',org));
+     try{await sync({...row,config,status:'syncing'} as Integration);}
+     catch(syncError){const details=syncError instanceof MetaGraphError?syncError.details:null;const failureConfig=diagnosticConfig(config,{syncStatus:'error',lastError:details});await service.from('integrations').update({status:details?.code==='190'?'expired':'error',is_enabled:false,config:failureConfig,last_error:syncError instanceof Error?syncError.message:'Não foi possível concluir a primeira sincronização.'}).eq('id',row.id).eq('organization_id',org);}
+    }));
+    (globalThis as typeof globalThis&{EdgeRuntime:{waitUntil(promise:Promise<unknown>):void}}).EdgeRuntime.waitUntil(background);
+   }
+   const detail=blocked?` ${blocked} exige(m) correção de permissões.`:syncQueue.length?` ${syncQueue.length} sincronização(ões) iniciada(s) em segundo plano.`:'';
+   return json({message:`${requested.length} conta(s) vinculada(s) exclusivamente a este cliente.${detail}`});
   }
   if(body.action==='disconnect'){
    const integrationId=String(body.integrationId||'');
