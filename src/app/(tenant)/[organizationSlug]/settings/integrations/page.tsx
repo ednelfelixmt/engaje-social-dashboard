@@ -39,6 +39,7 @@ function ConnectorCard({connector, organizationId, prepared}: {connector: Connec
         </div>
         <div className="flex flex-wrap gap-2">{connector.capabilities.map((capability) => <span className="connector-capability" key={capability}>{capability}</span>)}</div>
       </div>
+      <p className="muted text-xs">A conta só será vinculada após você selecioná-la e confirmar o cliente.</p>
       {connector.stage === 'live'
         ? <IntegrationControls organizationId={organizationId} provider={connector.provider} />
         : <FoundationConnector organizationId={organizationId} provider={connector.provider} prepared={prepared} />}
@@ -93,8 +94,8 @@ export default async function Page({params, searchParams}: {params: {organizatio
       <section className="space-y-4">
         <div><h2 className="text-xl font-semibold">Extratores e serviços Google</h2><p className="muted mt-1 text-sm">Uma única fonte por plataforma evita duplicidade de investimento e conversões.</p></div>
         <div className="grid gap-4 xl:grid-cols-2">
-          <Card><div className="mb-4 flex items-start justify-between gap-3"><div className="integration-brand">{icons.windsor}<div><h3>Windsor.ai</h3><p>Google Ads operacional; Google Business e YouTube com base registrada.</p></div></div><StageBadge stage="live" /></div><ExtractorSetup organizationId={org.id} provider="windsor" /></Card>
-          <Card><div className="mb-4 flex items-start justify-between gap-3"><div className="integration-brand">{icons.stract}<div><h3>Stract</h3><p>Destino Supabase e contas por cliente preparados para a carga externa.</p></div></div><StageBadge stage="foundation" /></div><ExtractorSetup organizationId={org.id} provider="stract" /></Card>
+          <Card><div className="mb-4 flex items-start justify-between gap-3"><div className="integration-brand">{icons.windsor}<div><h3>Windsor.ai</h3><p>Google Ads operacional; Google Business e YouTube com base registrada.</p></div></div><StageBadge stage="live" /></div><p className="muted mb-4 text-xs">Cadastre as contas disponíveis e confirme quais pertencem a este cliente.</p><ExtractorSetup organizationId={org.id} provider="windsor" /></Card>
+          <Card><div className="mb-4 flex items-start justify-between gap-3"><div className="integration-brand">{icons.stract}<div><h3>Stract</h3><p>Destino Supabase e contas por cliente preparados para a carga externa.</p></div></div><StageBadge stage="foundation" /></div><p className="muted mb-4 text-xs">Cadastre as contas disponíveis e confirme quais pertencem a este cliente.</p><ExtractorSetup organizationId={org.id} provider="stract" /></Card>
         </div>
       </section>
 

@@ -54,6 +54,7 @@ export function ExtractorSetup({organizationId, provider}: {organizationId: stri
         throw new Error(body?.message || body?.error || error.message);
       }
       setMessage(data.message);
+      setOpen(false);
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Não foi possível salvar a configuração.');
@@ -63,7 +64,7 @@ export function ExtractorSetup({organizationId, provider}: {organizationId: stri
   }
 
   if (!open) {
-    return <Button variant="outline" onClick={() => setOpen(true)}>Configurar extrator</Button>;
+    return <Button variant="outline" onClick={() => setOpen(true)}>Cadastrar e selecionar contas</Button>;
   }
 
   return (
@@ -90,7 +91,7 @@ export function ExtractorSetup({organizationId, provider}: {organizationId: stri
       <div className="flex flex-wrap gap-2">
         <Button disabled={busy} type="submit">
           {busy ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
-          {busy ? 'Salvando…' : 'Salvar fonte'}
+          {busy ? 'Salvando…' : 'Adicionar à seleção'}
         </Button>
         <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
         {provider === 'stract' && (

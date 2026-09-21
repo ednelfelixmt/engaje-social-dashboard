@@ -8,6 +8,19 @@ import {Button} from '@/components/ui/button';
 
 type Candidate = {id: string; accountName: string; externalAccountId: string};
 
+const providerLabels: Record<string, string> = {
+  meta_ads: 'Meta Ads',
+  facebook_organic: 'Facebook orgânico',
+  instagram_organic: 'Instagram orgânico',
+  tiktok_ads: 'TikTok Ads',
+  tiktok_organic: 'TikTok orgânico',
+  windsor: 'Windsor.ai',
+  stract: 'Stract',
+  hubspot: 'HubSpot',
+  rd_station: 'RD Station',
+  generic_crm: 'CRM genérico',
+};
+
 export function MetaAccountSelector({organizationId, provider, candidates}: {
   organizationId: string;
   provider: string;
@@ -17,7 +30,7 @@ export function MetaAccountSelector({organizationId, provider, candidates}: {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const router = useRouter();
-  const providerName = provider === 'meta_ads' ? 'Meta Ads' : provider === 'facebook_organic' ? 'Facebook orgânico' : 'Instagram orgânico';
+  const providerName = providerLabels[provider] ?? provider;
   const allSelected = selected.size === candidates.length;
 
   return <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/80 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby={`account-selector-${provider}`}>

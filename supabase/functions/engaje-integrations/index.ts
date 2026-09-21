@@ -99,12 +99,14 @@ Deno.serve(async(req:Request)=>{
   const body=await req.json();const org=String(body.organizationId||'');if(!/^[0-9a-f-]{36}$/.test(org))throw new Error('Cliente inválido.');const actor=await allowed(req,org);
   if(body.action==='assign_accounts'){
    const provider=String(body.provider||'');const requested=Array.isArray(body.integrationIds)?body.integrationIds.map(String):[];
-   if(!['meta_ads','facebook_organic','instagram_organic'].includes(provider)||!requested.length)throw new Error('Selecione ao menos uma conta válida.');
+   const selectableProviders=['meta_ads','facebook_organic','instagram_organic','tiktok_ads','tiktok_organic','windsor','stract','hubspot','rd_station','generic_crm'];
+   if(!selectableProviders.includes(provider)||!requested.length)throw new Error('Selecione ao menos uma conta válida.');
    const {data:rows,error}=await service.from('integrations').select('id,config').eq('organization_id',org).eq('provider',provider);
    if(error)throw new Error('Não foi possível validar as contas descobertas.');
    const candidates=(rows||[]).filter((row:any)=>row.config?.selection_pending===true);const candidateIds=new Set(candidates.map((row:any)=>String(row.id)));
    if(requested.some((id:string)=>!candidateIds.has(id)))throw new Error('Uma conta selecionada não pertence a este cliente.');
-   for(const row of candidates){const config={...(row.config||{})};delete config.selection_pending;delete config.batch_id;if(requested.includes(row.id)){await check(await service.from('integrations').update({status:'connected',is_enabled:false,config,last_error:null}).eq('id',row.id).eq('organization_id',org));}else{const removed=await service.from('integrations').delete().eq('id',row.id).eq('organization_id',org);if(removed.error)await check(await service.from('integrations').update({status:'disconnected',is_enabled:false,config:{...config,hidden:true}}).eq('id',row.id).eq('organization_id',org));}}
+   const readyToConnect=['meta_ads','facebook_organic','instagram_organic','windsor'];
+   for(const row of candidates){const config={...(row.config||{})};delete config.selection_pending;delete config.batch_id;if(requested.includes(row.id)){await check(await service.from('integrations').update({status:readyToConnect.includes(provider)?'connected':'pending',is_enabled:false,config:{...config,assignment_confirmed_at:new Date().toISOString(),assignment_confirmed_by:actor.id},last_error:null}).eq('id',row.id).eq('organization_id',org));}else{const removed=await service.from('integrations').delete().eq('id',row.id).eq('organization_id',org);if(removed.error)await check(await service.from('integrations').update({status:'disconnected',is_enabled:false,config:{...config,hidden:true}}).eq('id',row.id).eq('organization_id',org));}}
    return json({message:`${requested.length} conta(s) vinculada(s) exclusivamente a este cliente.`});
   }
   if(body.action==='diagnose'){
@@ -151,6 +153,13 @@ Deno.serve(async(req:Request)=>{
    },{onConflict:'organization_id,provider,external_account_id'}));
    return json({message:'Base de '+definition.name+' preparada. Na próxima etapa serão configuradas credenciais, OAuth e mapeamento de dados.'});
   }
+  if(body.action==='register_candidate_account'){
+   const provider=String(body.provider||'');const accountName=String(body.accountName||'').trim();const externalAccountId=String(body.externalAccountId||'').trim();
+   if(!['tiktok_ads','tiktok_organic','hubspot','rd_station','generic_crm'].includes(provider))throw new Error('Este conector não aceita cadastro manual de contas.');
+   if(accountName.length<2||accountName.length>160||externalAccountId.length<1||externalAccountId.length>180)throw new Error('Informe nome e ID válidos para a conta.');
+   await check(await service.from('integrations').upsert({organization_id:org,provider,external_account_id:externalAccountId,account_name:accountName,status:'pending',is_enabled:false,config:{selection_pending:true,setup_stage:'credentials',configured_by:actor.id},last_error:null},{onConflict:'organization_id,provider,external_account_id'}));
+   return json({message:'Conta cadastrada. Selecione e confirme se ela pertence a este cliente.'});
+  }
   if(body.action==='create_ingest_key'){
    const integrationId=String(body.integrationId||'');
    if(!/^[0-9a-f-]{36}$/.test(integrationId))throw new Error('Integração inválida.');
@@ -170,9 +179,8 @@ Deno.serve(async(req:Request)=>{
    if(!allowedSources[provider]?.includes(source))throw new Error('Combinação de extrator e fonte inválida.');
    if(accountName.length<2||accountName.length>160||sourceAccountId.length<1||sourceAccountId.length>180)throw new Error('Informe nome e ID válidos para a conta.');
    if(provider==='windsor'&&!windsorKey)throw new Error('Configure WINDSOR_API_KEY nos Secrets do Supabase antes de cadastrar contas.');
-   const status=provider==='windsor'?'connected':'pending';
-   await check(await service.from('integrations').upsert({organization_id:org,provider,external_account_id:source+':'+sourceAccountId,account_name:accountName,status,is_enabled:true,config:{source_platform:source,source_account_id:sourceAccountId,configured_by:actor.id},last_error:null},{onConflict:'organization_id,provider,external_account_id'}));
-   return json({message:provider==='windsor'?'Conta Windsor vinculada. Use “Sincronizar agora” na lista de contas.':'Fonte Stract registrada. Configure a carga no painel Stract; o status mudará após a primeira importação.'});
+   await check(await service.from('integrations').upsert({organization_id:org,provider,external_account_id:source+':'+sourceAccountId,account_name:accountName,status:'pending',is_enabled:false,config:{source_platform:source,source_account_id:sourceAccountId,configured_by:actor.id,selection_pending:true},last_error:null},{onConflict:'organization_id,provider,external_account_id'}));
+   return json({message:'Conta cadastrada. Selecione e confirme se ela pertence a este cliente.'});
   }
   if(body.action==='connect'){
    if(!['meta_ads','facebook_organic','instagram_organic'].includes(body.provider))return json({message:body.provider==='tiktok_ads'||body.provider==='tiktok_organic'?'TikTok: o conector está preparado, mas requer aplicativo aprovado e as credenciais TIKTOK_APP_ID e TIKTOK_APP_SECRET.':'Use o formulário do extrator para cadastrar esta fonte.'});
