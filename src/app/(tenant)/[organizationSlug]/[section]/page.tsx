@@ -3,16 +3,15 @@ import Link from 'next/link';
 import {notFound} from 'next/navigation';
 import {Images} from 'lucide-react';
 import {tenant} from '@/lib/auth/session';
-import {filters, dashboardData, totals, sum} from '@/lib/metrics/query';
+import {filters, dashboardData, sum} from '@/lib/metrics/query';
 import {campaigns} from '@/lib/metrics/campaigns';
 import {platformDashboardByRoute, platformDashboards, type DashboardPlatform} from '@/lib/metrics/platforms';
 import {Filters} from '@/components/dashboard/filters';
-import {Kpis} from '@/components/dashboard/kpis';
 import {OrganicKpis} from '@/components/dashboard/organic-kpis';
-import {Timeline} from '@/components/dashboard/charts';
 import {Funnel} from '@/components/dashboard/funnel';
-import {Ranking} from '@/components/dashboard/ranking';
 import {CampaignWorkspace} from '@/components/dashboard/campaign-workspace';
+import {CampaignOverview} from '@/components/dashboard/campaign-overview';
+import {DataFreshness} from '@/components/dashboard/data-freshness';
 import {CreativeSummary} from '@/components/dashboard/creative-summary';
 import {Card} from '@/components/ui/card';
 import {UploadForm} from '@/components/upload-form';
@@ -36,14 +35,17 @@ function timelineRows(rows: Row<'metrics_ads'>[]) {
 }
 
 export default async function Page({params, searchParams}: {params: {organizationSlug: string; section: string}; searchParams: Record<string, string | undefined>}) {
-  const {db, org} = await tenant(params.organizationSlug);
+  const {db, org, user, superAdmin} = await tenant(params.organizationSlug);
   const platformPage = platformDashboardByRoute.get(params.section);
   const title = baseTitles[params.section] ?? platformPage?.label;
   if (!title) notFound();
 
-  const [{data: config}, {data: orgs}] = await Promise.all([
+  const [{data: config}, {data: orgs}, {data: membership}, {data: activeIntegrations}, {data: latestMovement}] = await Promise.all([
     db.from('dashboard_configs').select('*').eq('organization_id', org.id).single(),
     db.from('organizations').select('name,slug').eq('status', 'active').order('name'),
+    db.from('organization_members').select('role').eq('organization_id', org.id).eq('user_id', user.id).maybeSingle(),
+    db.from('integrations').select('id,provider,last_synced_at,status').eq('organization_id', org.id).eq('is_enabled', true).in('provider', ['meta_ads', 'windsor', 'stract']),
+    db.from('metrics_ads').select('metric_date').eq('organization_id', org.id).gt('spend', 0).order('metric_date', {ascending: false}).limit(1).maybeSingle(),
   ]);
   if (!config) throw new Error('Configuração do dashboard não encontrada.');
   const requiredPage = platformPage?.group ?? params.section;
@@ -74,21 +76,21 @@ export default async function Page({params, searchParams}: {params: {organizatio
   const previousOrganic = chosen ? data.organicComparison.filter((row) => row.platform === chosen) : data.organicComparison;
   const currentCampaigns = campaigns(ads, data.crm, config.preferred_revenue_source);
   const previousCampaigns = campaigns(previousAds, data.crmComparison, config.preferred_revenue_source);
+  const campaignsWithMovement = currentCampaigns.filter((row) => row.spend > 0 || Number(row.impressions ?? 0) > 0 || Number(row.clicks ?? 0) > 0 || Number(row.leads ?? 0) > 0 || Number(row.purchases ?? 0) > 0);
   const filteredCreatives = data.creatives.filter((creative) => !chosen || creative.platform === chosen);
   const queryWithoutPlatform = Object.fromEntries(Object.entries(f));
 
   return <div className="mx-auto max-w-[1680px] space-y-7">
     <header className="flex flex-wrap items-end justify-between gap-5 border-b border-white/10 pb-6"><div><p className="eyebrow mb-2">{org.name} / INTELIGÊNCIA DE MARKETING</p><h1 className="text-3xl font-semibold tracking-tight">{title}</h1><p className="muted mt-2 text-sm">Performance consolidada com origem identificada. Valores indisponíveis aparecem como —.</p></div><div className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-xs text-zinc-400">{f.from.split('-').reverse().join('/')} — {f.to.split('-').reverse().join('/')}</div></header>
+    <DataFreshness organizationId={org.id} integrations={(activeIntegrations ?? []).map((item) => ({id: item.id, provider: item.provider, lastSyncedAt: item.last_synced_at, status: item.status}))} canSync={superAdmin || ['client_admin', 'editor'].includes(membership?.role ?? '')} />
     <Filters value={f} organizations={orgs ?? []} slug={org.slug} />
 
     {sectionGroup && !platformPage ? <div className="flex flex-wrap gap-3"><Link className={`rounded-lg px-4 py-2 text-sm ${chosen ? 'bg-white/5' : 'bg-primary text-black'}`} href={`?${new URLSearchParams(queryWithoutPlatform).toString()}`}>Todas com dados</Link>{visible.map((platform) => {const definition = platformDashboards.find((item) => item.platform === platform); return <Link key={platform} className={`rounded-lg px-4 py-2 text-sm ${chosen === platform ? 'bg-primary text-black' : 'bg-white/5'}`} href={`?${new URLSearchParams({...queryWithoutPlatform, platform}).toString()}`}>{definition?.label ?? platform}</Link>;})}</div> : null}
 
-    {params.section === 'overview' ? <div className="flex flex-col gap-5">{[...new Set(config.widget_order)].map((widget) => widget === 'kpis'
-      ? <Kpis key={widget} current={totals(data.days)} previous={f.compare === 'none' ? undefined : totals(data.comparison)} currency={f.currency} enabled={config.enabled_metrics} />
-      : widget === 'timeline' ? <Card key={widget}><h2 className="font-semibold">Investimento e receita</h2><p className="muted mt-2 text-xs">Receita real conciliada, com receita de anúncios como alternativa.</p><Timeline rows={data.days.map((day) => ({date: day.metric_date!, spend: day.spend, revenue: day.revenue}))} /></Card>
-      : widget === 'funnel' ? <Card key={widget}><h2 className="font-semibold">Funil geral</h2><Funnel values={['impressions', 'clicks', 'page_views', 'leads', 'checkouts', 'purchases'].map((key) => sum(data.days, key))} /></Card>
-      : widget === 'campaigns' ? <Card key={widget}><h2 className="mb-5 font-semibold">Campanhas em destaque</h2><Ranking rows={currentCampaigns} currency={f.currency} /></Card>
-      : null)}</div> : null}
+    {params.section === 'overview' ? <div className="space-y-5">
+      {!campaignsWithMovement.length && latestMovement?.metric_date ? <Card className="border-amber-400/20 bg-amber-400/[0.05] !py-4"><p className="text-sm text-amber-100">Não houve veiculação no intervalo selecionado. O último investimento registrado foi em <strong>{latestMovement.metric_date.split('-').reverse().join('/')}</strong>.</p></Card> : null}
+      <CampaignOverview rows={campaignsWithMovement} currency={f.currency} />
+    </div> : null}
 
     {sectionGroup === 'paid' ? <CampaignWorkspace rows={currentCampaigns} previousRows={f.compare === 'none' ? [] : previousCampaigns} timeline={timelineRows(ads)} currency={f.currency} showPlatforms={!platformPage && !chosen} /> : null}
 
