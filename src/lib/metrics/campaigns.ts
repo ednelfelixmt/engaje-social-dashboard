@@ -6,6 +6,7 @@ export function campaigns(
   ads: Row<'metrics_ads'>[],
   crm: Row<'metrics_crm'>[],
   preferred: 'crm' | 'spreadsheet',
+  catalog: Row<'ad_campaigns'>[] = [],
 ): CampaignPerformance[] {
   const groups = new Map<string, Row<'metrics_ads'>[]>();
   for (const ad of ads) {
@@ -13,7 +14,7 @@ export function campaigns(
     groups.set(key, [...(groups.get(key) || []), ad]);
   }
 
-  return [...groups.values()].map((rows) => {
+  const performance = [...groups.values()].map((rows) => {
     const first = rows[0];
     const spend = sum(rows, 'spend') || 0;
     const byDay = new Map<string, Row<'metrics_ads'>[]>();
@@ -54,6 +55,7 @@ export function campaigns(
       accountId: first.account_id,
       campaignId: first.campaign_id,
       campaignName: first.campaign_name,
+      campaignStatus: [...rows].sort((a, b) => b.metric_date.localeCompare(a.metric_date)).find((row) => row.campaign_status)?.campaign_status ?? null,
       currency: first.currency,
       spend,
       revenue,
@@ -82,4 +84,41 @@ export function campaigns(
       conversionRate: clicks && purchases != null ? purchases / clicks * 100 : null,
     };
   });
+
+  const known = new Set(performance.map((row) => [row.platform, row.accountId, row.campaignId].join(':')));
+  for (const campaign of catalog) {
+    const key = [campaign.platform, campaign.account_id, campaign.external_id].join(':');
+    if (known.has(key)) continue;
+    performance.push({
+      organizationId: campaign.organization_id,
+      platform: campaign.platform,
+      accountId: campaign.account_id,
+      campaignId: campaign.external_id,
+      campaignName: campaign.name,
+      campaignStatus: campaign.status,
+      currency: '',
+      spend: 0,
+      revenue: null,
+      impressions: null,
+      clicks: null,
+      pageViews: null,
+      leads: null,
+      registrationLeads: null,
+      messageLeads: null,
+      checkouts: null,
+      revenueSource: 'unavailable',
+      purchases: null,
+      roas: null,
+      roi: null,
+      cpm: null,
+      cpc: null,
+      cpl: null,
+      costPerRegistration: null,
+      costPerMessage: null,
+      ctr: null,
+      cpa: null,
+      conversionRate: null,
+    });
+  }
+  return performance;
 }

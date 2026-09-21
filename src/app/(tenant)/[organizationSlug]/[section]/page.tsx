@@ -85,8 +85,9 @@ export default async function Page({params, searchParams}: {params: {organizatio
   const previousAds = chosen ? data.adsComparison.filter((row) => row.platform === chosen) : data.adsComparison;
   const organic = chosen ? data.organic.filter((row) => row.platform === chosen) : data.organic;
   const previousOrganic = chosen ? data.organicComparison.filter((row) => row.platform === chosen) : data.organicComparison;
-  const currentCampaigns = campaigns(ads, data.crm, config.preferred_revenue_source);
-  const previousCampaigns = campaigns(previousAds, data.crmComparison, config.preferred_revenue_source);
+  const catalog = chosen ? data.adCampaigns.filter((row) => row.platform === chosen) : data.adCampaigns;
+  const currentCampaigns = campaigns(ads, data.crm, config.preferred_revenue_source, catalog);
+  const previousCampaigns = campaigns(previousAds, data.crmComparison, config.preferred_revenue_source, catalog);
   const funnelSpend = sum(data.days, 'spend');
   const leads = leadSummary(currentCampaigns);
   const funnelSteps = [
@@ -101,8 +102,8 @@ export default async function Page({params, searchParams}: {params: {organizatio
   const filteredCreatives = data.creatives.filter((creative) => !chosen || creative.platform === chosen);
   const queryWithoutPlatform = Object.fromEntries(Object.entries(f));
 
-  return <div className="mx-auto max-w-[1680px] space-y-7">
-    <header className="flex flex-wrap items-end justify-between gap-5 border-b border-white/10 pb-6"><div><p className="eyebrow mb-2">{org.name} / INTELIGÊNCIA DE MARKETING</p><h1 className="text-3xl font-semibold tracking-tight">{title}</h1><p className="muted mt-2 text-sm">Performance consolidada com origem identificada. Valores indisponíveis aparecem como —.</p></div><div className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-xs text-zinc-400">{f.from.split('-').reverse().join('/')} — {f.to.split('-').reverse().join('/')}</div></header>
+  return <div className="mx-auto max-w-[1780px] space-y-6 lg:space-y-8">
+    <header className="dashboard-hero flex flex-wrap items-end justify-between gap-6"><div className="relative z-10 max-w-4xl"><p className="eyebrow mb-4">{org.name} · INTELIGÊNCIA DE MARKETING</p><h1 className="display-title">{title}</h1><p className="muted mt-4 max-w-2xl text-sm leading-6">Performance consolidada, leitura executiva e origem identificada. Sem maquiagem estatística: dados indisponíveis aparecem como —.</p></div><div className="relative z-10 rounded-full border border-white/10 bg-black/20 px-4 py-2 text-xs font-medium text-zinc-300 shadow-inner">{f.from.split('-').reverse().join('/')} <span className="mx-2 text-primary">→</span> {f.to.split('-').reverse().join('/')}</div></header>
     <DataFreshness organizationId={org.id} integrations={(activeIntegrations ?? []).map((item) => ({id: item.id, provider: item.provider, lastSyncedAt: item.last_synced_at, status: item.status}))} canSync={superAdmin || ['client_admin', 'editor'].includes(membership?.role ?? '')} />
     <Filters value={f} organizations={orgs ?? []} slug={org.slug} />
 

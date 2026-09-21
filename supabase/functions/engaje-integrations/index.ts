@@ -38,6 +38,7 @@ async function allowed(req:Request,org:string){const auth=req.headers.get('Autho
 async function setToken(id:string,token:string){await check(await service.rpc('store_integration_token',{p_id:id,p_token:token}));}
 function actionValue(actions:any[]|undefined,...keys:string[]):number|null{if(!actions)return null;for(const key of keys){const item=actions.find(a=>a.action_type===key);if(item)return Number(item.value);}return 0;}
 function numeric(value:unknown){const result=Number(value);return Number.isFinite(result)?result:0;}
+function campaignStatus(value:unknown){const normalized=String(value||'').trim().toUpperCase().replace(/[^A-Z0-9_]/g,'_');return normalized&&normalized.length<=64?normalized:null;}
 function isoDate(date:Date){return date.toISOString().slice(0,10);}
 async function syncWindsor(i:Integration){
  const source=String(i.config.source_platform||'');
@@ -48,7 +49,7 @@ async function syncWindsor(i:Integration){
  endpoint.searchParams.set('api_key',windsorKey);
  endpoint.searchParams.set('date_from',isoDate(from));
  endpoint.searchParams.set('date_to',isoDate(to));
- endpoint.searchParams.set('fields','date,account_id,account_name,campaign_id,campaign,spend,impressions,clicks,conversions,conversion_value,currency');
+ endpoint.searchParams.set('fields','date,account_id,account_name,campaign_id,campaign,campaign_status,spend,impressions,clicks,conversions,conversion_value,currency');
  const response=await fetch(endpoint,{signal:AbortSignal.timeout(30000)});
  const payload=await response.json().catch(()=>({}));
  if(!response.ok)throw new Error('Windsor recusou a consulta (HTTP '+response.status+').');
@@ -57,8 +58,10 @@ async function syncWindsor(i:Integration){
  const sourceRows=received.filter((row:any)=>!accountId||String(row.account_id||'').trim()===accountId);
  const facts=sourceRows.map((row:any)=>{
   const campaignId=String(row.campaign_id||row.campaign||'sem-campanha');
-  return {organization_id:i.organization_id,integration_id:i.id,platform:'google_ads',metric_date:String(row.date||isoDate(to)).slice(0,10),currency:String(row.currency||i.config.currency||'BRL').toUpperCase().slice(0,3),account_id:String(row.account_id||accountId),campaign_id:campaignId,campaign_name:String(row.campaign||row.campaign_name||campaignId),adset_id:null,ad_id:campaignId+':aggregate',spend:numeric(row.spend),revenue:row.conversion_value==null?null:numeric(row.conversion_value),impressions:numeric(row.impressions),clicks:numeric(row.clicks),page_views:null,leads:null,message_leads:null,checkouts:null,purchases:numeric(row.conversions),attribution_window:'windsor_source',synced_at:new Date().toISOString()};
+  return {organization_id:i.organization_id,integration_id:i.id,platform:'google_ads',metric_date:String(row.date||isoDate(to)).slice(0,10),currency:String(row.currency||i.config.currency||'BRL').toUpperCase().slice(0,3),account_id:String(row.account_id||accountId),campaign_id:campaignId,campaign_name:String(row.campaign||row.campaign_name||campaignId),campaign_status:campaignStatus(row.campaign_status),adset_id:null,ad_id:campaignId+':aggregate',spend:numeric(row.spend),revenue:row.conversion_value==null?null:numeric(row.conversion_value),impressions:numeric(row.impressions),clicks:numeric(row.clicks),page_views:null,leads:null,message_leads:null,checkouts:null,purchases:numeric(row.conversions),attribution_window:'windsor_source',synced_at:new Date().toISOString()};
  });
+ const campaignRows=[...new Map(facts.map((fact:any)=>[fact.campaign_id,{organization_id:i.organization_id,integration_id:i.id,platform:'google_ads',account_id:fact.account_id,external_id:fact.campaign_id,name:fact.campaign_name,status:fact.campaign_status,last_seen_at:new Date().toISOString()}])).values()];
+ if(campaignRows.length)await check(await service.from('ad_campaigns').upsert(campaignRows,{onConflict:'organization_id,platform,account_id,external_id'}));
  for(let n=0;n<facts.length;n+=200)await check(await service.from('metrics_ads').upsert(facts.slice(n,n+200),{onConflict:'organization_id,platform,account_id,campaign_id,ad_id,metric_date,currency'}));
  const syncedAt=new Date().toISOString();const config=diagnosticConfig(i.config||{},{syncStatus:'synchronized',providerConnected:true,accountSelected:true,tokenValid:true,lastError:null,lastSyncAt:syncedAt});
  await check(await service.from('integrations').update({status:'connected',is_enabled:true,last_synced_at:syncedAt,config,last_error:null}).eq('id',i.id));
@@ -66,6 +69,7 @@ async function syncWindsor(i:Integration){
 }
 async function sync(i:Integration){if(i.provider==='windsor')return syncWindsor(i);const token=await check(await service.rpc('integration_token',{p_id:i.id}));if(!token)throw new Error('Conta sem autorização. Reconecte.');let rows=0,creativeCount=0;
  if(i.provider==='meta_ads'){
+  const statuses=new Map<string,string>();try{const campaignRows=await pages(i.external_account_id+'/campaigns',token,{fields:'id,name,effective_status,status'});for(const campaign of campaignRows){const status=campaignStatus(campaign.effective_status||campaign.status);if(status)statuses.set(String(campaign.id),status);}if(campaignRows.length)await check(await service.from('ad_campaigns').upsert(campaignRows.map((campaign:any)=>({organization_id:i.organization_id,integration_id:i.id,platform:'meta_ads',account_id:i.external_account_id,external_id:String(campaign.id),name:String(campaign.name||campaign.id),status:campaignStatus(campaign.effective_status||campaign.status),last_seen_at:new Date().toISOString()})),{onConflict:'organization_id,platform,account_id,external_id'}));}catch(error){console.warn('[meta-campaign-status]',{integration_id:i.id,message:error instanceof Error?error.message:'Falha desconhecida'});}
   const data=await pages(i.external_account_id+'/insights',token,{level:'ad',date_preset:'last_30d',time_increment:'1',action_attribution_windows:'["7d_click"]',fields:'account_id,account_currency,campaign_id,campaign_name,adset_id,ad_id,date_start,spend,impressions,clicks,actions,action_values'});
   const facts=data.map(d=>{
    const formLeads=actionValue(d.actions,'lead','onsite_conversion.lead_grouped','offsite_conversion.fb_pixel_lead');
@@ -73,7 +77,7 @@ async function sync(i:Integration){if(i.provider==='windsor')return syncWindsor(
    // primeiro alias encontrado, evitando duplicar a mesma ação no total.
    const messageLeads=actionValue(d.actions,'onsite_conversion.messaging_conversation_started_7d','messaging_conversation_started_7d','onsite_conversion.total_messaging_connection','onsite_conversion.messaging_first_reply');
    const totalLeads=d.actions?(formLeads??0)+(messageLeads??0):null;
-   return {organization_id:i.organization_id,integration_id:i.id,platform:'meta_ads',metric_date:d.date_start,currency:d.account_currency,account_id:String(d.account_id),campaign_id:String(d.campaign_id),campaign_name:d.campaign_name,adset_id:d.adset_id,ad_id:String(d.ad_id),spend:Number(d.spend),revenue:actionValue(d.action_values,'omni_purchase','purchase','offsite_conversion.fb_pixel_purchase'),impressions:d.impressions==null?null:Number(d.impressions),clicks:d.clicks==null?null:Number(d.clicks),page_views:actionValue(d.actions,'landing_page_view'),leads:totalLeads,message_leads:messageLeads,checkouts:actionValue(d.actions,'initiate_checkout','offsite_conversion.fb_pixel_initiate_checkout'),purchases:actionValue(d.actions,'omni_purchase','purchase','offsite_conversion.fb_pixel_purchase'),attribution_window:'7d_click',synced_at:new Date().toISOString()};
+   return {organization_id:i.organization_id,integration_id:i.id,platform:'meta_ads',metric_date:d.date_start,currency:d.account_currency,account_id:String(d.account_id),campaign_id:String(d.campaign_id),campaign_name:d.campaign_name,campaign_status:statuses.get(String(d.campaign_id))||null,adset_id:d.adset_id,ad_id:String(d.ad_id),spend:Number(d.spend),revenue:actionValue(d.action_values,'omni_purchase','purchase','offsite_conversion.fb_pixel_purchase'),impressions:d.impressions==null?null:Number(d.impressions),clicks:d.clicks==null?null:Number(d.clicks),page_views:actionValue(d.actions,'landing_page_view'),leads:totalLeads,message_leads:messageLeads,checkouts:actionValue(d.actions,'initiate_checkout','offsite_conversion.fb_pixel_initiate_checkout'),purchases:actionValue(d.actions,'omni_purchase','purchase','offsite_conversion.fb_pixel_purchase'),attribution_window:'7d_click',synced_at:new Date().toISOString()};
   });
   for(let n=0;n<facts.length;n+=200){await check(await service.from('metrics_ads').upsert(facts.slice(n,n+200),{onConflict:'organization_id,platform,account_id,campaign_id,ad_id,metric_date,currency'}));rows+=facts.slice(n,n+200).length;}
   const ads=await pages(i.external_account_id+'/ads',token,{fields:'id,name,created_time,campaign_id,creative{id,thumbnail_url,image_url,body,video_id}'});

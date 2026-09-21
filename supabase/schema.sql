@@ -145,6 +145,7 @@ create table public.metrics_ads (
   account_id text not null,
   campaign_id text not null,
   campaign_name text not null,
+  campaign_status text check (campaign_status is null or campaign_status ~ '^[A-Z][A-Z0-9_]{1,63}$'),
   adset_id text,
   ad_id text not null,
   currency text not null check (currency ~ '^[A-Z]{3}$'),
@@ -163,6 +164,23 @@ create table public.metrics_ads (
   updated_at timestamptz not null default now(),
   foreign key (organization_id,integration_id) references public.integrations(organization_id,id),
   unique (organization_id,platform,account_id,campaign_id,ad_id,metric_date,currency)
+);
+
+-- Catálogo atual de campanhas, inclusive sem veiculação no período selecionado.
+create table public.ad_campaigns (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  integration_id uuid not null,
+  platform public.integration_provider not null check (platform in ('meta_ads','google_ads','tiktok_ads')),
+  account_id text not null,
+  external_id text not null,
+  name text not null,
+  status text check (status is null or status ~ '^[A-Z][A-Z0-9_]{1,63}$'),
+  last_seen_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (organization_id,platform,account_id,external_id),
+  foreign key (organization_id,integration_id) references public.integrations(organization_id,id) on delete cascade
 );
 
 -- Grão: dia + fonte + moeda + canal + conta + campanha.
@@ -312,7 +330,7 @@ begin
 end;
 $$;
 do $$ declare t text; begin
-  foreach t in array array['organizations','profiles','organization_members','branding','dashboard_configs','integrations','metrics_ads','metrics_crm','metrics_organic','creatives','spreadsheet_uploads'] loop
+  foreach t in array array['organizations','profiles','organization_members','branding','dashboard_configs','integrations','ad_campaigns','metrics_ads','metrics_crm','metrics_organic','creatives','spreadsheet_uploads'] loop
     execute format('alter table public.%I enable row level security',t);
     execute format('revoke all on public.%I from anon, authenticated',t);
     execute format('grant all on public.%I to service_role',t);

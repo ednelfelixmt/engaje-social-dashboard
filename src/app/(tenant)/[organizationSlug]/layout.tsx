@@ -30,6 +30,6 @@ export default async function Layout({children, params}: {children: React.ReactN
 
   return <div style={{'--primary': branding?.primary_color, '--background': branding?.background_color} as CSSProperties}>
     <Navigation slug={org.slug} enabled={config?.enabled_pages} availablePlatforms={availablePlatforms} />
-    <main className="min-h-screen p-6 lg:ml-60 lg:p-9" style={{background: image ? `linear-gradient(#0f0f13ed,#0f0f13ed),url("${image}") center/cover` : undefined}}>{children}</main>
+    <main className="dashboard-shell min-h-screen px-4 py-6 sm:px-6 lg:ml-[272px] lg:px-8 lg:py-9 2xl:px-12" style={{background: image ? `linear-gradient(#080b12ed,#080b12ed),url("${image}") center/cover fixed` : undefined}}>{children}</main>
   </div>;
 }

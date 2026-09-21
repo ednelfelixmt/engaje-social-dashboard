@@ -4,6 +4,51 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      ad_campaigns: {
+        Row: {
+          id: string;
+          organization_id: string;
+          integration_id: string;
+          platform: Database['public']['Enums']['integration_provider'];
+          account_id: string;
+          external_id: string;
+          name: string;
+          status: string | null;
+          last_seen_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          integration_id: string;
+          platform: Database['public']['Enums']['integration_provider'];
+          account_id: string;
+          external_id: string;
+          name: string;
+          status?: string | null;
+          last_seen_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          integration_id?: string;
+          platform?: Database['public']['Enums']['integration_provider'];
+          account_id?: string;
+          external_id?: string;
+          name?: string;
+          status?: string | null;
+          last_seen_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          { foreignKeyName: "ad_campaigns_organization_id_fkey"; columns: ["organization_id"]; isOneToOne: false; referencedRelation: "organizations"; referencedColumns: ["id"]; },
+          { foreignKeyName: "ad_campaigns_organization_id_integration_id_fkey"; columns: ["organization_id","integration_id"]; isOneToOne: false; referencedRelation: "integrations"; referencedColumns: ["organization_id","id"]; }
+        ];
+      };
       branding: {
         Row: {
           organization_id: string;
@@ -248,6 +293,7 @@ export type Database = {
           account_id: string;
           campaign_id: string;
           campaign_name: string;
+          campaign_status: string | null;
           adset_id: string | null;
           ad_id: string;
           currency: string;
@@ -274,6 +320,7 @@ export type Database = {
           account_id: string;
           campaign_id: string;
           campaign_name: string;
+          campaign_status?: string | null;
           adset_id?: string | null;
           ad_id: string;
           currency: string;
@@ -300,6 +347,7 @@ export type Database = {
           account_id?: string;
           campaign_id?: string;
           campaign_name?: string;
+          campaign_status?: string | null;
           adset_id?: string | null;
           ad_id?: string;
           currency?: string;
@@ -621,8 +669,8 @@ export type Database = {
           impressions: number | null;
           clicks: number | null;
           page_views: number | null;
-          leads: number | null;
           message_leads: number | null;
+          leads: number | null;
           checkouts: number | null;
           ads_synced_at: string | null;
           real_synced_at: string | null;

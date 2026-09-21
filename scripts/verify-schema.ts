@@ -38,6 +38,10 @@ await db.exec(`
   insert into public.integrations(id,organization_id,provider,external_account_id,account_name) values
     ('${intA}','${orgA}','meta_ads','a','Conta A'),('${intB}','${orgB}','meta_ads','b','Conta B'),
     ('${crmA}','${orgA}','hubspot','c','CRM A');
+  insert into public.ad_campaigns(organization_id,integration_id,platform,account_id,external_id,name,status) values
+    ('${orgA}','${intA}','meta_ads','a','c1','Campanha 1','ACTIVE'),
+    ('${orgA}','${intA}','meta_ads','a','c2','Campanha 2','PAUSED'),
+    ('${orgB}','${intB}','meta_ads','b','b','Privada','ACTIVE');
   insert into public.spreadsheet_uploads(id,organization_id,uploaded_by,file_path,file_name,sha256) values
     ('${uploadA}','${orgA}','${admin}','${orgA}/file.csv','file.csv',repeat('a',64)),
     ('40000000-0000-0000-0000-000000000002','${orgB}','${admin}','${orgB}/file.csv','file.csv',repeat('b',64));
@@ -63,8 +67,8 @@ await db.exec(`
     ('${orgA}','${uploadA}','spreadsheet','2026-09-01','BRL',700,7,true),
     ('${orgB}','40000000-0000-0000-0000-000000000002','spreadsheet','2026-09-01','BRL',10000,10,true);
 `);
-check(await scalar("select count(*)::int from pg_tables where schemaname='public'") === 11, 'Exatamente 11 tabelas públicas');
-check(await scalar("select count(*)::int from pg_tables where schemaname='public' and rowsecurity") === 11, 'RLS habilitada nas 11 tabelas');
+check(await scalar("select count(*)::int from pg_tables where schemaname='public'") === 12, 'Exatamente 12 tabelas públicas');
+check(await scalar("select count(*)::int from pg_tables where schemaname='public' and rowsecurity") === 12, 'RLS habilitada nas 12 tabelas');
 let day = (await db.query<Record<string, unknown>>(`select * from public.daily_performance where organization_id='${orgA}' and metric_date='2026-09-01' and currency='BRL'`)).rows[0]!;
 check(Number(day.spend) === 200 && Number(day.revenue) === 600, 'JOIN não multiplica Ads nem soma CRM com planilha');
 check(Number(day.roas) === 3 && Number(day.roi) === 200 && Math.abs(Number(day.cpa) - 200/6) < 0.00001, 'ROAS, ROI e CPA reais');
@@ -82,7 +86,7 @@ await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub'
 check(await scalar('select count(*)::int from public.organizations') === 1, 'Viewer só vê sua organização');
 check(await scalar(`select count(*)::int from public.daily_performance where organization_id='${orgB}'`) === 0, 'View respeita RLS de outro cliente');
 check(await scalar('select public.is_super_admin()') === false, 'Viewer não é super admin');
-for (const table of ['profiles','organization_members','branding','dashboard_configs','metrics_ads','metrics_crm','metrics_organic','creatives','spreadsheet_uploads']) {
+for (const table of ['profiles','organization_members','branding','dashboard_configs','ad_campaigns','metrics_ads','metrics_crm','metrics_organic','creatives','spreadsheet_uploads']) {
   check(await scalar(`select count(*)::int from public.${table} where organization_id='${orgB}'`) === 0, `${table}: sem leitura cross-tenant`);
 }
 check(await scalar(`select count(id)::int from public.integrations where organization_id='${orgB}'`) === 0, 'integrations: sem leitura cross-tenant');
