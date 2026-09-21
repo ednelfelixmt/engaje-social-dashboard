@@ -15,6 +15,7 @@ import {DataFreshness} from '@/components/dashboard/data-freshness';
 import {CreativeSummary} from '@/components/dashboard/creative-summary';
 import {Card} from '@/components/ui/card';
 import {UploadForm} from '@/components/upload-form';
+import {money, number} from '@/lib/utils';
 import type {CampaignPerformance} from '@/types/domain';
 import type {Row} from '@/types/database.types';
 
@@ -32,6 +33,16 @@ function timelineRows(rows: Row<'metrics_ads'>[]) {
     grouped.set(row.metric_date, current);
   }
   return [...grouped.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function leadSummary(rows: CampaignPerformance[]) {
+  const aggregate = (key: 'leads' | 'registrationLeads' | 'messageLeads') => {
+    const available = rows.filter((row) => row[key] != null);
+    const count = available.length ? available.reduce((value, row) => value + Number(row[key]), 0) : null;
+    const spend = available.reduce((value, row) => value + row.spend, 0);
+    return {count, cost: count ? spend / count : null};
+  };
+  return {total: aggregate('leads'), registrations: aggregate('registrationLeads'), messages: aggregate('messageLeads')};
 }
 
 export default async function Page({params, searchParams}: {params: {organizationSlug: string; section: string}; searchParams: Record<string, string | undefined>}) {
@@ -53,17 +64,6 @@ export default async function Page({params, searchParams}: {params: {organizatio
 
   const f = filters(searchParams, org.timezone, org.currency);
   const data = await dashboardData(org.slug, f);
-  const funnelSpend = sum(data.days, 'spend');
-  const funnelLeads = sum(data.days, 'leads');
-  const funnelMessageLeads = sum(data.days, 'message_leads');
-  const funnelSteps = [
-    {label:'Impressões',value:sum(data.days,'impressions'),costLabel:'CPM',cost:sum(data.days,'impressions') ? Number(funnelSpend) / Number(sum(data.days,'impressions')) * 1000 : null},
-    {label:'Cliques',value:sum(data.days,'clicks'),costLabel:'CPC',cost:sum(data.days,'clicks') ? Number(funnelSpend) / Number(sum(data.days,'clicks')) : null},
-    {label:'Visitas',value:sum(data.days,'page_views'),costLabel:'CPV',cost:sum(data.days,'page_views') ? Number(funnelSpend) / Number(sum(data.days,'page_views')) : null},
-    {label:'Leads',value:funnelLeads,costLabel:'CPL',cost:funnelLeads ? Number(funnelSpend) / Number(funnelLeads) : null,detail:funnelMessageLeads == null ? null : `${Number(funnelMessageLeads).toLocaleString('pt-BR')} por mensagens`},
-    {label:'Checkouts',value:sum(data.days,'checkouts'),costLabel:'CPCO',cost:sum(data.days,'checkouts') ? Number(funnelSpend) / Number(sum(data.days,'checkouts')) : null},
-    {label:'Compras',value:sum(data.days,'purchases'),costLabel:'CPA',cost:sum(data.days,'purchases') ? Number(funnelSpend) / Number(sum(data.days,'purchases')) : null},
-  ];
   const sectionGroup = platformPage?.group ?? (params.section === 'paid' || params.section === 'organic' ? params.section : null);
   const visibleChecks = await Promise.all(platformDashboards.filter((item) => item.group === sectionGroup).map(async (item) => {
     const table = item.group === 'paid' ? 'metrics_ads' : 'metrics_organic';
@@ -87,6 +87,16 @@ export default async function Page({params, searchParams}: {params: {organizatio
   const previousOrganic = chosen ? data.organicComparison.filter((row) => row.platform === chosen) : data.organicComparison;
   const currentCampaigns = campaigns(ads, data.crm, config.preferred_revenue_source);
   const previousCampaigns = campaigns(previousAds, data.crmComparison, config.preferred_revenue_source);
+  const funnelSpend = sum(data.days, 'spend');
+  const leads = leadSummary(currentCampaigns);
+  const funnelSteps = [
+    {label:'Impressões',value:sum(data.days,'impressions'),costLabel:'CPM',cost:sum(data.days,'impressions') ? Number(funnelSpend) / Number(sum(data.days,'impressions')) * 1000 : null},
+    {label:'Cliques',value:sum(data.days,'clicks'),costLabel:'CPC',cost:sum(data.days,'clicks') ? Number(funnelSpend) / Number(sum(data.days,'clicks')) : null},
+    {label:'Visitas',value:sum(data.days,'page_views'),costLabel:'CPV',cost:sum(data.days,'page_views') ? Number(funnelSpend) / Number(sum(data.days,'page_views')) : null},
+    {label:'Leads',value:leads.total.count,costLabel:'CPL',cost:leads.total.cost,detail:leads.registrations.count == null && leads.messages.count == null ? null : `Cadastros: ${number(leads.registrations.count)} (${money(leads.registrations.cost, f.currency)}) · Mensagens: ${number(leads.messages.count)} (${money(leads.messages.cost, f.currency)})`},
+    {label:'Checkouts',value:sum(data.days,'checkouts'),costLabel:'CPCO',cost:sum(data.days,'checkouts') ? Number(funnelSpend) / Number(sum(data.days,'checkouts')) : null},
+    {label:'Compras',value:sum(data.days,'purchases'),costLabel:'CPA',cost:sum(data.days,'purchases') ? Number(funnelSpend) / Number(sum(data.days,'purchases')) : null},
+  ];
   const campaignsWithMovement = currentCampaigns.filter((row) => row.spend > 0 || Number(row.impressions ?? 0) > 0 || Number(row.clicks ?? 0) > 0 || Number(row.leads ?? 0) > 0 || Number(row.purchases ?? 0) > 0);
   const filteredCreatives = data.creatives.filter((creative) => !chosen || creative.platform === chosen);
   const queryWithoutPlatform = Object.fromEntries(Object.entries(f));

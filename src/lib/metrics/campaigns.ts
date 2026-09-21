@@ -43,6 +43,9 @@ export function campaigns(
     const pageViews = sum(rows, 'page_views');
     const leads = sum(rows, 'leads');
     const messageLeads = sum(rows, 'message_leads');
+    const registrationLeads = leads != null && messageLeads != null
+      ? Math.max(0, leads - messageLeads)
+      : null;
     const checkouts = sum(rows, 'checkouts');
 
     return {
@@ -58,6 +61,7 @@ export function campaigns(
       clicks,
       pageViews,
       leads,
+      registrationLeads,
       messageLeads,
       checkouts,
       revenueSource: revenue == null
@@ -71,6 +75,8 @@ export function campaigns(
       cpm: impressions ? spend / impressions * 1000 : null,
       cpc: clicks ? spend / clicks : null,
       cpl: leads ? spend / leads : null,
+      costPerRegistration: registrationLeads ? spend / registrationLeads : null,
+      costPerMessage: messageLeads ? spend / messageLeads : null,
       cpa: purchases ? spend / purchases : null,
       ctr: impressions && clicks != null ? clicks / impressions * 100 : null,
       conversionRate: clicks && purchases != null ? purchases / clicks * 100 : null,

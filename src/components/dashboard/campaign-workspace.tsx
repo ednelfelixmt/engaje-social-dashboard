@@ -6,12 +6,12 @@ import {
   ShoppingCart,
   Target,
   TrendingUp,
-  Users,
 } from 'lucide-react';
 import {Card} from '@/components/ui/card';
 import {Timeline} from '@/components/dashboard/charts';
 import {Ranking} from '@/components/dashboard/ranking';
 import {Funnel} from '@/components/dashboard/funnel';
+import {LeadBreakdown} from '@/components/dashboard/lead-breakdown';
 import {money, number} from '@/lib/utils';
 import type {CampaignPerformance, Platform} from '@/types/domain';
 
@@ -28,6 +28,18 @@ function total(rows: CampaignPerformance[], key: keyof CampaignPerformance) {
   return rows.reduce((value, row) => value + Number(row[key]), 0);
 }
 
+function availableTotal(rows: CampaignPerformance[], key: keyof CampaignPerformance) {
+  const available = rows.filter((row) => row[key] != null);
+  return available.length ? available.reduce((value, row) => value + Number(row[key]), 0) : null;
+}
+
+function costFor(rows: CampaignPerformance[], key: keyof CampaignPerformance) {
+  const available = rows.filter((row) => row[key] != null);
+  const count = available.reduce((value, row) => value + Number(row[key] ?? 0), 0);
+  const spend = available.reduce((value, row) => value + Number(row.spend), 0);
+  return count > 0 ? spend / count : null;
+}
+
 function metrics(rows: CampaignPerformance[]) {
   const spend = total(rows, 'spend');
   const revenue = total(rows, 'revenue');
@@ -35,8 +47,8 @@ function metrics(rows: CampaignPerformance[]) {
   const clicks = total(rows, 'clicks');
   const pageViews = total(rows, 'pageViews');
   const leads = total(rows, 'leads');
-  const messageRows = rows.filter((row) => row.platform === 'meta_ads' && row.messageLeads != null);
-  const messageLeads = messageRows.length ? messageRows.reduce((value, row) => value + Number(row.messageLeads), 0) : null;
+  const registrationLeads = availableTotal(rows, 'registrationLeads');
+  const messageLeads = availableTotal(rows, 'messageLeads');
   const checkouts = total(rows, 'checkouts');
   const purchases = total(rows, 'purchases');
 
@@ -47,6 +59,7 @@ function metrics(rows: CampaignPerformance[]) {
     clicks,
     pageViews,
     leads,
+    registrationLeads,
     messageLeads,
     checkouts,
     purchases,
@@ -54,6 +67,8 @@ function metrics(rows: CampaignPerformance[]) {
     cpm: impressions && spend != null ? spend / impressions * 1000 : null,
     cpc: clicks && spend != null ? spend / clicks : null,
     cpl: leads && spend != null ? spend / leads : null,
+    costPerRegistration: costFor(rows, 'registrationLeads'),
+    costPerMessage: costFor(rows, 'messageLeads'),
     cpa: purchases && spend != null ? spend / purchases : null,
     roas: spend && revenue != null ? revenue / spend : null,
   };
@@ -104,7 +119,7 @@ function TrafficFunnel({rows, currency}: {rows: CampaignPerformance[]; currency:
     {label: 'Impressões', value: summary.impressions, cost: summary.cpm, costLabel: 'CPM'},
     {label: 'Cliques', value: summary.clicks, cost: summary.cpc, costLabel: 'CPC'},
     {label: 'Page views', value: summary.pageViews, cost: summary.pageViews && summary.spend != null ? summary.spend / summary.pageViews : null, costLabel: 'CPV'},
-    {label: 'Leads', value: summary.leads, cost: summary.cpl, costLabel: 'CPL', detail: summary.messageLeads == null ? null : `${number(summary.messageLeads)} por mensagens`},
+    {label: 'Leads', value: summary.leads, cost: summary.cpl, costLabel: 'CPL', detail: summary.registrationLeads == null && summary.messageLeads == null ? null : `${number(summary.registrationLeads)} cadastros · ${number(summary.messageLeads)} mensagens`},
     {label: 'Checkouts', value: summary.checkouts, cost: summary.checkouts && summary.spend != null ? summary.spend / summary.checkouts : null, costLabel: 'CPCO'},
     {label: 'Compras', value: summary.purchases, cost: summary.cpa, costLabel: 'CPA'},
   ];
@@ -213,11 +228,8 @@ export function CampaignWorkspace({
     {label: 'Investimento', value: current.spend, previous: previous.spend, format: (value: number | null) => money(value, currency), icon: BadgeDollarSign},
     {label: 'Impressões', value: current.impressions, previous: previous.impressions, format: (value: number | null) => number(value), icon: Eye},
     {label: 'Cliques', value: current.clicks, previous: previous.clicks, format: (value: number | null) => number(value), icon: MousePointerClick},
-    {label: 'Leads', value: current.leads, previous: previous.leads, format: (value: number | null) => number(value), icon: Users},
-    {label: 'Leads por mensagens', value: current.messageLeads, previous: previous.messageLeads, format: (value: number | null) => number(value), icon: Users},
     {label: 'CTR', value: current.ctr, previous: previous.ctr, format: (value: number | null) => value == null ? '—' : `${number(value, 2)}%`, icon: TrendingUp},
     {label: 'CPC', value: current.cpc, previous: previous.cpc, format: (value: number | null) => money(value, currency), inverse: true, icon: Gauge},
-    {label: 'CPL', value: current.cpl, previous: previous.cpl, format: (value: number | null) => money(value, currency), inverse: true, icon: Target},
     {label: 'Compras', value: current.purchases, previous: previous.purchases, format: (value: number | null) => number(value), icon: ShoppingCart},
   ];
 
@@ -225,6 +237,7 @@ export function CampaignWorkspace({
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {kpis.map((kpi) => <KpiCard key={kpi.label} {...kpi} />)}
     </section>
+    <LeadBreakdown totalLeads={current.leads} registrationLeads={current.registrationLeads} messageLeads={current.messageLeads} totalCost={current.cpl} registrationCost={current.costPerRegistration} messageCost={current.costPerMessage} currency={currency} />
     {showPlatforms ? <PlatformBreakdown rows={rows} currency={currency} /> : null}
     <section className="grid gap-5 2xl:grid-cols-[0.9fr_1.4fr]">
       <TrafficFunnel rows={rows} currency={currency} />

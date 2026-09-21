@@ -29,6 +29,7 @@ export type CampaignPerformance = {
   clicks: number | null;
   pageViews: number | null;
   leads: number | null;
+  registrationLeads: number | null;
   messageLeads: number | null;
   checkouts: number | null;
   revenueSource: 'crm' | 'spreadsheet' | 'ads' | 'mixed' | 'unavailable';
@@ -38,6 +39,8 @@ export type CampaignPerformance = {
   cpm: number | null;
   cpc: number | null;
   cpl: number | null;
+  costPerRegistration: number | null;
+  costPerMessage: number | null;
   ctr: number | null;
   cpa: number | null;
   conversionRate: number | null;

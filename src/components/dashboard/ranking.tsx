@@ -31,23 +31,29 @@ export function Ranking({rows, currency}: {rows: CampaignPerformance[]; currency
         <option value="roi">Maior ROI</option>
         <option value="revenue">Maior receita</option>
         <option value="leads">Mais leads</option>
+        <option value="registrationLeads">Mais cadastros</option>
+        <option value="messageLeads">Mais mensagens</option>
         <option value="purchases">Mais compras</option>
       </select>
     </div>
     <div className="overflow-x-auto">
       <table>
-        <thead><tr>{['Campanha', 'Investimento', 'Impressões', 'Cliques', 'Leads', 'Receita', 'ROAS', 'ROI', 'CTR', 'CPL', 'CPA'].map((heading) => <th key={heading}>{heading}</th>)}</tr></thead>
+        <thead><tr>{['Campanha', 'Investimento', 'Impressões', 'Cliques', 'Todos os leads', 'CPL', 'Cadastros', 'Custo/cadastro', 'Mensagens', 'Custo/mensagem', 'Receita', 'ROAS', 'ROI', 'CTR', 'CPA'].map((heading) => <th key={heading}>{heading}</th>)}</tr></thead>
         <tbody>{visibleRows.map((row) => <tr key={row.platform + row.accountId + row.campaignId}>
           <td className="min-w-64"><strong className="font-medium text-zinc-200">{row.campaignName}</strong><small className="mt-1.5 block text-zinc-500"><span className="text-primary">{platformNames[row.platform] || row.platform}</span> · receita: {row.revenueSource}</small></td>
           <td>{money(row.spend, currency)}</td>
           <td>{number(row.impressions)}</td>
           <td>{number(row.clicks)}</td>
           <td>{number(row.leads)}</td>
+          <td>{money(row.cpl, currency)}</td>
+          <td>{number(row.registrationLeads)}</td>
+          <td>{money(row.costPerRegistration, currency)}</td>
+          <td>{number(row.messageLeads)}</td>
+          <td>{money(row.costPerMessage, currency)}</td>
           <td>{money(row.revenue, currency)}</td>
           <td>{row.roas == null ? '—' : `${number(row.roas, 2)}x`}</td>
           <td className={row.roi == null ? '' : row.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}>{number(row.roi, 1)}{row.roi != null ? '%' : ''}</td>
           <td>{row.ctr == null ? '—' : `${number(row.ctr, 2)}%`}</td>
-          <td>{money(row.cpl, currency)}</td>
           <td>{money(row.cpa, currency)}</td>
         </tr>)}</tbody>
       </table>
