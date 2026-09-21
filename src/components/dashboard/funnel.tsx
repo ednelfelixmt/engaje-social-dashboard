@@ -28,7 +28,7 @@ export function Funnel({values, steps: suppliedSteps, currency = 'BRL'}: {
   if (!steps.length) return null;
 
   const firstValue = steps[0]?.value;
-  const lastValue = [...steps].reverse().find((step) => step.value != null)?.value ?? null;
+  const lastValue = steps.at(-1)?.value ?? null;
   const totalConversion = conversion(lastValue, firstValue);
   const firstPositive = steps.find((step) => step.value != null && step.value > 0)?.value ?? 1;
   let previousWidth = 100;

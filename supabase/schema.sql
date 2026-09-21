@@ -182,6 +182,7 @@ create table public.ad_campaigns (
   unique (organization_id,platform,account_id,external_id),
   foreign key (organization_id,integration_id) references public.integrations(organization_id,id) on delete cascade
 );
+create index ad_campaigns_integration_idx on public.ad_campaigns (organization_id,integration_id);
 
 -- Grão: dia + fonte + moeda + canal + conta + campanha.
 -- Receita líquida reconhecida no dia (inclui estornos); NULL = desconhecida, 0 = zero real.
