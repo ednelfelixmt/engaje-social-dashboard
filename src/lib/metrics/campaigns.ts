@@ -2,6 +2,10 @@ import type {Row} from '@/types/database.types';
 import type {CampaignPerformance} from '@/types/domain';
 import {sum} from './query';
 
+function normalizedAccountId(value: string) {
+  return value.replace(/^act_/, '');
+}
+
 export function campaigns(
   ads: Row<'metrics_ads'>[],
   crm: Row<'metrics_crm'>[],
@@ -10,7 +14,7 @@ export function campaigns(
 ): CampaignPerformance[] {
   const groups = new Map<string, Row<'metrics_ads'>[]>();
   for (const ad of ads) {
-    const key = [ad.platform, ad.account_id, ad.campaign_id].join(':');
+    const key = [ad.platform, normalizedAccountId(ad.account_id), ad.campaign_id].join(':');
     groups.set(key, [...(groups.get(key) || []), ad]);
   }
 
@@ -85,9 +89,9 @@ export function campaigns(
     };
   });
 
-  const known = new Set(performance.map((row) => [row.platform, row.accountId, row.campaignId].join(':')));
+  const known = new Set(performance.map((row) => [row.platform, normalizedAccountId(row.accountId), row.campaignId].join(':')));
   for (const campaign of catalog) {
-    const key = [campaign.platform, campaign.account_id, campaign.external_id].join(':');
+    const key = [campaign.platform, normalizedAccountId(campaign.account_id), campaign.external_id].join(':');
     if (known.has(key)) continue;
     performance.push({
       organizationId: campaign.organization_id,
