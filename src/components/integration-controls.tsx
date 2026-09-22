@@ -15,9 +15,10 @@ type IntegrationControlsProps = {
   accountName?: string;
   allowDisconnect?: boolean;
   disconnectOnly?: boolean;
+  actionLabel?: string;
 };
 
-export function IntegrationControls({organizationId, provider, integrationId, enabled = true, reconnect = false, accountName, allowDisconnect = false, disconnectOnly = false}: IntegrationControlsProps) {
+export function IntegrationControls({organizationId, provider, integrationId, enabled = true, reconnect = false, accountName, allowDisconnect = false, disconnectOnly = false, actionLabel}: IntegrationControlsProps) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const router = useRouter();
@@ -27,11 +28,11 @@ export function IntegrationControls({organizationId, provider, integrationId, en
     : provider === 'instagram_organic'
       ? 'Reconectar e selecionar'
       : 'Reconectar e selecionar';
-  const buttonLabel = reconnect
+  const buttonLabel = actionLabel ?? (reconnect
     ? reconnectLabel
     : integrationId
       ? enabled ? 'Sincronizar agora' : 'Ativar e sincronizar'
-      : 'Conectar e selecionar';
+      : 'Conectar e selecionar');
 
   const invoke = async (action: 'connect' | 'sync' | 'disconnect') => {
     setBusy(true);

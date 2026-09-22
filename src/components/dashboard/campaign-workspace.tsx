@@ -28,6 +28,15 @@ function total(rows: CampaignPerformance[], key: keyof CampaignPerformance) {
   return rows.reduce((value, row) => value + Number(row[key]), 0);
 }
 
+function hasMeasuredPerformance(row: CampaignPerformance) {
+  return row.spend > 0
+    || (row.impressions ?? 0) > 0
+    || (row.clicks ?? 0) > 0
+    || row.leads != null
+    || row.revenue != null
+    || row.purchases != null;
+}
+
 function availableTotal(rows: CampaignPerformance[], key: keyof CampaignPerformance) {
   const available = rows.filter((row) => row[key] != null);
   return available.length ? available.reduce((value, row) => value + Number(row[key]), 0) : null;
@@ -222,8 +231,10 @@ export function CampaignWorkspace({
   currency: string;
   showPlatforms?: boolean;
 }) {
-  const current = metrics(rows);
-  const previous = metrics(previousRows);
+  const measuredRows = rows.filter(hasMeasuredPerformance);
+  const measuredPreviousRows = previousRows.filter(hasMeasuredPerformance);
+  const current = metrics(measuredRows);
+  const previous = metrics(measuredPreviousRows);
   const kpis = [
     {label: 'Investimento', value: current.spend, previous: previous.spend, format: (value: number | null) => money(value, currency), icon: BadgeDollarSign},
     {label: 'Impressões', value: current.impressions, previous: previous.impressions, format: (value: number | null) => number(value), icon: Eye},
@@ -238,12 +249,12 @@ export function CampaignWorkspace({
       {kpis.map((kpi) => <KpiCard key={kpi.label} {...kpi} />)}
     </section>
     <LeadBreakdown totalLeads={current.leads} registrationLeads={current.registrationLeads} messageLeads={current.messageLeads} totalCost={current.cpl} registrationCost={current.costPerRegistration} messageCost={current.costPerMessage} currency={currency} />
-    {showPlatforms ? <PlatformBreakdown rows={rows} currency={currency} /> : null}
+    {showPlatforms ? <PlatformBreakdown rows={measuredRows} currency={currency} /> : null}
     <section className="grid gap-5 2xl:grid-cols-[0.9fr_1.4fr]">
-      <TrafficFunnel rows={rows} currency={currency} />
+      <TrafficFunnel rows={measuredRows} currency={currency} />
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-4"><div><p className="eyebrow">Evolução temporal</p><h2 className="mt-2 text-lg font-semibold">Investimento e receita atribuída</h2></div><p className="max-w-md text-right text-xs text-zinc-500">Receita real conciliada quando disponível; receita da plataforma como alternativa.</p></div>
-        <Timeline rows={timeline} />
+        <Timeline rows={timeline} currency={currency} />
       </Card>
     </section>
     <Card>
@@ -251,8 +262,8 @@ export function CampaignWorkspace({
       <Ranking rows={rows} currency={currency} />
     </Card>
     <section className="grid gap-5 2xl:grid-cols-2">
-      <ComparisonPanel currentRows={rows} previousRows={previousRows} currency={currency} />
-      <AttentionPanel rows={rows} currency={currency} />
+      <ComparisonPanel currentRows={measuredRows} previousRows={measuredPreviousRows} currency={currency} />
+      <AttentionPanel rows={measuredRows} currency={currency} />
     </section>
   </div>;
 }

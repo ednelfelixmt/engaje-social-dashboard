@@ -15,12 +15,23 @@ type Integration = {
 
 const SIX_HOURS = 6 * 60 * 60 * 1000;
 
-export function DataFreshness({organizationId, integrations, canSync}: {organizationId: string; integrations: Integration[]; canSync: boolean}) {
+export function DataFreshness({organizationId, integrations, canSync, renderedAt, timezone}: {
+  organizationId: string;
+  integrations: Integration[];
+  canSync: boolean;
+  renderedAt: number;
+  timezone: string;
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const newest = useMemo(() => integrations.map((item) => item.lastSyncedAt).filter(Boolean).sort().at(-1) ?? null, [integrations]);
-  const stale = !newest || Date.now() - Date.parse(newest) > SIX_HOURS;
+  const stale = !newest || renderedAt - Date.parse(newest) > SIX_HOURS;
+  const newestLabel = newest ? new Intl.DateTimeFormat('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'medium',
+    timeZone: timezone,
+  }).format(new Date(newest)) : null;
 
   async function synchronize(automatic = false) {
     if (!canSync || busy) return;
@@ -61,7 +72,7 @@ export function DataFreshness({organizationId, integrations, canSync}: {organiza
       {stale ? <TriangleAlert className="text-amber-300" size={18} /> : <span className="size-2 rounded-full bg-emerald-400" />}
       <div>
         <p className="text-sm font-medium">{stale ? 'Base aguardando atualização' : 'Dados sincronizados'}</p>
-        <p className="mt-0.5 text-xs text-zinc-500">{newest ? `Última sincronização: ${new Date(newest).toLocaleString('pt-BR')}` : 'Nenhuma sincronização concluída'}</p>
+        <p className="mt-0.5 text-xs text-zinc-500">{newestLabel ? `Última sincronização: ${newestLabel}` : 'Nenhuma sincronização concluída'}</p>
         {message ? <p role="status" className="mt-1 text-xs text-amber-200">{message}</p> : null}
       </div>
     </div>

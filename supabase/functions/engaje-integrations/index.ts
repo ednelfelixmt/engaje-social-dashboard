@@ -10,11 +10,25 @@ const metaId=Deno.env.get('META_APP_ID'),metaSecret=Deno.env.get('META_APP_SECRE
 const advancedInsights=Deno.env.get('META_ADVANCED_INSIGHTS_ENABLED')==='true';
 const windsorKey=Deno.env.get('WINDSOR_API_KEY');
 type Integration={id:string;organization_id:string;provider:string;external_account_id:string;config:Record<string,unknown>;status:string;account_name:string};
+type MetaErrorDetails={code:string;subcode:string|null;endpoint:string;stage:string;rawMessage:string;occurredAt:string};
+class MetaGraphError extends Error{
+ details:MetaErrorDetails;
+ constructor(details:MetaErrorDetails){super(userMessageForMetaError(details.code));this.name='MetaGraphError';this.details=details;}
+}
+const requiredPermissions:Record<string,string[]>={
+ meta_ads:['ads_read'],
+ facebook_organic:['pages_show_list','pages_read_engagement','pages_read_user_content'],
+ instagram_organic:['pages_show_list','pages_read_engagement','instagram_basic'],
+};
+function permissionsFor(provider:string){return [...(requiredPermissions[provider]||[]),...(advancedInsights?(provider==='facebook_organic'?['read_insights']:provider==='instagram_organic'?['instagram_manage_insights']:[]):[])];}
+function userMessageForMetaError(code:string){if(code==='10'||code==='200')return 'A Meta não concedeu todas as permissões necessárias para sincronizar esta conta.';if(code==='190')return 'A autorização da Meta expirou ou foi revogada.';if(code==='4'||code==='17')return 'A Meta limitou temporariamente as consultas. Tente sincronizar novamente mais tarde.';if(code==='100')return 'A Meta recusou um parâmetro da sincronização. A integração precisa ser revisada.';return 'A Meta não conseguiu concluir esta sincronização.';}
+function diagnosticConfig(config:Record<string,unknown>,patch:Record<string,unknown>){const current=config?.diagnostics&&typeof config.diagnostics==='object'&&!Array.isArray(config.diagnostics)?config.diagnostics as Record<string,unknown>:{};return {...config,diagnostics:{...current,...patch}};}
 async function check<T>(result:{data:T;error:unknown}):Promise<T>{if(result.error)throw new Error('Falha ao gravar no Supabase.');return result.data;}
 async function hmac(text:string){if(!metaSecret)throw new Error('Configure META_APP_SECRET.');const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(metaSecret),{name:'HMAC',hash:'SHA-256'},false,['sign']);return Array.from(new Uint8Array(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(text)))).map(n=>n.toString(16).padStart(2,'0')).join('');}
 async function sha256(text:string){return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))).map(n=>n.toString(16).padStart(2,'0')).join('');}
 function randomKey(){const bytes=crypto.getRandomValues(new Uint8Array(32));return Array.from(bytes).map(n=>n.toString(16).padStart(2,'0')).join('');}
-async function graph(path:string,token:string|null,params:Record<string,string>={},stage='consulta'){const url=new URL('https://graph.facebook.com/'+graphVersion+'/'+path);const signedParams=token?{...params,appsecret_proof:await hmac(token)}:params;for(const [k,v]of Object.entries(signedParams))url.searchParams.set(k,v);const headers:Record<string,string>={'Accept':'application/json'};if(token)headers.Authorization='Bearer '+token;const r=await fetch(url,{headers,signal:AbortSignal.timeout(25000)});const body=await r.json().catch(()=>({}));if(!r.ok||body.error){const code=String(body.error?.code||r.status),subcode=body.error?.error_subcode?'/'+String(body.error.error_subcode):'';const detail=String(body.error?.message||'Resposta inválida da Meta.').replace(/[\r\n]+/g,' ').slice(0,180);console.error('[meta-auth]',{stage,status:r.status,code,subcode:body.error?.error_subcode||null,type:body.error?.type||null,message:detail});throw new Error('Meta recusou '+stage+' (código '+code+subcode+'): '+detail);}return body;}
+async function graph(path:string,token:string|null,params:Record<string,string>={},stage='consulta'){const url=new URL('https://graph.facebook.com/'+graphVersion+'/'+path);const signedParams=token?{...params,appsecret_proof:await hmac(token)}:params;for(const [k,v]of Object.entries(signedParams))url.searchParams.set(k,v);const headers:Record<string,string>={'Accept':'application/json'};if(token)headers.Authorization='Bearer '+token;const r=await fetch(url,{headers,signal:AbortSignal.timeout(25000)});const body=await r.json().catch(()=>({}));if(!r.ok||body.error){const code=String(body.error?.code||r.status);const subcode=body.error?.error_subcode?String(body.error.error_subcode):null;const detail=String(body.error?.message||'Resposta inválida da Meta.').replace(/[\r\n]+/g,' ').slice(0,300);const details={stage,status:r.status,code,subcode,type:body.error?.type||null,message:detail,endpoint:path};console.error('[meta-graph]',details);throw new MetaGraphError({code,subcode,endpoint:path,stage,rawMessage:detail,occurredAt:new Date().toISOString()});}return body;}
+async function grantedPermissions(token:string){const response=await graph('me/permissions',token,{},'a validação das permissões');return (response.data||[]).filter((item:any)=>item.status==='granted').map((item:any)=>String(item.permission));}
 async function pages(path:string,token:string,params:Record<string,string>={}){const result:Record<string,any>[]=[];let after:string|undefined;for(let page=0;page<50;page++){const r=await graph(path,token,{...params,limit:'100',...(after?{after}:{})});result.push(...(r.data||[]));if(!r.paging?.next)return result;after=r.paging.cursors?.after;if(!after)throw new Error('A paginação da Meta não pôde ser concluída.');}throw new Error('Volume excede a sincronização interativa; reduza o período.');}
 async function recentPages(path:string,token:string,params:Record<string,string>,cutoff:Date,maxItems=100){const result:Record<string,any>[]=[];let after:string|undefined;for(let page=0;page<10;page++){const response=await graph(path,token,{...params,limit:'100',...(after?{after}:{})},'a leitura das publicações');const batch:Record<string,any>[]=response.data||[];let reachedCutoff=false;for(const item of batch){const published=new Date(item.timestamp||item.created_time||0);if(Number.isNaN(published.getTime())||published<cutoff){reachedCutoff=true;continue;}result.push(item);if(result.length>=maxItems)return result;}if(reachedCutoff||!response.paging?.next)return result;after=response.paging.cursors?.after;if(!after)return result;}return result;}
 async function concurrentMap<T,R>(items:T[],limit:number,handler:(item:T,index:number)=>Promise<R>){const output=new Array<R>(items.length);let cursor=0;const workers=Array.from({length:Math.min(limit,items.length)},async()=>{while(true){const index=cursor++;if(index>=items.length)return;output[index]=await handler(items[index],index);}});await Promise.all(workers);return output;}
@@ -24,6 +38,7 @@ async function allowed(req:Request,org:string){const auth=req.headers.get('Autho
 async function setToken(id:string,token:string){await check(await service.rpc('store_integration_token',{p_id:id,p_token:token}));}
 function actionValue(actions:any[]|undefined,...keys:string[]):number|null{if(!actions)return null;for(const key of keys){const item=actions.find(a=>a.action_type===key);if(item)return Number(item.value);}return 0;}
 function numeric(value:unknown){const result=Number(value);return Number.isFinite(result)?result:0;}
+function campaignStatus(value:unknown){const normalized=String(value||'').trim().toUpperCase().replace(/[^A-Z0-9_]/g,'_');return normalized&&normalized.length<=64?normalized:null;}
 function isoDate(date:Date){return date.toISOString().slice(0,10);}
 async function syncWindsor(i:Integration){
  const source=String(i.config.source_platform||'');
@@ -34,7 +49,7 @@ async function syncWindsor(i:Integration){
  endpoint.searchParams.set('api_key',windsorKey);
  endpoint.searchParams.set('date_from',isoDate(from));
  endpoint.searchParams.set('date_to',isoDate(to));
- endpoint.searchParams.set('fields','date,account_id,account_name,campaign_id,campaign,spend,impressions,clicks,conversions,conversion_value,currency');
+ endpoint.searchParams.set('fields','date,account_id,account_name,campaign_id,campaign,campaign_status,spend,impressions,clicks,conversions,conversion_value,currency');
  const response=await fetch(endpoint,{signal:AbortSignal.timeout(30000)});
  const payload=await response.json().catch(()=>({}));
  if(!response.ok)throw new Error('Windsor recusou a consulta (HTTP '+response.status+').');
@@ -43,14 +58,18 @@ async function syncWindsor(i:Integration){
  const sourceRows=received.filter((row:any)=>!accountId||String(row.account_id||'').trim()===accountId);
  const facts=sourceRows.map((row:any)=>{
   const campaignId=String(row.campaign_id||row.campaign||'sem-campanha');
-  return {organization_id:i.organization_id,integration_id:i.id,platform:'google_ads',metric_date:String(row.date||isoDate(to)).slice(0,10),currency:String(row.currency||i.config.currency||'BRL').toUpperCase().slice(0,3),account_id:String(row.account_id||accountId),campaign_id:campaignId,campaign_name:String(row.campaign||row.campaign_name||campaignId),adset_id:null,ad_id:campaignId+':aggregate',spend:numeric(row.spend),revenue:row.conversion_value==null?null:numeric(row.conversion_value),impressions:numeric(row.impressions),clicks:numeric(row.clicks),page_views:null,leads:null,message_leads:null,checkouts:null,purchases:numeric(row.conversions),attribution_window:'windsor_source',synced_at:new Date().toISOString()};
+  return {organization_id:i.organization_id,integration_id:i.id,platform:'google_ads',metric_date:String(row.date||isoDate(to)).slice(0,10),currency:String(row.currency||i.config.currency||'BRL').toUpperCase().slice(0,3),account_id:String(row.account_id||accountId),campaign_id:campaignId,campaign_name:String(row.campaign||row.campaign_name||campaignId),campaign_status:campaignStatus(row.campaign_status),adset_id:null,ad_id:campaignId+':aggregate',spend:numeric(row.spend),revenue:row.conversion_value==null?null:numeric(row.conversion_value),impressions:numeric(row.impressions),clicks:numeric(row.clicks),page_views:null,leads:null,message_leads:null,checkouts:null,purchases:numeric(row.conversions),attribution_window:'windsor_source',synced_at:new Date().toISOString()};
  });
+ const campaignRows=[...new Map(facts.map((fact:any)=>[fact.campaign_id,{organization_id:i.organization_id,integration_id:i.id,platform:'google_ads',account_id:fact.account_id,external_id:fact.campaign_id,name:fact.campaign_name,status:fact.campaign_status,last_seen_at:new Date().toISOString()}])).values()];
+ if(campaignRows.length)await check(await service.from('ad_campaigns').upsert(campaignRows,{onConflict:'organization_id,platform,account_id,external_id'}));
  for(let n=0;n<facts.length;n+=200)await check(await service.from('metrics_ads').upsert(facts.slice(n,n+200),{onConflict:'organization_id,platform,account_id,campaign_id,ad_id,metric_date,currency'}));
- await check(await service.from('integrations').update({status:'connected',is_enabled:true,last_synced_at:new Date().toISOString(),last_error:null}).eq('id',i.id));
+ const syncedAt=new Date().toISOString();const config=diagnosticConfig(i.config||{},{syncStatus:'synchronized',providerConnected:true,accountSelected:true,tokenValid:true,lastError:null,lastSyncAt:syncedAt});
+ await check(await service.from('integrations').update({status:'connected',is_enabled:true,last_synced_at:syncedAt,config,last_error:null}).eq('id',i.id));
  return {message:`Sincronização Windsor concluída: ${facts.length} métricas do Google Ads gravadas no Supabase.`,rows:facts.length,creatives:0};
 }
 async function sync(i:Integration){if(i.provider==='windsor')return syncWindsor(i);const token=await check(await service.rpc('integration_token',{p_id:i.id}));if(!token)throw new Error('Conta sem autorização. Reconecte.');let rows=0,creativeCount=0;
  if(i.provider==='meta_ads'){
+  const statuses=new Map<string,string>();try{const campaignRows=await pages(i.external_account_id+'/campaigns',token,{fields:'id,name,effective_status,status'});for(const campaign of campaignRows){const status=campaignStatus(campaign.effective_status||campaign.status);if(status)statuses.set(String(campaign.id),status);}if(campaignRows.length)await check(await service.from('ad_campaigns').upsert(campaignRows.map((campaign:any)=>({organization_id:i.organization_id,integration_id:i.id,platform:'meta_ads',account_id:i.external_account_id,external_id:String(campaign.id),name:String(campaign.name||campaign.id),status:campaignStatus(campaign.effective_status||campaign.status),last_seen_at:new Date().toISOString()})),{onConflict:'organization_id,platform,account_id,external_id'}));}catch(error){console.warn('[meta-campaign-status]',{integration_id:i.id,message:error instanceof Error?error.message:'Falha desconhecida'});}
   const data=await pages(i.external_account_id+'/insights',token,{level:'ad',date_preset:'last_30d',time_increment:'1',action_attribution_windows:'["7d_click"]',fields:'account_id,account_currency,campaign_id,campaign_name,adset_id,ad_id,date_start,spend,impressions,clicks,actions,action_values'});
   const facts=data.map(d=>{
    const formLeads=actionValue(d.actions,'lead','onsite_conversion.lead_grouped','offsite_conversion.fb_pixel_lead');
@@ -58,7 +77,7 @@ async function sync(i:Integration){if(i.provider==='windsor')return syncWindsor(
    // primeiro alias encontrado, evitando duplicar a mesma ação no total.
    const messageLeads=actionValue(d.actions,'onsite_conversion.messaging_conversation_started_7d','messaging_conversation_started_7d','onsite_conversion.total_messaging_connection','onsite_conversion.messaging_first_reply');
    const totalLeads=d.actions?(formLeads??0)+(messageLeads??0):null;
-   return {organization_id:i.organization_id,integration_id:i.id,platform:'meta_ads',metric_date:d.date_start,currency:d.account_currency,account_id:String(d.account_id),campaign_id:String(d.campaign_id),campaign_name:d.campaign_name,adset_id:d.adset_id,ad_id:String(d.ad_id),spend:Number(d.spend),revenue:actionValue(d.action_values,'omni_purchase','purchase','offsite_conversion.fb_pixel_purchase'),impressions:d.impressions==null?null:Number(d.impressions),clicks:d.clicks==null?null:Number(d.clicks),page_views:actionValue(d.actions,'landing_page_view'),leads:totalLeads,message_leads:messageLeads,checkouts:actionValue(d.actions,'initiate_checkout','offsite_conversion.fb_pixel_initiate_checkout'),purchases:actionValue(d.actions,'omni_purchase','purchase','offsite_conversion.fb_pixel_purchase'),attribution_window:'7d_click',synced_at:new Date().toISOString()};
+   return {organization_id:i.organization_id,integration_id:i.id,platform:'meta_ads',metric_date:d.date_start,currency:d.account_currency,account_id:String(d.account_id),campaign_id:String(d.campaign_id),campaign_name:d.campaign_name,campaign_status:statuses.get(String(d.campaign_id))||null,adset_id:d.adset_id,ad_id:String(d.ad_id),spend:Number(d.spend),revenue:actionValue(d.action_values,'omni_purchase','purchase','offsite_conversion.fb_pixel_purchase'),impressions:d.impressions==null?null:Number(d.impressions),clicks:d.clicks==null?null:Number(d.clicks),page_views:actionValue(d.actions,'landing_page_view'),leads:totalLeads,message_leads:messageLeads,checkouts:actionValue(d.actions,'initiate_checkout','offsite_conversion.fb_pixel_initiate_checkout'),purchases:actionValue(d.actions,'omni_purchase','purchase','offsite_conversion.fb_pixel_purchase'),attribution_window:'7d_click',synced_at:new Date().toISOString()};
   });
   for(let n=0;n<facts.length;n+=200){await check(await service.from('metrics_ads').upsert(facts.slice(n,n+200),{onConflict:'organization_id,platform,account_id,campaign_id,ad_id,metric_date,currency'}));rows+=facts.slice(n,n+200).length;}
   const ads=await pages(i.external_account_id+'/ads',token,{fields:'id,name,created_time,campaign_id,creative{id,thumbnail_url,image_url,body,video_id}'});
@@ -74,7 +93,8 @@ async function sync(i:Integration){if(i.provider==='windsor')return syncWindsor(
   if(metricRows.length){for(let n=0;n<metricRows.length;n+=200)await check(await service.from('metrics_organic').upsert(metricRows.slice(n,n+200),{onConflict:'organization_id,creative_id,metric_date'}));rows=metricRows.length;}
   const failed=insights.filter(item=>item.error).length;if(failed)console.warn('[organic-sync]',{integration_id:i.id,posts:posts.length,advanced_insight_failures:failed});
  }else throw new Error('Este provedor ainda precisa do adaptador e das credenciais de API.');
- await check(await service.from('integrations').update({status:'connected',is_enabled:true,last_synced_at:new Date().toISOString(),last_error:null}).eq('id',i.id));
+ const completedAt=new Date().toISOString();const completedConfig=diagnosticConfig(i.config||{},{syncStatus:'synchronized',providerConnected:true,accountSelected:true,tokenValid:true,lastError:null,lastSyncAt:completedAt});
+ await check(await service.from('integrations').update({status:'connected',is_enabled:true,last_synced_at:completedAt,config:completedConfig,last_error:null}).eq('id',i.id));
  return {message:`Sincronização concluída: ${rows} métricas e ${creativeCount} criativos gravados no Supabase.`,rows,creatives:creativeCount};
 }
 Deno.serve(async(req:Request)=>{
@@ -87,11 +107,13 @@ Deno.serve(async(req:Request)=>{
    if(url.searchParams.get('error'))throw new Error('Autorização recusada.');const code=url.searchParams.get('code');if(!code)throw new Error('Código ausente.');
    const result=await graph('oauth/access_token',null,{client_id:metaId!,client_secret:metaSecret!,redirect_uri:callback,code},'a troca do código OAuth');let token=result.access_token;if(!token)throw new Error('Token não recebido.');
    const long=await graph('oauth/access_token',null,{grant_type:'fb_exchange_token',client_id:metaId!,client_secret:metaSecret!,fb_exchange_token:token},'a renovação do token');token=long.access_token||token;
+   const required=permissionsFor(pending.provider);const granted=await grantedPermissions(token);const missing=required.filter(permission=>!granted.includes(permission));
    const ads=pending.provider==='meta_ads';const instagram=pending.provider==='instagram_organic';const accountFields=ads?'id,name,currency':instagram?'id,name,access_token,instagram_business_account{id,username}':'id,name,access_token';const accounts=await pages(ads?'me/adaccounts':'me/accounts',token,{fields:accountFields});
    let imported=0;for(const a of accounts){const ig=pending.provider==='instagram_organic';if(ig&&!a.instagram_business_account)continue;const accountId=ig?a.instagram_business_account.id:a.id;const name=ig?a.instagram_business_account.username:a.name;
     const {data:assigned}=await service.from('integrations').select('id,organization_id').eq('provider',pending.provider).eq('external_account_id',accountId).eq('status','connected').neq('organization_id',pending.organization_id).limit(1).maybeSingle();
     if(assigned)continue;
-    const saved=await check(await service.from('integrations').upsert({organization_id:pending.organization_id,provider:pending.provider,external_account_id:accountId,account_name:name,status:'pending',is_enabled:false,config:{currency:a.currency||null,selection_pending:true,batch_id:pending.id},last_error:null},{onConflict:'organization_id,provider,external_account_id'}).select('id').single());await setToken(saved.id,ads?token:a.access_token||token);imported++;}
+    const config=diagnosticConfig({currency:a.currency||null,selection_pending:true,batch_id:pending.id},{providerConnected:true,accountSelected:false,tokenValid:true,permissionsValid:missing.length===0,grantedPermissions:granted,missingPermissions:missing,syncStatus:missing.length?'blocked':'ready',lastError:null});
+    const saved=await check(await service.from('integrations').upsert({organization_id:pending.organization_id,provider:pending.provider,external_account_id:accountId,account_name:name,status:'pending',is_enabled:false,scopes:granted,config,last_error:null},{onConflict:'organization_id,provider,external_account_id'}).select('id').single());await setToken(saved.id,ads?token:a.access_token||token);imported++;}
    await check(await service.from('integrations').delete().eq('id',id));
    return Response.redirect(origin+'/'+org.slug+'/settings/integrations?select_accounts=1&provider='+encodeURIComponent(pending.provider)+'&batch='+encodeURIComponent(pending.id)+'&found='+imported,303);
   }
@@ -102,13 +124,41 @@ Deno.serve(async(req:Request)=>{
    const selectableProviders=['meta_ads','facebook_organic','instagram_organic','tiktok_ads','tiktok_organic','windsor','stract','hubspot','rd_station','generic_crm'];
    if(!selectableProviders.includes(provider)||!requested.length)throw new Error('Selecione ao menos uma conta válida.');
    if(batchId&&!/^[0-9a-f-]{36}$/.test(batchId))throw new Error('Lote de autorização inválido.');
-   const {data:rows,error}=await service.from('integrations').select('id,config').eq('organization_id',org).eq('provider',provider);
+   const {data:rows,error}=await service.from('integrations').select('*').eq('organization_id',org).eq('provider',provider);
    if(error)throw new Error('Não foi possível validar as contas descobertas.');
    const candidates=(rows||[]).filter((row:any)=>row.config?.selection_pending===true&&(batchId?row.config?.batch_id===batchId:!row.config?.batch_id));const candidateIds=new Set(candidates.map((row:any)=>String(row.id)));
    if(requested.some((id:string)=>!candidateIds.has(id)))throw new Error('Uma conta selecionada não pertence a este cliente.');
-   const readyToConnect=['meta_ads','facebook_organic','instagram_organic','windsor'];
-   for(const row of candidates){const config={...(row.config||{})};delete config.selection_pending;delete config.batch_id;if(requested.includes(row.id)){await check(await service.from('integrations').update({status:readyToConnect.includes(provider)?'connected':'pending',is_enabled:false,config:{...config,assignment_confirmed_at:new Date().toISOString(),assignment_confirmed_by:actor.id},last_error:null}).eq('id',row.id).eq('organization_id',org));}else{const removed=await service.from('integrations').delete().eq('id',row.id).eq('organization_id',org);if(removed.error)await check(await service.from('integrations').update({status:'disconnected',is_enabled:false,config:{...config,hidden:true}}).eq('id',row.id).eq('organization_id',org));}}
-   return json({message:`${requested.length} conta(s) vinculada(s) exclusivamente a este cliente.`});
+   const readyToConnect=['meta_ads','facebook_organic','instagram_organic','windsor'];let blocked=0;
+   const syncQueue:{row:any;config:Record<string,unknown>}[]=[];
+   for(const row of candidates){
+    const config={...(row.config||{})};delete config.selection_pending;delete config.batch_id;
+    if(requested.includes(row.id)){
+     const diagnostics=config.diagnostics&&typeof config.diagnostics==='object'&&!Array.isArray(config.diagnostics)?config.diagnostics as Record<string,unknown>:{};
+     const missing=Array.isArray(diagnostics.missingPermissions)?diagnostics.missingPermissions.map(String):[];
+     const shouldSync=readyToConnect.includes(provider)&&!missing.length;
+     const assignedConfig=diagnosticConfig({...config,assignment_confirmed_at:new Date().toISOString(),assignment_confirmed_by:actor.id},{accountSelected:true,syncStatus:missing.length?'blocked':shouldSync?'queued':'ready'});
+     if(missing.length){
+      blocked++;
+      await check(await service.from('integrations').update({status:'error',is_enabled:false,config:assignedConfig,last_error:'A Meta não concedeu todas as permissões necessárias para sincronizar esta conta.'}).eq('id',row.id).eq('organization_id',org));
+     }else{
+      await check(await service.from('integrations').update({status:shouldSync?'connected':'pending',is_enabled:shouldSync,config:assignedConfig,last_error:null}).eq('id',row.id).eq('organization_id',org));
+      if(shouldSync)syncQueue.push({row,config:assignedConfig});
+     }
+    }else{
+     const removed=await service.from('integrations').delete().eq('id',row.id).eq('organization_id',org);
+     if(removed.error)await check(await service.from('integrations').update({status:'disconnected',is_enabled:false,config:{...config,hidden:true}}).eq('id',row.id).eq('organization_id',org));
+    }
+   }
+   if(syncQueue.length){
+    const background=Promise.allSettled(syncQueue.map(async({row,config})=>{
+     await check(await service.from('integrations').update({status:'syncing',last_sync_started_at:new Date().toISOString(),config:diagnosticConfig(config,{syncStatus:'syncing'})}).eq('id',row.id).eq('organization_id',org));
+     try{await sync({...row,config,status:'syncing'} as Integration);}
+     catch(syncError){const details=syncError instanceof MetaGraphError?syncError.details:null;const failureConfig=diagnosticConfig(config,{syncStatus:'error',lastError:details});await service.from('integrations').update({status:details?.code==='190'?'expired':'error',is_enabled:false,config:failureConfig,last_error:syncError instanceof Error?syncError.message:'Não foi possível concluir a primeira sincronização.'}).eq('id',row.id).eq('organization_id',org);}
+    }));
+    (globalThis as typeof globalThis&{EdgeRuntime:{waitUntil(promise:Promise<unknown>):void}}).EdgeRuntime.waitUntil(background);
+   }
+   const detail=blocked?` ${blocked} exige(m) correção de permissões.`:syncQueue.length?` ${syncQueue.length} sincronização(ões) iniciada(s) em segundo plano.`:'';
+   return json({message:`${requested.length} conta(s) vinculada(s) exclusivamente a este cliente.${detail}`});
   }
   if(body.action==='disconnect'){
    const integrationId=String(body.integrationId||'');
@@ -198,7 +248,7 @@ Deno.serve(async(req:Request)=>{
    if(!metaId||!metaSecret)return json({message:'Configure META_APP_ID e META_APP_SECRET no Supabase.'});
    await check(await service.from('integrations').delete().eq('organization_id',org).eq('provider',body.provider).eq('status','pending').like('external_account_id','pending:%'));
    const nonce=crypto.randomUUID();const pending=await check(await service.from('integrations').insert({organization_id:org,provider:body.provider,external_account_id:'pending:'+nonce,account_name:'Autorização em andamento',status:'pending',config:{nonce,user_id:actor.id}}).select('id').single());
-   const signed=[pending.id,Date.now()+600000,nonce].join('.');const state=signed+'.'+await hmac(signed);const scopes=body.provider==='meta_ads'?'ads_read':body.provider==='facebook_organic'?'pages_show_list,pages_read_engagement'+(advancedInsights?',read_insights':''):'pages_show_list,pages_read_engagement,instagram_basic'+(advancedInsights?',instagram_manage_insights':'');
+   const signed=[pending.id,Date.now()+600000,nonce].join('.');const state=signed+'.'+await hmac(signed);const scopes=permissionsFor(String(body.provider)).join(',');
    const login=new URL('https://www.facebook.com/'+graphVersion+'/dialog/oauth');login.search=new URLSearchParams({client_id:metaId,redirect_uri:callback,state,scope:scopes,response_type:'code'}).toString();return json({url:login.href});
   }
   if(body.action==='sync'){
@@ -206,5 +256,5 @@ Deno.serve(async(req:Request)=>{
    const {data:locked}=await service.from('integrations').update({status:'syncing',last_sync_started_at:new Date().toISOString(),last_error:null}).eq('id',i.id).neq('status','syncing').select('id').maybeSingle();if(!locked)return json({message:'Esta conta já está sincronizando. Aguarde a conclusão.'});return json(await sync(i));
   }
   return json({message:'Ação inválida.'},400);
- }catch(e){const message=e instanceof Error?e.message:'Erro de sincronização';if(activeId)await service.from('integrations').update({status:'error',last_error:message.slice(0,300)}).eq('id',activeId);return json({message},400);}
+ }catch(e){const message=e instanceof Error?e.message:'Erro de sincronização';if(activeId){const {data:current}=await service.from('integrations').select('config').eq('id',activeId).maybeSingle();const details=e instanceof MetaGraphError?e.details:null;const config=diagnosticConfig((current?.config&&typeof current.config==='object'&&!Array.isArray(current.config)?current.config:{}) as Record<string,unknown>,{syncStatus:details?.code==='10'||details?.code==='200'?'blocked':'error',tokenValid:details?.code!=='190',permissionsValid:details?.code==='10'||details?.code==='200'?false:undefined,lastError:details});await service.from('integrations').update({status:details?.code==='190'?'expired':'error',is_enabled:false,config,last_error:message.slice(0,300)}).eq('id',activeId);}return json({message},400);}
 });

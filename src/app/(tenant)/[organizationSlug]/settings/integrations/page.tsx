@@ -1,16 +1,15 @@
 import type {ReactNode} from 'react';
-import {Activity, Blocks, Cable, CheckCircle2, Clock3, Database, Facebook, Instagram, LineChart, MessageSquareText, TriangleAlert, Webhook} from 'lucide-react';
+import {Activity, Blocks, Cable, CheckCircle2, Database, Facebook, Instagram, LineChart, MessageSquareText, TriangleAlert, Webhook} from 'lucide-react';
 import {tenant} from '@/lib/auth/session';
 import {connectorCatalog, connectorByProvider, type ConnectorDefinition} from '@/lib/integrations/catalog';
 import {Card} from '@/components/ui/card';
 import {IntegrationControls} from '@/components/integration-controls';
 import {ExtractorSetup} from '@/components/extractor-setup';
 import {FoundationConnector} from '@/components/foundation-connector';
-import {IngestEndpoint} from '@/components/ingest-endpoint';
 import {IntegrationDiagnostics} from '@/components/integration-diagnostics';
 import {MetaAccountSelector} from '@/components/meta-account-selector';
+import {IntegrationAccountCard} from '@/components/integration-account-card';
 
-const statusLabels: Record<string, string> = {connected: 'Conectada', syncing: 'Sincronizando', pending: 'Base preparada', disconnected: 'Desconectada', error: 'Com erro', expired: 'Autorização expirada'};
 const icons: Record<string, ReactNode> = {
   meta_ads: <LineChart className="text-blue-400" />, facebook_organic: <Facebook className="text-blue-500" />,
   instagram_organic: <Instagram className="text-pink-400" />, tiktok_ads: <Activity className="text-cyan-300" />,
@@ -18,12 +17,6 @@ const icons: Record<string, ReactNode> = {
   stract: <Database className="text-orange-300" />, hubspot: <MessageSquareText className="text-orange-400" />,
   rd_station: <Blocks className="text-teal-300" />, generic_crm: <Webhook className="text-zinc-300" />,
 };
-
-function StatusIcon({status}: {status: string}) {
-  if (status === 'connected') return <CheckCircle2 className="text-emerald-400" size={17} />;
-  if (status === 'syncing' || status === 'pending') return <Clock3 className="text-amber-300" size={17} />;
-  return <TriangleAlert className="text-red-400" size={17} />;
-}
 
 function StageBadge({stage}: Pick<ConnectorDefinition, 'stage'>) {
   return <span className={`connector-badge connector-badge-${stage}`}>{stage === 'live' ? 'Operacional' : 'Base pronta'}</span>;
@@ -116,17 +109,7 @@ export default async function Page({params, searchParams}: {params: {organizatio
           const sourceKey = typeof config.source_platform === 'string' ? config.source_platform : null;
           const source = sourceKey ? connectorByProvider.get(sourceKey as never)?.name ?? sourceKey : null;
           const definition = connectorByProvider.get(item.provider);
-          const supportsIngest = item.provider === 'stract' || item.provider === 'generic_crm';
-          const ingestConfigured = typeof config.ingest_key_hash === 'string';
-          const staleOauth = item.status === 'pending'
-            && item.external_account_id.startsWith('pending:')
-            && Date.now() - new Date(item.updated_at).getTime() > 10 * 60 * 1000;
-          const requiresReconnect = staleOauth || item.status === 'expired' || (
-            item.status === 'error'
-            && item.provider === 'facebook_organic'
-            && item.last_error?.includes('pages_read_user_content')
-          );
-          return <Card key={item.id} className="p-4"><div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_210px]"><div className="flex min-w-0 items-start gap-3"><StatusIcon status={staleOauth ? 'expired' : item.status} /><div className="min-w-0"><h3 className="truncate font-semibold">{item.account_name}</h3><p className="muted mt-1 text-xs">{definition?.name ?? item.provider}{source ? ` · ${source}` : ''} · {staleOauth ? 'Autorização expirada' : statusLabels[item.status] ?? item.status}</p><p className="muted mt-1 text-xs">Última sincronização: {item.last_synced_at ? new Date(item.last_synced_at).toLocaleString('pt-BR') : 'ainda não realizada'}</p>{item.last_error ? <p className="mt-2 break-words text-xs text-red-300">{item.last_error}</p> : null}{supportsIngest ? <IngestEndpoint organizationId={org.id} integrationId={item.id} configured={ingestConfigured} /> : null}</div></div><div className="w-full md:w-[210px]">{!supportsIngest && (item.status !== 'pending' || staleOauth) ? <IntegrationControls organizationId={org.id} provider={item.provider} integrationId={item.id} enabled={item.is_enabled} reconnect={requiresReconnect} accountName={item.account_name} allowDisconnect /> : <div className="space-y-2"><span className="connector-badge connector-badge-foundation block text-center">{ingestConfigured ? 'Endpoint preparado' : 'Aguardando credenciais'}</span><IntegrationControls organizationId={org.id} provider={item.provider} integrationId={item.id} enabled={item.is_enabled} accountName={item.account_name} allowDisconnect disconnectOnly /></div>}</div></div></Card>;
+          return <IntegrationAccountCard key={item.id} organizationId={org.id} item={item} providerName={definition?.name ?? item.provider} source={source} />;
         })}</div> : <Card className="border-dashed text-center"><p>Nenhuma integração preparada neste cliente.</p><p className="muted mt-2 text-sm">Conecte uma conta operacional ou prepare um dos conectores acima.</p></Card>}
       </section>
     </div>

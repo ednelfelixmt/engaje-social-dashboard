@@ -22,6 +22,7 @@ export type CampaignPerformance = {
   accountId: string;
   campaignId: string;
   campaignName: string;
+  campaignStatus: string | null;
   currency: string;
   spend: number;
   revenue: number | null;
