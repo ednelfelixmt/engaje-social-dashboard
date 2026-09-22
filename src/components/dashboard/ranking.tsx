@@ -11,6 +11,14 @@ const platformNames: Record<string, string> = {
   tiktok_ads: 'TikTok Ads',
 };
 
+const revenueSourceLabels: Record<CampaignPerformance['revenueSource'], string> = {
+  crm: 'CRM',
+  spreadsheet: 'planilha',
+  ads: 'plataforma',
+  mixed: 'fontes combinadas',
+  unavailable: 'indisponível',
+};
+
 type StatusGroup = 'active' | 'inactive' | 'attention' | 'unknown';
 
 function statusGroup(value: string | null): StatusGroup {
@@ -70,7 +78,7 @@ export function Ranking({rows, currency}: {rows: CampaignPerformance[]; currency
       <table>
         <thead><tr>{['Campanha', 'Status', 'Investimento', 'Impressões', 'Cliques', 'Todos os leads', 'CPL', 'Cadastros', 'Custo/cadastro', 'Mensagens', 'Custo/mensagem', 'Receita', 'ROAS', 'ROI', 'CTR', 'CPA'].map((heading) => <th key={heading}>{heading}</th>)}</tr></thead>
         <tbody>{visibleRows.map((row) => <tr key={row.platform + row.accountId + row.campaignId}>
-          <td className="min-w-64"><strong className="font-medium text-zinc-200">{row.campaignName}</strong><small className="mt-1.5 block text-zinc-500"><span className="text-primary">{platformNames[row.platform] || row.platform}</span> · receita: {row.revenueSource}</small></td>
+          <td className="min-w-64"><strong className="font-medium text-zinc-200">{row.campaignName}</strong><small className="mt-1.5 block text-zinc-500"><span className="text-primary">{platformNames[row.platform] || row.platform}</span> · receita: {revenueSourceLabels[row.revenueSource]}</small></td>
           <td><span className={`status-pill status-${statusGroup(row.campaignStatus)}`}>{statusLabel(row.campaignStatus)}</span></td>
           <td>{money(row.spend, currency)}</td>
           <td>{number(row.impressions)}</td>
