@@ -55,7 +55,10 @@ function metrics(rows: CampaignPerformance[]) {
   const impressions = total(rows, 'impressions');
   const clicks = total(rows, 'clicks');
   const pageViews = total(rows, 'pageViews');
-  const leads = total(rows, 'leads');
+  // Some campaigns expose message leads while other campaigns do not expose
+  // a total lead field. Aggregate the values that are actually available so
+  // the summary stays consistent with the detailed lead breakdown.
+  const leads = availableTotal(rows, 'leads');
   const registrationLeads = availableTotal(rows, 'registrationLeads');
   const messageLeads = availableTotal(rows, 'messageLeads');
   const checkouts = total(rows, 'checkouts');
