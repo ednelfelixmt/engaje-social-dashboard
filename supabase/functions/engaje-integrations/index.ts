@@ -21,6 +21,7 @@ const requiredPermissions:Record<string,string[]>={
  instagram_organic:['pages_show_list','pages_read_engagement','instagram_basic'],
 };
 function permissionsFor(provider:string){return [...(requiredPermissions[provider]||[]),...(advancedInsights?(provider==='facebook_organic'?['read_insights']:provider==='instagram_organic'?['instagram_manage_insights']:[]):[])];}
+function metaOAuthPermissions(){return [...new Set(['ads_read','business_management','pages_show_list','pages_read_engagement','pages_read_user_content','instagram_basic','leads_retrieval',...(advancedInsights?['read_insights','instagram_manage_insights']:[])])];}
 function userMessageForMetaError(code:string){if(code==='10'||code==='200')return 'A Meta não concedeu todas as permissões necessárias para sincronizar esta conta.';if(code==='190')return 'A autorização da Meta expirou ou foi revogada.';if(code==='4'||code==='17')return 'A Meta limitou temporariamente as consultas. Tente sincronizar novamente mais tarde.';if(code==='100')return 'A Meta recusou um parâmetro da sincronização. A integração precisa ser revisada.';return 'A Meta não conseguiu concluir esta sincronização.';}
 function diagnosticConfig(config:Record<string,unknown>,patch:Record<string,unknown>){const current=config?.diagnostics&&typeof config.diagnostics==='object'&&!Array.isArray(config.diagnostics)?config.diagnostics as Record<string,unknown>:{};return {...config,diagnostics:{...current,...patch}};}
 async function check<T>(result:{data:T;error:unknown}):Promise<T>{if(result.error)throw new Error('Falha ao gravar no Supabase.');return result.data;}
@@ -36,6 +37,37 @@ function insightValues(payload:any){const values:Record<string,number>={};for(co
 async function organicInsights(postId:string,token:string,instagram:boolean){const metric=instagram?'reach,saved,shares,total_interactions,views':'post_impressions,post_impressions_unique,post_clicks,post_video_views';try{return {values:insightValues(await graph(postId+'/insights',token,{metric},'a leitura dos insights orgânicos')),error:false};}catch(error){console.warn('[organic-insights]',{post_id:postId,platform:instagram?'instagram':'facebook',message:error instanceof Error?error.message:'Falha desconhecida'});return {values:{},error:true};}}
 async function allowed(req:Request,org:string){const auth=req.headers.get('Authorization');if(!auth)throw new Error('Sessão necessária.');const client=createClient(base,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:auth}},auth:{persistSession:false}});const {data:{user}}=await client.auth.getUser();if(!user)throw new Error('Sessão expirada.');const {data:superAdmin}=await client.rpc('is_super_admin');if(!superAdmin){const {data:member}=await service.from('organization_members').select('role,is_active,organizations!inner(status)').eq('organization_id',org).eq('user_id',user.id).single();if(!member?.is_active||!['client_admin','editor'].includes(member.role)||(member.organizations as any)?.status!=='active')throw new Error('Sem permissão para gerenciar integrações.');}return user;}
 async function setToken(id:string,token:string){await check(await service.rpc('store_integration_token',{p_id:id,p_token:token}));}
+async function setConnectionToken(id:string,token:string){await check(await service.rpc('store_platform_connection_token',{p_id:id,p_token:token}));}
+async function safePages(path:string,token:string,params:Record<string,string>={}){try{return await pages(path,token,params);}catch(error){console.warn('[meta-discovery-skipped]',{endpoint:path,message:error instanceof Error?error.message:'Falha desconhecida'});return [];}}
+async function discoverMetaAssets(connectionId:string,token:string){
+ const now=new Date().toISOString();const assets:any[]=[];
+ const businesses=await safePages('me/businesses',token,{fields:'id,name,verification_status'});
+ const businessIds=new Map<string,string>();
+ for(const business of businesses){
+  const saved=await check(await service.from('platform_organizations').upsert({connection_id:connectionId,provider:'meta_ads',external_id:String(business.id),name:String(business.name||business.id),organization_type:'business_manager',status:'active',metadata:{verification_status:business.verification_status||null},last_seen_at:now},{onConflict:'connection_id,organization_type,external_id'}).select('id').single());
+  businessIds.set(String(business.id),saved.id);
+ }
+ const adAccounts=await safePages('me/adaccounts',token,{fields:'id,name,currency,timezone_name,account_status,business{id,name}'});
+ for(const account of adAccounts)assets.push({connection_id:connectionId,platform_organization_id:account.business?.id?businessIds.get(String(account.business.id))||null:null,provider:'meta_ads',asset_type:'ad_account',external_id:String(account.id),name:String(account.name||account.id),asset_status:'active',metadata:{currency:account.currency||null,timezone:account.timezone_name||null,account_status:account.account_status??null,business_id:account.business?.id||null},recommended:true,last_seen_at:now});
+ const pageRows=await safePages('me/accounts',token,{fields:'id,name,category,instagram_business_account{id,username,name}'});
+ for(const page of pageRows){
+  assets.push({connection_id:connectionId,provider:'facebook_organic',asset_type:'facebook_page',external_id:String(page.id),name:String(page.name||page.id),asset_status:'active',metadata:{category:page.category||null},recommended:true,last_seen_at:now});
+  if(page.instagram_business_account){const ig=page.instagram_business_account;assets.push({connection_id:connectionId,provider:'instagram_organic',asset_type:'instagram_account',external_id:String(ig.id),name:String(ig.username||ig.name||ig.id),asset_status:'active',parent_external_id:String(page.id),metadata:{page_id:String(page.id),username:ig.username||null},recommended:true,last_seen_at:now});}
+  for(const form of await safePages(String(page.id)+'/leadgen_forms',token,{fields:'id,name,status'}))assets.push({connection_id:connectionId,provider:'facebook_organic',asset_type:'lead_form',external_id:String(form.id),name:String(form.name||form.id),asset_status:'active',parent_external_id:String(page.id),metadata:{page_id:String(page.id),status:form.status||null},recommended:true,last_seen_at:now});
+ }
+ for(const business of businesses){
+  const orgId=businessIds.get(String(business.id))||null;
+  for(const [edge,type,label] of [['owned_pixels','pixel','Pixel'],['owned_product_catalogs','catalog','Catálogo'],['owned_datasets','dataset','Dataset']] as const){
+   for(const item of await safePages(String(business.id)+'/'+edge,token,{fields:'id,name'}))assets.push({connection_id:connectionId,platform_organization_id:orgId,provider:'meta_ads',asset_type:type,external_id:String(item.id),name:String(item.name||label+' '+item.id),asset_status:'active',metadata:{business_id:String(business.id)},recommended:type!=='dataset',last_seen_at:now});
+  }
+ }
+ for(const account of adAccounts)for(const item of await safePages(String(account.id)+'/customconversions',token,{fields:'id,name,status'}))assets.push({connection_id:connectionId,provider:'meta_ads',asset_type:'custom_conversion',external_id:String(item.id),name:String(item.name||item.id),asset_status:'active',parent_external_id:String(account.id),metadata:{status:item.status||null},recommended:false,last_seen_at:now});
+ if(assets.length)for(let n=0;n<assets.length;n+=200)await check(await service.from('platform_assets').upsert(assets.slice(n,n+200),{onConflict:'connection_id,asset_type,external_id'}));
+ const {data:connectionAssets}=await service.from('platform_assets').select('id').eq('connection_id',connectionId);const connectionAssetIds=(connectionAssets||[]).map((item:any)=>item.id);
+ if(connectionAssetIds.length){const {data:assigned}=await service.from('client_asset_assignments').select('asset_id').in('asset_id',connectionAssetIds).eq('assignment_status','assigned');const assignedIds=(assigned||[]).map((item:any)=>item.asset_id);if(assignedIds.length)await check(await service.from('platform_assets').update({asset_status:'assigned'}).in('id',assignedIds));}
+ await check(await service.from('platform_connections').update({status:'connected',last_discovered_at:now,last_error:null}).eq('id',connectionId));
+ return assets.length;
+}
 // Meta omits `actions` when every requested action is zero. Treating that
 // omission as unknown invalidates the whole campaign aggregation downstream.
 function actionValue(actions:any[]|undefined,...keys:string[]):number{if(!actions)return 0;for(const key of keys){const item=actions.find(a=>a.action_type===key);if(item)return Number(item.value);}return 0;}
@@ -113,18 +145,55 @@ Deno.serve(async(req:Request)=>{
    if(url.searchParams.get('error'))throw new Error('Autorização recusada.');const code=url.searchParams.get('code');if(!code)throw new Error('Código ausente.');
    const result=await graph('oauth/access_token',null,{client_id:metaId!,client_secret:metaSecret!,redirect_uri:callback,code},'a troca do código OAuth');let token=result.access_token;if(!token)throw new Error('Token não recebido.');
    const long=await graph('oauth/access_token',null,{grant_type:'fb_exchange_token',client_id:metaId!,client_secret:metaSecret!,fb_exchange_token:token},'a renovação do token');token=long.access_token||token;
-   const required=permissionsFor(pending.provider);const granted=await grantedPermissions(token);const missing=required.filter(permission=>!granted.includes(permission));
-   const ads=pending.provider==='meta_ads';const instagram=pending.provider==='instagram_organic';const accountFields=ads?'id,name,currency':instagram?'id,name,access_token,instagram_business_account{id,username}':'id,name,access_token';const accounts=await pages(ads?'me/adaccounts':'me/accounts',token,{fields:accountFields});
-   let imported=0;for(const a of accounts){const ig=pending.provider==='instagram_organic';if(ig&&!a.instagram_business_account)continue;const accountId=ig?a.instagram_business_account.id:a.id;const name=ig?a.instagram_business_account.username:a.name;
-    const {data:assigned}=await service.from('integrations').select('id,organization_id').eq('provider',pending.provider).eq('external_account_id',accountId).eq('status','connected').neq('organization_id',pending.organization_id).limit(1).maybeSingle();
-    if(assigned)continue;
-    const config=diagnosticConfig({currency:a.currency||null,selection_pending:true,batch_id:pending.id},{providerConnected:true,accountSelected:false,tokenValid:true,permissionsValid:missing.length===0,grantedPermissions:granted,missingPermissions:missing,syncStatus:missing.length?'blocked':'ready',lastError:null});
-    const saved=await check(await service.from('integrations').upsert({organization_id:pending.organization_id,provider:pending.provider,external_account_id:accountId,account_name:name,status:'pending',is_enabled:false,scopes:granted,config,last_error:null},{onConflict:'organization_id,provider,external_account_id'}).select('id').single());await setToken(saved.id,ads?token:a.access_token||token);imported++;}
+   const granted=await grantedPermissions(token);const identity=await graph('me',token,{fields:'id,name'},'a identificação do usuário');
+   const {data:agency}=await service.from('organizations').select('id').eq('is_agency',true).order('created_at').limit(1).maybeSingle();
+   const savedConnection=await check(await service.from('platform_connections').upsert({agency_organization_id:agency?.id||pending.organization_id,target_organization_id:pending.organization_id,provider:pending.provider,external_user_id:String(identity.id),account_name:String(identity.name||'Conta Meta'),status:'syncing',scopes:granted,config:{connected_by:actorId},last_error:null},{onConflict:'agency_organization_id,provider,external_user_id'}).select('id').single());
+   await setConnectionToken(savedConnection.id,token);
+   const imported=await discoverMetaAssets(savedConnection.id,token);
    await check(await service.from('integrations').delete().eq('id',id));
-   return Response.redirect(origin+'/'+org.slug+'/settings/integrations?select_accounts=1&provider='+encodeURIComponent(pending.provider)+'&batch='+encodeURIComponent(pending.id)+'&found='+imported,303);
+   return Response.redirect(origin+'/'+org.slug+'/settings/integrations?select_assets=1&connection_id='+encodeURIComponent(savedConnection.id)+'&found='+imported,303);
   }
   if(req.method!=='POST')return json({message:'Método inválido.'},405);
   const body=await req.json();const org=String(body.organizationId||'');if(!/^[0-9a-f-]{36}$/.test(org))throw new Error('Cliente inválido.');const actor=await allowed(req,org);
+  if(body.action==='assign_assets'){
+   const connectionId=String(body.connectionId||'');const requested=Array.isArray(body.assetIds)?[...new Set(body.assetIds.map(String))]:[];
+   if(!/^[0-9a-f-]{36}$/.test(connectionId)||!requested.length||requested.some(id=>!/^[0-9a-f-]{36}$/.test(id)))throw new Error('Selecione ao menos um ativo válido.');
+   const {data:connection}=await service.from('platform_connections').select('*').eq('id',connectionId).eq('target_organization_id',org).single();
+   if(!connection)throw new Error('Esta conexão não pertence ao cliente selecionado.');
+   const {data:assets,error:assetError}=await service.from('platform_assets').select('*').eq('connection_id',connectionId).in('id',requested);
+   if(assetError||!assets||assets.length!==requested.length)throw new Error('Um ou mais ativos não pertencem a esta conexão.');
+   const {data:conflicts}=await service.from('client_asset_assignments').select('asset_id,organization_id').in('asset_id',requested).eq('assignment_status','assigned').neq('organization_id',org);
+   if(conflicts?.length)throw new Error('Um ou mais ativos já estão vinculados a outro cliente. Atualize a descoberta e tente novamente.');
+   const token=await check(await service.rpc('platform_connection_token',{p_id:connectionId}));if(!token)throw new Error('A autorização da plataforma expirou. Reconecte.');
+   const granted=Array.isArray(connection.scopes)?connection.scopes.map(String):[];const syncQueue:Integration[]=[];
+   for(const asset of assets){
+    const mapping:Record<string,string>={ad_account:'meta_ads',facebook_page:'facebook_organic',instagram_account:'instagram_organic'};const provider=mapping[asset.asset_type];let integrationId:string|null=null;
+    if(provider){
+     const required=permissionsFor(provider);const missing=required.filter(permission=>!granted.includes(permission));let assetToken=token;
+     if(provider==='facebook_organic'||provider==='instagram_organic'){const pageId=provider==='facebook_organic'?asset.external_id:String(asset.parent_external_id||asset.metadata?.page_id||'');if(!pageId)throw new Error('A página vinculada ao ativo não foi localizada.');const page=await graph(pageId,token,{fields:'access_token'},'a autorização da página');assetToken=page.access_token||token;}
+     const config=diagnosticConfig({platform_connection_id:connectionId,platform_asset_id:asset.id,asset_type:asset.asset_type,currency:asset.metadata?.currency||null},{providerConnected:true,accountSelected:true,tokenValid:true,permissionsValid:missing.length===0,grantedPermissions:granted,missingPermissions:missing,syncStatus:missing.length?'blocked':'queued',lastError:null});
+     const externalId=provider==='meta_ads'&&String(asset.external_id).startsWith('act_')===false?'act_'+asset.external_id:String(asset.external_id);
+     const saved=await check(await service.from('integrations').upsert({organization_id:org,provider,external_account_id:externalId,account_name:asset.name,status:missing.length?'error':'connected',is_enabled:!missing.length,scopes:granted,config,last_error:missing.length?'A Meta não concedeu as permissões necessárias para sincronizar este ativo.':null},{onConflict:'organization_id,provider,external_account_id'}).select('*').single());
+     integrationId=saved.id;await setToken(saved.id,assetToken);if(!missing.length)syncQueue.push(saved as Integration);
+    }
+    const {data:previous}=await service.from('client_asset_assignments').select('id').eq('organization_id',org).eq('asset_id',asset.id).limit(1).maybeSingle();
+    const assignment=previous?await check(await service.from('client_asset_assignments').update({integration_id:integrationId,assignment_status:'assigned',sync_enabled:Boolean(provider),assigned_by:actor.id,assigned_at:new Date().toISOString(),removed_at:null}).eq('id',previous.id).select('id').single()):await check(await service.from('client_asset_assignments').insert({organization_id:org,asset_id:asset.id,integration_id:integrationId,assignment_status:'assigned',sync_enabled:Boolean(provider),assigned_by:actor.id}).select('id').single());
+    await check(await service.from('platform_assets').update({asset_status:'assigned'}).eq('id',asset.id));
+    await check(await service.from('sync_configs').upsert({assignment_id:assignment.id,enabled:Boolean(provider),metric_family:provider==='meta_ads'?'paid':provider?'organic':'catalog'},{onConflict:'assignment_id'}));
+   }
+   if(syncQueue.length)(globalThis as typeof globalThis&{EdgeRuntime:{waitUntil(promise:Promise<unknown>):void}}).EdgeRuntime.waitUntil(Promise.allSettled(syncQueue.map(i=>sync(i))));
+   return json({message:`${requested.length} ativo(s) vinculado(s) ao cliente. ${syncQueue.length} sincronização(ões) iniciada(s).`});
+  }
+  if(body.action==='refresh_assets'){
+   const connectionId=String(body.connectionId||'');const {data:connection}=await service.from('platform_connections').select('id').eq('id',connectionId).eq('target_organization_id',org).single();if(!connection)throw new Error('Conexão não encontrada.');const token=await check(await service.rpc('platform_connection_token',{p_id:connectionId}));const found=await discoverMetaAssets(connectionId,token);return json({message:`Descoberta atualizada: ${found} ativo(s) encontrado(s).`,found});
+  }
+  if(body.action==='unassign_asset'){
+   const assignmentId=String(body.assignmentId||'');const {data:assignment}=await service.from('client_asset_assignments').select('id,asset_id,integration_id').eq('id',assignmentId).eq('organization_id',org).eq('assignment_status','assigned').single();if(!assignment)throw new Error('Vínculo não encontrado.');
+   await check(await service.from('client_asset_assignments').update({assignment_status:'removed',sync_enabled:false,removed_at:new Date().toISOString()}).eq('id',assignment.id));
+   await check(await service.from('platform_assets').update({asset_status:'active'}).eq('id',assignment.asset_id));
+   if(assignment.integration_id)await check(await service.from('integrations').update({status:'disconnected',is_enabled:false}).eq('id',assignment.integration_id).eq('organization_id',org));
+   return json({message:'Ativo removido do cliente. O histórico foi preservado e novas sincronizações foram interrompidas.'});
+  }
   if(body.action==='assign_accounts'){
    const provider=String(body.provider||'');const requested=Array.isArray(body.integrationIds)?body.integrationIds.map(String):[];const batchId=String(body.batchId||'');
    const selectableProviders=['meta_ads','facebook_organic','instagram_organic','tiktok_ads','tiktok_organic','windsor','stract','hubspot','rd_station','generic_crm'];
@@ -254,7 +323,7 @@ Deno.serve(async(req:Request)=>{
    if(!metaId||!metaSecret)return json({message:'Configure META_APP_ID e META_APP_SECRET no Supabase.'});
    await check(await service.from('integrations').delete().eq('organization_id',org).eq('provider',body.provider).eq('status','pending').like('external_account_id','pending:%'));
    const nonce=crypto.randomUUID();const pending=await check(await service.from('integrations').insert({organization_id:org,provider:body.provider,external_account_id:'pending:'+nonce,account_name:'Autorização em andamento',status:'pending',config:{nonce,user_id:actor.id}}).select('id').single());
-   const signed=[pending.id,Date.now()+600000,nonce].join('.');const state=signed+'.'+await hmac(signed);const scopes=permissionsFor(String(body.provider)).join(',');
+   const signed=[pending.id,Date.now()+600000,nonce].join('.');const state=signed+'.'+await hmac(signed);const scopes=metaOAuthPermissions().join(',');
    const login=new URL('https://www.facebook.com/'+graphVersion+'/dialog/oauth');login.search=new URLSearchParams({client_id:metaId,redirect_uri:callback,state,scope:scopes,response_type:'code'}).toString();return json({url:login.href});
   }
   if(body.action==='sync'){

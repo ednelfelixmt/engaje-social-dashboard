@@ -28,6 +28,9 @@ const intB = '30000000-0000-0000-0000-000000000002';
 const crmA = '30000000-0000-0000-0000-000000000003';
 const uploadA = '40000000-0000-0000-0000-000000000001';
 const creativeA = '50000000-0000-0000-0000-000000000001';
+const connectionA = '60000000-0000-0000-0000-000000000001';
+const assetA = '70000000-0000-0000-0000-000000000001';
+const assignmentA = '80000000-0000-0000-0000-000000000001';
 await db.exec(`
   insert into auth.users values ('${viewer}'),('${editor}'),('${admin}');
   insert into public.organizations(id,name,slug,is_agency) values
@@ -66,9 +69,17 @@ await db.exec(`
   insert into public.metrics_crm(organization_id,spreadsheet_upload_id,source,metric_date,currency,revenue,purchases,is_complete) values
     ('${orgA}','${uploadA}','spreadsheet','2026-09-01','BRL',700,7,true),
     ('${orgB}','40000000-0000-0000-0000-000000000002','spreadsheet','2026-09-01','BRL',10000,10,true);
+  insert into public.platform_connections(id,agency_organization_id,target_organization_id,provider,external_user_id,account_name,status) values
+    ('${connectionA}','${agency}','${orgA}','meta_ads','meta-user-a','Meta User A','connected');
+  insert into public.platform_assets(id,connection_id,provider,asset_type,external_id,name,asset_status) values
+    ('${assetA}','${connectionA}','meta_ads','ad_account','act_a','Conta A','assigned');
+  insert into public.client_asset_assignments(id,organization_id,asset_id,integration_id) values
+    ('${assignmentA}','${orgA}','${assetA}','${intA}');
+  insert into public.sync_configs(assignment_id,metric_family) values ('${assignmentA}','paid');
+  insert into public.sync_jobs(organization_id,connection_id,assignment_id,status) values ('${orgA}','${connectionA}','${assignmentA}','completed');
 `);
-check(await scalar("select count(*)::int from pg_tables where schemaname='public'") === 12, 'Exatamente 12 tabelas públicas');
-check(await scalar("select count(*)::int from pg_tables where schemaname='public' and rowsecurity") === 12, 'RLS habilitada nas 12 tabelas');
+check(await scalar("select count(*)::int from pg_tables where schemaname='public'") === 18, 'Exatamente 18 tabelas públicas');
+check(await scalar("select count(*)::int from pg_tables where schemaname='public' and rowsecurity") === 18, 'RLS habilitada nas 18 tabelas');
 let day = (await db.query<Record<string, unknown>>(`select * from public.daily_performance where organization_id='${orgA}' and metric_date='2026-09-01' and currency='BRL'`)).rows[0]!;
 check(Number(day.spend) === 200 && Number(day.revenue) === 600, 'JOIN não multiplica Ads nem soma CRM com planilha');
 check(Number(day.roas) === 3 && Number(day.roi) === 200 && Math.abs(Number(day.cpa) - 200/6) < 0.00001, 'ROAS, ROI e CPA reais');
@@ -86,7 +97,7 @@ await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub'
 check(await scalar('select count(*)::int from public.organizations') === 1, 'Viewer só vê sua organização');
 check(await scalar(`select count(*)::int from public.daily_performance where organization_id='${orgB}'`) === 0, 'View respeita RLS de outro cliente');
 check(await scalar('select public.is_super_admin()') === false, 'Viewer não é super admin');
-for (const table of ['profiles','organization_members','branding','dashboard_configs','ad_campaigns','metrics_ads','metrics_crm','metrics_organic','creatives','spreadsheet_uploads']) {
+for (const table of ['profiles','organization_members','branding','dashboard_configs','ad_campaigns','metrics_ads','metrics_crm','metrics_organic','creatives','spreadsheet_uploads','client_asset_assignments','sync_jobs']) {
   check(await scalar(`select count(*)::int from public.${table} where organization_id='${orgB}'`) === 0, `${table}: sem leitura cross-tenant`);
 }
 check(await scalar(`select count(id)::int from public.integrations where organization_id='${orgB}'`) === 0, 'integrations: sem leitura cross-tenant');
@@ -113,6 +124,7 @@ await db.exec(`select set_config('request.jwt.claim.sub','${admin}',false)`);
 check(await scalar('select public.is_super_admin()') === true, 'Super admin da agência reconhecido');
 check(await scalar('select count(*)::int from public.organizations') === 3, 'Super admin vê todos, inclusive pausados');
 await db.exec('reset role');
+await denied(`insert into public.client_asset_assignments(organization_id,asset_id) values ('${orgB}','${assetA}')`, '23505', 'Ativo não pode pertencer simultaneamente a dois clientes');
 await denied(`insert into public.creatives(organization_id,integration_id,platform,account_id,external_id,kind) values ('${orgB}','${intA}','meta_ads','b','invalid','image')`, '23503', 'FK composta bloqueia integração de outro tenant');
 await denied(`insert into public.metrics_ads(organization_id,integration_id,metric_date,platform,account_id,campaign_id,campaign_name,ad_id,currency,spend,attribution_window) values ('${orgA}','${intA}','2026-09-01','meta_ads','a','c1','Duplicada','ad1','BRL',100,'7d_click')`, '23505', 'Chave natural impede duplicação na ressincronização');
 await db.exec('set role anon');

@@ -99,6 +99,55 @@ export type Database = {
           { foreignKeyName: "branding_organization_id_fkey"; columns: ["organization_id"]; isOneToOne: true; referencedRelation: "organizations"; referencedColumns: ["id"]; }
         ];
       };
+      client_asset_assignments: {
+        Row: {
+          id: string;
+          organization_id: string;
+          asset_id: string;
+          integration_id: string | null;
+          assignment_status: string;
+          sync_enabled: boolean;
+          assigned_by: string | null;
+          assigned_at: string;
+          removed_at: string | null;
+          config: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          asset_id: string;
+          integration_id?: string | null;
+          assignment_status?: string;
+          sync_enabled?: boolean;
+          assigned_by?: string | null;
+          assigned_at?: string;
+          removed_at?: string | null;
+          config?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          asset_id?: string;
+          integration_id?: string | null;
+          assignment_status?: string;
+          sync_enabled?: boolean;
+          assigned_by?: string | null;
+          assigned_at?: string;
+          removed_at?: string | null;
+          config?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          { foreignKeyName: "client_asset_assignments_asset_id_fkey"; columns: ["asset_id"]; isOneToOne: false; referencedRelation: "platform_assets"; referencedColumns: ["id"]; },
+          { foreignKeyName: "client_asset_assignments_organization_id_fkey"; columns: ["organization_id"]; isOneToOne: false; referencedRelation: "organizations"; referencedColumns: ["id"]; },
+          { foreignKeyName: "client_asset_assignments_organization_id_integration_id_fkey"; columns: ["organization_id","integration_id"]; isOneToOne: false; referencedRelation: "integrations"; referencedColumns: ["organization_id","id"]; }
+        ];
+      };
       creatives: {
         Row: {
           id: string;
@@ -571,6 +620,161 @@ export type Database = {
 
         ];
       };
+      platform_assets: {
+        Row: {
+          id: string;
+          connection_id: string;
+          platform_organization_id: string | null;
+          provider: Database['public']['Enums']['integration_provider'];
+          asset_type: string;
+          external_id: string;
+          name: string;
+          asset_status: string;
+          parent_external_id: string | null;
+          metadata: Json;
+          recommended: boolean;
+          last_seen_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          connection_id: string;
+          platform_organization_id?: string | null;
+          provider: Database['public']['Enums']['integration_provider'];
+          asset_type: string;
+          external_id: string;
+          name: string;
+          asset_status?: string;
+          parent_external_id?: string | null;
+          metadata?: Json;
+          recommended?: boolean;
+          last_seen_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          connection_id?: string;
+          platform_organization_id?: string | null;
+          provider?: Database['public']['Enums']['integration_provider'];
+          asset_type?: string;
+          external_id?: string;
+          name?: string;
+          asset_status?: string;
+          parent_external_id?: string | null;
+          metadata?: Json;
+          recommended?: boolean;
+          last_seen_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          { foreignKeyName: "platform_assets_connection_id_fkey"; columns: ["connection_id"]; isOneToOne: false; referencedRelation: "platform_connections"; referencedColumns: ["id"]; },
+          { foreignKeyName: "platform_assets_platform_organization_id_fkey"; columns: ["platform_organization_id"]; isOneToOne: false; referencedRelation: "platform_organizations"; referencedColumns: ["id"]; }
+        ];
+      };
+      platform_connections: {
+        Row: {
+          id: string;
+          agency_organization_id: string;
+          target_organization_id: string | null;
+          provider: Database['public']['Enums']['integration_provider'];
+          external_user_id: string;
+          account_name: string;
+          status: Database['public']['Enums']['integration_status'];
+          credential_secret_id: string | null;
+          scopes: (string)[];
+          config: Json;
+          last_discovered_at: string | null;
+          last_error: string | null;
+          token_expires_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          agency_organization_id: string;
+          target_organization_id?: string | null;
+          provider: Database['public']['Enums']['integration_provider'];
+          external_user_id: string;
+          account_name: string;
+          status?: Database['public']['Enums']['integration_status'];
+          credential_secret_id?: string | null;
+          scopes?: (string)[];
+          config?: Json;
+          last_discovered_at?: string | null;
+          last_error?: string | null;
+          token_expires_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          agency_organization_id?: string;
+          target_organization_id?: string | null;
+          provider?: Database['public']['Enums']['integration_provider'];
+          external_user_id?: string;
+          account_name?: string;
+          status?: Database['public']['Enums']['integration_status'];
+          credential_secret_id?: string | null;
+          scopes?: (string)[];
+          config?: Json;
+          last_discovered_at?: string | null;
+          last_error?: string | null;
+          token_expires_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          { foreignKeyName: "platform_connections_agency_organization_id_fkey"; columns: ["agency_organization_id"]; isOneToOne: false; referencedRelation: "organizations"; referencedColumns: ["id"]; },
+          { foreignKeyName: "platform_connections_target_organization_id_fkey"; columns: ["target_organization_id"]; isOneToOne: false; referencedRelation: "organizations"; referencedColumns: ["id"]; }
+        ];
+      };
+      platform_organizations: {
+        Row: {
+          id: string;
+          connection_id: string;
+          provider: Database['public']['Enums']['integration_provider'];
+          external_id: string;
+          name: string;
+          organization_type: string;
+          status: string;
+          metadata: Json;
+          last_seen_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          connection_id: string;
+          provider: Database['public']['Enums']['integration_provider'];
+          external_id: string;
+          name: string;
+          organization_type: string;
+          status?: string;
+          metadata?: Json;
+          last_seen_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          connection_id?: string;
+          provider?: Database['public']['Enums']['integration_provider'];
+          external_id?: string;
+          name?: string;
+          organization_type?: string;
+          status?: string;
+          metadata?: Json;
+          last_seen_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          { foreignKeyName: "platform_organizations_connection_id_fkey"; columns: ["connection_id"]; isOneToOne: false; referencedRelation: "platform_connections"; referencedColumns: ["id"]; }
+        ];
+      };
       profiles: {
         Row: {
           organization_id: string;
@@ -651,6 +855,84 @@ export type Database = {
         };
         Relationships: [
           { foreignKeyName: "spreadsheet_uploads_organization_id_fkey"; columns: ["organization_id"]; isOneToOne: false; referencedRelation: "organizations"; referencedColumns: ["id"]; }
+        ];
+      };
+      sync_configs: {
+        Row: {
+          id: string;
+          assignment_id: string;
+          enabled: boolean;
+          metric_family: string | null;
+          config: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          assignment_id: string;
+          enabled?: boolean;
+          metric_family?: string | null;
+          config?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          assignment_id?: string;
+          enabled?: boolean;
+          metric_family?: string | null;
+          config?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          { foreignKeyName: "sync_configs_assignment_id_fkey"; columns: ["assignment_id"]; isOneToOne: true; referencedRelation: "client_asset_assignments"; referencedColumns: ["id"]; }
+        ];
+      };
+      sync_jobs: {
+        Row: {
+          id: string;
+          organization_id: string;
+          connection_id: string | null;
+          assignment_id: string | null;
+          status: string;
+          rows_processed: number;
+          error_summary: string | null;
+          started_at: string | null;
+          completed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          connection_id?: string | null;
+          assignment_id?: string | null;
+          status?: string;
+          rows_processed?: number;
+          error_summary?: string | null;
+          started_at?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          connection_id?: string | null;
+          assignment_id?: string | null;
+          status?: string;
+          rows_processed?: number;
+          error_summary?: string | null;
+          started_at?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          { foreignKeyName: "sync_jobs_assignment_id_fkey"; columns: ["assignment_id"]; isOneToOne: false; referencedRelation: "client_asset_assignments"; referencedColumns: ["id"]; },
+          { foreignKeyName: "sync_jobs_connection_id_fkey"; columns: ["connection_id"]; isOneToOne: false; referencedRelation: "platform_connections"; referencedColumns: ["id"]; },
+          { foreignKeyName: "sync_jobs_organization_id_fkey"; columns: ["organization_id"]; isOneToOne: false; referencedRelation: "organizations"; referencedColumns: ["id"]; }
         ];
       };
     };
