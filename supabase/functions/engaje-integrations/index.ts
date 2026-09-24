@@ -181,7 +181,11 @@ Deno.serve(async(req:Request)=>{
     await check(await service.from('platform_assets').update({asset_status:'assigned'}).eq('id',asset.id));
     await check(await service.from('sync_configs').upsert({assignment_id:assignment.id,enabled:Boolean(provider),metric_family:provider==='meta_ads'?'paid':provider?'organic':'catalog'},{onConflict:'assignment_id'}));
    }
-   if(syncQueue.length)(globalThis as typeof globalThis&{EdgeRuntime:{waitUntil(promise:Promise<unknown>):void}}).EdgeRuntime.waitUntil(Promise.allSettled(syncQueue.map(i=>sync(i))));
+   if(syncQueue.length){
+    const queued=await Promise.all(syncQueue.map(async integration=>{const {data:assignment}=await service.from('client_asset_assignments').select('id').eq('organization_id',org).eq('integration_id',integration.id).eq('assignment_status','assigned').single();const job=await check(await service.from('sync_jobs').insert({organization_id:org,connection_id:connectionId,assignment_id:assignment?.id||null,status:'queued'}).select('id').single());return {integration,jobId:job.id};}));
+    const background=Promise.allSettled(queued.map(async({integration,jobId})=>{await service.from('sync_jobs').update({status:'running',started_at:new Date().toISOString()}).eq('id',jobId);try{const result=await sync(integration);await service.from('sync_jobs').update({status:'completed',rows_processed:Number(result.rows||0),completed_at:new Date().toISOString()}).eq('id',jobId);}catch(error){await service.from('sync_jobs').update({status:'failed',error_summary:(error instanceof Error?error.message:'Falha de sincronização').slice(0,300),completed_at:new Date().toISOString()}).eq('id',jobId);throw error;}}));
+    (globalThis as typeof globalThis&{EdgeRuntime:{waitUntil(promise:Promise<unknown>):void}}).EdgeRuntime.waitUntil(background);
+   }
    return json({message:`${requested.length} ativo(s) vinculado(s) ao cliente. ${syncQueue.length} sincronização(ões) iniciada(s).`});
   }
   if(body.action==='refresh_assets'){
