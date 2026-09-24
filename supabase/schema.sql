@@ -186,6 +186,10 @@ create table public.client_asset_assignments (
 );
 create unique index one_active_client_per_asset on public.client_asset_assignments(asset_id) where assignment_status='assigned';
 create index client_asset_assignments_org on public.client_asset_assignments(organization_id,assignment_status);
+create index client_asset_assignments_assigned_by on public.client_asset_assignments(assigned_by);
+create index client_asset_assignments_integration on public.client_asset_assignments(organization_id,integration_id);
+create index platform_connections_target_org on public.platform_connections(target_organization_id);
+create index platform_assets_platform_org on public.platform_assets(platform_organization_id);
 
 create table public.sync_configs (
   id uuid primary key default gen_random_uuid(),
@@ -210,6 +214,9 @@ create table public.sync_jobs (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+create index sync_jobs_org on public.sync_jobs(organization_id);
+create index sync_jobs_connection on public.sync_jobs(connection_id);
+create index sync_jobs_assignment on public.sync_jobs(assignment_id);
 
 create table public.spreadsheet_uploads (
   id uuid primary key default gen_random_uuid(),
