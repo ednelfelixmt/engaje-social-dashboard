@@ -77,9 +77,10 @@ await db.exec(`
     ('${assignmentA}','${orgA}','${assetA}','${intA}');
   insert into public.sync_configs(assignment_id,metric_family) values ('${assignmentA}','paid');
   insert into public.sync_jobs(organization_id,connection_id,assignment_id,status) values ('${orgA}','${connectionA}','${assignmentA}','completed');
+  insert into public.integration_alerts(organization_id,alert_key,code,severity,title) values ('${orgA}','test-alert','stale_sync','warning','Conta sem atualização');
 `);
-check(await scalar("select count(*)::int from pg_tables where schemaname='public'") === 18, 'Exatamente 18 tabelas públicas');
-check(await scalar("select count(*)::int from pg_tables where schemaname='public' and rowsecurity") === 18, 'RLS habilitada nas 18 tabelas');
+check(await scalar("select count(*)::int from pg_tables where schemaname='public'") === 19, 'Exatamente 19 tabelas públicas');
+check(await scalar("select count(*)::int from pg_tables where schemaname='public' and rowsecurity") === 19, 'RLS habilitada nas 19 tabelas');
 let day = (await db.query<Record<string, unknown>>(`select * from public.daily_performance where organization_id='${orgA}' and metric_date='2026-09-01' and currency='BRL'`)).rows[0]!;
 check(Number(day.spend) === 200 && Number(day.revenue) === 600, 'JOIN não multiplica Ads nem soma CRM com planilha');
 check(Number(day.roas) === 3 && Number(day.roi) === 200 && Math.abs(Number(day.cpa) - 200/6) < 0.00001, 'ROAS, ROI e CPA reais');
@@ -97,7 +98,7 @@ await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub'
 check(await scalar('select count(*)::int from public.organizations') === 1, 'Viewer só vê sua organização');
 check(await scalar(`select count(*)::int from public.daily_performance where organization_id='${orgB}'`) === 0, 'View respeita RLS de outro cliente');
 check(await scalar('select public.is_super_admin()') === false, 'Viewer não é super admin');
-for (const table of ['profiles','organization_members','branding','dashboard_configs','ad_campaigns','metrics_ads','metrics_crm','metrics_organic','creatives','spreadsheet_uploads','client_asset_assignments','sync_jobs']) {
+for (const table of ['profiles','organization_members','branding','dashboard_configs','ad_campaigns','metrics_ads','metrics_crm','metrics_organic','creatives','spreadsheet_uploads','client_asset_assignments','sync_jobs','integration_alerts']) {
   check(await scalar(`select count(*)::int from public.${table} where organization_id='${orgB}'`) === 0, `${table}: sem leitura cross-tenant`);
 }
 check(await scalar(`select count(id)::int from public.integrations where organization_id='${orgB}'`) === 0, 'integrations: sem leitura cross-tenant');

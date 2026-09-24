@@ -273,6 +273,68 @@ export type Database = {
           { foreignKeyName: "dashboard_configs_organization_id_fkey"; columns: ["organization_id"]; isOneToOne: true; referencedRelation: "organizations"; referencedColumns: ["id"]; }
         ];
       };
+      integration_alerts: {
+        Row: {
+          id: string;
+          organization_id: string;
+          integration_id: string | null;
+          connection_id: string | null;
+          sync_job_id: string | null;
+          alert_key: string;
+          code: string;
+          severity: string;
+          status: string;
+          title: string;
+          detail: string | null;
+          detected_at: string;
+          last_seen_at: string;
+          resolved_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          integration_id?: string | null;
+          connection_id?: string | null;
+          sync_job_id?: string | null;
+          alert_key: string;
+          code: string;
+          severity: string;
+          status?: string;
+          title: string;
+          detail?: string | null;
+          detected_at?: string;
+          last_seen_at?: string;
+          resolved_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          integration_id?: string | null;
+          connection_id?: string | null;
+          sync_job_id?: string | null;
+          alert_key?: string;
+          code?: string;
+          severity?: string;
+          status?: string;
+          title?: string;
+          detail?: string | null;
+          detected_at?: string;
+          last_seen_at?: string;
+          resolved_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          { foreignKeyName: "integration_alerts_connection_id_fkey"; columns: ["connection_id"]; isOneToOne: false; referencedRelation: "platform_connections"; referencedColumns: ["id"]; },
+          { foreignKeyName: "integration_alerts_integration_id_fkey"; columns: ["integration_id"]; isOneToOne: false; referencedRelation: "integrations"; referencedColumns: ["id"]; },
+          { foreignKeyName: "integration_alerts_organization_id_fkey"; columns: ["organization_id"]; isOneToOne: false; referencedRelation: "organizations"; referencedColumns: ["id"]; },
+          { foreignKeyName: "integration_alerts_sync_job_id_fkey"; columns: ["sync_job_id"]; isOneToOne: false; referencedRelation: "sync_jobs"; referencedColumns: ["id"]; }
+        ];
+      };
       integrations: {
         Row: {
           id: string;
