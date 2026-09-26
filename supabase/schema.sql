@@ -75,7 +75,7 @@ create table public.branding (
 create table public.dashboard_configs (
   organization_id uuid primary key references public.organizations(id) on delete cascade,
   enabled_pages text[] not null default array['overview','paid','funnel','organic','creatives','external'],
-  enabled_metrics text[] not null default array['spend','revenue','roas','roi','cpa','purchases'],
+  enabled_metrics text[] not null default array['spend','impressions','clicks','ctr','leads','registration_leads','message_leads','cpl','purchases','cpa','revenue','roas'],
   widget_order text[] not null default array['kpis','funnel','campaigns','timeline'],
   only_platforms_with_data boolean not null default true,
   comparison_enabled boolean not null default true,
@@ -88,7 +88,7 @@ create table public.dashboard_configs (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   check (enabled_pages <@ array['overview','paid','meta_ads','google_ads','tiktok_ads','funnel','organic','facebook_organic','instagram_organic','tiktok_organic','creatives','external']),
-  check (enabled_metrics <@ array['spend','revenue','roas','roi','cpa','purchases','impressions','clicks','ctr','page_views','leads','checkouts','reach','engagement','followers']),
+  check (cardinality(enabled_metrics) > 0 and enabled_metrics <@ array['spend','revenue','roas','roi','purchases','cpa','conversion_rate','checkouts','cost_per_checkout','impressions','cpm','clicks','ctr','cpc','page_views','cost_per_page_view','leads','registration_leads','message_leads','cpl','cost_per_registration','cost_per_message','reach','interactions','engagement_rate','likes','comments','shares','saves','video_views']),
   check (widget_order <@ array['kpis','funnel','campaigns','timeline','creatives','platforms'])
 );
 

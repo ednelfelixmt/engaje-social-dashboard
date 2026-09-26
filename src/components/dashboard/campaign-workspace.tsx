@@ -1,7 +1,6 @@
 import {
   BadgeDollarSign,
   Eye,
-  Gauge,
   MousePointerClick,
   ShoppingCart,
   Target,
@@ -13,6 +12,7 @@ import {Ranking} from '@/components/dashboard/ranking';
 import {Funnel} from '@/components/dashboard/funnel';
 import {LeadBreakdown} from '@/components/dashboard/lead-breakdown';
 import {money, number} from '@/lib/utils';
+import {dashboardMetricLabels, paidMetricKeys, type DashboardMetricKey} from '@/lib/metrics/catalog';
 import type {CampaignPerformance, Platform} from '@/types/domain';
 
 type TimelineRow = {date: string; spend: number | null; revenue: number | null};
@@ -83,7 +83,30 @@ function metrics(rows: CampaignPerformance[]) {
     costPerMessage: costFor(rows, 'messageLeads'),
     cpa: purchases && spend != null ? spend / purchases : null,
     roas: spend && revenue != null ? revenue / spend : null,
+    roi: spend && revenue != null ? (revenue - spend) / spend * 100 : null,
+    conversion_rate: clicks && purchases != null ? purchases / clicks * 100 : null,
+    cost_per_page_view: pageViews && spend != null ? spend / pageViews : null,
+    cost_per_checkout: checkouts && spend != null ? spend / checkouts : null,
+    registration_leads: registrationLeads,
+    message_leads: messageLeads,
+    page_views: pageViews,
+    cost_per_registration: costFor(rows, 'registrationLeads'),
+    cost_per_message: costFor(rows, 'messageLeads'),
   };
+}
+
+const paidCardDefinitions = paidMetricKeys.map((key) => ({
+  key: key as DashboardMetricKey,
+  label: dashboardMetricLabels[key as DashboardMetricKey],
+  inverse: ['cpa','cpm','cpc','cpl','cost_per_registration','cost_per_message','cost_per_page_view','cost_per_checkout'].includes(key),
+  icon: ['spend','revenue','cpa','cpm','cpc','cpl','cost_per_registration','cost_per_message','cost_per_page_view','cost_per_checkout'].includes(key) ? BadgeDollarSign : ['purchases','checkouts'].includes(key) ? ShoppingCart : ['impressions','page_views'].includes(key) ? Eye : ['clicks','ctr','conversion_rate'].includes(key) ? MousePointerClick : TrendingUp,
+}));
+
+function formatPaidMetric(key: string, value: number | null, currency: string) {
+  if (['spend','revenue','cpa','cpm','cpc','cpl','cost_per_registration','cost_per_message','cost_per_page_view','cost_per_checkout'].includes(key)) return money(value, currency);
+  if (['ctr','roi','conversion_rate'].includes(key)) return value == null ? '—' : `${number(value, 2)}%`;
+  if (key === 'roas') return value == null ? '—' : `${number(value, 2)}x`;
+  return number(value);
 }
 
 function delta(current: number | null, previous: number | null) {
@@ -144,8 +167,9 @@ function TrafficFunnel({rows, currency}: {rows: CampaignPerformance[]; currency:
   </Card>;
 }
 
-function PlatformBreakdown({rows, currency}: {rows: CampaignPerformance[]; currency: string}) {
+function PlatformBreakdown({rows, currency, enabledMetrics}: {rows: CampaignPerformance[]; currency: string; enabledMetrics: string[]}) {
   const platforms = [...new Set(rows.map((row) => row.platform))];
+  const visibleMetrics = paidCardDefinitions.filter((item) => enabledMetrics.includes(item.key)).slice(0, 6);
   if (!platforms.length) return null;
 
   return <div className="grid gap-4 lg:grid-cols-3">
@@ -153,12 +177,7 @@ function PlatformBreakdown({rows, currency}: {rows: CampaignPerformance[]; curre
       const summary = metrics(rows.filter((row) => row.platform === platform));
       return <Card className="!p-5" key={platform}>
         <div className="flex items-center justify-between"><strong>{platformLabels[platform] || platform}</strong><span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary">Com dados</span></div>
-        <div className="mt-5 grid grid-cols-2 gap-4 text-sm">
-          <div><p className="text-xs text-zinc-500">Investimento</p><strong className="mt-1 block">{money(summary.spend, currency)}</strong></div>
-          <div><p className="text-xs text-zinc-500">Receita</p><strong className="mt-1 block">{money(summary.revenue, currency)}</strong></div>
-          <div><p className="text-xs text-zinc-500">Leads</p><strong className="mt-1 block">{number(summary.leads)}</strong></div>
-          <div><p className="text-xs text-zinc-500">ROAS</p><strong className="mt-1 block">{summary.roas == null ? '—' : `${number(summary.roas, 2)}x`}</strong></div>
-        </div>
+        <div className="mt-5 grid grid-cols-2 gap-4 text-sm">{visibleMetrics.map((metric)=><div key={metric.key}><p className="text-xs text-zinc-500">{metric.label}</p><strong className="mt-1 block">{formatPaidMetric(metric.key, summary[metric.key as keyof typeof summary] as number|null, currency)}</strong></div>)}</div>
       </Card>;
     })}
   </div>;
@@ -227,32 +246,33 @@ export function CampaignWorkspace({
   timeline,
   currency,
   showPlatforms = false,
+  enabledMetrics,
 }: {
   rows: CampaignPerformance[];
   previousRows: CampaignPerformance[];
   timeline: TimelineRow[];
   currency: string;
   showPlatforms?: boolean;
+  enabledMetrics: string[];
 }) {
   const measuredRows = rows.filter(hasMeasuredPerformance);
   const measuredPreviousRows = previousRows.filter(hasMeasuredPerformance);
   const current = metrics(measuredRows);
   const previous = metrics(measuredPreviousRows);
-  const kpis = [
-    {label: 'Investimento', value: current.spend, previous: previous.spend, format: (value: number | null) => money(value, currency), icon: BadgeDollarSign},
-    {label: 'Impressões', value: current.impressions, previous: previous.impressions, format: (value: number | null) => number(value), icon: Eye},
-    {label: 'Cliques', value: current.clicks, previous: previous.clicks, format: (value: number | null) => number(value), icon: MousePointerClick},
-    {label: 'CTR', value: current.ctr, previous: previous.ctr, format: (value: number | null) => value == null ? '—' : `${number(value, 2)}%`, icon: TrendingUp},
-    {label: 'CPC', value: current.cpc, previous: previous.cpc, format: (value: number | null) => money(value, currency), inverse: true, icon: Gauge},
-    {label: 'Compras', value: current.purchases, previous: previous.purchases, format: (value: number | null) => number(value), icon: ShoppingCart},
-  ];
+  const kpis = paidCardDefinitions.filter((item)=>enabledMetrics.includes(item.key)).map((item)=>({
+    ...item,
+    value: current[item.key as keyof typeof current] as number|null,
+    previous: previous[item.key as keyof typeof previous] as number|null,
+    format: (value:number|null)=>formatPaidMetric(item.key,value,currency),
+  }));
+  const showLeadBreakdown=['leads','registration_leads','message_leads','cpl','cost_per_registration','cost_per_message'].some((key)=>enabledMetrics.includes(key));
 
   return <div className="space-y-5">
-    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {kpis.map((kpi) => <KpiCard key={kpi.label} {...kpi} />)}
+    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6">
+      {kpis.map(({key,...kpi}) => <KpiCard key={key} {...kpi} />)}
     </section>
-    <LeadBreakdown totalLeads={current.leads} registrationLeads={current.registrationLeads} messageLeads={current.messageLeads} totalCost={current.cpl} registrationCost={current.costPerRegistration} messageCost={current.costPerMessage} currency={currency} />
-    {showPlatforms ? <PlatformBreakdown rows={measuredRows} currency={currency} /> : null}
+    {showLeadBreakdown?<LeadBreakdown totalLeads={current.leads} registrationLeads={current.registrationLeads} messageLeads={current.messageLeads} totalCost={current.cpl} registrationCost={current.costPerRegistration} messageCost={current.costPerMessage} currency={currency} />:null}
+    {showPlatforms ? <PlatformBreakdown rows={measuredRows} currency={currency} enabledMetrics={enabledMetrics} /> : null}
     <section className="grid gap-5 2xl:grid-cols-[0.9fr_1.4fr]">
       <TrafficFunnel rows={measuredRows} currency={currency} />
       <Card>
