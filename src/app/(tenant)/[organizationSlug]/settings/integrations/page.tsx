@@ -62,7 +62,8 @@ export default async function Page({params, searchParams}: {params: {organizatio
   const integrations = data ?? [];
   const configOf = (item: typeof integrations[number]) => item.config && typeof item.config === 'object' && !Array.isArray(item.config) ? item.config as Record<string, unknown> : {};
   const candidates = integrations.filter((item) => configOf(item).selection_pending === true);
-  const candidateGroups = Array.from(new Set(candidates.map((item) => `${item.provider}:${String(configOf(item).batch_id ?? 'unbatched')}`))).map((key) => {
+  const legacyMetaProviders = new Set(['meta_ads','facebook_organic','instagram_organic']);
+  const candidateGroups = Array.from(new Set(candidates.filter((item)=>!legacyMetaProviders.has(item.provider)).map((item) => `${item.provider}:${String(configOf(item).batch_id ?? 'unbatched')}`))).map((key) => {
     const [provider, batchValue] = key.split(':');
     return {
       provider,
@@ -83,6 +84,7 @@ export default async function Page({params, searchParams}: {params: {organizatio
       <header><p className="eyebrow mb-2">{org.name}</p><h1 className="text-3xl font-semibold">Central de integradores</h1><p className="muted mt-2 max-w-3xl">Conectores organizados por estágio real. Toda conta pertence exclusivamente a este workspace e os segredos permanecem no backend do Supabase.</p></header>
       {searchParams.select_assets && !availableDiscoveredRows.length ? <Card className="border-amber-500/40 bg-amber-500/5 text-amber-200">A descoberta foi concluída, mas não há novos ativos disponíveis. Os ativos já vinculados permanecem na área deste cliente.</Card> : null}
       {searchParams.select_accounts && !candidates.length ? <Card className="border-amber-500/40 bg-amber-500/5 text-amber-200">Nenhuma conta disponível foi encontrada.</Card> : null}
+      {candidates.some((item)=>legacyMetaProviders.has(item.provider)) ? <Card className="border-blue-500/30 bg-blue-500/[.05] text-blue-100"><strong>Seleção Meta atualizada</strong><p className="muted mt-2 text-sm">O seletor antigo mostrava somente contas de anúncios. Use “Conectar e selecionar” no card da Meta para escolher, no mesmo fluxo, contas, Páginas do Facebook, Instagram, pixels, formulários, catálogos e conversões.</p></Card> : null}
       {searchParams.error ? <Card className="border-red-500/40 bg-red-500/5 text-red-300">A conexão não foi concluída. Verifique permissões e credenciais.</Card> : null}
 
       <IntegrationDiagnostics organizationId={org.id} />

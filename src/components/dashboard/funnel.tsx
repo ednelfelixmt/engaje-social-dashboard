@@ -32,7 +32,7 @@ export function Funnel({values, steps: suppliedSteps, currency = 'BRL'}: {
   const totalConversion = conversion(lastValue, firstValue);
   // The geometry represents the journey order. Actual performance is expressed
   // by the values and conversion labels, avoiding a misleading area comparison.
-  const minimumWidth = 40;
+  const minimumWidth = steps.length > 6 ? 54 : 48;
   const widthStep = steps.length > 1 ? (100 - minimumWidth) / (steps.length - 1) : 0;
   const widths = steps.map((_, index) => 100 - widthStep * index);
 
@@ -44,7 +44,7 @@ export function Funnel({values, steps: suppliedSteps, currency = 'BRL'}: {
     </div>
 
     <div className="grid xl:grid-cols-[minmax(420px,1.15fr)_minmax(340px,.85fr)]">
-      <div className="relative flex min-h-[590px] flex-col justify-center overflow-hidden border-b border-white/[.08] px-4 py-10 xl:border-b-0 xl:border-r xl:px-10">
+      <div className="relative flex flex-col justify-center overflow-hidden border-b border-white/[.08] px-4 py-10 xl:border-b-0 xl:border-r xl:px-10" style={{minHeight:`${Math.max(430,steps.length*82+100)}px`}}>
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(77,212,255,.11),transparent_48%)]" />
         <div className="pointer-events-none absolute left-1/2 top-10 h-[calc(100%-5rem)] w-px bg-gradient-to-b from-cyan-400/0 via-white/10 to-emerald-400/0" />
         <div className="relative pb-8">
@@ -57,7 +57,7 @@ export function Funnel({values, steps: suppliedSteps, currency = 'BRL'}: {
             return <div className="relative mx-auto" key={`${step.label}-${index}`} style={{width: `${currentWidth}%`}}>
               {index > 0 ? <div className="absolute -top-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-[#0a0e16] px-2.5 py-1 text-[9px] font-bold text-zinc-300 shadow-xl"><ArrowDown size={10} className="text-primary" />{rate == null ? 'Sem taxa' : `${number(rate, 1)}%`}</div> : null}
               <div className="funnel-stage" style={{'--stage-color': color, '--funnel-inset': `${bottomInset}%`} as CSSProperties}>
-                <div className="relative z-10 flex w-full items-center justify-between gap-3 drop-shadow-md">
+                <div className="relative z-10 mx-auto flex w-[76%] items-center justify-between gap-3 drop-shadow-md sm:w-[72%]">
                   <span className="truncate text-[10px] font-extrabold uppercase tracking-[.16em] sm:text-xs">{step.label}</span>
                   <strong className="data-value shrink-0 text-lg sm:text-2xl">{number(step.value)}</strong>
                 </div>

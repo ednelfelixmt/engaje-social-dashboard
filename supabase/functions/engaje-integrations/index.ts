@@ -50,10 +50,11 @@ async function discoverMetaAssets(connectionId:string,token:string){
  }
  const adAccounts=await safePages('me/adaccounts',token,{fields:'id,name,currency,timezone_name,account_status,business{id,name}'});
  for(const account of adAccounts)assets.push({connection_id:connectionId,platform_organization_id:account.business?.id?businessIds.get(String(account.business.id))||null:null,provider:'meta_ads',asset_type:'ad_account',external_id:String(account.id),name:String(account.name||account.id),asset_status:'active',metadata:{currency:account.currency||null,timezone:account.timezone_name||null,account_status:account.account_status??null,business_id:account.business?.id||null},recommended:true,last_seen_at:now});
- const pageRows=await safePages('me/accounts',token,{fields:'id,name,category,instagram_business_account{id,username,name}'});
+ const pageRows=await safePages('me/accounts',token,{fields:'id,name,category,instagram_business_account{id,username,name},connected_instagram_account{id,username,name}'});
  for(const page of pageRows){
   assets.push({connection_id:connectionId,provider:'facebook_organic',asset_type:'facebook_page',external_id:String(page.id),name:String(page.name||page.id),asset_status:'active',metadata:{category:page.category||null},recommended:true,last_seen_at:now});
-  if(page.instagram_business_account){const ig=page.instagram_business_account;assets.push({connection_id:connectionId,provider:'instagram_organic',asset_type:'instagram_account',external_id:String(ig.id),name:String(ig.username||ig.name||ig.id),asset_status:'active',parent_external_id:String(page.id),metadata:{page_id:String(page.id),username:ig.username||null},recommended:true,last_seen_at:now});}
+  const instagramAccounts=[page.instagram_business_account,page.connected_instagram_account].filter(Boolean).filter((item:any,index:number,list:any[])=>list.findIndex(candidate=>String(candidate.id)===String(item.id))===index);
+  for(const ig of instagramAccounts)assets.push({connection_id:connectionId,provider:'instagram_organic',asset_type:'instagram_account',external_id:String(ig.id),name:String(ig.username||ig.name||ig.id),asset_status:'active',parent_external_id:String(page.id),metadata:{page_id:String(page.id),username:ig.username||null},recommended:true,last_seen_at:now});
   for(const form of await safePages(String(page.id)+'/leadgen_forms',token,{fields:'id,name,status'}))assets.push({connection_id:connectionId,provider:'facebook_organic',asset_type:'lead_form',external_id:String(form.id),name:String(form.name||form.id),asset_status:'active',parent_external_id:String(page.id),metadata:{page_id:String(page.id),status:form.status||null},recommended:true,last_seen_at:now});
  }
  for(const business of businesses){
@@ -398,7 +399,8 @@ Deno.serve(async(req:Request)=>{
   if(body.action==='connect'){
    if(!['meta_ads','facebook_organic','instagram_organic'].includes(body.provider))return json({message:body.provider==='tiktok_ads'||body.provider==='tiktok_organic'?'TikTok: o conector está preparado, mas requer aplicativo aprovado e as credenciais TIKTOK_APP_ID e TIKTOK_APP_SECRET.':'Use o formulário do extrator para cadastrar esta fonte.'});
    if(!metaId||!metaSecret)return json({message:'Configure META_APP_ID e META_APP_SECRET no Supabase.'});
-   await check(await service.from('integrations').delete().eq('organization_id',org).eq('provider',body.provider).eq('status','pending').like('external_account_id','pending:%'));
+   await check(await service.from('integrations').delete().eq('organization_id',org).in('provider',['meta_ads','facebook_organic','instagram_organic']).eq('config->>selection_pending','true'));
+   await check(await service.from('integrations').delete().eq('organization_id',org).in('provider',['meta_ads','facebook_organic','instagram_organic']).eq('status','pending').like('external_account_id','pending:%'));
    const nonce=crypto.randomUUID();const pending=await check(await service.from('integrations').insert({organization_id:org,provider:body.provider,external_account_id:'pending:'+nonce,account_name:'Autorização em andamento',status:'pending',config:{nonce,user_id:actor.id}}).select('id').single());
    const signed=[pending.id,Date.now()+600000,nonce].join('.');const state=signed+'.'+await hmac(signed);const scopes=metaOAuthPermissions().join(',');
    const login=new URL('https://www.facebook.com/'+graphVersion+'/dialog/oauth');login.search=new URLSearchParams({client_id:metaId,redirect_uri:callback,state,scope:scopes,response_type:'code'}).toString();return json({url:login.href});

@@ -6,6 +6,7 @@ import {tenant} from '@/lib/auth/session';
 import {filters, dashboardData, sum} from '@/lib/metrics/query';
 import {campaigns} from '@/lib/metrics/campaigns';
 import {preparePerformanceRankings} from '@/lib/metrics/rankings';
+import {funnelMetricDefinitions, parseFunnelSteps, type FunnelMetricKey} from '@/lib/metrics/funnel-config';
 import {platformDashboardByRoute, platformDashboards, type DashboardPlatform} from '@/lib/metrics/platforms';
 import {Filters} from '@/components/dashboard/filters';
 import {OrganicKpis} from '@/components/dashboard/organic-kpis';
@@ -16,7 +17,6 @@ import {DataFreshness} from '@/components/dashboard/data-freshness';
 import {CreativeSummary} from '@/components/dashboard/creative-summary';
 import {Card} from '@/components/ui/card';
 import {UploadForm} from '@/components/upload-form';
-import {money, number} from '@/lib/utils';
 import type {CampaignPerformance} from '@/types/domain';
 import type {Row} from '@/types/database.types';
 
@@ -36,14 +36,13 @@ function timelineRows(rows: Row<'metrics_ads'>[]) {
   return [...grouped.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
-function leadSummary(rows: CampaignPerformance[]) {
-  const aggregate = (key: 'leads' | 'registrationLeads' | 'messageLeads') => {
-    const available = rows.filter((row) => row[key] != null);
-    const count = available.length ? available.reduce((value, row) => value + Number(row[key]), 0) : null;
-    const spend = available.reduce((value, row) => value + row.spend, 0);
-    return {count, cost: count ? spend / count : null};
-  };
-  return {total: aggregate('leads'), registrations: aggregate('registrationLeads'), messages: aggregate('messageLeads')};
+function configuredFunnel(rows:CampaignPerformance[],rawSteps:unknown){
+  const property:Record<FunnelMetricKey,keyof CampaignPerformance>={impressions:'impressions',clicks:'clicks',page_views:'pageViews',leads:'leads',registration_leads:'registrationLeads',message_leads:'messageLeads',checkouts:'checkouts',purchases:'purchases'};
+  return parseFunnelSteps(rawSteps).map((step)=>{
+    const key=property[step.metric];const available=rows.filter((row)=>row[key]!=null);const value=available.length?available.reduce((total,row)=>total+Number(row[key]),0):null;const spend=available.reduce((total,row)=>total+row.spend,0);const definition=funnelMetricDefinitions.find((item)=>item.key===step.metric)!;
+    const cost=value?spend/value*(step.metric==='impressions'?1000:1):null;
+    return {label:step.label,value,costLabel:definition.costLabel,cost};
+  });
 }
 
 export default async function Page({params, searchParams}: {params: {organizationSlug: string; section: string}; searchParams: Record<string, string | undefined>}) {
@@ -90,17 +89,8 @@ export default async function Page({params, searchParams}: {params: {organizatio
   const catalog = chosen ? data.adCampaigns.filter((row) => row.platform === chosen) : data.adCampaigns;
   const currentCampaigns = campaigns(ads, data.crm, config.preferred_revenue_source, catalog);
   const previousCampaigns = campaigns(previousAds, data.crmComparison, config.preferred_revenue_source, catalog);
-  const funnelSpend = sum(data.days, 'spend');
-  const leads = leadSummary(currentCampaigns);
-  const funnelSteps = [
-    {label:'Impressões',value:sum(data.days,'impressions'),costLabel:'CPM',cost:sum(data.days,'impressions') ? Number(funnelSpend) / Number(sum(data.days,'impressions')) * 1000 : null},
-    {label:'Cliques',value:sum(data.days,'clicks'),costLabel:'CPC',cost:sum(data.days,'clicks') ? Number(funnelSpend) / Number(sum(data.days,'clicks')) : null},
-    {label:'Visitas',value:sum(data.days,'page_views'),costLabel:'CPV',cost:sum(data.days,'page_views') ? Number(funnelSpend) / Number(sum(data.days,'page_views')) : null},
-    {label:'Leads',value:leads.total.count,costLabel:'CPL',cost:leads.total.cost,detail:leads.registrations.count == null && leads.messages.count == null ? null : `Cadastros: ${number(leads.registrations.count)} (${money(leads.registrations.cost, f.currency)}) · Mensagens: ${number(leads.messages.count)} (${money(leads.messages.cost, f.currency)})`},
-    {label:'Checkouts',value:sum(data.days,'checkouts'),costLabel:'CPCO',cost:sum(data.days,'checkouts') ? Number(funnelSpend) / Number(sum(data.days,'checkouts')) : null},
-    {label:'Compras',value:sum(data.days,'purchases'),costLabel:'CPA',cost:sum(data.days,'purchases') ? Number(funnelSpend) / Number(sum(data.days,'purchases')) : null},
-  ];
   const campaignsWithMovement = currentCampaigns.filter((row) => row.spend > 0 || Number(row.impressions ?? 0) > 0 || Number(row.clicks ?? 0) > 0 || Number(row.leads ?? 0) > 0 || Number(row.purchases ?? 0) > 0);
+  const funnelSteps=configuredFunnel(campaignsWithMovement,config.funnel_steps);
   const filteredCreatives = data.creatives.filter((creative) => !chosen || creative.platform === chosen);
   const performanceRankings = preparePerformanceRankings(campaignsWithMovement, ads, breakdowns, filteredCreatives);
   const queryWithoutPlatform = Object.fromEntries(Object.entries(f));
@@ -118,9 +108,9 @@ export default async function Page({params, searchParams}: {params: {organizatio
       <Card><div><p className="eyebrow">Jornada completa</p><h2 className="mt-2 text-lg font-semibold">Funil geral de campanhas</h2><p className="muted mt-2 text-sm">Inclui leads de formulários e conversas iniciadas por mensagens.</p></div><Funnel currency={f.currency} steps={funnelSteps} /></Card>
     </div> : null}
 
-    {sectionGroup === 'paid' ? <CampaignWorkspace rows={currentCampaigns} previousRows={f.compare === 'none' ? [] : previousCampaigns} timeline={timelineRows(ads)} currency={f.currency} showPlatforms={!platformPage && !chosen} enabledMetrics={config.enabled_metrics} rankings={performanceRankings} /> : null}
+    {sectionGroup === 'paid' ? <CampaignWorkspace rows={currentCampaigns} previousRows={f.compare === 'none' ? [] : previousCampaigns} timeline={timelineRows(ads)} currency={f.currency} showPlatforms={!platformPage && !chosen} enabledMetrics={config.enabled_metrics} rankings={performanceRankings} funnelSteps={funnelSteps} /> : null}
 
-    {params.section === 'funnel' ? <Card><h2 className="font-semibold">Da descoberta à compra</h2><p className="muted mt-2 text-sm">Taxas entre eventos; sem identificação de usuários, não representam uma coorte individual.</p><Funnel currency={f.currency} steps={funnelSteps} /></Card> : null}
+    {params.section === 'funnel' ? <Card><h2 className="font-semibold">Funil do modelo de negócio</h2><p className="muted mt-2 text-sm">Etapas configuradas para este cliente. As taxas são relações entre eventos agregados e não representam uma coorte individual.</p><Funnel currency={f.currency} steps={funnelSteps} /></Card> : null}
 
     {sectionGroup === 'organic' ? <><Card><p className="muted text-sm">Métricas diárias da plataforma selecionada. Os cards dos conteúdos exibem os contadores acumulados até a última sincronização.</p></Card><OrganicKpis current={organic} previous={f.compare === 'none' ? undefined : previousOrganic} enabledMetrics={config.enabled_metrics} /><Card><h2 className="font-semibold">Funil orgânico</h2><Funnel values={[sum(organic, 'impressions'), sum(organic, 'clicks'), sum(organic, 'page_views'), null, null, null]} /></Card></> : null}
 

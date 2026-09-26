@@ -80,6 +80,8 @@ create table public.dashboard_configs (
   only_platforms_with_data boolean not null default true,
   comparison_enabled boolean not null default true,
   preferred_revenue_source public.revenue_source not null default 'crm',
+  funnel_model text not null default 'custom' check (funnel_model in ('lead_generation','messages','ecommerce','local_business','custom')),
+  funnel_steps jsonb not null default '[{"metric":"impressions","label":"Impressões"},{"metric":"clicks","label":"Cliques"},{"metric":"page_views","label":"Visitas"},{"metric":"leads","label":"Leads"},{"metric":"checkouts","label":"Checkouts"},{"metric":"purchases","label":"Compras"}]'::jsonb check (jsonb_typeof(funnel_steps)='array' and jsonb_array_length(funnel_steps) between 2 and 8),
   target_roas numeric(18,6) check (target_roas >= 0),
   target_roi numeric(18,6),
   target_cpa numeric(18,6) check (target_cpa >= 0),

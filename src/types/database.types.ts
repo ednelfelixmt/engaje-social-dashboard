@@ -229,6 +229,8 @@ export type Database = {
           only_platforms_with_data: boolean;
           comparison_enabled: boolean;
           preferred_revenue_source: Database['public']['Enums']['revenue_source'];
+          funnel_model: 'lead_generation' | 'messages' | 'ecommerce' | 'local_business' | 'custom';
+          funnel_steps: Json;
           target_roas: number | null;
           target_roi: number | null;
           target_cpa: number | null;
@@ -245,6 +247,8 @@ export type Database = {
           only_platforms_with_data?: boolean;
           comparison_enabled?: boolean;
           preferred_revenue_source?: Database['public']['Enums']['revenue_source'];
+          funnel_model?: 'lead_generation' | 'messages' | 'ecommerce' | 'local_business' | 'custom';
+          funnel_steps?: Json;
           target_roas?: number | null;
           target_roi?: number | null;
           target_cpa?: number | null;
@@ -261,6 +265,8 @@ export type Database = {
           only_platforms_with_data?: boolean;
           comparison_enabled?: boolean;
           preferred_revenue_source?: Database['public']['Enums']['revenue_source'];
+          funnel_model?: 'lead_generation' | 'messages' | 'ecommerce' | 'local_business' | 'custom';
+          funnel_steps?: Json;
           target_roas?: number | null;
           target_roi?: number | null;
           target_cpa?: number | null;

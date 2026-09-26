@@ -1,0 +1,23 @@
+'use client';
+
+import {useState} from 'react';
+import {ArrowDown, ArrowUp, Filter, Plus, Trash2} from 'lucide-react';
+import {funnelMetricDefinitions, funnelPresets, type FunnelMetricKey, type FunnelModel, type FunnelStepConfig} from '@/lib/metrics/funnel-config';
+
+export function FunnelConfigurator({initialModel,initialSteps}:{initialModel:FunnelModel;initialSteps:FunnelStepConfig[]}){
+  const [model,setModel]=useState<FunnelModel>(initialModel);
+  const [steps,setSteps]=useState<FunnelStepConfig[]>(initialSteps);
+  const unused=funnelMetricDefinitions.filter((definition)=>!steps.some((step)=>step.metric===definition.key));
+  const applyModel=(next:FunnelModel)=>{setModel(next);const preset=funnelPresets.find((item)=>item.id===next);if(preset&&next!=='custom')setSteps(preset.steps.map((step)=>({...step})));};
+  return <section className="space-y-5">
+    <input type="hidden" name="funnel_model" value={model}/>
+    <input type="hidden" name="funnel_steps" value={JSON.stringify(steps)}/>
+    <div><h2 className="flex items-center gap-2 text-lg font-semibold"><Filter className="text-primary" size={18}/>Modelo do funil</h2><p className="muted mt-2 text-sm">O modelo define a jornada. As etapas continuam editáveis e usam somente dados recebidos das plataformas.</p></div>
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">{funnelPresets.map((preset)=><button type="button" key={preset.id} onClick={()=>applyModel(preset.id)} className={`rounded-2xl border p-4 text-left transition ${model===preset.id?'border-primary/50 bg-primary/[.08]':'border-white/10 bg-black/10 hover:border-white/20'}`}><strong className="text-sm">{preset.label}</strong><span className="mt-2 block text-xs leading-5 text-zinc-500">{preset.description}</span></button>)}</div>
+    <div className="rounded-2xl border border-white/10 bg-black/10 p-4 sm:p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-semibold">Etapas visíveis</h3><p className="muted mt-1 text-xs">Mínimo de 2 e máximo de 8 etapas. A ordem é a ordem real do funil.</p></div>{unused.length&&steps.length<8?<select aria-label="Adicionar etapa" value="" onChange={(event)=>{const metric=event.target.value as FunnelMetricKey;if(!metric)return;const definition=funnelMetricDefinitions.find((item)=>item.key===metric);if(definition){setModel('custom');setSteps((current)=>[...current,{metric,label:definition.label}]);}}}><option value="">+ Adicionar etapa</option>{unused.map((item)=><option key={item.key} value={item.key}>{item.label}</option>)}</select>:null}</div>
+      <div className="space-y-2">{steps.map((step,index)=>{const definition=funnelMetricDefinitions.find((item)=>item.key===step.metric);return <div className="grid gap-3 rounded-xl border border-white/[.08] bg-white/[.025] p-3 sm:grid-cols-[32px_1fr_auto] sm:items-center" key={step.metric}><span className="grid size-8 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary">{index+1}</span><label className="text-xs text-zinc-500">Nome da etapa<input className="mt-1 w-full" maxLength={40} value={step.label} onChange={(event)=>{setModel('custom');setSteps((current)=>current.map((item,itemIndex)=>itemIndex===index?{...item,label:event.target.value}:item));}}/><small className="mt-1 block">Métrica: {definition?.label} · Custo: {definition?.costLabel}</small></label><div className="flex gap-1"><button type="button" aria-label={`Subir ${step.label}`} disabled={!index} className="rounded-lg border border-white/10 p-2 disabled:opacity-30" onClick={()=>{setModel('custom');setSteps((current)=>{const next=[...current];[next[index-1],next[index]]=[next[index],next[index-1]];return next;});}}><ArrowUp size={15}/></button><button type="button" aria-label={`Descer ${step.label}`} disabled={index===steps.length-1} className="rounded-lg border border-white/10 p-2 disabled:opacity-30" onClick={()=>{setModel('custom');setSteps((current)=>{const next=[...current];[next[index+1],next[index]]=[next[index],next[index+1]];return next;});}}><ArrowDown size={15}/></button><button type="button" aria-label={`Remover ${step.label}`} disabled={steps.length<=2} className="rounded-lg border border-red-500/20 p-2 text-red-300 disabled:opacity-30" onClick={()=>{setModel('custom');setSteps((current)=>current.filter((_,itemIndex)=>itemIndex!==index));}}><Trash2 size={15}/></button></div></div>;})}</div>
+      {!unused.length||steps.length>=8?null:<p className="mt-4 flex items-center gap-2 text-xs text-zinc-600"><Plus size={13}/>Selecione “Adicionar etapa” para incluir outra métrica.</p>}
+    </div>
+  </section>;
+}

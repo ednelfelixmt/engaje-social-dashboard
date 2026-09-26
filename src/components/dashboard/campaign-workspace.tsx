@@ -9,7 +9,7 @@ import {
 import {Card} from '@/components/ui/card';
 import {Timeline} from '@/components/dashboard/charts';
 import {Ranking} from '@/components/dashboard/ranking';
-import {Funnel} from '@/components/dashboard/funnel';
+import {Funnel, type FunnelStep} from '@/components/dashboard/funnel';
 import {LeadBreakdown} from '@/components/dashboard/lead-breakdown';
 import {PerformanceRankings} from '@/components/dashboard/performance-rankings';
 import {money, number} from '@/lib/utils';
@@ -150,16 +150,7 @@ function KpiCard({
   </Card>;
 }
 
-function TrafficFunnel({rows, currency}: {rows: CampaignPerformance[]; currency: string}) {
-  const summary = metrics(rows);
-  const steps = [
-    {label: 'Impressões', value: summary.impressions, cost: summary.cpm, costLabel: 'CPM'},
-    {label: 'Cliques', value: summary.clicks, cost: summary.cpc, costLabel: 'CPC'},
-    {label: 'Page views', value: summary.pageViews, cost: summary.pageViews && summary.spend != null ? summary.spend / summary.pageViews : null, costLabel: 'CPV'},
-    {label: 'Leads', value: summary.leads, cost: summary.cpl, costLabel: 'CPL', detail: summary.registrationLeads == null && summary.messageLeads == null ? null : `${number(summary.registrationLeads)} cadastros · ${number(summary.messageLeads)} mensagens`},
-    {label: 'Checkouts', value: summary.checkouts, cost: summary.checkouts && summary.spend != null ? summary.spend / summary.checkouts : null, costLabel: 'CPCO'},
-    {label: 'Compras', value: summary.purchases, cost: summary.cpa, costLabel: 'CPA'},
-  ];
+function TrafficFunnel({steps, currency}: {steps:FunnelStep[]; currency: string}) {
   return <Card className="h-full">
     <div className="flex items-center justify-between gap-4">
       <div><p className="eyebrow">Jornada de conversão</p><h2 className="mt-2 text-lg font-semibold">Funil de campanhas</h2></div>
@@ -250,6 +241,7 @@ export function CampaignWorkspace({
   showPlatforms = false,
   enabledMetrics,
   rankings,
+  funnelSteps,
 }: {
   rows: CampaignPerformance[];
   previousRows: CampaignPerformance[];
@@ -258,6 +250,7 @@ export function CampaignWorkspace({
   showPlatforms?: boolean;
   enabledMetrics: string[];
   rankings: PerformanceRankingGroups;
+  funnelSteps: FunnelStep[];
 }) {
   const measuredRows = rows.filter(hasMeasuredPerformance);
   const measuredPreviousRows = previousRows.filter(hasMeasuredPerformance);
@@ -278,7 +271,7 @@ export function CampaignWorkspace({
     {showLeadBreakdown?<LeadBreakdown totalLeads={current.leads} registrationLeads={current.registrationLeads} messageLeads={current.messageLeads} totalCost={current.cpl} registrationCost={current.costPerRegistration} messageCost={current.costPerMessage} currency={currency} />:null}
     {showPlatforms ? <PlatformBreakdown rows={measuredRows} currency={currency} enabledMetrics={enabledMetrics} /> : null}
     <section className="grid gap-5 2xl:grid-cols-[0.9fr_1.4fr]">
-      <TrafficFunnel rows={measuredRows} currency={currency} />
+      <TrafficFunnel steps={funnelSteps} currency={currency} />
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-4"><div><p className="eyebrow">Evolução temporal</p><h2 className="mt-2 text-lg font-semibold">Investimento e receita atribuída</h2></div><p className="max-w-md text-right text-xs text-zinc-500">Receita real conciliada quando disponível; receita da plataforma como alternativa.</p></div>
         <Timeline rows={timeline} currency={currency} />
