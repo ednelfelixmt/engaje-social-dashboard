@@ -4,6 +4,7 @@ import {requireAdmin} from '@/lib/auth/session';
 import {Card} from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
 import {ActionForm} from '@/components/action-form';
+import {ClientLifecycleControls} from '@/components/client-lifecycle-controls';
 import {createOrganization, updateOrganization} from '../actions';
 
 export default async function Page() {
@@ -62,6 +63,9 @@ export default async function Page() {
               <label>Status<select name="status" defaultValue={organization.status}><option value="active">Ativo</option><option value="paused">Pausado</option></select></label>
             </div>
           </ActionForm>
+          <div className="mt-5 border-t border-white/10 pt-5">
+            <ClientLifecycleControls organizationId={organization.id} organizationName={organization.name} />
+          </div>
         </Card>
       ))}
     </div>

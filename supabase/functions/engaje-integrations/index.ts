@@ -36,6 +36,7 @@ async function concurrentMap<T,R>(items:T[],limit:number,handler:(item:T,index:n
 function insightValues(payload:any){const values:Record<string,number>={};for(const metric of payload?.data||[]){const raw=metric.values?.at?.(-1)?.value??metric.value;if(typeof raw==='number'&&Number.isFinite(raw))values[String(metric.name)]=raw;else if(raw&&typeof raw==='object'){for(const [key,value]of Object.entries(raw))if(typeof value==='number'&&Number.isFinite(value))values[key]=value;}}return values;}
 async function organicInsights(postId:string,token:string,instagram:boolean){const metric=instagram?'reach,saved,shares,total_interactions,views':'post_impressions,post_impressions_unique,post_clicks,post_video_views';try{return {values:insightValues(await graph(postId+'/insights',token,{metric},'a leitura dos insights orgânicos')),error:false};}catch(error){console.warn('[organic-insights]',{post_id:postId,platform:instagram?'instagram':'facebook',message:error instanceof Error?error.message:'Falha desconhecida'});return {values:{},error:true};}}
 async function allowed(req:Request,org:string){const auth=req.headers.get('Authorization');if(!auth)throw new Error('Sessão necessária.');const client=createClient(base,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:auth}},auth:{persistSession:false}});const {data:{user}}=await client.auth.getUser();if(!user)throw new Error('Sessão expirada.');const {data:superAdmin}=await client.rpc('is_super_admin');if(!superAdmin){const {data:member}=await service.from('organization_members').select('role,is_active,organizations!inner(status)').eq('organization_id',org).eq('user_id',user.id).single();if(!member?.is_active||!['client_admin','editor'].includes(member.role)||(member.organizations as any)?.status!=='active')throw new Error('Sem permissão para gerenciar integrações.');}return user;}
+async function superAdminClient(req:Request){const auth=req.headers.get('Authorization');if(!auth)throw new Error('Sessão necessária.');const client=createClient(base,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:auth}},auth:{persistSession:false}});const {data:{user}}=await client.auth.getUser();if(!user)throw new Error('Sessão expirada.');const {data:isSuperAdmin,error}=await client.rpc('is_super_admin');if(error||!isSuperAdmin)throw new Error('Somente um super administrador pode executar esta ação.');return {client,user};}
 async function setToken(id:string,token:string){await check(await service.rpc('store_integration_token',{p_id:id,p_token:token}));}
 async function setConnectionToken(id:string,token:string){await check(await service.rpc('store_platform_connection_token',{p_id:id,p_token:token}));}
 async function safePages(path:string,token:string,params:Record<string,string>={}){try{return await pages(path,token,params);}catch(error){console.warn('[meta-discovery-skipped]',{endpoint:path,message:error instanceof Error?error.message:'Falha desconhecida'});return [];}}
@@ -155,6 +156,29 @@ Deno.serve(async(req:Request)=>{
   }
   if(req.method!=='POST')return json({message:'Método inválido.'},405);
   const body=await req.json();const org=String(body.organizationId||'');if(!/^[0-9a-f-]{36}$/.test(org))throw new Error('Cliente inválido.');const actor=await allowed(req,org);
+  if(body.action==='disconnect_client'||body.action==='delete_client'){
+   const {client,user}=await superAdminClient(req);const confirmation=String(body.confirmation||'');
+   const {data:organization,error:organizationError}=await service.from('organizations').select('id,name,is_agency').eq('id',org).single();
+   if(organizationError||!organization||organization.is_agency)throw new Error('Cliente não encontrado.');
+   if(body.action==='disconnect_client'){
+    if(confirmation!=='DESCONECTAR')throw new Error('Confirmação inválida.');
+    const {data,error}=await client.rpc('disconnect_client_organization',{p_organization_id:org});if(error)throw new Error(error.message);
+    console.info('[client-disconnect]',{organization_id:org,actor_id:user.id,removed_integrations:data?.removed_integrations||0});
+    return json({message:'Todas as integrações do cliente foram desconectadas.',result:data});
+   }
+   if(confirmation!==organization.name)throw new Error('Digite o nome exato do cliente para confirmar a exclusão.');
+   const storedObjects:{bucket:string;paths:string[]}[]=[];
+   for(const bucket of ['branding','creatives','spreadsheets']){
+    const {data:objects,error}=await service.storage.from(bucket).list(org,{limit:1000,offset:0});
+    if(error)console.warn('[client-delete-storage-list]',{organization_id:org,bucket,message:error.message});
+    storedObjects.push({bucket,paths:(objects||[]).map((item:any)=>org+'/'+item.name)});
+   }
+   const {data,error}=await client.rpc('delete_client_organization',{p_organization_id:org});if(error)throw new Error(error.message);
+   const cleanupErrors:string[]=[];
+   for(const item of storedObjects)if(item.paths.length){const {error:removeError}=await service.storage.from(item.bucket).remove(item.paths);if(removeError)cleanupErrors.push(item.bucket);}
+   console.info('[client-delete]',{organization_id:org,actor_id:user.id,storage_cleanup_errors:cleanupErrors});
+   return json({message:cleanupErrors.length?'Cliente excluído. Alguns arquivos órfãos exigem limpeza técnica.':'Cliente excluído permanentemente.',result:data,cleanupErrors});
+  }
   if(body.action==='assign_assets'){
    const connectionId=String(body.connectionId||'');const requested=Array.isArray(body.assetIds)?[...new Set(body.assetIds.map(String))]:[];
    if(!/^[0-9a-f-]{36}$/.test(connectionId)||!requested.length||requested.some(id=>!/^[0-9a-f-]{36}$/.test(id)))throw new Error('Selecione ao menos um ativo válido.');
