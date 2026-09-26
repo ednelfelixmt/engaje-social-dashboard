@@ -481,6 +481,90 @@ export type Database = {
           { foreignKeyName: "metrics_ads_organization_id_integration_id_fkey"; columns: ["organization_id","integration_id"]; isOneToOne: false; referencedRelation: "integrations"; referencedColumns: ["organization_id","id"]; }
         ];
       };
+      metrics_ads_breakdowns: {
+        Row: {
+          id: string;
+          organization_id: string;
+          integration_id: string;
+          metric_date: string;
+          platform: Database['public']['Enums']['integration_provider'];
+          account_id: string;
+          campaign_id: string;
+          campaign_name: string;
+          dimension_type: 'audience' | 'creative' | 'gender' | 'age' | 'device' | 'state' | 'city';
+          dimension_value: string;
+          dimension_label: string;
+          currency: string;
+          spend: number;
+          revenue: number | null;
+          impressions: number | null;
+          clicks: number | null;
+          leads: number | null;
+          message_leads: number | null;
+          checkouts: number | null;
+          purchases: number | null;
+          attribution_window: string;
+          synced_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          integration_id: string;
+          metric_date: string;
+          platform: Database['public']['Enums']['integration_provider'];
+          account_id: string;
+          campaign_id: string;
+          campaign_name: string;
+          dimension_type: 'audience' | 'creative' | 'gender' | 'age' | 'device' | 'state' | 'city';
+          dimension_value: string;
+          dimension_label: string;
+          currency: string;
+          spend: number;
+          revenue?: number | null;
+          impressions?: number | null;
+          clicks?: number | null;
+          leads?: number | null;
+          message_leads?: number | null;
+          checkouts?: number | null;
+          purchases?: number | null;
+          attribution_window: string;
+          synced_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          integration_id?: string;
+          metric_date?: string;
+          platform?: Database['public']['Enums']['integration_provider'];
+          account_id?: string;
+          campaign_id?: string;
+          campaign_name?: string;
+          dimension_type?: 'audience' | 'creative' | 'gender' | 'age' | 'device' | 'state' | 'city';
+          dimension_value?: string;
+          dimension_label?: string;
+          currency?: string;
+          spend?: number;
+          revenue?: number | null;
+          impressions?: number | null;
+          clicks?: number | null;
+          leads?: number | null;
+          message_leads?: number | null;
+          checkouts?: number | null;
+          purchases?: number | null;
+          attribution_window?: string;
+          synced_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          { foreignKeyName: "metrics_ads_breakdowns_organization_id_fkey"; columns: ["organization_id"]; isOneToOne: false; referencedRelation: "organizations"; referencedColumns: ["id"]; },
+          { foreignKeyName: "metrics_ads_breakdowns_organization_id_integration_id_fkey"; columns: ["organization_id","integration_id"]; isOneToOne: false; referencedRelation: "integrations"; referencedColumns: ["organization_id","id"]; }
+        ];
+      };
       metrics_crm: {
         Row: {
           id: string;

@@ -292,6 +292,37 @@ create table public.metrics_ads (
   unique (organization_id,platform,account_id,campaign_id,ad_id,metric_date,currency)
 );
 
+-- Grão: dia + campanha + uma única dimensão de segmentação. Nunca somar tipos
+-- diferentes entre si, pois cada tipo representa uma visão completa do mesmo tráfego.
+create table public.metrics_ads_breakdowns (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  integration_id uuid not null,
+  metric_date date not null,
+  platform public.integration_provider not null check (platform in ('meta_ads','google_ads','tiktok_ads')),
+  account_id text not null,
+  campaign_id text not null,
+  campaign_name text not null,
+  dimension_type text not null check (dimension_type in ('audience','creative','gender','age','device','state','city')),
+  dimension_value text not null,
+  dimension_label text not null,
+  currency text not null check (currency ~ '^[A-Z]{3}$'),
+  spend numeric(18,6) not null check (spend >= 0),
+  revenue numeric(18,6),
+  impressions bigint check (impressions >= 0),
+  clicks bigint check (clicks >= 0),
+  leads bigint check (leads >= 0),
+  message_leads bigint check (message_leads >= 0),
+  checkouts bigint check (checkouts >= 0),
+  purchases bigint check (purchases >= 0),
+  attribution_window text not null,
+  synced_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  foreign key (organization_id,integration_id) references public.integrations(organization_id,id) on delete cascade,
+  unique (organization_id,platform,account_id,campaign_id,dimension_type,dimension_value,metric_date,currency)
+);
+
 -- Catálogo atual de campanhas, inclusive sem veiculação no período selecionado.
 create table public.ad_campaigns (
   id uuid primary key default gen_random_uuid(),
@@ -395,6 +426,8 @@ create table public.metrics_organic (
 
 create index metrics_ads_period on public.metrics_ads(organization_id,metric_date,platform);
 create index metrics_ads_integration on public.metrics_ads(organization_id,integration_id);
+create index metrics_ads_breakdowns_period on public.metrics_ads_breakdowns(organization_id,metric_date,platform,dimension_type);
+create index metrics_ads_breakdowns_integration on public.metrics_ads_breakdowns(organization_id,integration_id);
 create index metrics_crm_period on public.metrics_crm(organization_id,metric_date,source);
 create index metrics_crm_integration on public.metrics_crm(organization_id,integration_id);
 create index metrics_crm_upload on public.metrics_crm(organization_id,spreadsheet_upload_id);
@@ -457,7 +490,7 @@ begin
 end;
 $$;
 do $$ declare t text; begin
-  foreach t in array array['organizations','profiles','organization_members','branding','dashboard_configs','integrations','ad_campaigns','metrics_ads','metrics_crm','metrics_organic','creatives','spreadsheet_uploads'] loop
+  foreach t in array array['organizations','profiles','organization_members','branding','dashboard_configs','integrations','ad_campaigns','metrics_ads','metrics_ads_breakdowns','metrics_crm','metrics_organic','creatives','spreadsheet_uploads'] loop
     execute format('alter table public.%I enable row level security',t);
     execute format('revoke all on public.%I from anon, authenticated',t);
     execute format('grant all on public.%I to service_role',t);

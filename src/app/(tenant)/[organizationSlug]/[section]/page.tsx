@@ -5,6 +5,7 @@ import {Images} from 'lucide-react';
 import {tenant} from '@/lib/auth/session';
 import {filters, dashboardData, sum} from '@/lib/metrics/query';
 import {campaigns} from '@/lib/metrics/campaigns';
+import {preparePerformanceRankings} from '@/lib/metrics/rankings';
 import {platformDashboardByRoute, platformDashboards, type DashboardPlatform} from '@/lib/metrics/platforms';
 import {Filters} from '@/components/dashboard/filters';
 import {OrganicKpis} from '@/components/dashboard/organic-kpis';
@@ -82,6 +83,7 @@ export default async function Page({params, searchParams}: {params: {organizatio
   const requestedPlatform = visible.find((platform) => platform === searchParams.platform);
   const chosen = platformPage?.platform ?? requestedPlatform ?? null;
   const ads = chosen ? data.ads.filter((row) => row.platform === chosen) : data.ads;
+  const breakdowns = chosen ? data.breakdowns.filter((row) => row.platform === chosen) : data.breakdowns;
   const previousAds = chosen ? data.adsComparison.filter((row) => row.platform === chosen) : data.adsComparison;
   const organic = chosen ? data.organic.filter((row) => row.platform === chosen) : data.organic;
   const previousOrganic = chosen ? data.organicComparison.filter((row) => row.platform === chosen) : data.organicComparison;
@@ -100,6 +102,7 @@ export default async function Page({params, searchParams}: {params: {organizatio
   ];
   const campaignsWithMovement = currentCampaigns.filter((row) => row.spend > 0 || Number(row.impressions ?? 0) > 0 || Number(row.clicks ?? 0) > 0 || Number(row.leads ?? 0) > 0 || Number(row.purchases ?? 0) > 0);
   const filteredCreatives = data.creatives.filter((creative) => !chosen || creative.platform === chosen);
+  const performanceRankings = preparePerformanceRankings(campaignsWithMovement, ads, breakdowns, filteredCreatives);
   const queryWithoutPlatform = Object.fromEntries(Object.entries(f));
 
   return <div className="mx-auto max-w-[1780px] space-y-6 lg:space-y-8">
@@ -115,7 +118,7 @@ export default async function Page({params, searchParams}: {params: {organizatio
       <Card><div><p className="eyebrow">Jornada completa</p><h2 className="mt-2 text-lg font-semibold">Funil geral de campanhas</h2><p className="muted mt-2 text-sm">Inclui leads de formulários e conversas iniciadas por mensagens.</p></div><Funnel currency={f.currency} steps={funnelSteps} /></Card>
     </div> : null}
 
-    {sectionGroup === 'paid' ? <CampaignWorkspace rows={currentCampaigns} previousRows={f.compare === 'none' ? [] : previousCampaigns} timeline={timelineRows(ads)} currency={f.currency} showPlatforms={!platformPage && !chosen} enabledMetrics={config.enabled_metrics} /> : null}
+    {sectionGroup === 'paid' ? <CampaignWorkspace rows={currentCampaigns} previousRows={f.compare === 'none' ? [] : previousCampaigns} timeline={timelineRows(ads)} currency={f.currency} showPlatforms={!platformPage && !chosen} enabledMetrics={config.enabled_metrics} rankings={performanceRankings} /> : null}
 
     {params.section === 'funnel' ? <Card><h2 className="font-semibold">Da descoberta à compra</h2><p className="muted mt-2 text-sm">Taxas entre eventos; sem identificação de usuários, não representam uma coorte individual.</p><Funnel currency={f.currency} steps={funnelSteps} /></Card> : null}
 

@@ -8,6 +8,7 @@ const organicPlatforms = new Set(['facebook_organic', 'instagram_organic', 'tikt
 const creativePlatforms = new Set([...adsPlatforms, ...organicPlatforms]);
 const channels = new Set(['meta_ads', 'google_ads', 'tiktok_ads', 'organic', 'direct', 'unattributed']);
 const kinds = new Set(['image', 'video', 'carousel', 'text']);
+const dimensions = new Set(['audience', 'creative', 'gender', 'age', 'device', 'state', 'city']);
 
 type Row = Record<string, unknown>;
 
@@ -93,7 +94,7 @@ Deno.serve(async (request: Request) => {
     const body = await request.json();
     const dataset = String(body.dataset || '');
     const sourceRows = Array.isArray(body.rows) ? body.rows as Row[] : [];
-    if (!['ads', 'crm', 'creatives', 'organic'].includes(dataset)) throw new Error('dataset inválido.');
+    if (!['ads', 'ads_breakdowns', 'crm', 'creatives', 'organic'].includes(dataset)) throw new Error('dataset inválido.');
     if (!sourceRows.length || sourceRows.length > 1000) throw new Error('Envie entre 1 e 1000 linhas.');
     const now = new Date().toISOString();
 
@@ -108,6 +109,18 @@ Deno.serve(async (request: Request) => {
       await upsert('metrics_ads', rows, 'organization_id,platform,account_id,campaign_id,ad_id,metric_date,currency');
       const campaigns = [...new Map(rows.map((row) => [`${row.platform}:${row.account_id}:${row.campaign_id}`, {organization_id: integration.organization_id, integration_id: integration.id, platform: row.platform, account_id: row.account_id, external_id: row.campaign_id, name: row.campaign_name, status: row.campaign_status, last_seen_at: now}])).values()];
       await upsert('ad_campaigns', campaigns, 'organization_id,platform,account_id,external_id');
+    }
+
+    if (dataset === 'ads_breakdowns') {
+      const rows = sourceRows.map((row) => {
+        const platform = text(row.platform, 'platform', 40);
+        const dimensionType = text(row.dimension_type, 'dimension_type', 20);
+        if (!adsPlatforms.has(platform) || !dimensions.has(dimensionType)) throw new Error('Plataforma ou dimensão inválida.');
+        const campaignId = text(row.campaign_id, 'campaign_id');
+        const dimensionValue = text(row.dimension_value, 'dimension_value');
+        return {organization_id: integration.organization_id, integration_id: integration.id, metric_date: date(row.metric_date), platform, account_id: text(row.account_id, 'account_id'), campaign_id: campaignId, campaign_name: text(row.campaign_name ?? campaignId, 'campaign_name'), dimension_type: dimensionType, dimension_value: dimensionValue, dimension_label: text(row.dimension_label ?? dimensionValue, 'dimension_label'), currency: currency(row.currency), spend: numberValue(row.spend, 'spend', false), revenue: numberValue(row.revenue, 'revenue', true, false), impressions: integer(row.impressions, 'impressions'), clicks: integer(row.clicks, 'clicks'), leads: integer(row.leads, 'leads'), message_leads: integer(row.message_leads, 'message_leads'), checkouts: integer(row.checkouts, 'checkouts'), purchases: integer(row.purchases, 'purchases'), attribution_window: text(row.attribution_window ?? 'source_default', 'attribution_window', 80), synced_at: now};
+      });
+      await upsert('metrics_ads_breakdowns', rows, 'organization_id,platform,account_id,campaign_id,dimension_type,dimension_value,metric_date,currency');
     }
 
     if (dataset === 'crm') {

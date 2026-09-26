@@ -61,6 +61,9 @@ await db.exec(`
     ('${orgA}','${intA}','2026-09-03','meta_ads','a','c1','Campanha 1','ad1','BRL',0,100,1000,100,1,'7d_click'),
     ('${orgA}','${intA}','2026-09-01','meta_ads','a','usd','USD','usd','USD',10,20,100,10,1,'7d_click'),
     ('${orgB}','${intB}','2026-09-01','meta_ads','b','b','Privada','b','BRL',1000,9000,1000,100,10,'7d_click');
+  insert into public.metrics_ads_breakdowns(organization_id,integration_id,metric_date,platform,account_id,campaign_id,campaign_name,dimension_type,dimension_value,dimension_label,currency,spend,impressions,clicks,leads,attribution_window) values
+    ('${orgA}','${intA}','2026-09-01','meta_ads','a','c1','Campanha 1','age','25-34','25 a 34','BRL',100,1000,100,10,'7d_click'),
+    ('${orgB}','${intB}','2026-09-01','meta_ads','b','b','Privada','city','999','Cidade privada','BRL',1000,1000,100,10,'7d_click');
   insert into public.metrics_crm(organization_id,integration_id,source,metric_date,currency,channel,account_id,campaign_id,revenue,purchases,is_complete) values
     ('${orgA}','${crmA}','crm','2026-09-01','BRL','meta_ads','a','c1',400,4,true),
     ('${orgA}','${crmA}','crm','2026-09-01','BRL','meta_ads','a','c2',200,2,true),
@@ -79,8 +82,8 @@ await db.exec(`
   insert into public.sync_jobs(organization_id,connection_id,assignment_id,status) values ('${orgA}','${connectionA}','${assignmentA}','completed');
   insert into public.integration_alerts(organization_id,alert_key,code,severity,title) values ('${orgA}','test-alert','stale_sync','warning','Conta sem atualização');
 `);
-check(await scalar("select count(*)::int from pg_tables where schemaname='public'") === 19, 'Exatamente 19 tabelas públicas');
-check(await scalar("select count(*)::int from pg_tables where schemaname='public' and rowsecurity") === 19, 'RLS habilitada nas 19 tabelas');
+check(await scalar("select count(*)::int from pg_tables where schemaname='public'") === 20, 'Exatamente 20 tabelas públicas');
+check(await scalar("select count(*)::int from pg_tables where schemaname='public' and rowsecurity") === 20, 'RLS habilitada nas 20 tabelas');
 let day = (await db.query<Record<string, unknown>>(`select * from public.daily_performance where organization_id='${orgA}' and metric_date='2026-09-01' and currency='BRL'`)).rows[0]!;
 check(Number(day.spend) === 200 && Number(day.revenue) === 600, 'JOIN não multiplica Ads nem soma CRM com planilha');
 check(Number(day.roas) === 3 && Number(day.roi) === 200 && Math.abs(Number(day.cpa) - 200/6) < 0.00001, 'ROAS, ROI e CPA reais');
@@ -98,7 +101,7 @@ await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub'
 check(await scalar('select count(*)::int from public.organizations') === 1, 'Viewer só vê sua organização');
 check(await scalar(`select count(*)::int from public.daily_performance where organization_id='${orgB}'`) === 0, 'View respeita RLS de outro cliente');
 check(await scalar('select public.is_super_admin()') === false, 'Viewer não é super admin');
-for (const table of ['profiles','organization_members','branding','dashboard_configs','ad_campaigns','metrics_ads','metrics_crm','metrics_organic','creatives','spreadsheet_uploads','client_asset_assignments','sync_jobs','integration_alerts']) {
+for (const table of ['profiles','organization_members','branding','dashboard_configs','ad_campaigns','metrics_ads','metrics_ads_breakdowns','metrics_crm','metrics_organic','creatives','spreadsheet_uploads','client_asset_assignments','sync_jobs','integration_alerts']) {
   check(await scalar(`select count(*)::int from public.${table} where organization_id='${orgB}'`) === 0, `${table}: sem leitura cross-tenant`);
 }
 check(await scalar(`select count(id)::int from public.integrations where organization_id='${orgB}'`) === 0, 'integrations: sem leitura cross-tenant');

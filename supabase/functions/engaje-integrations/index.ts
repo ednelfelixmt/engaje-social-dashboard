@@ -77,6 +77,11 @@ function numeric(value:unknown){const result=Number(value);return Number.isFinit
 function campaignStatus(value:unknown){const normalized=String(value||'').trim().toUpperCase().replace(/[^A-Z0-9_]/g,'_');return normalized&&normalized.length<=64?normalized:null;}
 function metaAccountId(value:unknown){return String(value||'').trim().replace(/^act_/,'');}
 function isoDate(date:Date){return date.toISOString().slice(0,10);}
+function metaBreakdownFact(i:Integration,d:any,type:string,value:unknown,label:unknown){
+ const formLeads=actionValue(d.actions,'lead','onsite_conversion.lead_grouped','offsite_conversion.fb_pixel_lead');
+ const messageLeads=actionValue(d.actions,'onsite_conversion.messaging_conversation_started_7d','messaging_conversation_started_7d','onsite_conversion.total_messaging_connection','onsite_conversion.messaging_first_reply');
+ return {organization_id:i.organization_id,integration_id:i.id,platform:'meta_ads',metric_date:d.date_start,currency:String(d.account_currency||'BRL').toUpperCase(),account_id:metaAccountId(d.account_id||i.external_account_id),campaign_id:String(d.campaign_id),campaign_name:String(d.campaign_name||d.campaign_id),dimension_type:type,dimension_value:String(value),dimension_label:String(label||value),spend:numeric(d.spend),revenue:optionalActionValue(d.action_values,'omni_purchase','purchase','offsite_conversion.fb_pixel_purchase'),impressions:d.impressions==null?null:numeric(d.impressions),clicks:d.clicks==null?null:numeric(d.clicks),leads:formLeads+messageLeads,message_leads:messageLeads,checkouts:actionValue(d.actions,'initiate_checkout','offsite_conversion.fb_pixel_initiate_checkout'),purchases:actionValue(d.actions,'omni_purchase','purchase','offsite_conversion.fb_pixel_purchase'),attribution_window:'7d_click',synced_at:new Date().toISOString()};
+}
 async function syncWindsor(i:Integration){
  const source=String(i.config.source_platform||'');
  if(source!=='google_ads')throw new Error('A importação Windsor para esta fonte será ativada após definir o mapeamento de campos. Use Google Ads nesta etapa.');
@@ -118,9 +123,25 @@ async function sync(i:Integration){if(i.provider==='windsor')return syncWindsor(
    return {organization_id:i.organization_id,integration_id:i.id,platform:'meta_ads',metric_date:d.date_start,currency:d.account_currency,account_id:metaAccountId(d.account_id||normalizedAccountId),campaign_id:String(d.campaign_id),campaign_name:d.campaign_name,campaign_status:statuses.get(String(d.campaign_id))||null,adset_id:d.adset_id,ad_id:String(d.ad_id),spend:Number(d.spend),revenue:optionalActionValue(d.action_values,'omni_purchase','purchase','offsite_conversion.fb_pixel_purchase'),impressions:d.impressions==null?null:Number(d.impressions),clicks:d.clicks==null?null:Number(d.clicks),page_views:actionValue(d.actions,'landing_page_view'),leads:totalLeads,message_leads:messageLeads,checkouts:actionValue(d.actions,'initiate_checkout','offsite_conversion.fb_pixel_initiate_checkout'),purchases:actionValue(d.actions,'omni_purchase','purchase','offsite_conversion.fb_pixel_purchase'),attribution_window:'7d_click',synced_at:new Date().toISOString()};
   });
   for(let n=0;n<facts.length;n+=200){await check(await service.from('metrics_ads').upsert(facts.slice(n,n+200),{onConflict:'organization_id,platform,account_id,campaign_id,ad_id,metric_date,currency'}));rows+=facts.slice(n,n+200).length;}
+  const insightFields='account_id,account_currency,campaign_id,campaign_name,date_start,spend,impressions,clicks,actions,action_values';
+  const breakdownRequests=[
+   {type:'audience',level:'adset',breakdown:null,fields:insightFields+',adset_id,adset_name',value:'adset_id',label:'adset_name'},
+   {type:'gender',level:'campaign',breakdown:'gender',fields:insightFields,value:'gender',label:'gender'},
+   {type:'age',level:'campaign',breakdown:'age',fields:insightFields,value:'age',label:'age'},
+   {type:'device',level:'campaign',breakdown:'device_platform',fields:insightFields,value:'device_platform',label:'device_platform'},
+   {type:'state',level:'campaign',breakdown:'region',fields:insightFields,value:'region',label:'region'},
+  ];
+  const detailed=await concurrentMap(breakdownRequests,2,async request=>{
+   const params:Record<string,string>={level:request.level,date_preset:'last_30d',time_increment:'1',action_attribution_windows:'["7d_click"]',fields:request.fields};
+   if(request.breakdown)params.breakdowns=request.breakdown;
+   const items=await safePages(i.external_account_id+'/insights',token,params);
+   return items.filter(item=>item[request.value]!=null).map(item=>metaBreakdownFact(i,item,request.type,item[request.value],item[request.label]));
+  });
+  const breakdownRows=[...data.filter(d=>d.ad_id!=null).map(d=>metaBreakdownFact(i,d,'creative',d.ad_id,d.ad_id)),...detailed.flat()];
+  for(let n=0;n<breakdownRows.length;n+=200)await check(await service.from('metrics_ads_breakdowns').upsert(breakdownRows.slice(n,n+200),{onConflict:'organization_id,platform,account_id,campaign_id,dimension_type,dimension_value,metric_date,currency'}));
   const ads=await pages(i.external_account_id+'/ads',token,{fields:'id,name,created_time,campaign_id,creative{id,thumbnail_url,image_url,body,video_id}'});
   for(const a of ads){if(!a.creative)continue;await check(await service.from('creatives').upsert({organization_id:i.organization_id,integration_id:i.id,platform:'meta_ads',account_id:normalizedAccountId,external_id:a.id,ad_id:a.id,campaign_id:a.campaign_id,kind:a.creative.video_id?'video':'image',caption:a.creative.body||a.name,thumbnail_url:a.creative.thumbnail_url,media_url:a.creative.image_url,published_at:a.created_time,synced_at:new Date().toISOString()},{onConflict:'organization_id,platform,account_id,external_id'}));creativeCount++;}
-  console.info('[meta-sync-summary]',{integration_id:i.id,account_id:normalizedAccountId,campaigns:statuses.size,insight_rows:facts.length,creatives:creativeCount,from:facts.map((fact:any)=>fact.metric_date).sort()[0]||null,to:facts.map((fact:any)=>fact.metric_date).sort().at(-1)||null});
+  console.info('[meta-sync-summary]',{integration_id:i.id,account_id:normalizedAccountId,campaigns:statuses.size,insight_rows:facts.length,breakdown_rows:breakdownRows.length,creatives:creativeCount,from:facts.map((fact:any)=>fact.metric_date).sort()[0]||null,to:facts.map((fact:any)=>fact.metric_date).sort().at(-1)||null});
  }else if(i.provider==='instagram_organic'||i.provider==='facebook_organic'){
   const ig=i.provider==='instagram_organic',cutoff=new Date();cutoff.setUTCDate(cutoff.getUTCDate()-30);const since=String(Math.floor(cutoff.getTime()/1000));
   const fields=ig?'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count':'id,message,full_picture,permalink_url,created_time,shares,reactions.limit(0).summary(true),comments.limit(0).summary(true)';

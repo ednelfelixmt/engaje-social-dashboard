@@ -11,9 +11,11 @@ import {Timeline} from '@/components/dashboard/charts';
 import {Ranking} from '@/components/dashboard/ranking';
 import {Funnel} from '@/components/dashboard/funnel';
 import {LeadBreakdown} from '@/components/dashboard/lead-breakdown';
+import {PerformanceRankings} from '@/components/dashboard/performance-rankings';
 import {money, number} from '@/lib/utils';
 import {dashboardMetricLabels, paidMetricKeys, type DashboardMetricKey} from '@/lib/metrics/catalog';
 import type {CampaignPerformance, Platform} from '@/types/domain';
+import type {PerformanceRankingGroups} from '@/lib/metrics/rankings';
 
 type TimelineRow = {date: string; spend: number | null; revenue: number | null};
 
@@ -247,6 +249,7 @@ export function CampaignWorkspace({
   currency,
   showPlatforms = false,
   enabledMetrics,
+  rankings,
 }: {
   rows: CampaignPerformance[];
   previousRows: CampaignPerformance[];
@@ -254,6 +257,7 @@ export function CampaignWorkspace({
   currency: string;
   showPlatforms?: boolean;
   enabledMetrics: string[];
+  rankings: PerformanceRankingGroups;
 }) {
   const measuredRows = rows.filter(hasMeasuredPerformance);
   const measuredPreviousRows = previousRows.filter(hasMeasuredPerformance);
@@ -284,6 +288,7 @@ export function CampaignWorkspace({
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="eyebrow">Análise detalhada</p><h2 className="mt-2 text-lg font-semibold">Ranking de campanhas</h2></div><p className="text-xs text-zinc-500">Ordene por investimento, retorno ou receita.</p></div>
       <Ranking rows={rows} currency={currency} />
     </Card>
+    <PerformanceRankings rankings={rankings} currency={currency} />
     <section className="grid gap-5 2xl:grid-cols-2">
       <ComparisonPanel currentRows={measuredRows} previousRows={measuredPreviousRows} currency={currency} />
       <AttentionPanel rows={measuredRows} currency={currency} />
