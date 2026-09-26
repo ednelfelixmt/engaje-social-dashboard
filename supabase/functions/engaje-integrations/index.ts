@@ -105,9 +105,37 @@ async function syncWindsor(i:Integration){
  const campaignRows=[...new Map(facts.map((fact:any)=>[fact.campaign_id,{organization_id:i.organization_id,integration_id:i.id,platform:'google_ads',account_id:fact.account_id,external_id:fact.campaign_id,name:fact.campaign_name,status:fact.campaign_status,last_seen_at:new Date().toISOString()}])).values()];
  if(campaignRows.length)await check(await service.from('ad_campaigns').upsert(campaignRows,{onConflict:'organization_id,platform,account_id,external_id'}));
  for(let n=0;n<facts.length;n+=200)await check(await service.from('metrics_ads').upsert(facts.slice(n,n+200),{onConflict:'organization_id,platform,account_id,campaign_id,ad_id,metric_date,currency'}));
+ const dimensionFields=[
+  {type:'audience',field:'adgroup'},
+  {type:'creative',field:'creative_id'},
+  {type:'gender',field:'gender_type'},
+  {type:'age',field:'age_range_type'},
+  {type:'device',field:'device'},
+  {type:'state',field:'region'},
+  {type:'city',field:'city'},
+ ];
+ const breakdownBatches=await concurrentMap(dimensionFields,2,async dimension=>{
+  try{
+   const detailUrl=new URL('https://connectors.windsor.ai/google_ads');
+   detailUrl.searchParams.set('api_key',windsorKey);
+   detailUrl.searchParams.set('date_from',isoDate(from));
+   detailUrl.searchParams.set('date_to',isoDate(to));
+   detailUrl.searchParams.set('fields',`date,account_id,campaign_id,campaign,${dimension.field},spend,impressions,clicks,conversions,conversion_value,currency`);
+   const detailResponse=await fetch(detailUrl,{signal:AbortSignal.timeout(30000)});
+   const detailPayload=await detailResponse.json().catch(()=>({}));
+   if(!detailResponse.ok)throw new Error('HTTP '+detailResponse.status);
+   const detailRows=Array.isArray(detailPayload.data)?detailPayload.data:Array.isArray(detailPayload)?detailPayload:[];
+   return detailRows.filter((row:any)=>(!accountId||String(row.account_id||'').trim()===accountId)&&row[dimension.field]!=null&&String(row[dimension.field]).trim()).map((row:any)=>{
+    const campaignId=String(row.campaign_id||row.campaign||'sem-campanha');const value=String(row[dimension.field]);
+    return {organization_id:i.organization_id,integration_id:i.id,platform:'google_ads',metric_date:String(row.date||isoDate(to)).slice(0,10),currency:String(row.currency||i.config.currency||'BRL').toUpperCase().slice(0,3),account_id:String(row.account_id||accountId),campaign_id:campaignId,campaign_name:String(row.campaign||campaignId),dimension_type:dimension.type,dimension_value:value,dimension_label:value,spend:numeric(row.spend),revenue:row.conversion_value==null?null:numeric(row.conversion_value),impressions:row.impressions==null?null:numeric(row.impressions),clicks:row.clicks==null?null:numeric(row.clicks),leads:null,message_leads:null,checkouts:null,purchases:row.conversions==null?null:numeric(row.conversions),attribution_window:'windsor_source',synced_at:new Date().toISOString()};
+   });
+  }catch(error){console.warn('[windsor-breakdown-skipped]',{integration_id:i.id,dimension:dimension.type,message:error instanceof Error?error.message:'Falha desconhecida'});return [];}
+ });
+ const breakdownRows=breakdownBatches.flat();
+ for(let n=0;n<breakdownRows.length;n+=200)await check(await service.from('metrics_ads_breakdowns').upsert(breakdownRows.slice(n,n+200),{onConflict:'organization_id,platform,account_id,campaign_id,dimension_type,dimension_value,metric_date,currency'}));
  const syncedAt=new Date().toISOString();const config=diagnosticConfig(i.config||{},{syncStatus:'synchronized',providerConnected:true,accountSelected:true,tokenValid:true,lastError:null,lastSyncAt:syncedAt});
  await check(await service.from('integrations').update({status:'connected',is_enabled:true,last_synced_at:syncedAt,config,last_error:null}).eq('id',i.id));
- return {message:`Sincronização Windsor concluída: ${facts.length} métricas do Google Ads gravadas no Supabase.`,rows:facts.length,creatives:0};
+ return {message:`Sincronização Windsor concluída: ${facts.length} métricas e ${breakdownRows.length} detalhamentos do Google Ads gravados no Supabase.`,rows:facts.length,creatives:0};
 }
 async function sync(i:Integration){if(i.provider==='windsor')return syncWindsor(i);const token=await check(await service.rpc('integration_token',{p_id:i.id}));if(!token)throw new Error('Conta sem autorização. Reconecte.');let rows=0,creativeCount=0;
  if(i.provider==='meta_ads'){
