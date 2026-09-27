@@ -1,7 +1,8 @@
 'use client';
 
-import {useEffect, useRef, useState} from 'react';
+import {useState} from 'react';
 import {ArrowDown, ArrowUp, GripVertical} from 'lucide-react';
+import {useSortableList} from '@/hooks/use-sortable-list';
 
 const labels:Record<string,string>={
   kpis:'Indicadores principais', platforms:'Visão por plataforma', funnel:'Funil de conversão',
@@ -16,23 +17,13 @@ function move<T>(items:T[],from:number,to:number){
 
 export function WidgetOrder({initial}:{initial:string[]}){
   const [items,setItems]=useState(()=>[...initial.filter((item)=>availableItems.includes(item)),...availableItems.filter((item)=>!initial.includes(item))]);
-  const [dragging,setDragging]=useState<string|null>(null);
-  const [selected,setSelected]=useState<string|null>(null);
-  const dragged=useRef<string|null>(null);
-  const reorder=(target:string)=>setItems((current)=>move(current,current.indexOf(dragged.current??''),current.indexOf(target)));
-  const start=(item:string)=>{dragged.current=item;setDragging(item);};
-  const finish=()=>{dragged.current=null;setDragging(null);};
-  const selectOrMove=(item:string)=>{if(selected&&selected!==item){dragged.current=selected;reorder(item);dragged.current=null;setSelected(null);}else setSelected(selected===item?null:item);};
-  useEffect(()=>{
-    const track=(event:PointerEvent|MouseEvent)=>{if(!dragged.current)return;event.preventDefault();const target=document.elementFromPoint(event.clientX,event.clientY)?.closest<HTMLElement>('[data-sortable-id]')?.dataset.sortableId;if(target&&target!==dragged.current){reorder(target);dragged.current=target;setDragging(target);}};
-    window.addEventListener('pointermove',track,{passive:false});window.addEventListener('mousemove',track,{passive:false});window.addEventListener('pointerup',finish);window.addEventListener('mouseup',finish);window.addEventListener('pointercancel',finish);
-    return()=>{window.removeEventListener('pointermove',track);window.removeEventListener('mousemove',track);window.removeEventListener('pointerup',finish);window.removeEventListener('mouseup',finish);window.removeEventListener('pointercancel',finish);};
-  },[]);
+  const reorder=(active:string,target:string)=>setItems((current)=>move(current,current.indexOf(active),current.indexOf(target)));
+  const {dragging,over,selected,start,selectOrMove}=useSortableList<string>({selector:'[data-sortable-widget]',attribute:'data-sortable-widget',onMove:reorder});
   return <div className="space-y-2">
-    <p className="muted text-xs">Arraste o card inteiro ou clique em um card e depois na posição de destino. A ordem é salva ao enviar o formulário.</p>
-    {items.map((item,index)=><div key={item} draggable data-sortable-id={item} className={`grid select-none grid-cols-[auto_auto_1fr_auto] items-center gap-3 rounded-xl border p-3 transition ${dragging===item||selected===item?'border-primary/60 bg-primary/[.09] shadow-lg':'border-white/10 bg-white/[.025]'}`} onClick={(event)=>{if(!(event.target as HTMLElement).closest('button,input,select,textarea,a'))selectOrMove(item);}} onPointerDown={(event)=>{if(!(event.target as HTMLElement).closest('button,input,select,textarea,a'))start(item);}} onDragStart={(event)=>{dragged.current=item;setDragging(item);event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',item);}} onDragEnter={(event)=>{event.preventDefault();if(dragged.current&&dragged.current!==item){reorder(item);dragged.current=item;setDragging(item);}}} onDragOver={(event)=>event.preventDefault()} onDrop={(event)=>{event.preventDefault();finish();}} onDragEnd={finish}>
+    <p className="muted text-xs">Arraste qualquer área livre do card até a posição desejada. Também é possível clicar em um card e depois no destino. A ordem é salva ao enviar o formulário.</p>
+    {items.map((item,index)=><div key={item} data-sortable-widget={item} className={`grid touch-none select-none grid-cols-[auto_auto_1fr_auto] items-center gap-3 rounded-xl border p-3 transition ${dragging===item||selected===item?'scale-[.99] border-primary/70 bg-primary/[.12] shadow-lg':over===item?'border-emerald-400/70 bg-emerald-400/[.08]':'cursor-grab border-white/10 bg-white/[.025] active:cursor-grabbing'}`} onClick={(event)=>selectOrMove(item,event)} onPointerDown={(event)=>start(item,event)}>
       <input type="hidden" name="widget_order" value={item}/>
-      <button type="button" aria-pressed={selected===item} aria-label={`Selecionar ou arrastar ${labels[item]??item}`} title="Arraste ou clique para selecionar" className="cursor-grab touch-none rounded-lg border border-white/10 p-2 text-zinc-400 active:cursor-grabbing active:text-primary" onClick={()=>selectOrMove(item)} onPointerDown={()=>start(item)}><GripVertical size={17}/></button>
+      <button type="button" aria-pressed={selected===item} aria-label={`Selecionar ou arrastar ${labels[item]??item}`} title="Arraste ou clique para selecionar" className="cursor-grab touch-none rounded-lg border border-white/10 p-2 text-zinc-400 active:cursor-grabbing active:text-primary" onClick={(event)=>selectOrMove(item,event,true)} onPointerDown={(event)=>{event.stopPropagation();start(item,event,true);}}><GripVertical size={17}/></button>
       <span className="grid size-7 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary">{index+1}</span>
       <span className="font-medium">{labels[item]??item}</span>
       <div className="flex gap-1"><button type="button" aria-label={`Subir ${labels[item]??item}`} disabled={!index} className="rounded-lg border border-white/10 p-2 disabled:opacity-30" onClick={()=>setItems((current)=>move(current,index,index-1))}><ArrowUp size={15}/></button><button type="button" aria-label={`Descer ${labels[item]??item}`} disabled={index===items.length-1} className="rounded-lg border border-white/10 p-2 disabled:opacity-30" onClick={()=>setItems((current)=>move(current,index,index+1))}><ArrowDown size={15}/></button></div>
