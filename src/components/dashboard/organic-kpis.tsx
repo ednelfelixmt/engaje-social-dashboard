@@ -39,6 +39,10 @@ export function OrganicKpis({current, previous, enabledMetrics}: {current: Metri
     video_views:{current:value(current,'video_views'),previous:previous?value(previous,'video_views'):undefined,suffix:''},
     engagement_rate:{current:currentInteractions!==null&&currentReach?currentInteractions/currentReach*100:null,previous:previousInteractions!==undefined&&previousInteractions!==null&&previousReach?previousInteractions/previousReach*100:previous===undefined?undefined:null,suffix:'%'},
   };
-  const metrics=organicMetricKeys.filter((key)=>enabledMetrics.includes(key)).map((key)=>({key,label:dashboardMetricLabels[key as DashboardMetricKey],...metricValues[key]})).filter((metric)=>metric.current!==undefined);
+  const metrics=organicMetricKeys.filter((key)=>enabledMetrics.includes(key)).map((key)=>({
+    key,
+    label:dashboardMetricLabels[key as DashboardMetricKey],
+    ...(metricValues[key]??{current:null,previous:previous?null:undefined,suffix:''}),
+  }));
   return <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">{metrics.map((metric) => <Card key={metric.label} className="!p-5"><p className="muted text-xs">{metric.label}</p><strong className="mt-4 block text-2xl tracking-tight">{number(metric.current, metric.suffix ? 2 : 0)}{metric.current === null ? '' : metric.suffix}</strong><Delta current={metric.current} previous={metric.previous} /></Card>)}</div>;
 }
