@@ -16,7 +16,7 @@ export async function saveDashboard(_:ActionState,f:FormData):Promise<ActionStat
   const enabledMetrics=[...new Set(f.getAll('enabled_metrics').map(String))];
   if(!enabledMetrics.length||enabledMetrics.some((metric)=>!allowed.has(metric)))return {ok:false,message:'Selecione ao menos uma métrica válida.'};
   const enabledPages=[...new Set(f.getAll('enabled_pages').map(String))];
-  const funnelModel=z.enum(['lead_generation','messages','ecommerce','local_business','custom']).catch('custom').parse(f.get('funnel_model'));
+  const funnelModel=z.enum(['lead_generation','messages','ecommerce','local_business','inside_sales','appointments','custom']).catch('custom').parse(f.get('funnel_model'));
   let funnelSteps:unknown;try{funnelSteps=JSON.parse(String(f.get('funnel_steps')||'[]'));}catch{return {ok:false,message:'Configuração do funil inválida.'};}
   const funnelStepSchema=z.array(z.object({metric:z.enum(funnelMetricDefinitions.map((item)=>item.key) as [typeof funnelMetricDefinitions[number]['key'],...typeof funnelMetricDefinitions[number]['key'][]]),label:z.string().trim().min(1).max(40)})).min(2).max(8).refine((steps)=>new Set(steps.map((step)=>step.metric)).size===steps.length,'Etapas repetidas');
   const parsedFunnel=funnelStepSchema.safeParse(funnelSteps);if(!parsedFunnel.success)return {ok:false,message:'Escolha entre 2 e 8 etapas válidas, sem repetições.'};

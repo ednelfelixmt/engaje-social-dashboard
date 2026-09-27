@@ -11,13 +11,15 @@ export const funnelMetricDefinitions = [
 
 export type FunnelMetricKey=typeof funnelMetricDefinitions[number]['key'];
 export type FunnelStepConfig={metric:FunnelMetricKey;label:string};
-export type FunnelModel='lead_generation'|'messages'|'ecommerce'|'local_business'|'custom';
+export type FunnelModel='lead_generation'|'messages'|'ecommerce'|'local_business'|'inside_sales'|'appointments'|'custom';
 
 export const funnelPresets:{id:FunnelModel;label:string;description:string;steps:FunnelStepConfig[]}[]=[
   {id:'lead_generation',label:'Geração de leads',description:'Serviços, educação, saúde, imóveis e B2B.',steps:[{metric:'impressions',label:'Impressões'},{metric:'clicks',label:'Cliques'},{metric:'page_views',label:'Visitas'},{metric:'leads',label:'Leads'}]},
   {id:'messages',label:'Conversas e WhatsApp',description:'Campanhas cujo resultado principal é uma conversa.',steps:[{metric:'impressions',label:'Impressões'},{metric:'clicks',label:'Cliques'},{metric:'message_leads',label:'Conversas iniciadas'}]},
   {id:'ecommerce',label:'E-commerce',description:'Da descoberta até a compra confirmada.',steps:[{metric:'impressions',label:'Impressões'},{metric:'clicks',label:'Cliques'},{metric:'page_views',label:'Visitas'},{metric:'checkouts',label:'Checkouts'},{metric:'purchases',label:'Compras'}]},
   {id:'local_business',label:'Negócio local',description:'Visibilidade, visita digital e contato direto.',steps:[{metric:'impressions',label:'Alcance de mídia'},{metric:'clicks',label:'Interações'},{metric:'page_views',label:'Visitas'},{metric:'message_leads',label:'Contatos'}]},
+  {id:'inside_sales',label:'Inside Sales',description:'Aquisição, geração de demanda, conversa comercial e venda.',steps:[{metric:'impressions',label:'Exposições'},{metric:'clicks',label:'Cliques'},{metric:'page_views',label:'Visitas'},{metric:'leads',label:'Leads'},{metric:'message_leads',label:'Conversas'},{metric:'purchases',label:'Vendas'}]},
+  {id:'appointments',label:'Agendamentos',description:'Clínicas, consultorias, serviços e atendimento comercial.',steps:[{metric:'impressions',label:'Impressões'},{metric:'clicks',label:'Cliques'},{metric:'page_views',label:'Visitas'},{metric:'registration_leads',label:'Cadastros'},{metric:'message_leads',label:'Agendamentos'}]},
   {id:'custom',label:'Personalizado',description:'Escolha, renomeie e ordene as etapas.',steps:[{metric:'impressions',label:'Impressões'},{metric:'clicks',label:'Cliques'},{metric:'page_views',label:'Visitas'},{metric:'leads',label:'Leads'}]},
 ];
 
