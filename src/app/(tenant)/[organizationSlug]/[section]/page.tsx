@@ -6,7 +6,7 @@ import {tenant} from '@/lib/auth/session';
 import {filters, dashboardData, sum} from '@/lib/metrics/query';
 import {campaigns} from '@/lib/metrics/campaigns';
 import {preparePerformanceRankings} from '@/lib/metrics/rankings';
-import {funnelMetricDefinitions, parseFunnelSteps, type FunnelMetricKey} from '@/lib/metrics/funnel-config';
+import {funnelMetricDefinitions, parseFunnelSteps} from '@/lib/metrics/funnel-config';
 import {platformDashboardByRoute, platformDashboards, type DashboardPlatform} from '@/lib/metrics/platforms';
 import {Filters} from '@/components/dashboard/filters';
 import {OrganicKpis} from '@/components/dashboard/organic-kpis';
@@ -37,10 +37,10 @@ function timelineRows(rows: Row<'metrics_ads'>[]) {
 }
 
 function configuredFunnel(rows:CampaignPerformance[],rawSteps:unknown){
-  const property:Record<FunnelMetricKey,keyof CampaignPerformance>={impressions:'impressions',clicks:'clicks',page_views:'pageViews',leads:'leads',registration_leads:'registrationLeads',message_leads:'messageLeads',checkouts:'checkouts',purchases:'purchases'};
   return parseFunnelSteps(rawSteps).map((step)=>{
-    const key=property[step.metric];const available=rows.filter((row)=>row[key]!=null);const value=available.length?available.reduce((total,row)=>total+Number(row[key]),0):null;const spend=available.reduce((total,row)=>total+row.spend,0);const definition=funnelMetricDefinitions.find((item)=>item.key===step.metric)!;
-    const cost=value?spend/value*(step.metric==='impressions'?1000:1):null;
+    const definition=funnelMetricDefinitions.find((item)=>item.key===step.metric)!;const key='dataKey' in definition?definition.dataKey:undefined;
+    const available=key?rows.filter((row)=>row[key]!=null):[];const value=key&&available.length?available.reduce((total,row)=>total+Number(row[key]),0):null;const spend=available.reduce((total,row)=>total+row.spend,0);
+    const cost=value?spend/value*('costMultiplier' in definition&&definition.costMultiplier?definition.costMultiplier:1):null;
     return {label:step.label,value,costLabel:definition.costLabel,cost};
   });
 }
