@@ -45,6 +45,8 @@ function configuredFunnel(rows:CampaignPerformance[],rawSteps:unknown){
   });
 }
 
+function byWidgetOrder(order:string[]){return (a:{id:string},b:{id:string})=>{const ai=order.indexOf(a.id);const bi=order.indexOf(b.id);return (ai<0?order.length:ai)-(bi<0?order.length:bi);};}
+
 export default async function Page({params, searchParams}: {params: {organizationSlug: string; section: string}; searchParams: Record<string, string | undefined>}) {
   const {db, org, user, superAdmin} = await tenant(params.organizationSlug);
   const platformPage = platformDashboardByRoute.get(params.section);
@@ -104,11 +106,10 @@ export default async function Page({params, searchParams}: {params: {organizatio
 
     {params.section === 'overview' ? <div className="space-y-5">
       {!campaignsWithMovement.length && latestMovement?.metric_date ? <Card className="border-amber-400/20 bg-amber-400/[0.05] !py-4"><p className="text-sm text-amber-100">Não houve veiculação no intervalo selecionado. O último investimento registrado foi em <strong>{latestMovement.metric_date.split('-').reverse().join('/')}</strong>.</p></Card> : null}
-      <CampaignOverview rows={campaignsWithMovement} currency={f.currency} enabledMetrics={config.enabled_metrics} />
-      <Card><div><p className="eyebrow">Jornada completa</p><h2 className="mt-2 text-lg font-semibold">Funil geral de campanhas</h2><p className="muted mt-2 text-sm">Inclui leads de formulários e conversas iniciadas por mensagens.</p></div><Funnel currency={f.currency} steps={funnelSteps} /></Card>
+      {[{id:'campaigns',content:<CampaignOverview key="campaigns" rows={campaignsWithMovement} currency={f.currency} enabledMetrics={config.enabled_metrics} />},{id:'funnel',content:<Card key="funnel"><div><p className="eyebrow">Jornada completa</p><h2 className="mt-2 text-lg font-semibold">Funil geral de campanhas</h2><p className="muted mt-2 text-sm">Inclui leads de formulários e conversas iniciadas por mensagens.</p></div><Funnel currency={f.currency} steps={funnelSteps} /></Card>}].sort(byWidgetOrder(config.widget_order)).map((widget)=>widget.content)}
     </div> : null}
 
-    {sectionGroup === 'paid' ? <CampaignWorkspace rows={currentCampaigns} previousRows={f.compare === 'none' ? [] : previousCampaigns} timeline={timelineRows(ads)} currency={f.currency} showPlatforms={!platformPage && !chosen} enabledMetrics={config.enabled_metrics} rankings={performanceRankings} funnelSteps={funnelSteps} /> : null}
+    {sectionGroup === 'paid' ? <CampaignWorkspace rows={currentCampaigns} previousRows={f.compare === 'none' ? [] : previousCampaigns} timeline={timelineRows(ads)} currency={f.currency} showPlatforms={!platformPage && !chosen} enabledMetrics={config.enabled_metrics} rankings={performanceRankings} funnelSteps={funnelSteps} widgetOrder={config.widget_order} /> : null}
 
     {params.section === 'funnel' ? <Card><h2 className="font-semibold">Funil do modelo de negócio</h2><p className="muted mt-2 text-sm">Etapas configuradas para este cliente. As taxas são relações entre eventos agregados e não representam uma coorte individual.</p><Funnel currency={f.currency} steps={funnelSteps} /></Card> : null}
 

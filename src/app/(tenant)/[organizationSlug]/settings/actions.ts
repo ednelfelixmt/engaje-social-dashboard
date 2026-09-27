@@ -20,9 +20,12 @@ export async function saveDashboard(_:ActionState,f:FormData):Promise<ActionStat
   let funnelSteps:unknown;try{funnelSteps=JSON.parse(String(f.get('funnel_steps')||'[]'));}catch{return {ok:false,message:'Configuração do funil inválida.'};}
   const funnelStepSchema=z.array(z.object({metric:z.enum(funnelMetricDefinitions.map((item)=>item.key) as [typeof funnelMetricDefinitions[number]['key'],...typeof funnelMetricDefinitions[number]['key'][]]),label:z.string().trim().min(1).max(40)})).min(2).max(12).refine((steps)=>new Set(steps.map((step)=>step.metric)).size===steps.length,'Etapas repetidas');
   const parsedFunnel=funnelStepSchema.safeParse(funnelSteps);if(!parsedFunnel.success)return {ok:false,message:'Escolha entre 2 e 12 etapas válidas, sem repetições.'};
+  const allowedWidgets=new Set(['kpis','funnel','campaigns','timeline','creatives','platforms']);
+  const widgetOrder=[...new Set(f.getAll('widget_order').map(String))];
+  if(!widgetOrder.length||widgetOrder.some((widget)=>!allowedWidgets.has(widget)))return {ok:false,message:'A ordem dos blocos é inválida.'};
   const targets:Record<string,number|null>={};
   for(const key of ['target_roas','target_roi','target_cpa','target_revenue','target_purchases']){const value=String(f.get(key)||'');targets[key]=value===''?null:Number(value);if(targets[key]!=null&&(!Number.isFinite(targets[key])||(key!=='target_roi'&&targets[key]!<0)))return {ok:false,message:'Metas inválidas.'};}
-  const {error}=await db.from('dashboard_configs').update({enabled_pages:enabledPages,enabled_metrics:enabledMetrics,widget_order:f.getAll('widget_order').map(String),preferred_revenue_source:f.get('preferred_revenue_source')==='spreadsheet'?'spreadsheet':'crm',funnel_model:funnelModel,funnel_steps:parsedFunnel.data,only_platforms_with_data:true,...targets}).eq('organization_id',org.id);
+  const {error}=await db.from('dashboard_configs').update({enabled_pages:enabledPages,enabled_metrics:enabledMetrics,widget_order:widgetOrder,preferred_revenue_source:f.get('preferred_revenue_source')==='spreadsheet'?'spreadsheet':'crm',funnel_model:funnelModel,funnel_steps:parsedFunnel.data,only_platforms_with_data:true,...targets}).eq('organization_id',org.id);
   revalidatePath('/'+slug,'layout');
   return {ok:!error,message:error?'Configuração inválida.':'Dashboard atualizado com as métricas selecionadas.'};
 }

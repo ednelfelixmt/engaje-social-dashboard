@@ -242,6 +242,7 @@ export function CampaignWorkspace({
   enabledMetrics,
   rankings,
   funnelSteps,
+  widgetOrder,
 }: {
   rows: CampaignPerformance[];
   previousRows: CampaignPerformance[];
@@ -251,6 +252,7 @@ export function CampaignWorkspace({
   enabledMetrics: string[];
   rankings: PerformanceRankingGroups;
   funnelSteps: FunnelStep[];
+  widgetOrder: string[];
 }) {
   const measuredRows = rows.filter(hasMeasuredPerformance);
   const measuredPreviousRows = previousRows.filter(hasMeasuredPerformance);
@@ -263,26 +265,29 @@ export function CampaignWorkspace({
     format: (value:number|null)=>formatPaidMetric(item.key,value,currency),
   }));
   const showLeadBreakdown=['leads','registration_leads','message_leads','cpl','cost_per_registration','cost_per_message'].some((key)=>enabledMetrics.includes(key));
+  const widgetRank=(key:string)=>{const index=widgetOrder.indexOf(key);return index<0?widgetOrder.length:index;};
 
-  return <div className="space-y-5">
-    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6">
+  return <div className="flex flex-col gap-5">
+    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6" style={{order:widgetRank('kpis')}}>
       {kpis.map(({key,...kpi}) => <KpiCard key={key} {...kpi} />)}
     </section>
-    {showLeadBreakdown?<LeadBreakdown totalLeads={current.leads} registrationLeads={current.registrationLeads} messageLeads={current.messageLeads} totalCost={current.cpl} registrationCost={current.costPerRegistration} messageCost={current.costPerMessage} currency={currency} />:null}
-    {showPlatforms ? <PlatformBreakdown rows={measuredRows} currency={currency} enabledMetrics={enabledMetrics} /> : null}
-    <section className="grid gap-5 2xl:grid-cols-[0.9fr_1.4fr]">
+    {showLeadBreakdown?<div style={{order:widgetRank('kpis')}}><LeadBreakdown totalLeads={current.leads} registrationLeads={current.registrationLeads} messageLeads={current.messageLeads} totalCost={current.cpl} registrationCost={current.costPerRegistration} messageCost={current.costPerMessage} currency={currency} /></div>:null}
+    {showPlatforms ? <div style={{order:widgetRank('platforms')}}><PlatformBreakdown rows={measuredRows} currency={currency} enabledMetrics={enabledMetrics} /></div> : null}
+    <section style={{order:widgetRank('funnel')}}>
       <TrafficFunnel steps={funnelSteps} currency={currency} />
+    </section>
+    <section style={{order:widgetRank('timeline')}}>
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-4"><div><p className="eyebrow">Evolução temporal</p><h2 className="mt-2 text-lg font-semibold">Investimento e receita atribuída</h2></div><p className="max-w-md text-right text-xs text-zinc-500">Receita real conciliada quando disponível; receita da plataforma como alternativa.</p></div>
         <Timeline rows={timeline} currency={currency} />
       </Card>
     </section>
-    <Card>
+    <div style={{order:widgetRank('campaigns')}}><Card>
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="eyebrow">Análise detalhada</p><h2 className="mt-2 text-lg font-semibold">Ranking de campanhas</h2></div><p className="text-xs text-zinc-500">Ordene por investimento, retorno ou receita.</p></div>
       <Ranking rows={rows} currency={currency} />
-    </Card>
-    <PerformanceRankings rankings={rankings} currency={currency} />
-    <section className="grid gap-5 2xl:grid-cols-2">
+    </Card></div>
+    <div style={{order:widgetRank('creatives')}}><PerformanceRankings rankings={rankings} currency={currency} /></div>
+    <section className="grid gap-5 2xl:grid-cols-2" style={{order:widgetOrder.length+1}}>
       <ComparisonPanel currentRows={measuredRows} previousRows={measuredPreviousRows} currency={currency} />
       <AttentionPanel rows={measuredRows} currency={currency} />
     </section>
