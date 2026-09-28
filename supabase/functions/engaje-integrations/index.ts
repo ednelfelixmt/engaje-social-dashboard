@@ -23,7 +23,35 @@ function permissionsFor(provider:string){return [...(requiredPermissions[provide
 function metaOAuthPermissions(){return [...new Set(['ads_read','business_management','pages_show_list','pages_read_engagement','pages_read_user_content','read_insights','instagram_basic','instagram_manage_insights','leads_retrieval'])];}
 function userMessageForMetaError(code:string){if(code==='10'||code==='200')return 'A Meta não concedeu todas as permissões necessárias para sincronizar esta conta.';if(code==='190')return 'A autorização da Meta expirou ou foi revogada.';if(code==='4'||code==='17')return 'A Meta limitou temporariamente as consultas. Tente sincronizar novamente mais tarde.';if(code==='100')return 'A Meta recusou um parâmetro da sincronização. A integração precisa ser revisada.';return 'A Meta não conseguiu concluir esta sincronização.';}
 function diagnosticConfig(config:Record<string,unknown>,patch:Record<string,unknown>){const current=config?.diagnostics&&typeof config.diagnostics==='object'&&!Array.isArray(config.diagnostics)?config.diagnostics as Record<string,unknown>:{};return {...config,diagnostics:{...current,...patch}};}
-async function check<T>(result:{data:T;error:unknown}):Promise<T>{if(result.error)throw new Error('Falha ao gravar no Supabase.');return result.data;}
+async function check<T>(result:{data:T;error:unknown}):Promise<T>{
+ if(result.error){
+  const error=result.error as {code?:string;message?:string;details?:string};
+  console.error('[supabase-write]',{code:error.code||null,message:error.message||'Erro desconhecido',details:error.details||null});
+  if(error.code==='23503')throw new Error('Este registro possui histórico vinculado e foi preservado. Atualize a página e tente novamente.');
+  throw new Error('Não foi possível salvar a alteração. O erro foi registrado para diagnóstico.');
+ }
+ return result.data;
+}
+
+async function archiveStaleMetaSelections(organizationId:string){
+ const providers=['meta_ads','facebook_organic','instagram_organic'];
+ const {data:selections,error}=await service.from('integrations').select('id,config').eq('organization_id',organizationId).in('provider',providers).eq('config->>selection_pending','true');
+ if(error)await check({data:null,error});
+ for(const row of selections||[]){
+  const config=row.config&&typeof row.config==='object'&&!Array.isArray(row.config)?{...row.config}:{};
+  delete config.selection_pending;delete config.batch_id;
+  await check(await service.from('integrations').update({status:'disconnected',is_enabled:false,config:{...config,hidden:true,archived_reason:'superseded_oauth_selection'}}).eq('id',row.id).eq('organization_id',organizationId));
+ }
+ const {data:temporary,error:temporaryError}=await service.from('integrations').select('id,config').eq('organization_id',organizationId).in('provider',providers).eq('status','pending').like('external_account_id','pending:%');
+ if(temporaryError)await check({data:null,error:temporaryError});
+ for(const row of temporary||[]){
+  const removed=await service.from('integrations').delete().eq('id',row.id).eq('organization_id',organizationId);
+  if(removed.error){
+   const config=row.config&&typeof row.config==='object'&&!Array.isArray(row.config)?row.config:{};
+   await check(await service.from('integrations').update({status:'disconnected',is_enabled:false,config:{...config,hidden:true,archived_reason:'superseded_oauth_attempt'}}).eq('id',row.id).eq('organization_id',organizationId));
+  }
+ }
+}
 async function hmac(text:string){if(!metaSecret)throw new Error('Configure META_APP_SECRET.');const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(metaSecret),{name:'HMAC',hash:'SHA-256'},false,['sign']);return Array.from(new Uint8Array(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(text)))).map(n=>n.toString(16).padStart(2,'0')).join('');}
 async function sha256(text:string){return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))).map(n=>n.toString(16).padStart(2,'0')).join('');}
 function randomKey(){const bytes=crypto.getRandomValues(new Uint8Array(32));return Array.from(bytes).map(n=>n.toString(16).padStart(2,'0')).join('');}
@@ -432,8 +460,7 @@ Deno.serve(async(req:Request)=>{
   if(body.action==='connect'){
    if(!['meta_ads','facebook_organic','instagram_organic'].includes(body.provider))return json({message:body.provider==='tiktok_ads'||body.provider==='tiktok_organic'?'TikTok: o conector está preparado, mas requer aplicativo aprovado e as credenciais TIKTOK_APP_ID e TIKTOK_APP_SECRET.':'Use o formulário do extrator para cadastrar esta fonte.'});
    if(!metaId||!metaSecret)return json({message:'Configure META_APP_ID e META_APP_SECRET no Supabase.'});
-   await check(await service.from('integrations').delete().eq('organization_id',org).in('provider',['meta_ads','facebook_organic','instagram_organic']).eq('config->>selection_pending','true'));
-   await check(await service.from('integrations').delete().eq('organization_id',org).in('provider',['meta_ads','facebook_organic','instagram_organic']).eq('status','pending').like('external_account_id','pending:%'));
+   await archiveStaleMetaSelections(org);
    const nonce=crypto.randomUUID();const pending=await check(await service.from('integrations').insert({organization_id:org,provider:body.provider,external_account_id:'pending:'+nonce,account_name:'Autorização em andamento',status:'pending',config:{nonce,user_id:actor.id}}).select('id').single());
    const signed=[pending.id,Date.now()+600000,nonce].join('.');const state=signed+'.'+await hmac(signed);const scopes=metaOAuthPermissions().join(',');
    const login=new URL('https://www.facebook.com/'+graphVersion+'/dialog/oauth');login.search=new URLSearchParams({client_id:metaId,redirect_uri:callback,state,scope:scopes,response_type:'code'}).toString();return json({url:login.href});
