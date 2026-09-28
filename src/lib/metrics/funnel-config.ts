@@ -11,7 +11,6 @@ export type FunnelDataKey='impressions'|'clicks'|'pageViews'|'leads'|'registrati
 
 export const funnelMetricDefinitions = [
   {key:'impressions',label:'Impressões',costLabel:'CPM',group:'awareness',dataKey:'impressions',costMultiplier:1000},
-  {key:'reach',label:'Alcance',costLabel:'Custo/alcance',group:'awareness'},
   {key:'video_views',label:'Visualizações de vídeo',costLabel:'CPV',group:'awareness'},
   {key:'engagements',label:'Engajamentos',costLabel:'CPE',group:'awareness'},
   {key:'clicks',label:'Cliques',costLabel:'CPC',group:'consideration',dataKey:'clicks'},
@@ -46,7 +45,7 @@ export const funnelPresets:{id:FunnelModel;label:string;description:string;steps
   {id:'lead_generation',label:'Geração de leads',description:'Serviços, educação, saúde, imóveis e B2B.',steps:[{metric:'impressions',label:'Impressões'},{metric:'clicks',label:'Cliques'},{metric:'page_views',label:'Visitas'},{metric:'registration_leads',label:'Cadastros'}]},
   {id:'messages',label:'Conversas e WhatsApp',description:'Campanhas cujo resultado principal é uma conversa.',steps:[{metric:'impressions',label:'Impressões'},{metric:'clicks',label:'Cliques'},{metric:'message_leads',label:'Conversas iniciadas'}]},
   {id:'ecommerce',label:'E-commerce',description:'Da descoberta até a compra confirmada.',steps:[{metric:'impressions',label:'Impressões'},{metric:'clicks',label:'Cliques'},{metric:'page_views',label:'Visitas'},{metric:'content_views',label:'Produtos visualizados'},{metric:'add_to_cart',label:'Carrinhos'},{metric:'checkouts',label:'Checkouts'},{metric:'purchases',label:'Compras'}]},
-  {id:'local_business',label:'Negócio local',description:'Visibilidade, contato, rota e visita ao estabelecimento.',steps:[{metric:'reach',label:'Pessoas alcançadas'},{metric:'clicks',label:'Interações'},{metric:'message_leads',label:'Contatos'},{metric:'directions',label:'Rotas'},{metric:'store_visits',label:'Visitas à loja'}]},
+  {id:'local_business',label:'Negócio local',description:'Visibilidade, contato, rota e visita ao estabelecimento.',steps:[{metric:'impressions',label:'Impressões'},{metric:'clicks',label:'Interações'},{metric:'message_leads',label:'Contatos'},{metric:'directions',label:'Rotas'},{metric:'store_visits',label:'Visitas à loja'}]},
   {id:'inside_sales',label:'Inside Sales',description:'Aquisição, qualificação, oportunidade, proposta e venda.',steps:[{metric:'leads',label:'Leads'},{metric:'qualified_leads',label:'Leads qualificados'},{metric:'mql',label:'MQL'},{metric:'sql',label:'SQL'},{metric:'opportunities',label:'Oportunidades'},{metric:'meetings',label:'Reuniões'},{metric:'proposals',label:'Propostas'},{metric:'purchases',label:'Vendas'}]},
   {id:'appointments',label:'Agendamentos',description:'Clínicas, consultorias, serviços e atendimento comercial.',steps:[{metric:'impressions',label:'Impressões'},{metric:'clicks',label:'Cliques'},{metric:'page_views',label:'Visitas'},{metric:'leads',label:'Leads'},{metric:'qualified_leads',label:'Qualificados'},{metric:'meetings',label:'Agendamentos'}]},
   {id:'custom',label:'Personalizado',description:'Escolha qualquer etapa, renomeie e ordene a jornada.',steps:[{metric:'impressions',label:'Impressões'},{metric:'clicks',label:'Cliques'},{metric:'page_views',label:'Visitas'},{metric:'leads',label:'Leads'}]},

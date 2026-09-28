@@ -7,9 +7,9 @@ import {dashboardMetricGroups, dashboardMetricKeys, type DashboardMetricScope} f
 type Scope='all'|DashboardMetricScope;
 const tabs:{id:Scope;label:string}[]=[{id:'all',label:'Todas'},{id:'paid',label:'Mídia paga'},{id:'organic',label:'Orgânico'},{id:'sales',label:'CRM e vendas'}];
 const presets=[
-  {label:'Essenciais',keys:['spend','impressions','clicks','ctr','cpc','leads','cpl','purchases','revenue','roas']},
-  {label:'Geração de leads',keys:['spend','impressions','clicks','ctr','cpc','page_views','leads','registration_leads','message_leads','cpl','cost_per_registration','cost_per_message']},
-  {label:'E-commerce',keys:['spend','impressions','clicks','ctr','cpc','content_views','add_to_cart','checkouts','purchases','cpa','revenue','roas']},
+  {label:'Essenciais',keys:['spend','impressions','reach','frequency','clicks','ctr','cpc','leads','cpl','purchases','revenue','roas']},
+  {label:'Geração de leads',keys:['spend','impressions','reach','frequency','clicks','ctr','cpc','page_views','leads','registration_leads','message_leads','cpl','cost_per_registration','cost_per_message']},
+  {label:'E-commerce',keys:['spend','impressions','reach','frequency','clicks','ctr','cpc','content_views','add_to_cart','checkouts','purchases','cpa','revenue','roas']},
   {label:'Conteúdo orgânico',keys:['impressions','reach','interactions','engagement_rate','likes','comments','shares','saves','video_views','followers','follower_growth','profile_views']},
 ] as const;
 
