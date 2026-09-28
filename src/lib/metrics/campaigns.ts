@@ -52,6 +52,7 @@ export function campaigns(
     }
 
     const impressions = sum(rows, 'impressions');
+    const reach = sum(rows, 'reach');
     const clicks = sum(rows, 'clicks');
     const pageViews = sum(rows, 'page_views');
     const leads = sum(rows, 'leads');
@@ -76,6 +77,7 @@ export function campaigns(
       spend,
       revenue,
       impressions,
+      reach,
       clicks,
       pageViews,
       leads,
@@ -117,6 +119,7 @@ export function campaigns(
       spend: 0,
       revenue: null,
       impressions: null,
+      reach: null,
       clicks: null,
       pageViews: null,
       leads: null,

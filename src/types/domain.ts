@@ -27,6 +27,7 @@ export type CampaignPerformance = {
   spend: number;
   revenue: number | null;
   impressions: number | null;
+  reach: number | null;
   clicks: number | null;
   pageViews: number | null;
   leads: number | null;
