@@ -6,6 +6,14 @@ function normalizedAccountId(value: string) {
   return value.replace(/^act_/, '');
 }
 
+const primitiveMetricKeys = [
+  'conversion_value','impressions','reach','clicks','link_clicks','outbound_clicks','unique_clicks','page_views',
+  'video_views','video_2s_views','video_3s_views','video_6s_views','thruplays','video_25','video_50','video_75','video_95','video_100',
+  'leads','registration_leads','message_leads','phone_calls','form_starts','form_completions','content_views','add_to_cart',
+  'checkouts','purchases','catalog_sales','subscriptions','conversions','all_conversions','view_through_conversions',
+  'search_impression_share','search_top_impression_share','search_absolute_top_impression_share','quality_score',
+] as const;
+
 export function campaigns(
   ads: Row<'metrics_ads'>[],
   crm: Row<'metrics_crm'>[],
@@ -48,10 +56,14 @@ export function campaigns(
     const pageViews = sum(rows, 'page_views');
     const leads = sum(rows, 'leads');
     const messageLeads = sum(rows, 'message_leads');
-    const registrationLeads = leads != null && messageLeads != null
+    const storedRegistrationLeads = sum(rows, 'registration_leads');
+    const registrationLeads = storedRegistrationLeads ?? (leads != null && messageLeads != null
       ? Math.max(0, leads - messageLeads)
-      : null;
+      : null);
     const checkouts = sum(rows, 'checkouts');
+    const metricValues:Record<string,number|null>={};
+    for(const key of primitiveMetricKeys)metricValues[key]=sum(rows,key);
+    metricValues.spend=spend;metricValues.revenue=revenue;metricValues.registration_leads=registrationLeads;
 
     return {
       organizationId: first.organization_id,
@@ -86,6 +98,7 @@ export function campaigns(
       cpa: purchases ? spend / purchases : null,
       ctr: impressions && clicks != null ? clicks / impressions * 100 : null,
       conversionRate: clicks && purchases != null ? purchases / clicks * 100 : null,
+      metricValues,
     };
   });
 
@@ -122,6 +135,7 @@ export function campaigns(
       ctr: null,
       cpa: null,
       conversionRate: null,
+      metricValues: {},
     });
   }
   return performance;

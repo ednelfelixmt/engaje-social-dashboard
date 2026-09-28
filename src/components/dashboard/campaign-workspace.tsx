@@ -16,6 +16,7 @@ import {money, number} from '@/lib/utils';
 import {dashboardMetricLabels, paidMetricKeys, type DashboardMetricKey} from '@/lib/metrics/catalog';
 import type {CampaignPerformance, Platform} from '@/types/domain';
 import type {PerformanceRankingGroups} from '@/lib/metrics/rankings';
+import {paidSummary} from '@/lib/metrics/paid-summary';
 
 type TimelineRow = {date: string; spend: number | null; revenue: number | null};
 
@@ -24,11 +25,6 @@ const platformLabels: Partial<Record<Platform, string>> = {
   google_ads: 'Google Ads',
   tiktok_ads: 'TikTok Ads',
 };
-
-function total(rows: CampaignPerformance[], key: keyof CampaignPerformance) {
-  if (!rows.length || rows.some((row) => row[key] == null)) return null;
-  return rows.reduce((value, row) => value + Number(row[key]), 0);
-}
 
 function hasMeasuredPerformance(row: CampaignPerformance) {
   return row.spend > 0
@@ -39,75 +35,21 @@ function hasMeasuredPerformance(row: CampaignPerformance) {
     || row.purchases != null;
 }
 
-function availableTotal(rows: CampaignPerformance[], key: keyof CampaignPerformance) {
-  const available = rows.filter((row) => row[key] != null);
-  return available.length ? available.reduce((value, row) => value + Number(row[key]), 0) : null;
-}
-
-function costFor(rows: CampaignPerformance[], key: keyof CampaignPerformance) {
-  const available = rows.filter((row) => row[key] != null);
-  const count = available.reduce((value, row) => value + Number(row[key] ?? 0), 0);
-  const spend = available.reduce((value, row) => value + Number(row.spend), 0);
-  return count > 0 ? spend / count : null;
-}
-
 function metrics(rows: CampaignPerformance[]) {
-  const spend = total(rows, 'spend');
-  const revenue = total(rows, 'revenue');
-  const impressions = total(rows, 'impressions');
-  const clicks = total(rows, 'clicks');
-  const pageViews = total(rows, 'pageViews');
-  // Some campaigns expose message leads while other campaigns do not expose
-  // a total lead field. Aggregate the values that are actually available so
-  // the summary stays consistent with the detailed lead breakdown.
-  const leads = availableTotal(rows, 'leads');
-  const registrationLeads = availableTotal(rows, 'registrationLeads');
-  const messageLeads = availableTotal(rows, 'messageLeads');
-  const checkouts = total(rows, 'checkouts');
-  const purchases = total(rows, 'purchases');
-
-  return {
-    spend,
-    revenue,
-    impressions,
-    clicks,
-    pageViews,
-    leads,
-    registrationLeads,
-    messageLeads,
-    checkouts,
-    purchases,
-    ctr: impressions && clicks != null ? clicks / impressions * 100 : null,
-    cpm: impressions && spend != null ? spend / impressions * 1000 : null,
-    cpc: clicks && spend != null ? spend / clicks : null,
-    cpl: leads && spend != null ? spend / leads : null,
-    costPerRegistration: costFor(rows, 'registrationLeads'),
-    costPerMessage: costFor(rows, 'messageLeads'),
-    cpa: purchases && spend != null ? spend / purchases : null,
-    roas: spend && revenue != null ? revenue / spend : null,
-    roi: spend && revenue != null ? (revenue - spend) / spend * 100 : null,
-    conversion_rate: clicks && purchases != null ? purchases / clicks * 100 : null,
-    cost_per_page_view: pageViews && spend != null ? spend / pageViews : null,
-    cost_per_checkout: checkouts && spend != null ? spend / checkouts : null,
-    registration_leads: registrationLeads,
-    message_leads: messageLeads,
-    page_views: pageViews,
-    cost_per_registration: costFor(rows, 'registrationLeads'),
-    cost_per_message: costFor(rows, 'messageLeads'),
-  };
+  return paidSummary(rows);
 }
 
 const paidCardDefinitions = paidMetricKeys.map((key) => ({
   key: key as DashboardMetricKey,
   label: dashboardMetricLabels[key as DashboardMetricKey],
-  inverse: ['cpa','cpm','cpc','cpl','cost_per_registration','cost_per_message','cost_per_page_view','cost_per_checkout'].includes(key),
-  icon: ['spend','revenue','cpa','cpm','cpc','cpl','cost_per_registration','cost_per_message','cost_per_page_view','cost_per_checkout'].includes(key) ? BadgeDollarSign : ['purchases','checkouts'].includes(key) ? ShoppingCart : ['impressions','page_views'].includes(key) ? Eye : ['clicks','ctr','conversion_rate'].includes(key) ? MousePointerClick : TrendingUp,
+  inverse: ['cpa','cpm','cpc','cpl','cost_per_conversion','cost_per_registration','cost_per_message','cost_per_call','cost_per_page_view','cost_per_thruplay','cost_per_add_to_cart','cost_per_checkout','cost_per_subscription'].includes(key),
+  icon: ['spend','revenue','conversion_value','profit','cpa','cpm','cpc','cpl'].includes(key) || key.startsWith('cost_per_') ? BadgeDollarSign : ['purchases','checkouts','add_to_cart'].includes(key) ? ShoppingCart : ['impressions','reach','page_views','video_views'].includes(key) ? Eye : ['clicks','link_clicks','outbound_clicks','ctr','conversion_rate'].includes(key) ? MousePointerClick : TrendingUp,
 }));
 
 function formatPaidMetric(key: string, value: number | null, currency: string) {
-  if (['spend','revenue','cpa','cpm','cpc','cpl','cost_per_registration','cost_per_message','cost_per_page_view','cost_per_checkout'].includes(key)) return money(value, currency);
-  if (['ctr','roi','conversion_rate'].includes(key)) return value == null ? '—' : `${number(value, 2)}%`;
-  if (key === 'roas') return value == null ? '—' : `${number(value, 2)}x`;
+  if (['spend','revenue','conversion_value','profit','cpa','cpm','cpc','cpl'].includes(key) || key.startsWith('cost_per_')) return money(value, currency);
+  if (['ctr','unique_ctr','roi','conversion_rate','search_impression_share','search_top_impression_share','search_absolute_top_impression_share'].includes(key)) return value == null ? '—' : `${number(value, 2)}%`;
+  if (key === 'roas' || key === 'frequency') return value == null ? '—' : `${number(value, 2)}x`;
   return number(value);
 }
 

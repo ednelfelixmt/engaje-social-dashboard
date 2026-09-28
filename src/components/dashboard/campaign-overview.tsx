@@ -7,54 +7,19 @@ import {LeadBreakdown} from '@/components/dashboard/lead-breakdown';
 import {money, number} from '@/lib/utils';
 import {dashboardMetricLabels, paidMetricKeys, type DashboardMetricKey} from '@/lib/metrics/catalog';
 import type {CampaignPerformance, Platform} from '@/types/domain';
+import {paidSummary} from '@/lib/metrics/paid-summary';
 
 const platformNames: Partial<Record<Platform, string>> = {meta_ads: 'Meta Ads', google_ads: 'Google Ads', tiktok_ads: 'TikTok Ads'};
-type Metric = keyof ReturnType<typeof summary>;
-
-function total(rows: CampaignPerformance[], key: keyof CampaignPerformance) {
-  if (!rows.length || rows.every((row) => row[key] == null)) return null;
-  return rows.reduce((sum, row) => sum + Number(row[key] ?? 0), 0);
-}
-
-function costFor(rows: CampaignPerformance[], key: keyof CampaignPerformance) {
-  const available = rows.filter((row) => row[key] != null);
-  const count = available.reduce((sum, row) => sum + Number(row[key] ?? 0), 0);
-  const spend = available.reduce((sum, row) => sum + row.spend, 0);
-  return count > 0 ? spend / count : null;
-}
+type Metric = string;
 
 function summary(rows: CampaignPerformance[]) {
-  const spend = total(rows, 'spend');
-  const impressions = total(rows, 'impressions');
-  const clicks = total(rows, 'clicks');
-  const pageViews = total(rows, 'pageViews');
-  const leads = total(rows, 'leads');
-  const registrationLeads = total(rows, 'registrationLeads');
-  const messageLeads = total(rows, 'messageLeads');
-  const checkouts = total(rows, 'checkouts');
-  const purchases = total(rows, 'purchases');
-  const revenue = total(rows, 'revenue');
-  return {
-    spend, revenue, impressions, clicks, page_views:pageViews, leads, registration_leads:registrationLeads, message_leads:messageLeads, checkouts, purchases,
-    roas: spend && revenue != null ? revenue / spend : null,
-    roi: spend && revenue != null ? (revenue-spend)/spend*100 : null,
-    cpa: purchases && spend != null ? spend/purchases : null,
-    conversion_rate: clicks && purchases != null ? purchases/clicks*100 : null,
-    cost_per_checkout: checkouts && spend != null ? spend/checkouts : null,
-    cpm: impressions && spend != null ? spend/impressions*1000 : null,
-    cpl: costFor(rows, 'leads'),
-    cost_per_registration: costFor(rows, 'registrationLeads'),
-    cost_per_message: costFor(rows, 'messageLeads'),
-    cost_per_page_view: pageViews && spend != null ? spend/pageViews : null,
-    cpc: clicks && spend != null ? spend / clicks : null,
-    ctr: impressions && clicks != null ? clicks / impressions * 100 : null,
-  };
+  return paidSummary(rows);
 }
 
 function formatMetric(metric: Metric, value: number | null, currency: string) {
-  if (['spend','revenue','cpa','cpm','cpc','cpl','cost_per_registration','cost_per_message','cost_per_page_view','cost_per_checkout'].includes(metric)) return money(value, currency);
-  if (['ctr','roi','conversion_rate'].includes(metric)) return value == null ? '—' : `${number(value, 2)}%`;
-  if (metric === 'roas') return value == null ? '—' : `${number(value, 2)}x`;
+  if (['spend','revenue','conversion_value','profit','cpa','cpm','cpc','cpl'].includes(metric) || metric.startsWith('cost_per_')) return money(value, currency);
+  if (['ctr','unique_ctr','roi','conversion_rate','search_impression_share','search_top_impression_share','search_absolute_top_impression_share'].includes(metric)) return value == null ? '—' : `${number(value, 2)}%`;
+  if (metric === 'roas' || metric === 'frequency') return value == null ? '—' : `${number(value, 2)}x`;
   return number(value);
 }
 

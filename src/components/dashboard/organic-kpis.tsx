@@ -10,6 +10,8 @@ function value(rows: MetricRow[], key: string) {
 }
 
 function interactions(rows: MetricRow[]) {
+  const supplied=value(rows,'interactions');
+  if(supplied!==null)return supplied;
   const values = ['likes', 'comments', 'shares', 'saves'].map((key) => value(rows, key)).filter((item): item is number => item !== null);
   return values.length ? values.reduce((total, item) => total + item, 0) : null;
 }
@@ -31,12 +33,21 @@ export function OrganicKpis({current, previous, enabledMetrics}: {current: Metri
     reach:{current:currentReach,previous:previousReach,suffix:''},
     interactions:{current:currentInteractions,previous:previousInteractions,suffix:''},
     clicks:{current:value(current,'clicks'),previous:previous?value(previous,'clicks'):undefined,suffix:''},
+    link_clicks:{current:value(current,'link_clicks'),previous:previous?value(previous,'link_clicks'):undefined,suffix:''},
     page_views:{current:value(current,'page_views'),previous:previous?value(previous,'page_views'):undefined,suffix:''},
     likes:{current:value(current,'likes'),previous:previous?value(previous,'likes'):undefined,suffix:''},
     comments:{current:value(current,'comments'),previous:previous?value(previous,'comments'):undefined,suffix:''},
     shares:{current:value(current,'shares'),previous:previous?value(previous,'shares'):undefined,suffix:''},
     saves:{current:value(current,'saves'),previous:previous?value(previous,'saves'):undefined,suffix:''},
     video_views:{current:value(current,'video_views'),previous:previous?value(previous,'video_views'):undefined,suffix:''},
+    video_2s_views:{current:value(current,'video_2s_views'),previous:previous?value(previous,'video_2s_views'):undefined,suffix:''},
+    video_3s_views:{current:value(current,'video_3s_views'),previous:previous?value(previous,'video_3s_views'):undefined,suffix:''},
+    video_6s_views:{current:value(current,'video_6s_views'),previous:previous?value(previous,'video_6s_views'):undefined,suffix:''},
+    video_25:{current:value(current,'video_25'),previous:previous?value(previous,'video_25'):undefined,suffix:''},
+    video_50:{current:value(current,'video_50'),previous:previous?value(previous,'video_50'):undefined,suffix:''},
+    video_75:{current:value(current,'video_75'),previous:previous?value(previous,'video_75'):undefined,suffix:''},
+    video_95:{current:value(current,'video_95'),previous:previous?value(previous,'video_95'):undefined,suffix:''},
+    video_100:{current:value(current,'video_100'),previous:previous?value(previous,'video_100'):undefined,suffix:''},
     engagement_rate:{current:currentInteractions!==null&&currentReach?currentInteractions/currentReach*100:null,previous:previousInteractions!==undefined&&previousInteractions!==null&&previousReach?previousInteractions/previousReach*100:previous===undefined?undefined:null,suffix:'%'},
   };
   const metrics=organicMetricKeys.filter((key)=>enabledMetrics.includes(key)).map((key)=>({

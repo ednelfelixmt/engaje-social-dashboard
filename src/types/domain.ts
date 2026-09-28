@@ -45,6 +45,8 @@ export type CampaignPerformance = {
   ctr: number | null;
   cpa: number | null;
   conversionRate: number | null;
+  /** Primitive and derived platform metrics keyed by the dashboard catalog. */
+  metricValues: Record<string, number | null>;
 };
 export type SyncResult = {
   integrationId: string;

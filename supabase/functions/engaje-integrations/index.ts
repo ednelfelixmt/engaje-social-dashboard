@@ -7,7 +7,6 @@ const cors={'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Headers':
 const json=(value:unknown,status=200)=>new Response(JSON.stringify(value),{status,headers:{...cors,'Content-Type':'application/json'}});
 const graphVersion=Deno.env.get('META_GRAPH_VERSION')||'v26.0';
 const metaId=Deno.env.get('META_APP_ID'),metaSecret=Deno.env.get('META_APP_SECRET');
-const advancedInsights=Deno.env.get('META_ADVANCED_INSIGHTS_ENABLED')==='true';
 const windsorKey=Deno.env.get('WINDSOR_API_KEY');
 type Integration={id:string;organization_id:string;provider:string;external_account_id:string;config:Record<string,unknown>;status:string;account_name:string};
 type MetaErrorDetails={code:string;subcode:string|null;endpoint:string;stage:string;rawMessage:string;occurredAt:string};
@@ -17,11 +16,11 @@ class MetaGraphError extends Error{
 }
 const requiredPermissions:Record<string,string[]>={
  meta_ads:['ads_read'],
- facebook_organic:['pages_show_list','pages_read_engagement','pages_read_user_content'],
- instagram_organic:['pages_show_list','pages_read_engagement','instagram_basic'],
+ facebook_organic:['pages_show_list','pages_read_engagement','pages_read_user_content','read_insights'],
+ instagram_organic:['pages_show_list','pages_read_engagement','instagram_basic','instagram_manage_insights'],
 };
-function permissionsFor(provider:string){return [...(requiredPermissions[provider]||[]),...(advancedInsights?(provider==='facebook_organic'?['read_insights']:provider==='instagram_organic'?['instagram_manage_insights']:[]):[])];}
-function metaOAuthPermissions(){return [...new Set(['ads_read','business_management','pages_show_list','pages_read_engagement','pages_read_user_content','instagram_basic','leads_retrieval',...(advancedInsights?['read_insights','instagram_manage_insights']:[])])];}
+function permissionsFor(provider:string){return [...(requiredPermissions[provider]||[])];}
+function metaOAuthPermissions(){return [...new Set(['ads_read','business_management','pages_show_list','pages_read_engagement','pages_read_user_content','read_insights','instagram_basic','instagram_manage_insights','leads_retrieval'])];}
 function userMessageForMetaError(code:string){if(code==='10'||code==='200')return 'A Meta não concedeu todas as permissões necessárias para sincronizar esta conta.';if(code==='190')return 'A autorização da Meta expirou ou foi revogada.';if(code==='4'||code==='17')return 'A Meta limitou temporariamente as consultas. Tente sincronizar novamente mais tarde.';if(code==='100')return 'A Meta recusou um parâmetro da sincronização. A integração precisa ser revisada.';return 'A Meta não conseguiu concluir esta sincronização.';}
 function diagnosticConfig(config:Record<string,unknown>,patch:Record<string,unknown>){const current=config?.diagnostics&&typeof config.diagnostics==='object'&&!Array.isArray(config.diagnostics)?config.diagnostics as Record<string,unknown>:{};return {...config,diagnostics:{...current,...patch}};}
 async function check<T>(result:{data:T;error:unknown}):Promise<T>{if(result.error)throw new Error('Falha ao gravar no Supabase.');return result.data;}
@@ -34,7 +33,14 @@ async function pages(path:string,token:string,params:Record<string,string>={}){c
 async function recentPages(path:string,token:string,params:Record<string,string>,cutoff:Date,maxItems=100){const result:Record<string,any>[]=[];let after:string|undefined;for(let page=0;page<10;page++){const response=await graph(path,token,{...params,limit:'100',...(after?{after}:{})},'a leitura das publicações');const batch:Record<string,any>[]=response.data||[];let reachedCutoff=false;for(const item of batch){const published=new Date(item.timestamp||item.created_time||0);if(Number.isNaN(published.getTime())||published<cutoff){reachedCutoff=true;continue;}result.push(item);if(result.length>=maxItems)return result;}if(reachedCutoff||!response.paging?.next)return result;after=response.paging.cursors?.after;if(!after)return result;}return result;}
 async function concurrentMap<T,R>(items:T[],limit:number,handler:(item:T,index:number)=>Promise<R>){const output=new Array<R>(items.length);let cursor=0;const workers=Array.from({length:Math.min(limit,items.length)},async()=>{while(true){const index=cursor++;if(index>=items.length)return;output[index]=await handler(items[index],index);}});await Promise.all(workers);return output;}
 function insightValues(payload:any){const values:Record<string,number>={};for(const metric of payload?.data||[]){const raw=metric.values?.at?.(-1)?.value??metric.value;if(typeof raw==='number'&&Number.isFinite(raw))values[String(metric.name)]=raw;else if(raw&&typeof raw==='object'){for(const [key,value]of Object.entries(raw))if(typeof value==='number'&&Number.isFinite(value))values[key]=value;}}return values;}
-async function organicInsights(postId:string,token:string,instagram:boolean){const metric=instagram?'reach,saved,shares,total_interactions,views':'post_impressions,post_impressions_unique,post_clicks,post_video_views';try{return {values:insightValues(await graph(postId+'/insights',token,{metric},'a leitura dos insights orgânicos')),error:false};}catch(error){console.warn('[organic-insights]',{post_id:postId,platform:instagram?'instagram':'facebook',message:error instanceof Error?error.message:'Falha desconhecida'});return {values:{},error:true};}}
+async function organicInsights(postId:string,token:string,instagram:boolean){
+ // Graph API v24+ replaced Facebook post impressions/reach with media views
+ // and unique media viewers. Requesting the retired names makes the complete
+ // insights call fail, leaving every advanced organic metric empty.
+ const metric=instagram?'reach,saved,shares,total_interactions,views':'post_media_view,post_total_media_view_unique,post_clicks';
+ try{return {values:insightValues(await graph(postId+'/insights',token,{metric},'a leitura dos insights orgânicos')),error:false};}
+ catch(error){console.warn('[organic-insights]',{post_id:postId,platform:instagram?'instagram':'facebook',message:error instanceof Error?error.message:'Falha desconhecida'});return {values:{},error:true};}
+}
 async function allowed(req:Request,org:string){const auth=req.headers.get('Authorization');if(!auth)throw new Error('Sessão necessária.');const client=createClient(base,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:auth}},auth:{persistSession:false}});const {data:{user}}=await client.auth.getUser();if(!user)throw new Error('Sessão expirada.');const {data:superAdmin}=await client.rpc('is_super_admin');if(!superAdmin){const {data:member}=await service.from('organization_members').select('role,is_active,organizations!inner(status)').eq('organization_id',org).eq('user_id',user.id).single();if(!member?.is_active||!['client_admin','editor'].includes(member.role)||(member.organizations as any)?.status!=='active')throw new Error('Sem permissão para gerenciar integrações.');}return user;}
 async function superAdminClient(req:Request){const auth=req.headers.get('Authorization');if(!auth)throw new Error('Sessão necessária.');const client=createClient(base,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:auth}},auth:{persistSession:false}});const {data:{user}}=await client.auth.getUser();if(!user)throw new Error('Sessão expirada.');const {data:isSuperAdmin,error}=await client.rpc('is_super_admin');if(error||!isSuperAdmin)throw new Error('Somente um super administrador pode executar esta ação.');return {client,user};}
 async function setToken(id:string,token:string){await check(await service.rpc('store_integration_token',{p_id:id,p_token:token}));}
@@ -74,10 +80,35 @@ async function discoverMetaAssets(connectionId:string,token:string){
 // omission as unknown invalidates the whole campaign aggregation downstream.
 function actionValue(actions:any[]|undefined,...keys:string[]):number{if(!actions)return 0;for(const key of keys){const item=actions.find(a=>a.action_type===key);if(item)return Number(item.value);}return 0;}
 function optionalActionValue(actions:any[]|undefined,...keys:string[]):number|null{return actions?actionValue(actions,...keys):null;}
+function metricArrayValue(values:any[]|undefined):number|null{if(!values)return null;const value=values.find(item=>item?.value!=null)?.value;return value==null?null:numeric(value);}
 function numeric(value:unknown){const result=Number(value);return Number.isFinite(result)?result:0;}
 function campaignStatus(value:unknown){const normalized=String(value||'').trim().toUpperCase().replace(/[^A-Z0-9_]/g,'_');return normalized&&normalized.length<=64?normalized:null;}
 function metaAccountId(value:unknown){return String(value||'').trim().replace(/^act_/,'');}
 function isoDate(date:Date){return date.toISOString().slice(0,10);}
+function metaPaidMetrics(d:any){
+ const registrationLeads=actionValue(d.actions,'lead','onsite_conversion.lead_grouped','offsite_conversion.fb_pixel_lead');
+ const messageLeads=actionValue(d.actions,'onsite_conversion.messaging_conversation_started_7d','messaging_conversation_started_7d','onsite_conversion.total_messaging_connection','onsite_conversion.messaging_first_reply');
+ const purchases=actionValue(d.actions,'omni_purchase','purchase','offsite_conversion.fb_pixel_purchase');
+ const conversionValue=optionalActionValue(d.action_values,'omni_purchase','purchase','offsite_conversion.fb_pixel_purchase');
+ const videoViews=metricArrayValue(d.video_play_actions);
+ return {
+  spend:numeric(d.spend),revenue:conversionValue,conversion_value:conversionValue,
+  impressions:d.impressions==null?null:numeric(d.impressions),reach:d.reach==null?null:numeric(d.reach),
+  clicks:d.clicks==null?null:numeric(d.clicks),link_clicks:d.inline_link_clicks==null?optionalActionValue(d.actions,'link_click'):numeric(d.inline_link_clicks),
+  outbound_clicks:metricArrayValue(d.outbound_clicks),unique_clicks:d.unique_clicks==null?null:numeric(d.unique_clicks),
+  page_views:optionalActionValue(d.actions,'landing_page_view'),video_views:videoViews,video_3s_views:videoViews,
+  thruplays:metricArrayValue(d.video_thruplay_watched_actions),video_25:metricArrayValue(d.video_p25_watched_actions),video_50:metricArrayValue(d.video_p50_watched_actions),
+  video_75:metricArrayValue(d.video_p75_watched_actions),video_95:metricArrayValue(d.video_p95_watched_actions),video_100:metricArrayValue(d.video_p100_watched_actions),
+  leads:registrationLeads+messageLeads,registration_leads:registrationLeads,message_leads:messageLeads,
+  phone_calls:optionalActionValue(d.actions,'click_to_call_call_confirm','onsite_conversion.click_to_call'),
+  form_starts:optionalActionValue(d.actions,'onsite_conversion.lead_form_start'),form_completions:registrationLeads,
+  content_views:optionalActionValue(d.actions,'view_content','offsite_conversion.fb_pixel_view_content'),
+  add_to_cart:optionalActionValue(d.actions,'add_to_cart','offsite_conversion.fb_pixel_add_to_cart'),
+  checkouts:optionalActionValue(d.actions,'initiate_checkout','offsite_conversion.fb_pixel_initiate_checkout'),purchases,
+  catalog_sales:optionalActionValue(d.actions,'catalog_segment_actions:purchase'),subscriptions:optionalActionValue(d.actions,'subscribe','offsite_conversion.fb_pixel_subscribe'),
+  conversions:registrationLeads+messageLeads+purchases,all_conversions:registrationLeads+messageLeads+purchases,
+ };
+}
 function metaBreakdownFact(i:Integration,d:any,type:string,value:unknown,label:unknown){
  const formLeads=actionValue(d.actions,'lead','onsite_conversion.lead_grouped','offsite_conversion.fb_pixel_lead');
  const messageLeads=actionValue(d.actions,'onsite_conversion.messaging_conversation_started_7d','messaging_conversation_started_7d','onsite_conversion.total_messaging_connection','onsite_conversion.messaging_first_reply');
@@ -92,7 +123,7 @@ async function syncWindsor(i:Integration){
  endpoint.searchParams.set('api_key',windsorKey);
  endpoint.searchParams.set('date_from',isoDate(from));
  endpoint.searchParams.set('date_to',isoDate(to));
- endpoint.searchParams.set('fields','date,account_id,account_name,campaign_id,campaign,campaign_status,spend,impressions,clicks,conversions,conversion_value,currency');
+ endpoint.searchParams.set('fields','date,account_id,account_name,campaign_id,campaign,campaign_status,spend,impressions,clicks,conversions,all_conversions,view_through_conversions,conversion_value,search_impression_share,search_top_impression_share,search_absolute_top_impression_share,currency');
  const response=await fetch(endpoint,{signal:AbortSignal.timeout(30000)});
  const payload=await response.json().catch(()=>({}));
  if(!response.ok)throw new Error('Windsor recusou a consulta (HTTP '+response.status+').');
@@ -101,7 +132,7 @@ async function syncWindsor(i:Integration){
  const sourceRows=received.filter((row:any)=>!accountId||String(row.account_id||'').trim()===accountId);
  const facts=sourceRows.map((row:any)=>{
   const campaignId=String(row.campaign_id||row.campaign||'sem-campanha');
-  return {organization_id:i.organization_id,integration_id:i.id,platform:'google_ads',metric_date:String(row.date||isoDate(to)).slice(0,10),currency:String(row.currency||i.config.currency||'BRL').toUpperCase().slice(0,3),account_id:String(row.account_id||accountId),campaign_id:campaignId,campaign_name:String(row.campaign||row.campaign_name||campaignId),campaign_status:campaignStatus(row.campaign_status),adset_id:null,ad_id:campaignId+':aggregate',spend:numeric(row.spend),revenue:row.conversion_value==null?null:numeric(row.conversion_value),impressions:numeric(row.impressions),clicks:numeric(row.clicks),page_views:null,leads:null,message_leads:null,checkouts:null,purchases:numeric(row.conversions),attribution_window:'windsor_source',synced_at:new Date().toISOString()};
+  return {organization_id:i.organization_id,integration_id:i.id,platform:'google_ads',metric_date:String(row.date||isoDate(to)).slice(0,10),currency:String(row.currency||i.config.currency||'BRL').toUpperCase().slice(0,3),account_id:String(row.account_id||accountId),campaign_id:campaignId,campaign_name:String(row.campaign||row.campaign_name||campaignId),campaign_status:campaignStatus(row.campaign_status),adset_id:null,ad_id:campaignId+':aggregate',spend:numeric(row.spend),revenue:row.conversion_value==null?null:numeric(row.conversion_value),conversion_value:row.conversion_value==null?null:numeric(row.conversion_value),impressions:numeric(row.impressions),clicks:numeric(row.clicks),page_views:null,leads:null,registration_leads:null,message_leads:null,checkouts:null,purchases:numeric(row.conversions),conversions:row.conversions==null?null:numeric(row.conversions),all_conversions:row.all_conversions==null?null:numeric(row.all_conversions),view_through_conversions:row.view_through_conversions==null?null:numeric(row.view_through_conversions),search_impression_share:row.search_impression_share==null?null:numeric(row.search_impression_share),search_top_impression_share:row.search_top_impression_share==null?null:numeric(row.search_top_impression_share),search_absolute_top_impression_share:row.search_absolute_top_impression_share==null?null:numeric(row.search_absolute_top_impression_share),attribution_window:'windsor_source',synced_at:new Date().toISOString()};
  });
  const campaignRows=[...new Map(facts.map((fact:any)=>[fact.campaign_id,{organization_id:i.organization_id,integration_id:i.id,platform:'google_ads',account_id:fact.account_id,external_id:fact.campaign_id,name:fact.campaign_name,status:fact.campaign_status,last_seen_at:new Date().toISOString()}])).values()];
  if(campaignRows.length)await check(await service.from('ad_campaigns').upsert(campaignRows,{onConflict:'organization_id,platform,account_id,external_id'}));
@@ -138,19 +169,12 @@ async function syncWindsor(i:Integration){
  await check(await service.from('integrations').update({status:'connected',is_enabled:true,last_synced_at:syncedAt,config,last_error:null}).eq('id',i.id));
  return {message:`Sincronização Windsor concluída: ${facts.length} métricas e ${breakdownRows.length} detalhamentos do Google Ads gravados no Supabase.`,rows:facts.length,creatives:0};
 }
-async function sync(i:Integration){if(i.provider==='windsor')return syncWindsor(i);const token=await check(await service.rpc('integration_token',{p_id:i.id}));if(!token)throw new Error('Conta sem autorização. Reconecte.');let rows=0,creativeCount=0;
+async function sync(i:Integration){if(i.provider==='windsor')return syncWindsor(i);const token=await check(await service.rpc('integration_token',{p_id:i.id}));if(!token)throw new Error('Conta sem autorização. Reconecte.');let rows=0,creativeCount=0,coverageFailures=0;
  if(i.provider==='meta_ads'){
   const normalizedAccountId=metaAccountId(i.external_account_id);
   const statuses=new Map<string,string>();try{const campaignRows=await pages(i.external_account_id+'/campaigns',token,{fields:'id,name,effective_status,status'});for(const campaign of campaignRows){const status=campaignStatus(campaign.effective_status||campaign.status);if(status)statuses.set(String(campaign.id),status);}if(campaignRows.length)await check(await service.from('ad_campaigns').upsert(campaignRows.map((campaign:any)=>({organization_id:i.organization_id,integration_id:i.id,platform:'meta_ads',account_id:normalizedAccountId,external_id:String(campaign.id),name:String(campaign.name||campaign.id),status:campaignStatus(campaign.effective_status||campaign.status),last_seen_at:new Date().toISOString()})),{onConflict:'organization_id,platform,account_id,external_id'}));}catch(error){console.warn('[meta-campaign-status]',{integration_id:i.id,message:error instanceof Error?error.message:'Falha desconhecida'});}
-  const data=await pages(i.external_account_id+'/insights',token,{level:'ad',date_preset:'last_30d',time_increment:'1',action_attribution_windows:'["7d_click"]',fields:'account_id,account_currency,campaign_id,campaign_name,adset_id,ad_id,date_start,spend,impressions,clicks,actions,action_values'});
-  const facts=data.map(d=>{
-   const formLeads=actionValue(d.actions,'lead','onsite_conversion.lead_grouped','offsite_conversion.fb_pixel_lead');
-   // A API pode devolver mais de um alias para a mesma conversa. actionValue usa o
-   // primeiro alias encontrado, evitando duplicar a mesma ação no total.
-   const messageLeads=actionValue(d.actions,'onsite_conversion.messaging_conversation_started_7d','messaging_conversation_started_7d','onsite_conversion.total_messaging_connection','onsite_conversion.messaging_first_reply');
-   const totalLeads=formLeads+messageLeads;
-   return {organization_id:i.organization_id,integration_id:i.id,platform:'meta_ads',metric_date:d.date_start,currency:d.account_currency,account_id:metaAccountId(d.account_id||normalizedAccountId),campaign_id:String(d.campaign_id),campaign_name:d.campaign_name,campaign_status:statuses.get(String(d.campaign_id))||null,adset_id:d.adset_id,ad_id:String(d.ad_id),spend:Number(d.spend),revenue:optionalActionValue(d.action_values,'omni_purchase','purchase','offsite_conversion.fb_pixel_purchase'),impressions:d.impressions==null?null:Number(d.impressions),clicks:d.clicks==null?null:Number(d.clicks),page_views:actionValue(d.actions,'landing_page_view'),leads:totalLeads,message_leads:messageLeads,checkouts:actionValue(d.actions,'initiate_checkout','offsite_conversion.fb_pixel_initiate_checkout'),purchases:actionValue(d.actions,'omni_purchase','purchase','offsite_conversion.fb_pixel_purchase'),attribution_window:'7d_click',synced_at:new Date().toISOString()};
-  });
+  const data=await pages(i.external_account_id+'/insights',token,{level:'ad',date_preset:'last_30d',time_increment:'1',action_attribution_windows:'["7d_click"]',fields:'account_id,account_currency,campaign_id,campaign_name,adset_id,ad_id,date_start,spend,impressions,reach,clicks,inline_link_clicks,outbound_clicks,unique_clicks,actions,action_values,video_play_actions,video_thruplay_watched_actions,video_p25_watched_actions,video_p50_watched_actions,video_p75_watched_actions,video_p95_watched_actions,video_p100_watched_actions'});
+  const facts=data.map(d=>({organization_id:i.organization_id,integration_id:i.id,platform:'meta_ads',metric_date:d.date_start,currency:d.account_currency,account_id:metaAccountId(d.account_id||normalizedAccountId),campaign_id:String(d.campaign_id),campaign_name:d.campaign_name,campaign_status:statuses.get(String(d.campaign_id))||null,adset_id:d.adset_id,ad_id:String(d.ad_id),...metaPaidMetrics(d),attribution_window:'7d_click',synced_at:new Date().toISOString()}));
   for(let n=0;n<facts.length;n+=200){await check(await service.from('metrics_ads').upsert(facts.slice(n,n+200),{onConflict:'organization_id,platform,account_id,campaign_id,ad_id,metric_date,currency'}));rows+=facts.slice(n,n+200).length;}
   const insightFields='account_id,account_currency,campaign_id,campaign_name,date_start,spend,impressions,clicks,actions,action_values';
   const breakdownRequests=[
@@ -172,19 +196,21 @@ async function sync(i:Integration){if(i.provider==='windsor')return syncWindsor(
   for(const a of ads){if(!a.creative)continue;await check(await service.from('creatives').upsert({organization_id:i.organization_id,integration_id:i.id,platform:'meta_ads',account_id:normalizedAccountId,external_id:a.id,ad_id:a.id,campaign_id:a.campaign_id,kind:a.creative.video_id?'video':'image',caption:a.creative.body||a.name,thumbnail_url:a.creative.thumbnail_url,media_url:a.creative.image_url,published_at:a.created_time,synced_at:new Date().toISOString()},{onConflict:'organization_id,platform,account_id,external_id'}));creativeCount++;}
   console.info('[meta-sync-summary]',{integration_id:i.id,account_id:normalizedAccountId,campaigns:statuses.size,insight_rows:facts.length,breakdown_rows:breakdownRows.length,creatives:creativeCount,from:facts.map((fact:any)=>fact.metric_date).sort()[0]||null,to:facts.map((fact:any)=>fact.metric_date).sort().at(-1)||null});
  }else if(i.provider==='instagram_organic'||i.provider==='facebook_organic'){
+  const granted=await grantedPermissions(token);const missing=permissionsFor(i.provider).filter(permission=>!granted.includes(permission));
+  if(missing.length)throw new Error('Reconecte a Meta para autorizar as métricas orgânicas: '+missing.join(', ')+'.');
   const ig=i.provider==='instagram_organic',cutoff=new Date();cutoff.setUTCDate(cutoff.getUTCDate()-30);const since=String(Math.floor(cutoff.getTime()/1000));
   const fields=ig?'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count':'id,message,full_picture,permalink_url,created_time,shares,reactions.limit(0).summary(true),comments.limit(0).summary(true)';
   const posts=await recentPages(i.external_account_id+(ig?'/media':'/published_posts'),token,{fields,since},cutoff,100);
   const insights=await concurrentMap(posts,5,p=>organicInsights(String(p.id),token,ig));const syncedAt=new Date().toISOString();
   const creativeRows=posts.map((p,index)=>{const advanced=insights[index].values;const basic=ig?{likes:p.like_count??null,comments:p.comments_count??null}:{likes:p.reactions?.summary?.total_count??null,comments:p.comments?.summary?.total_count??null,shares:p.shares?.count??null};return {organization_id:i.organization_id,integration_id:i.id,platform:i.provider,account_id:i.external_account_id,external_id:String(p.id),kind:p.media_type==='VIDEO'?'video':p.media_type==='CAROUSEL_ALBUM'?'carousel':'image',caption:p.caption||p.message||null,lifetime_metrics:{...basic,...advanced},thumbnail_url:p.thumbnail_url||p.full_picture||p.media_url||null,media_url:p.media_url||p.full_picture||null,permalink:p.permalink||p.permalink_url,published_at:p.timestamp||p.created_time,synced_at:syncedAt};});
   let savedCreatives:any[]=[];if(creativeRows.length){const saved=await service.from('creatives').upsert(creativeRows,{onConflict:'organization_id,platform,account_id,external_id'}).select('id,external_id');savedCreatives=await check(saved);creativeCount=savedCreatives.length;}
-  const ids=new Map(savedCreatives.map(c=>[String(c.external_id),String(c.id)]));const metricRows=posts.flatMap((p,index)=>{const creativeId=ids.get(String(p.id));if(!creativeId)return [];const values=insights[index].values;const published=String(p.timestamp||p.created_time||'').slice(0,10);if(!/^\d{4}-\d{2}-\d{2}$/.test(published))return [];return [{organization_id:i.organization_id,integration_id:i.id,creative_id:creativeId,metric_date:published,platform:i.provider,impressions:ig?(values.views??null):(values.post_impressions??null),reach:ig?(values.reach??null):(values.post_impressions_unique??null),clicks:ig?null:(values.post_clicks??null),page_views:null,likes:ig?numeric(p.like_count):numeric(p.reactions?.summary?.total_count),comments:ig?numeric(p.comments_count):numeric(p.comments?.summary?.total_count),shares:ig?(values.shares??null):numeric(p.shares?.count),saves:ig?(values.saved??null):null,video_views:ig?(p.media_type==='VIDEO'?(values.views??null):null):(values.post_video_views??null),synced_at:syncedAt}];});
+  const ids=new Map(savedCreatives.map(c=>[String(c.external_id),String(c.id)]));const metricRows=posts.flatMap((p,index)=>{const creativeId=ids.get(String(p.id));if(!creativeId)return [];const values=insights[index].values;const published=String(p.timestamp||p.created_time||'').slice(0,10);if(!/^\d{4}-\d{2}-\d{2}$/.test(published))return [];const likes=ig?numeric(p.like_count):numeric(p.reactions?.summary?.total_count);const comments=ig?numeric(p.comments_count):numeric(p.comments?.summary?.total_count);const shares=ig?(values.shares??null):numeric(p.shares?.count);const saves=ig?(values.saved??null):null;const interactions=values.total_interactions??(shares==null||saves==null&&ig?null:likes+comments+numeric(shares)+numeric(saves));const mediaViews=ig?(values.views??null):(values.post_media_view??null);return [{organization_id:i.organization_id,integration_id:i.id,creative_id:creativeId,metric_date:published,platform:i.provider,impressions:mediaViews,reach:ig?(values.reach??null):(values.post_total_media_view_unique??null),clicks:ig?null:(values.post_clicks??null),link_clicks:null,page_views:null,interactions,likes,comments,shares,saves,video_views:(ig?p.media_type==='VIDEO':true)?mediaViews:null,synced_at:syncedAt}];});
   if(metricRows.length){for(let n=0;n<metricRows.length;n+=200)await check(await service.from('metrics_organic').upsert(metricRows.slice(n,n+200),{onConflict:'organization_id,creative_id,metric_date'}));rows=metricRows.length;}
-  const failed=insights.filter(item=>item.error).length;if(failed)console.warn('[organic-sync]',{integration_id:i.id,posts:posts.length,advanced_insight_failures:failed});
+  coverageFailures=insights.filter(item=>item.error).length;if(coverageFailures)console.warn('[organic-sync]',{integration_id:i.id,posts:posts.length,advanced_insight_failures:coverageFailures});
  }else throw new Error('Este provedor ainda precisa do adaptador e das credenciais de API.');
- const completedAt=new Date().toISOString();const completedConfig=diagnosticConfig(i.config||{},{syncStatus:'synchronized',providerConnected:true,accountSelected:true,tokenValid:true,lastError:null,lastSyncAt:completedAt});
- await check(await service.from('integrations').update({status:'connected',is_enabled:true,last_synced_at:completedAt,config:completedConfig,last_error:null}).eq('id',i.id));
- return {message:`Sincronização concluída: ${rows} métricas e ${creativeCount} criativos gravados no Supabase.`,rows,creatives:creativeCount};
+ const completedAt=new Date().toISOString();const partial=coverageFailures>0;const warning=partial?`${coverageFailures} publicações não retornaram insights avançados.`:null;const completedConfig=diagnosticConfig(i.config||{},{syncStatus:partial?'partial':'synchronized',providerConnected:true,accountSelected:true,tokenValid:true,permissionsValid:true,metricCoverageFailures:coverageFailures,lastError:warning,lastSyncAt:completedAt});
+ await check(await service.from('integrations').update({status:'connected',is_enabled:true,last_synced_at:completedAt,config:completedConfig,last_error:warning}).eq('id',i.id));
+ return {message:`Sincronização ${partial?'parcial':'concluída'}: ${rows} métricas e ${creativeCount} criativos gravados no Supabase.${partial?' '+warning:''}`,rows,creatives:creativeCount,partial};
 }
 Deno.serve(async(req:Request)=>{
  if(req.method==='OPTIONS')return new Response(null,{headers:cors});const url=new URL(req.url);let activeId:string|undefined;
