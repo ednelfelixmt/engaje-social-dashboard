@@ -15,18 +15,20 @@ type Integration = {
 
 const SIX_HOURS = 6 * 60 * 60 * 1000;
 
-export function DataFreshness({organizationId, integrations, canSync, renderedAt, timezone}: {
+export function DataFreshness({organizationId, integrations, canSync, renderedAt, timezone, needsReachSync}: {
   organizationId: string;
   integrations: Integration[];
   canSync: boolean;
   renderedAt: number;
   timezone: string;
+  needsReachSync: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const newest = useMemo(() => integrations.map((item) => item.lastSyncedAt).filter(Boolean).sort().at(-1) ?? null, [integrations]);
   const stale = !newest || renderedAt - Date.parse(newest) > SIX_HOURS;
+  const needsSync = stale || needsReachSync;
   const newestLabel = newest ? new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'short',
     timeStyle: 'medium',
@@ -38,7 +40,7 @@ export function DataFreshness({organizationId, integrations, canSync, renderedAt
     const candidates = integrations.filter((item) => item.status !== 'syncing');
     if (!candidates.length) return;
     setBusy(true);
-    setMessage(automatic ? 'Atualizando dados automaticamente…' : 'Atualizando dados…');
+    setMessage(automatic && needsReachSync ? 'Sincronizando a métrica de alcance…' : automatic ? 'Atualizando dados automaticamente…' : 'Atualizando dados…');
     let completed = 0;
     let failure = '';
     for (const integration of candidates) {
@@ -57,21 +59,21 @@ export function DataFreshness({organizationId, integrations, canSync, renderedAt
   }
 
   useEffect(() => {
-    if (!stale || !canSync || !integrations.length) return;
-    const key = `engaje:auto-sync:${organizationId}`;
+    if (!needsSync || !canSync || !integrations.length) return;
+    const key = `engaje:auto-sync-reach-v1:${organizationId}`;
     const prior = Number(sessionStorage.getItem(key) || 0);
     if (Date.now() - prior < 30 * 60 * 1000) return;
     sessionStorage.setItem(key, String(Date.now()));
     void synchronize(true);
     // Synchronization intentionally runs once per stale organization/session window.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [organizationId, stale, canSync, integrations.length]);
+  }, [organizationId, needsSync, canSync, integrations.length]);
 
-  return <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 ${stale ? 'border-amber-400/25 bg-amber-400/[0.06]' : 'border-emerald-400/20 bg-emerald-400/[0.04]'}`}>
+  return <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 ${needsSync ? 'border-amber-400/25 bg-amber-400/[0.06]' : 'border-emerald-400/20 bg-emerald-400/[0.04]'}`}>
     <div className="flex items-center gap-3">
-      {stale ? <TriangleAlert className="text-amber-300" size={18} /> : <span className="size-2 rounded-full bg-emerald-400" />}
+      {needsSync ? <TriangleAlert className="text-amber-300" size={18} /> : <span className="size-2 rounded-full bg-emerald-400" />}
       <div>
-        <p className="text-sm font-medium">{stale ? 'Base aguardando atualização' : 'Dados sincronizados'}</p>
+        <p className="text-sm font-medium">{needsReachSync ? 'Atualizando a métrica de alcance' : stale ? 'Base aguardando atualização' : 'Dados sincronizados'}</p>
         <p className="mt-0.5 text-xs text-zinc-500">{newestLabel ? `Última sincronização: ${newestLabel}` : 'Nenhuma sincronização concluída'}</p>
         {message ? <p role="status" className="mt-1 text-xs text-amber-200">{message}</p> : null}
       </div>
