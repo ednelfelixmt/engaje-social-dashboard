@@ -17,6 +17,7 @@ import {dashboardMetricLabels, paidMetricKeys, type DashboardMetricKey} from '@/
 import type {CampaignPerformance, Platform} from '@/types/domain';
 import type {PerformanceRankingGroups} from '@/lib/metrics/rankings';
 import {paidSummary} from '@/lib/metrics/paid-summary';
+import {SortableCardGrid} from '@/components/dashboard/sortable-card-grid';
 
 type TimelineRow = {date: string; spend: number | null; revenue: number | null};
 
@@ -185,6 +186,7 @@ export function CampaignWorkspace({
   rankings,
   funnelSteps,
   widgetOrder,
+  storageKey,
 }: {
   rows: CampaignPerformance[];
   previousRows: CampaignPerformance[];
@@ -195,6 +197,7 @@ export function CampaignWorkspace({
   rankings: PerformanceRankingGroups;
   funnelSteps: FunnelStep[];
   widgetOrder: string[];
+  storageKey: string;
 }) {
   const measuredRows = rows.filter(hasMeasuredPerformance);
   const measuredPreviousRows = previousRows.filter(hasMeasuredPerformance);
@@ -210,9 +213,7 @@ export function CampaignWorkspace({
   const widgetRank=(key:string)=>{const index=widgetOrder.indexOf(key);return index<0?widgetOrder.length:index;};
 
   return <div className="flex flex-col gap-5">
-    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6" style={{order:widgetRank('kpis')}}>
-      {kpis.map(({key,...kpi}) => <KpiCard key={key} {...kpi} />)}
-    </section>
+    <section style={{order:widgetRank('kpis')}}><SortableCardGrid storageKey={storageKey} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6" items={kpis.map(({key,...kpi})=>({id:key,content:<KpiCard {...kpi}/>}))}/></section>
     {showLeadBreakdown?<div style={{order:widgetRank('kpis')}}><LeadBreakdown totalLeads={current.leads} registrationLeads={current.registrationLeads} messageLeads={current.messageLeads} totalCost={current.cpl} registrationCost={current.costPerRegistration} messageCost={current.costPerMessage} currency={currency} /></div>:null}
     {showPlatforms ? <div style={{order:widgetRank('platforms')}}><PlatformBreakdown rows={measuredRows} currency={currency} enabledMetrics={enabledMetrics} /></div> : null}
     <section style={{order:widgetRank('funnel')}}>
