@@ -37,9 +37,16 @@ async function organicInsights(postId:string,token:string,instagram:boolean){
  // Graph API v24+ replaced Facebook post impressions/reach with media views
  // and unique media viewers. Requesting the retired names makes the complete
  // insights call fail, leaving every advanced organic metric empty.
- const metric=instagram?'reach,saved,shares,total_interactions,views':'post_media_view,post_total_media_view_unique,post_clicks';
- try{return {values:insightValues(await graph(postId+'/insights',token,{metric},'a leitura dos insights orgânicos')),error:false};}
- catch(error){console.warn('[organic-insights]',{post_id:postId,platform:instagram?'instagram':'facebook',message:error instanceof Error?error.message:'Falha desconhecida'});return {values:{},error:true};}
+ const metrics=instagram?['reach','saved','shares','total_interactions','views']:['post_media_view','post_total_media_view_unique','post_clicks'];
+ try{return {values:insightValues(await graph(postId+'/insights',token,{metric:metrics.join(',')},'a leitura dos insights orgânicos')),error:false};}
+ catch(combinedError){
+  // Metric availability varies by media type and Graph API version. Retry one
+  // by one so one unsupported field does not erase every valid insight.
+  const attempts=await concurrentMap(metrics,3,async metric=>{try{return {metric,values:insightValues(await graph(postId+'/insights',token,{metric},'a leitura do insight '+metric)),error:false};}catch(error){console.warn('[organic-insight-metric]',{post_id:postId,platform:instagram?'instagram':'facebook',metric,message:error instanceof Error?error.message:'Falha desconhecida'});return {metric,values:{},error:true};}});
+  const values=Object.assign({},...attempts.map(item=>item.values));const failures=attempts.filter(item=>item.error).length;
+  console.warn('[organic-insights-fallback]',{post_id:postId,platform:instagram?'instagram':'facebook',failures,total:metrics.length,message:combinedError instanceof Error?combinedError.message:'Falha desconhecida'});
+  return {values,error:failures>0};
+ }
 }
 async function allowed(req:Request,org:string){const auth=req.headers.get('Authorization');if(!auth)throw new Error('Sessão necessária.');const client=createClient(base,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:auth}},auth:{persistSession:false}});const {data:{user}}=await client.auth.getUser();if(!user)throw new Error('Sessão expirada.');const {data:superAdmin}=await client.rpc('is_super_admin');if(!superAdmin){const {data:member}=await service.from('organization_members').select('role,is_active,organizations!inner(status)').eq('organization_id',org).eq('user_id',user.id).single();if(!member?.is_active||!['client_admin','editor'].includes(member.role)||(member.organizations as any)?.status!=='active')throw new Error('Sem permissão para gerenciar integrações.');}return user;}
 async function superAdminClient(req:Request){const auth=req.headers.get('Authorization');if(!auth)throw new Error('Sessão necessária.');const client=createClient(base,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:auth}},auth:{persistSession:false}});const {data:{user}}=await client.auth.getUser();if(!user)throw new Error('Sessão expirada.');const {data:isSuperAdmin,error}=await client.rpc('is_super_admin');if(error||!isSuperAdmin)throw new Error('Somente um super administrador pode executar esta ação.');return {client,user};}
