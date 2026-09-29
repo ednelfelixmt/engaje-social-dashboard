@@ -19,8 +19,11 @@ type DashboardDataOptions={
   crmComparison?:boolean;
   organic?:boolean;
   organicComparison?:boolean;
+  organicAccounts?:boolean;
+  organicAccountsComparison?:boolean;
   creatives?:boolean;
   creativeLimit?:number;
+  creativePeriod?:boolean;
   adCampaigns?:boolean;
 };
 
@@ -42,9 +45,15 @@ export async function dashboardData(db:DashboardDb,organizationId:string,f:Filte
     if(platform)query=query.eq('platform',platform as Row<'metrics_organic'>['platform']);
     return query.range(a,b);
   });
+  const readOrganicAccounts=(range:Filters)=>all<Row<'metrics_organic_accounts'>>((a,b)=>{
+    let query=db.from('metrics_organic_accounts').select('*').eq('organization_id',organizationId).gte('metric_date',range.from).lte('metric_date',range.to).order('metric_date');
+    if(platform)query=query.eq('platform',platform as Row<'metrics_organic_accounts'>['platform']);
+    return query.range(a,b);
+  });
   const readCreatives=()=>{
     const createQuery=()=>{
-      let query=db.from('creatives').select('*').eq('organization_id',organizationId).gte('published_at',f.from+'T00:00:00Z').lt('published_at',new Date(Date.parse(f.to)+86400000).toISOString()).order('published_at',{ascending:false});
+      let query=db.from('creatives').select('*').eq('organization_id',organizationId).order('published_at',{ascending:false});
+      if(options.creativePeriod!==false)query=query.gte('published_at',f.from+'T00:00:00Z').lt('published_at',new Date(Date.parse(f.to)+86400000).toISOString());
       if(platform)query=query.eq('platform',platform as Row<'creatives'>['platform']);
       return query;
     };
@@ -57,7 +66,7 @@ export async function dashboardData(db:DashboardDb,organizationId:string,f:Filte
     return query.range(a,b);
   });
   const comparisonRange=f.compare==='none'?null:previous(f);
-  const [ads,adsComparison,breakdowns,crm,crmComparison,organic,organicComparison,creatives,adCampaigns]=await Promise.all([
+  const [ads,adsComparison,breakdowns,crm,crmComparison,organic,organicComparison,organicAccounts,organicAccountsComparison,creatives,adCampaigns]=await Promise.all([
     options.ads?readAds(f):Promise.resolve([]),
     options.adsComparison&&comparisonRange?readAds(comparisonRange):Promise.resolve([]),
     options.breakdowns?readBreakdowns(f):Promise.resolve([]),
@@ -65,8 +74,10 @@ export async function dashboardData(db:DashboardDb,organizationId:string,f:Filte
     options.crmComparison&&comparisonRange?readCrm(comparisonRange):Promise.resolve([]),
     options.organic?readOrganic(f):Promise.resolve([]),
     options.organicComparison&&comparisonRange?readOrganic(comparisonRange):Promise.resolve([]),
+    options.organicAccounts?readOrganicAccounts(f):Promise.resolve([]),
+    options.organicAccountsComparison&&comparisonRange?readOrganicAccounts(comparisonRange):Promise.resolve([]),
     options.creatives?readCreatives():Promise.resolve([]),
     options.adCampaigns?readCampaigns():Promise.resolve([]),
   ]);
-  return {ads,adsComparison,breakdowns,crm,crmComparison,organic,organicComparison,creatives,adCampaigns};
+  return {ads,adsComparison,breakdowns,crm,crmComparison,organic,organicComparison,organicAccounts,organicAccountsComparison,creatives,adCampaigns};
 }

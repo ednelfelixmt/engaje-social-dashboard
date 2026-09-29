@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import {usePathname, useRouter} from 'next/navigation';
-import {Building2, ChartNoAxesCombined, Crown, Database, Filter, Images, LayoutDashboard, Leaf, LogOut, Palette, Plug, Settings, Users, type LucideIcon} from 'lucide-react';
+import {Building2, ChartNoAxesCombined, Crown, Database, Facebook, Filter, Images, Instagram, LayoutDashboard, Leaf, LogOut, Palette, Plug, Settings, Users, type LucideIcon} from 'lucide-react';
 import {browserClient} from '@/lib/supabase/browser';
 
 type NavItem={key:string;label:string;icon:LucideIcon;requires?:string};
@@ -12,9 +12,14 @@ const workspaceGroups:NavGroup[]=[
   {label:'Visão',items:[{key:'overview',label:'Visão geral',icon:LayoutDashboard,requires:'overview'}]},
   {label:'Análises',items:[
     {key:'paid',label:'Mídia paga',icon:ChartNoAxesCombined,requires:'paid'},
-    {key:'organic',label:'Conteúdo orgânico',icon:Leaf,requires:'organic'},
     {key:'funnel',label:'Funil de conversão',icon:Filter,requires:'funnel'},
-    {key:'creatives',label:'Criativos e posts',icon:Images,requires:'creatives'},
+    {key:'paid-creatives',label:'Criativos de anúncios',icon:Images,requires:'creatives'},
+  ]},
+  {label:'Orgânico',items:[
+    {key:'organic',label:'Visão orgânica',icon:Leaf,requires:'organic'},
+    {key:'facebook_organic',label:'Facebook',icon:Facebook,requires:'organic'},
+    {key:'instagram_organic',label:'Instagram',icon:Instagram,requires:'organic'},
+    {key:'organic-posts',label:'Posts publicados',icon:Images,requires:'organic'},
   ]},
   {label:'Dados',items:[{key:'external',label:'Receita e dados externos',icon:Database,requires:'external'}]},
   {label:'Configurações',items:[

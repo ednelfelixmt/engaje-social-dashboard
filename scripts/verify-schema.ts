@@ -54,6 +54,9 @@ await db.exec(`
   insert into public.metrics_organic(organization_id,integration_id,creative_id,metric_date,platform) values
     ('${orgA}','${intA}','${creativeA}','2026-09-01','instagram_organic'),
     ('${orgB}','${intB}','50000000-0000-0000-0000-000000000002','2026-09-01','instagram_organic');
+  insert into public.metrics_organic_accounts(organization_id,integration_id,metric_date,platform,account_id,followers,reach) values
+    ('${orgA}','${intA}','2026-09-01','instagram_organic','ig',1200,500),
+    ('${orgB}','${intB}','2026-09-01','instagram_organic','igb',9000,4000);
   insert into public.metrics_ads(organization_id,integration_id,metric_date,platform,account_id,campaign_id,campaign_name,ad_id,currency,spend,revenue,impressions,clicks,purchases,attribution_window) values
     ('${orgA}','${intA}','2026-09-01','meta_ads','a','c1','Campanha 1','ad1','BRL',100,900,1000,100,9,'7d_click'),
     ('${orgA}','${intA}','2026-09-01','meta_ads','a','c2','Campanha 2','ad2','BRL',100,100,1000,100,1,'7d_click'),
@@ -82,8 +85,8 @@ await db.exec(`
   insert into public.sync_jobs(organization_id,connection_id,assignment_id,status) values ('${orgA}','${connectionA}','${assignmentA}','completed');
   insert into public.integration_alerts(organization_id,alert_key,code,severity,title) values ('${orgA}','test-alert','stale_sync','warning','Conta sem atualização');
 `);
-check(await scalar("select count(*)::int from pg_tables where schemaname='public'") === 20, 'Exatamente 20 tabelas públicas');
-check(await scalar("select count(*)::int from pg_tables where schemaname='public' and rowsecurity") === 20, 'RLS habilitada nas 20 tabelas');
+check(await scalar("select count(*)::int from pg_tables where schemaname='public'") === 21, 'Exatamente 21 tabelas públicas');
+check(await scalar("select count(*)::int from pg_tables where schemaname='public' and rowsecurity") === 21, 'RLS habilitada nas 21 tabelas');
 let day = (await db.query<Record<string, unknown>>(`select * from public.daily_performance where organization_id='${orgA}' and metric_date='2026-09-01' and currency='BRL'`)).rows[0]!;
 check(Number(day.spend) === 200 && Number(day.revenue) === 600, 'JOIN não multiplica Ads nem soma CRM com planilha');
 check(Number(day.roas) === 3 && Number(day.roi) === 200 && Math.abs(Number(day.cpa) - 200/6) < 0.00001, 'ROAS, ROI e CPA reais');
@@ -101,7 +104,7 @@ await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub'
 check(await scalar('select count(*)::int from public.organizations') === 1, 'Viewer só vê sua organização');
 check(await scalar(`select count(*)::int from public.daily_performance where organization_id='${orgB}'`) === 0, 'View respeita RLS de outro cliente');
 check(await scalar('select public.is_super_admin()') === false, 'Viewer não é super admin');
-for (const table of ['profiles','organization_members','branding','dashboard_configs','ad_campaigns','metrics_ads','metrics_ads_breakdowns','metrics_crm','metrics_organic','creatives','spreadsheet_uploads','client_asset_assignments','sync_jobs','integration_alerts']) {
+for (const table of ['profiles','organization_members','branding','dashboard_configs','ad_campaigns','metrics_ads','metrics_ads_breakdowns','metrics_crm','metrics_organic','metrics_organic_accounts','creatives','spreadsheet_uploads','client_asset_assignments','sync_jobs','integration_alerts']) {
   check(await scalar(`select count(*)::int from public.${table} where organization_id='${orgB}'`) === 0, `${table}: sem leitura cross-tenant`);
 }
 check(await scalar(`select count(id)::int from public.integrations where organization_id='${orgB}'`) === 0, 'integrations: sem leitura cross-tenant');

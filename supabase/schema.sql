@@ -384,6 +384,8 @@ create table public.creatives (
   campaign_id text,
   ad_id text,
   kind public.creative_kind not null,
+  name text,
+  description text,
   caption text,
   media_url text,
   thumbnail_url text,
@@ -426,6 +428,32 @@ create table public.metrics_organic (
   unique (organization_id,creative_id,metric_date)
 );
 
+-- Métricas diárias da conta/perfil. Snapshots como seguidores nunca são
+-- misturados nem somados com as métricas de publicação acima.
+create table public.metrics_organic_accounts (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  integration_id uuid not null,
+  metric_date date not null,
+  platform public.integration_provider not null check (platform in ('facebook_organic','instagram_organic','tiktok_organic','youtube','google_business')),
+  account_id text not null,
+  impressions bigint check (impressions >= 0),
+  reach bigint check (reach >= 0),
+  interactions bigint check (interactions >= 0),
+  followers bigint check (followers >= 0),
+  follows bigint check (follows >= 0),
+  unfollows bigint check (unfollows >= 0),
+  profile_views bigint check (profile_views >= 0),
+  profile_visits bigint check (profile_visits >= 0),
+  website_clicks bigint check (website_clicks >= 0),
+  source_period text not null default 'day',
+  synced_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  foreign key (organization_id,integration_id) references public.integrations(organization_id,id) on delete cascade,
+  unique (organization_id,platform,account_id,metric_date)
+);
+
 create index metrics_ads_period on public.metrics_ads(organization_id,metric_date,platform);
 create index metrics_ads_integration on public.metrics_ads(organization_id,integration_id);
 create index metrics_ads_breakdowns_period on public.metrics_ads_breakdowns(organization_id,metric_date,platform,dimension_type);
@@ -436,6 +464,8 @@ create index metrics_crm_upload on public.metrics_crm(organization_id,spreadshee
 create index spreadsheet_uploads_uploaded_by_idx on public.spreadsheet_uploads(uploaded_by);
 create index metrics_organic_period on public.metrics_organic(organization_id,metric_date,platform);
 create index metrics_organic_integration on public.metrics_organic(organization_id,integration_id);
+create index metrics_organic_accounts_period on public.metrics_organic_accounts(organization_id,metric_date,platform);
+create index metrics_organic_accounts_integration on public.metrics_organic_accounts(organization_id,integration_id);
 create index creatives_period on public.creatives(organization_id,published_at desc);
 create index creatives_integration on public.creatives(organization_id,integration_id);
 
@@ -492,7 +522,7 @@ begin
 end;
 $$;
 do $$ declare t text; begin
-  foreach t in array array['organizations','profiles','organization_members','branding','dashboard_configs','integrations','ad_campaigns','metrics_ads','metrics_ads_breakdowns','metrics_crm','metrics_organic','creatives','spreadsheet_uploads'] loop
+  foreach t in array array['organizations','profiles','organization_members','branding','dashboard_configs','integrations','ad_campaigns','metrics_ads','metrics_ads_breakdowns','metrics_crm','metrics_organic','metrics_organic_accounts','creatives','spreadsheet_uploads'] loop
     execute format('alter table public.%I enable row level security',t);
     execute format('revoke all on public.%I from anon, authenticated',t);
     execute format('grant all on public.%I to service_role',t);

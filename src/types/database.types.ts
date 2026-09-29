@@ -159,6 +159,8 @@ export type Database = {
           campaign_id: string | null;
           ad_id: string | null;
           kind: Database['public']['Enums']['creative_kind'];
+          name: string | null;
+          description: string | null;
           caption: string | null;
           media_url: string | null;
           thumbnail_url: string | null;
@@ -181,6 +183,8 @@ export type Database = {
           campaign_id?: string | null;
           ad_id?: string | null;
           kind: Database['public']['Enums']['creative_kind'];
+          name?: string | null;
+          description?: string | null;
           caption?: string | null;
           media_url?: string | null;
           thumbnail_url?: string | null;
@@ -203,6 +207,8 @@ export type Database = {
           campaign_id?: string | null;
           ad_id?: string | null;
           kind?: Database['public']['Enums']['creative_kind'];
+          name?: string | null;
+          description?: string | null;
           caption?: string | null;
           media_url?: string | null;
           thumbnail_url?: string | null;
@@ -823,6 +829,75 @@ export type Database = {
           { foreignKeyName: "metrics_organic_organization_id_creative_id_fkey"; columns: ["organization_id","creative_id"]; isOneToOne: false; referencedRelation: "creatives"; referencedColumns: ["organization_id","id"]; },
           { foreignKeyName: "metrics_organic_organization_id_fkey"; columns: ["organization_id"]; isOneToOne: false; referencedRelation: "organizations"; referencedColumns: ["id"]; },
           { foreignKeyName: "metrics_organic_organization_id_integration_id_fkey"; columns: ["organization_id","integration_id"]; isOneToOne: false; referencedRelation: "integrations"; referencedColumns: ["organization_id","id"]; }
+        ];
+      };
+      metrics_organic_accounts: {
+        Row: {
+          id: string;
+          organization_id: string;
+          integration_id: string;
+          metric_date: string;
+          platform: Database['public']['Enums']['integration_provider'];
+          account_id: string;
+          impressions: number | null;
+          reach: number | null;
+          interactions: number | null;
+          followers: number | null;
+          follows: number | null;
+          unfollows: number | null;
+          profile_views: number | null;
+          profile_visits: number | null;
+          website_clicks: number | null;
+          source_period: string;
+          synced_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          integration_id: string;
+          metric_date: string;
+          platform: Database['public']['Enums']['integration_provider'];
+          account_id: string;
+          impressions?: number | null;
+          reach?: number | null;
+          interactions?: number | null;
+          followers?: number | null;
+          follows?: number | null;
+          unfollows?: number | null;
+          profile_views?: number | null;
+          profile_visits?: number | null;
+          website_clicks?: number | null;
+          source_period?: string;
+          synced_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          integration_id?: string;
+          metric_date?: string;
+          platform?: Database['public']['Enums']['integration_provider'];
+          account_id?: string;
+          impressions?: number | null;
+          reach?: number | null;
+          interactions?: number | null;
+          followers?: number | null;
+          follows?: number | null;
+          unfollows?: number | null;
+          profile_views?: number | null;
+          profile_visits?: number | null;
+          website_clicks?: number | null;
+          source_period?: string;
+          synced_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          { foreignKeyName: "metrics_organic_accounts_organization_id_fkey"; columns: ["organization_id"]; isOneToOne: false; referencedRelation: "organizations"; referencedColumns: ["id"]; },
+          { foreignKeyName: "metrics_organic_accounts_organization_id_integration_id_fkey"; columns: ["organization_id","integration_id"]; isOneToOne: false; referencedRelation: "integrations"; referencedColumns: ["organization_id","id"]; }
         ];
       };
       organization_members: {
