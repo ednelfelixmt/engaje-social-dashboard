@@ -53,7 +53,7 @@ export function OrganicKpis({current, previous, enabledMetrics, storageKey}: {cu
   };
   const metrics=organicMetricKeys.filter((key)=>enabledMetrics.includes(key)).map((key)=>({
     key,
-    label:dashboardMetricLabels[key as DashboardMetricKey],
+    label:key==='impressions'?'Visualizações / impressões':dashboardMetricLabels[key as DashboardMetricKey],
     ...(metricValues[key]??{current:null,previous:previous?null:undefined,suffix:''}),
   }));
   const items=metrics.map((metric)=>({id:metric.key,content:<Card className="!p-5"><p className="muted text-xs">{metric.label}</p><strong className="mt-4 block text-2xl tracking-tight">{number(metric.current, metric.suffix ? 2 : 0)}{metric.current === null ? '' : metric.suffix}</strong><Delta current={metric.current} previous={metric.previous}/></Card>}));
