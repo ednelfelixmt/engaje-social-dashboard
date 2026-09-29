@@ -27,6 +27,7 @@ export function DataFreshness({organizationId, integrations, canSync, renderedAt
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const newest = useMemo(() => integrations.map((item) => item.lastSyncedAt).filter(Boolean).sort().at(-1) ?? null, [integrations]);
+  const integrationKey = useMemo(() => integrations.map((item) => item.id).sort().join(','), [integrations]);
   const stale = !newest || renderedAt - Date.parse(newest) > SIX_HOURS;
   const needsSync = stale || needsReachSync;
   const newestLabel = newest ? new Intl.DateTimeFormat('pt-BR', {
@@ -60,14 +61,14 @@ export function DataFreshness({organizationId, integrations, canSync, renderedAt
 
   useEffect(() => {
     if (!needsSync || !canSync || !integrations.length) return;
-    const key = `engaje:auto-sync-reach-v1:${organizationId}`;
+    const key = `engaje:auto-sync-v2:${organizationId}:${integrationKey}`;
     const prior = Number(sessionStorage.getItem(key) || 0);
     if (Date.now() - prior < 30 * 60 * 1000) return;
     sessionStorage.setItem(key, String(Date.now()));
     void synchronize(true);
     // Synchronization intentionally runs once per stale organization/session window.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [organizationId, needsSync, canSync, integrations.length]);
+  }, [organizationId, integrationKey, needsSync, canSync, integrations.length]);
 
   return <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 ${needsSync ? 'border-amber-400/25 bg-amber-400/[0.06]' : 'border-emerald-400/20 bg-emerald-400/[0.04]'}`}>
     <div className="flex items-center gap-3">

@@ -1,13 +1,13 @@
 import {Card} from '@/components/ui/card';
 import {SortableCardGrid} from '@/components/dashboard/sortable-card-grid';
 import {number} from '@/lib/utils';
-import {sum} from '@/lib/metrics/query';
 import {dashboardMetricLabels, organicMetricKeys, type DashboardMetricKey} from '@/lib/metrics/catalog';
 
 type MetricRow = Record<string, unknown>;
 
 function value(rows: MetricRow[], key: string) {
-  return sum(rows, key);
+  const available=rows.map((row)=>row[key]).filter((item):item is number=>item!=null&&Number.isFinite(Number(item))).map(Number);
+  return available.length?available.reduce((total,item)=>total+item,0):null;
 }
 
 function interactions(rows: MetricRow[]) {
@@ -24,7 +24,7 @@ function Delta({current, previous}: {current: number | null; previous?: number |
   return <p className={`mt-3 text-xs ${delta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{delta > 0 ? '+' : ''}{number(delta, 1)}% vs. período comparado</p>;
 }
 
-export function OrganicKpis({current, previous, enabledMetrics, measurementAvailable, storageKey}: {current: MetricRow[]; previous?: MetricRow[]; enabledMetrics: string[]; measurementAvailable:boolean; storageKey:string}) {
+export function OrganicKpis({current, previous, enabledMetrics, storageKey}: {current: MetricRow[]; previous?: MetricRow[]; enabledMetrics: string[]; storageKey:string}) {
   const currentInteractions = interactions(current);
   const previousInteractions = previous ? interactions(previous) : undefined;
   const currentReach = value(current, 'reach');
@@ -54,7 +54,7 @@ export function OrganicKpis({current, previous, enabledMetrics, measurementAvail
   const metrics=organicMetricKeys.filter((key)=>enabledMetrics.includes(key)).map((key)=>({
     key,
     label:dashboardMetricLabels[key as DashboardMetricKey],
-    ...(measurementAvailable?(metricValues[key]??{current:null,previous:previous?null:undefined,suffix:''}):{current:null,previous:previous?null:undefined,suffix:''}),
+    ...(metricValues[key]??{current:null,previous:previous?null:undefined,suffix:''}),
   }));
   const items=metrics.map((metric)=>({id:metric.key,content:<Card className="!p-5"><p className="muted text-xs">{metric.label}</p><strong className="mt-4 block text-2xl tracking-tight">{number(metric.current, metric.suffix ? 2 : 0)}{metric.current === null ? '' : metric.suffix}</strong><Delta current={metric.current} previous={metric.previous}/></Card>}));
   return <SortableCardGrid items={items} storageKey={storageKey} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6"/>;
