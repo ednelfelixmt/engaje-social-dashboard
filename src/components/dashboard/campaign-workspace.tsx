@@ -7,7 +7,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import {Card} from '@/components/ui/card';
-import {Timeline} from '@/components/dashboard/charts';
+import {TimelineLazy} from '@/components/dashboard/timeline-lazy';
 import {Ranking} from '@/components/dashboard/ranking';
 import {Funnel, type FunnelStep} from '@/components/dashboard/funnel';
 import {LeadBreakdown} from '@/components/dashboard/lead-breakdown';
@@ -222,7 +222,7 @@ export function CampaignWorkspace({
     <section style={{order:widgetRank('timeline')}}>
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-4"><div><p className="eyebrow">Evolução temporal</p><h2 className="mt-2 text-lg font-semibold">Investimento e receita atribuída</h2></div><p className="max-w-md text-right text-xs text-zinc-500">Receita real conciliada quando disponível; receita da plataforma como alternativa.</p></div>
-        <Timeline rows={timeline} currency={currency} />
+        <TimelineLazy rows={timeline} currency={currency} />
       </Card>
     </section>
     <div style={{order:widgetRank('campaigns')}}><Card>

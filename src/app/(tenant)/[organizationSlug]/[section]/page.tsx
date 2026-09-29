@@ -51,31 +51,29 @@ export default async function Page({params, searchParams}: {params: {organizatio
   const platformPage = platformDashboardByRoute.get(params.section);
   const title = baseTitles[params.section] ?? platformPage?.label;
   if (!title) notFound();
+  const sectionGroup = platformPage?.group ?? (params.section === 'paid' || params.section === 'organic' ? params.section : null);
 
   const [{data: config}, {data: orgs}, {data: membership}, {data: activeIntegrations}, {data: latestMovement}] = await Promise.all([
     db.from('dashboard_configs').select('*').eq('organization_id', org.id).single(),
     db.from('organizations').select('name,slug').eq('status', 'active').order('name'),
     db.from('organization_members').select('role').eq('organization_id', org.id).eq('user_id', user.id).maybeSingle(),
     db.from('integrations').select('id,provider,last_synced_at,status,last_error').eq('organization_id', org.id).eq('is_enabled', true).in('provider', ['meta_ads', 'windsor', 'stract', 'facebook_organic', 'instagram_organic', 'tiktok_organic', 'youtube', 'google_business']),
-    db.from('metrics_ads').select('metric_date').eq('organization_id', org.id).gt('spend', 0).order('metric_date', {ascending: false}).limit(1).maybeSingle(),
+    params.section==='overview'?db.from('metrics_ads').select('metric_date').eq('organization_id', org.id).gt('spend', 0).order('metric_date', {ascending: false}).limit(1).maybeSingle():Promise.resolve({data:null}),
   ]);
   if (!config) throw new Error('Configuração do dashboard não encontrada.');
   const requiredPage = platformPage?.group ?? params.section;
   if (!config.enabled_pages.includes(requiredPage)) return <Card>Esta página foi desativada nas configurações do dashboard.</Card>;
 
   const f = filters(searchParams, org.timezone, org.currency);
-  const data = await dashboardData(org.slug, f);
-  const needsReachSync = data.ads.some((row) => Number(row.impressions ?? 0) > 0 && row.reach == null);
-  const sectionGroup = platformPage?.group ?? (params.section === 'paid' || params.section === 'organic' ? params.section : null);
   const visibleChecks = await Promise.all(platformDashboards.filter((item) => item.group === sectionGroup).map(async (item) => {
     const table = item.group === 'paid' ? 'metrics_ads' : 'metrics_organic';
-    const {count, error} = await db.from(table).select('id', {head: true, count: 'exact'}).eq('organization_id', org.id).eq('platform', item.platform as never);
+    const {data:sample, error} = await db.from(table).select('id').eq('organization_id', org.id).eq('platform', item.platform as never).limit(1);
     if (error) throw error;
-    if (count) return item.platform;
+    if (sample?.length) return item.platform;
     if (item.group === 'organic') {
-      const {count: creativeCount, error: creativeError} = await db.from('creatives').select('id', {head: true, count: 'exact'}).eq('organization_id', org.id).eq('platform', item.platform as never);
+      const {data:creativeSample, error: creativeError} = await db.from('creatives').select('id').eq('organization_id', org.id).eq('platform', item.platform as never).limit(1);
       if (creativeError) throw creativeError;
-      if (creativeCount) return item.platform;
+      if (creativeSample?.length) return item.platform;
     }
     return null;
   }));
@@ -83,19 +81,36 @@ export default async function Page({params, searchParams}: {params: {organizatio
   if (platformPage && !visible.includes(platformPage.platform)) notFound();
   const requestedPlatform = visible.find((platform) => platform === searchParams.platform);
   const chosen = platformPage?.platform ?? requestedPlatform ?? null;
-  const ads = chosen ? data.ads.filter((row) => row.platform === chosen) : data.ads;
-  const breakdowns = chosen ? data.breakdowns.filter((row) => row.platform === chosen) : data.breakdowns;
-  const previousAds = chosen ? data.adsComparison.filter((row) => row.platform === chosen) : data.adsComparison;
-  const organic = chosen ? data.organic.filter((row) => row.platform === chosen) : data.organic;
-  const previousOrganic = chosen ? data.organicComparison.filter((row) => row.platform === chosen) : data.organicComparison;
-  const catalog = chosen ? data.adCampaigns.filter((row) => row.platform === chosen) : data.adCampaigns;
+  const showAllCreatives=searchParams.creatives==='all';
+  const needsCampaignData=params.section==='overview'||params.section==='funnel'||sectionGroup==='paid';
+  const data = await dashboardData(db,org.id,f,{
+    platform:chosen,
+    ads:needsCampaignData||params.section==='creatives',
+    adsComparison:sectionGroup==='paid'&&f.compare!=='none',
+    breakdowns:sectionGroup==='paid',
+    crm:needsCampaignData||params.section==='external',
+    crmComparison:sectionGroup==='paid'&&f.compare!=='none',
+    organic:sectionGroup==='organic',
+    organicComparison:sectionGroup==='organic'&&f.compare!=='none',
+    creatives:sectionGroup==='paid'||sectionGroup==='organic'||params.section==='creatives',
+    creativeLimit:(sectionGroup==='organic'||params.section==='creatives')&&!showAllCreatives?24:undefined,
+    adCampaigns:needsCampaignData,
+  });
+  const needsReachSync = data.ads.some((row) => Number(row.impressions ?? 0) > 0 && row.reach == null);
+  const ads = data.ads;
+  const breakdowns = data.breakdowns;
+  const previousAds = data.adsComparison;
+  const organic = data.organic;
+  const previousOrganic = data.organicComparison;
+  const catalog = data.adCampaigns;
   const currentCampaigns = campaigns(ads, data.crm, config.preferred_revenue_source, catalog);
   const previousCampaigns = campaigns(previousAds, data.crmComparison, config.preferred_revenue_source, catalog);
   const campaignsWithMovement = currentCampaigns.filter((row) => row.spend > 0 || Number(row.impressions ?? 0) > 0 || Number(row.clicks ?? 0) > 0 || Number(row.leads ?? 0) > 0 || Number(row.purchases ?? 0) > 0);
   const funnelSteps=configuredFunnel(campaignsWithMovement,config.funnel_steps);
   const filteredCreatives = data.creatives.filter((creative) => !chosen || creative.platform === chosen);
-  const performanceRankings = preparePerformanceRankings(campaignsWithMovement, ads, breakdowns, filteredCreatives);
+  const performanceRankings = sectionGroup==='paid'?preparePerformanceRankings(campaignsWithMovement, ads, breakdowns, filteredCreatives):{campaign:[],audience:[],creative:[],gender:[],age:[],device:[],state:[],city:[]};
   const queryWithoutPlatform = Object.fromEntries(Object.entries(f));
+  const showAllCreativesHref=`?${new URLSearchParams({...queryWithoutPlatform,...(chosen?{platform:chosen}:{}),creatives:'all'}).toString()}`;
   const paidIntegrations=(activeIntegrations??[]).filter((item)=>['meta_ads','windsor','stract'].includes(item.provider));
   const organicProviders=['facebook_organic','instagram_organic','tiktok_organic','youtube','google_business'];
   const relevantOrganicIntegrations=(activeIntegrations??[]).filter((item)=>organicProviders.includes(item.provider)&&(!chosen||item.provider===chosen));
@@ -122,7 +137,7 @@ export default async function Page({params, searchParams}: {params: {organizatio
 
     {params.section === 'creatives' ? <CreativeSummary rows={ads} currency={f.currency} /> : null}
 
-    {(params.section === 'creatives' || sectionGroup === 'organic') ? <CreativeLibrary creatives={filteredCreatives} storageKey={`${org.id}:${params.section}:${chosen??'all'}:creatives`} organicInsightsUnavailable={Boolean(organicIntegrationIssue)} /> : null}
+    {(params.section === 'creatives' || sectionGroup === 'organic') ? <CreativeLibrary creatives={filteredCreatives} storageKey={`${org.id}:${params.section}:${chosen??'all'}:creatives`} organicInsightsUnavailable={Boolean(organicIntegrationIssue)} showAllHref={!showAllCreatives&&filteredCreatives.length===24?showAllCreativesHref:undefined} /> : null}
 
     {params.section === 'external' ? <><Card><h2 className="mb-3 text-lg font-semibold">Importar receita real</h2><p className="muted mb-5 text-sm">Importe CSV com datas, receita e compras conciliadas por dia. A importação é validada antes de gravar.</p><UploadForm organizationId={org.id} /></Card><Card><h2 className="mb-4 font-semibold">Registros de receita</h2><p className="muted">{data.crm.length} registros no período selecionado.</p></Card></> : null}
   </div>;

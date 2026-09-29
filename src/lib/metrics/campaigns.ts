@@ -23,26 +23,30 @@ export function campaigns(
   const groups = new Map<string, Row<'metrics_ads'>[]>();
   for (const ad of ads) {
     const key = [ad.platform, normalizedAccountId(ad.account_id), ad.campaign_id].join(':');
-    groups.set(key, [...(groups.get(key) || []), ad]);
+    const group=groups.get(key);
+    if(group)group.push(ad);else groups.set(key,[ad]);
+  }
+
+  const crmByCampaignDay=new Map<string,Row<'metrics_crm'>[]>();
+  for(const row of crm){
+    const key=[row.metric_date,row.channel,row.account_id,row.campaign_id].join(':');
+    const group=crmByCampaignDay.get(key);
+    if(group)group.push(row);else crmByCampaignDay.set(key,[row]);
   }
 
   const performance = [...groups.values()].map((rows) => {
     const first = rows[0];
     const spend = sum(rows, 'spend') || 0;
     const byDay = new Map<string, Row<'metrics_ads'>[]>();
-    rows.forEach((row) => byDay.set(row.metric_date, [...(byDay.get(row.metric_date) || []), row]));
+    for(const row of rows){const group=byDay.get(row.metric_date);if(group)group.push(row);else byDay.set(row.metric_date,[row]);}
 
     let revenue: number | null = 0;
     let purchases: number | null = 0;
     const sources = new Set<string>();
 
     for (const [day, daily] of byDay) {
-      const actual = crm.filter((row) => row.metric_date === day
-        && row.channel === first.platform
-        && row.account_id === first.account_id
-        && row.campaign_id === first.campaign_id
-        && row.is_complete
-        && row.revenue != null);
+      const actual = (crmByCampaignDay.get([day,first.platform,first.account_id,first.campaign_id].join(':'))||[])
+        .filter((row)=>row.is_complete&&row.revenue!=null);
       const chosen = actual.find((row) => row.source === preferred) || actual[0];
       const amount = chosen ? chosen.revenue : sum(daily, 'revenue');
       const count = chosen ? chosen.purchases : sum(daily, 'purchases');
