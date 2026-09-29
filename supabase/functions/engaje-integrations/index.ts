@@ -217,6 +217,22 @@ async function metaVideoAsset(videoId:string,token:string){
   return {source:typeof video.source==='string'?video.source:null,thumbnail:typeof best?.uri==='string'?best.uri:typeof video.picture==='string'?video.picture:null};
  }catch(error){console.warn('[meta-video-asset]',{video_id:videoId,message:error instanceof Error?error.message:'Falha desconhecida'});return {source:null,thumbnail:null};}
 }
+async function metaImageAssets(accountId:string,hashes:string[],token:string){
+ const assets=new Map<string,{source:string|null;thumbnail:string|null;width:number|null;height:number|null}>();
+ const unique=[...new Set(hashes.filter(Boolean))];
+ for(let offset=0;offset<unique.length;offset+=40){
+  const batch=unique.slice(offset,offset+40);
+  try{
+   const response=await graph(`act_${metaAccountId(accountId)}/adimages`,token,{hashes:JSON.stringify(batch),fields:'hash,url,url_128,width,height,original_width,original_height',limit:'100'},'a leitura das imagens originais dos anúncios');
+   for(const image of response.data||[]){
+    const hash=String(image.hash||'');if(!hash)continue;
+    const width=numeric(image.original_width||image.width)||null,height=numeric(image.original_height||image.height)||null;
+    assets.set(hash,{source:typeof image.url==='string'?image.url:null,thumbnail:typeof image.url_128==='string'?image.url_128:null,width,height});
+   }
+  }catch(error){console.warn('[meta-image-assets]',{account_id:metaAccountId(accountId),hashes:batch.length,message:error instanceof Error?error.message:'Falha desconhecida'});}
+ }
+ return assets;
+}
 async function syncWindsor(i:Integration){
  const source=String(i.config.source_platform||'');
  if(source!=='google_ads')throw new Error('A importação Windsor para esta fonte será ativada após definir o mapeamento de campos. Use Google Ads nesta etapa.');
@@ -296,7 +312,9 @@ async function sync(i:Integration){if(i.provider==='windsor')return syncWindsor(
   const breakdownRows=[...data.filter(d=>d.ad_id!=null).map(d=>metaBreakdownFact(i,d,'creative',d.ad_id,d.ad_id)),...detailed.flat()];
   for(let n=0;n<breakdownRows.length;n+=200)await check(await service.from('metrics_ads_breakdowns').upsert(breakdownRows.slice(n,n+200),{onConflict:'organization_id,platform,account_id,campaign_id,dimension_type,dimension_value,metric_date,currency'}));
   const ads=await pages(i.external_account_id+'/ads',token,{fields:'id,name,created_time,campaign_id,adset_id,creative{id,name,title,body,thumbnail_url,image_url,image_hash,video_id,object_story_spec,asset_feed_spec}'});
-  const creativeRows=(await concurrentMap(ads,5,async a=>{if(!a.creative)return null;const creative=a.creative;const story=creative.object_story_spec||{};const storyData=story.link_data||story.video_data||story.photo_data||{};const primaryText=creative.body||storyData.message||creative.asset_feed_spec?.bodies?.[0]?.text||null;const headline=creative.title||storyData.name||creative.asset_feed_spec?.titles?.[0]?.text||null;const description=storyData.description||creative.asset_feed_spec?.descriptions?.[0]?.text||primaryText||headline||null;const video=creative.video_id?await metaVideoAsset(String(creative.video_id),token):{source:null,thumbnail:null};const originalImage=creative.image_url||storyData.picture||storyData.image_url||null;return {organization_id:i.organization_id,integration_id:i.id,platform:'meta_ads',account_id:normalizedAccountId,external_id:String(a.id),ad_id:String(a.id),campaign_id:a.campaign_id,kind:creative.video_id?'video':'image',name:String(a.name||creative.name||a.id),description,caption:primaryText||description||String(a.name||''),thumbnail_url:video.thumbnail||creative.thumbnail_url||originalImage,media_url:video.source||originalImage,lifetime_metrics:{headline,creative_name:creative.name||null,image_hash:creative.image_hash||null},published_at:a.created_time,synced_at:new Date().toISOString()};})).filter(Boolean);
+  const imageHash=(creative:any)=>String(creative.image_hash||creative.object_story_spec?.link_data?.image_hash||creative.object_story_spec?.photo_data?.image_hash||creative.asset_feed_spec?.images?.[0]?.hash||'');
+  const imageAssets=await metaImageAssets(i.external_account_id,ads.map((ad:any)=>imageHash(ad.creative||{})),token);
+  const creativeRows=(await concurrentMap(ads,5,async a=>{if(!a.creative)return null;const creative=a.creative;const story=creative.object_story_spec||{};const storyData=story.link_data||story.video_data||story.photo_data||{};const primaryText=creative.body||storyData.message||creative.asset_feed_spec?.bodies?.[0]?.text||null;const headline=creative.title||storyData.name||creative.asset_feed_spec?.titles?.[0]?.text||null;const description=storyData.description||creative.asset_feed_spec?.descriptions?.[0]?.text||primaryText||headline||null;const video=creative.video_id?await metaVideoAsset(String(creative.video_id),token):{source:null,thumbnail:null};const hash=imageHash(creative);const image=imageAssets.get(hash);const fallbackImage=creative.image_url||storyData.picture||storyData.image_url||null;return {organization_id:i.organization_id,integration_id:i.id,platform:'meta_ads',account_id:normalizedAccountId,external_id:String(a.id),ad_id:String(a.id),campaign_id:a.campaign_id,kind:creative.video_id?'video':'image',name:String(a.name||creative.name||a.id),description,caption:primaryText||description||String(a.name||''),thumbnail_url:video.thumbnail||creative.thumbnail_url||image?.thumbnail||fallbackImage,media_url:video.source||image?.source||fallbackImage,lifetime_metrics:{headline,creative_name:creative.name||null,image_hash:hash||null,image_width:image?.width||null,image_height:image?.height||null},published_at:a.created_time,synced_at:new Date().toISOString()};})).filter(Boolean);
   for(let offset=0;offset<creativeRows.length;offset+=200)await check(await service.from('creatives').upsert(creativeRows.slice(offset,offset+200),{onConflict:'organization_id,platform,account_id,external_id'}));creativeCount=creativeRows.length;
   console.info('[meta-sync-summary]',{integration_id:i.id,account_id:normalizedAccountId,campaigns:statuses.size,insight_rows:facts.length,breakdown_rows:breakdownRows.length,creatives:creativeCount,from:facts.map((fact:any)=>fact.metric_date).sort()[0]||null,to:facts.map((fact:any)=>fact.metric_date).sort().at(-1)||null});
  }else if(i.provider==='instagram_organic'||i.provider==='facebook_organic'){

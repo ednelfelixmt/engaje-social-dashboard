@@ -21,7 +21,7 @@ export function SortableCardGrid({items,storageKey,className}:{items:SortableCar
   useEffect(()=>{
     let stored:unknown=[];
     try{stored=JSON.parse(localStorage.getItem(`engaje:card-order:v1:${storageKey}`)||'[]');}catch{stored=[];}
-    const saved=Array.isArray(stored)?stored.filter((id):id is string=>typeof id==='string'&&ids.includes(id)):[];
+    const saved=[...new Set(Array.isArray(stored)?stored.filter((id):id is string=>typeof id==='string'&&ids.includes(id)):[])];
     setOrder([...saved,...ids.filter((id)=>!saved.includes(id))]);
     setReady(true);
     // The item set is stable for the rendered dashboard/filter combination.
@@ -36,7 +36,7 @@ export function SortableCardGrid({items,storageKey,className}:{items:SortableCar
   const selector=`[data-sortable-scope="${scope}"][data-sortable-card]`;
   const {dragging,over,selected,start,selectOrMove}=useSortableList<string>({selector,attribute:'data-sortable-card',onMove:reorder});
   const byId=new Map(items.map((item)=>[item.id,item.content]));
-  const visible=[...order.filter((id)=>byId.has(id)),...ids.filter((id)=>!order.includes(id))];
+  const visible=[...new Set([...order.filter((id)=>byId.has(id)),...ids.filter((id)=>!order.includes(id))])];
 
   return <div className={className}>
     {visible.map((id)=><div
