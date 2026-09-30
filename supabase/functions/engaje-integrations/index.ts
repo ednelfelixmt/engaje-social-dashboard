@@ -8,9 +8,15 @@ const json=(value:unknown,status=200)=>new Response(JSON.stringify(value),{statu
 const graphVersion=Deno.env.get('META_GRAPH_VERSION')||'v26.0';
 const metaId=Deno.env.get('META_APP_ID'),metaSecret=Deno.env.get('META_APP_SECRET');
 const windsorKey=Deno.env.get('WINDSOR_API_KEY');
-// ID da configuração de Login do Facebook para Empresas. Quando definido, o login usa a configuração
-// (permissões e ativos vêm dela) em vez de `scope`. Sem ele, o comportamento anterior é mantido.
-const loginConfigId=Deno.env.get('META_LOGIN_CONFIG_ID')||'';
+// ID da configuração de Login do Facebook para Empresas. Quando definido (secret META_LOGIN_CONFIG_ID ou
+// segredo `meta_login_config_id` no Vault do banco), o login usa a configuração (permissões e ativos vêm
+// dela) em vez de `scope`. Sem ele, o comportamento anterior é mantido.
+const envLoginConfigId=Deno.env.get('META_LOGIN_CONFIG_ID')||'';
+async function loginConfig(){
+ if(envLoginConfigId)return envLoginConfigId;
+ const {data}=await service.rpc('meta_login_config_id');
+ return typeof data==='string'&&/^\d{6,30}$/.test(data)?data:'';
+}
 type Integration={id:string;organization_id:string;provider:string;external_account_id:string;config:Record<string,unknown>;status:string;account_name:string};
 type MetaErrorDetails={code:string;subcode:string|null;endpoint:string;stage:string;rawMessage:string;occurredAt:string};
 class MetaGraphError extends Error{
@@ -364,6 +370,7 @@ Deno.serve(async(req:Request)=>{
    const {data:pending,error}=await service.from('integrations').update({status:'syncing'}).eq('id',id).eq('status','pending').select('*').single();if(error||!pending||pending.config.nonce!==nonce)throw new Error('Autorização já utilizada.');
    activeId=id;const actorId=pending.config.user_id;if(!actorId)throw new Error('Reconecte para renovar a autorização.');const {data:members}=await service.from('organization_members').select('organization_id,role,is_active,organizations!inner(status,is_agency)').eq('user_id',actorId).eq('is_active',true);const authorized=members?.some((m:any)=>m.organizations.status==='active'&&((m.organizations.is_agency&&m.role==='super_admin')||(m.organization_id===pending.organization_id&&['client_admin','editor'].includes(m.role))));if(!authorized)throw new Error('Permissão revogada durante a autorização.');const {data:org}=await service.from('organizations').select('slug,status').eq('id',pending.organization_id).single();if(!org||org.status!=='active')throw new Error('Cliente indisponível.');
    const code=url.searchParams.get('code');if(!code)throw new Error('Código ausente.');
+   const loginConfigId=await loginConfig();
    const result=await graph('oauth/access_token',null,{client_id:metaId!,client_secret:metaSecret!,redirect_uri:callback,code},'a troca do código OAuth');let token=result.access_token;if(!token)throw new Error('Token não recebido.');
    if(loginConfigId){try{const long=await graph('oauth/access_token',null,{grant_type:'fb_exchange_token',client_id:metaId!,client_secret:metaSecret!,fb_exchange_token:token},'a renovação do token');token=long.access_token||token;}catch{/* tokens de usuário do sistema não precisam de troca */}}
    else{const long=await graph('oauth/access_token',null,{grant_type:'fb_exchange_token',client_id:metaId!,client_secret:metaSecret!,fb_exchange_token:token},'a renovação do token');token=long.access_token||token;}
@@ -574,6 +581,7 @@ Deno.serve(async(req:Request)=>{
    if(!['meta_ads','facebook_organic','instagram_organic'].includes(body.provider))return json({message:body.provider==='tiktok_ads'||body.provider==='tiktok_organic'?'TikTok: o conector está preparado, mas requer aplicativo aprovado e as credenciais TIKTOK_APP_ID e TIKTOK_APP_SECRET.':'Use o formulário do extrator para cadastrar esta fonte.'});
    if(!metaId||!metaSecret)return json({message:'Configure META_APP_ID e META_APP_SECRET no Supabase.'});
    await archiveStaleMetaSelections(org);
+   const loginConfigId=await loginConfig();
    const nonce=crypto.randomUUID();const pending=await check(await service.from('integrations').insert({organization_id:org,provider:body.provider,external_account_id:'pending:'+nonce,account_name:'Autorização em andamento',status:'pending',config:{nonce,user_id:actor.id}}).select('id').single());
    const signed=[pending.id,Date.now()+600000,nonce].join('.');const state=signed+'.'+await stateHmac(signed);const scopes=metaOAuthPermissions().join(',');
    const login=new URL('https://www.facebook.com/'+graphVersion+'/dialog/oauth');login.search=new URLSearchParams(loginConfigId?{client_id:metaId,redirect_uri:callback,state,config_id:loginConfigId,response_type:'code',override_default_response_type:'true'}:{client_id:metaId,redirect_uri:callback,state,scope:scopes,response_type:'code'}).toString();return json({url:login.href});

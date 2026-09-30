@@ -76,4 +76,4 @@ Um job do `pg_cron` (`engaje-scheduled-sync`) roda às 09:00 e 21:00 UTC (06:00 
 
 ## Login da Meta com configuração (opcional)
 
-Se o secret `META_LOGIN_CONFIG_ID` estiver definido na função, o login usa o ID da configuração de Login do Facebook para Empresas (`config_id`, com `override_default_response_type=true`) em vez de `scope`. Sem ele, nada muda. `engaje-integrations` e `meta-auth` devem ser publicadas com o mesmo código.
+O ID fica no Vault do banco (segredo `meta_login_config_id`, lido por `public.meta_login_config_id()`); o secret `META_LOGIN_CONFIG_ID` da função, se existir, tem prioridade. Para voltar ao login por permissões: `delete from vault.secrets where name = 'meta_login_config_id';`. Quando há ID, o login usa o ID da configuração de Login do Facebook para Empresas (`config_id`, com `override_default_response_type=true`) em vez de `scope`. Sem ele, nada muda. `engaje-integrations` e `meta-auth` devem ser publicadas com o mesmo código.
