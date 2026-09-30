@@ -7,12 +7,13 @@ import {ActionForm} from '@/components/action-form';
 import {ClientLifecycleControls} from '@/components/client-lifecycle-controls';
 import {createOrganization, updateOrganization} from '../actions';
 import {businessNiches, salesModels, suggestFunnelModel, funnelPresetFor, type BusinessNiche, type SalesModel} from '@/lib/metrics/funnel-config';
+import {currencyOptions, timezoneOptions} from '@/lib/organization-options';
 
 export default async function Page() {
   const {db} = await requireAdmin();
   const {data, error} = await db
     .from('organizations')
-    .select('id,name,slug,status,niche,sales_model')
+    .select('id,name,slug,status,niche,sales_model,timezone,currency')
     .eq('is_agency', false)
     .order('name');
 
@@ -67,7 +68,11 @@ export default async function Page() {
               <label>Status<select name="status" defaultValue={organization.status}><option value="active">Ativo</option><option value="paused">Pausado</option></select></label>
               <label>Nicho<select name="niche" defaultValue={organization.niche ?? ''}><option value="">Não informado</option>{businessNiches.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
               <label>Modelo de vendas<select name="sales_model" defaultValue={organization.sales_model ?? ''}><option value="">Não informado</option>{salesModels.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+              <label>Fuso horário<select name="timezone" defaultValue={organization.timezone}>{timezoneOptions.some((item) => item.id === organization.timezone) ? null : <option value={organization.timezone}>{organization.timezone}</option>}{timezoneOptions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+              <label>Moeda<select name="currency" defaultValue={organization.currency}>{currencyOptions.some((item) => item.id === organization.currency) ? null : <option value={organization.currency}>{organization.currency}</option>}{currencyOptions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
             </div>
+            <label className="mt-4 !flex-row items-center gap-3 text-sm"><input type="checkbox" name="apply_funnel" className="size-4" /><span>Aplicar o funil sugerido para o nicho e o modelo de vendas (substitui as etapas atuais do funil deste cliente)</span></label>
+            <p className="muted mt-2 text-xs">Alterar a moeda muda quais dados aparecem no dashboard: os números são separados por moeda e nunca misturados.</p>
           </ActionForm>
           <div className="mt-5 border-t border-white/10 pt-5">
             <ClientLifecycleControls organizationId={organization.id} organizationName={organization.name} />

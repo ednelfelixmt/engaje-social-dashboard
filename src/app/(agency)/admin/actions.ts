@@ -1,4 +1,4 @@
-'use server';import {z} from 'zod';import {revalidatePath} from 'next/cache';import {requireAdmin} from '@/lib/auth/session';import type {ActionState} from '@/components/action-form';import {businessNiches,salesModels,suggestFunnelModel,funnelPresetFor} from '@/lib/metrics/funnel-config';
+'use server';import {z} from 'zod';import {revalidatePath} from 'next/cache';import {requireAdmin} from '@/lib/auth/session';import type {ActionState} from '@/components/action-form';import {businessNiches,salesModels,suggestFunnelModel,funnelPresetFor} from '@/lib/metrics/funnel-config';import {isValidTimezone} from '@/lib/organization-options';
 const nicheIds=businessNiches.map((item)=>item.id) as [typeof businessNiches[number]['id'],...typeof businessNiches[number]['id'][]];
 const salesModelIds=salesModels.map((item)=>item.id) as [typeof salesModels[number]['id'],...typeof salesModels[number]['id'][]];
 export async function createOrganization(_:ActionState,f:FormData):Promise<ActionState>{
@@ -18,10 +18,21 @@ export async function createOrganization(_:ActionState,f:FormData):Promise<Actio
 export async function updateOrganization(_:ActionState,f:FormData):Promise<ActionState>{
   const {db}=await requireAdmin();
   const id=z.string().uuid().parse(f.get('id'));
-  const parsed=z.object({name:z.string().trim().min(2),status:z.enum(['active','paused']),niche:z.enum(nicheIds).nullable(),sales_model:z.enum(salesModelIds).nullable()}).safeParse({name:f.get('name'),status:f.get('status'),niche:f.get('niche')||null,sales_model:f.get('sales_model')||null});
-  if(!parsed.success)return {ok:false,message:'Dados inválidos.'};
-  const {error}=await db.from('organizations').update(parsed.data).eq('id',id).eq('is_agency',false);
+  const parsed=z.object({name:z.string().trim().min(2).max(160),status:z.enum(['active','paused']),niche:z.enum(nicheIds).nullable(),sales_model:z.enum(salesModelIds).nullable(),timezone:z.string().refine(isValidTimezone),currency:z.string().regex(/^[A-Z]{3}$/)}).safeParse({name:f.get('name'),status:f.get('status'),niche:f.get('niche')||null,sales_model:f.get('sales_model')||null,timezone:f.get('timezone'),currency:f.get('currency')});
+  if(!parsed.success)return {ok:false,message:'Confira nome, status, fuso horário e moeda.'};
+  const {data:updated,error}=await db.from('organizations').update(parsed.data).eq('id',id).eq('is_agency',false).select('id,slug').maybeSingle();
+  if(error||!updated)return {ok:false,message:'Não foi possível salvar.'};
+  let funnelMessage='';
+  if(f.get('apply_funnel')==='on'){
+    if(!parsed.data.niche||!parsed.data.sales_model){revalidatePath('/admin');return {ok:false,message:'Dados salvos, mas para aplicar o funil informe o nicho e o modelo de vendas.'};}
+    const funnelModel=suggestFunnelModel(parsed.data.niche,parsed.data.sales_model);
+    const preset=funnelPresetFor(funnelModel);
+    const {error:funnelError}=await db.from('dashboard_configs').update({funnel_model:funnelModel,funnel_steps:preset.steps}).eq('organization_id',id);
+    if(funnelError){revalidatePath('/admin');return {ok:false,message:'Dados salvos, mas o funil não pôde ser aplicado.'};}
+    funnelMessage=` Funil aplicado: ${preset.label}.`;
+  }
   revalidatePath('/admin');
-  return {ok:!error,message:error?'Não foi possível salvar.':'Cliente atualizado. O funil só muda em Configurar dashboard.'};
+  revalidatePath('/'+updated.slug,'layout');
+  return {ok:true,message:'Cliente atualizado.'+funnelMessage+(funnelMessage?'':' O funil só muda se você marcar "Aplicar o funil sugerido".')};
 }
 export async function saveMember(_:ActionState,f:FormData):Promise<ActionState>{const {db}=await requireAdmin();const input=z.object({organization_id:z.string().uuid(),user_id:z.string().uuid(),role:z.enum(['client_admin','editor','viewer']),is_active:z.boolean()}).safeParse({organization_id:f.get('organization_id'),user_id:f.get('user_id'),role:f.get('role'),is_active:f.get('is_active')==='on'});if(!input.success)return {ok:false,message:'Preencha organização, UUID do usuário e role.'};const {data:existing}=await db.from('organization_members').select('role').eq('organization_id',input.data.organization_id).eq('user_id',input.data.user_id).maybeSingle();if(existing?.role==='super_admin')return {ok:false,message:'O acesso de super administrador não pode ser alterado neste formulário.'};const {error}=await db.from('organization_members').upsert(input.data);revalidatePath('/admin/users');return {ok:!error,message:error?'Usuário não encontrado no Auth ou vínculo inválido.':'Acesso atualizado.'};}
