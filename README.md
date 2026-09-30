@@ -29,6 +29,7 @@ Crie o primeiro usuário no Supabase Auth, uma organização com `is_agency=true
 - Páginas dedicadas por plataforma, habilitadas automaticamente somente quando há dados: Meta Ads, Google Ads, TikTok Ads, Facebook orgânico, Instagram orgânico, TikTok orgânico, YouTube e Google Business.
 - Comparação por período também nas páginas específicas, com KPIs próprios, ranking de campanhas, linha do tempo e galeria filtrada.
 - Configuração de páginas, métricas e ordem dos quatro blocos principais.
+- Dashboard personalizável por usuário: botão "Personalizar" em cada tela (arrastar e ocultar cards, reordenar e ocultar blocos), salvo na conta em `user_dashboard_layouts` (RLS: cada pessoa só acessa o próprio layout). Editores e admins podem promover a própria visão a padrão do cliente (`dashboard_configs.default_layouts`). A ordem antiga salva no navegador é importada uma única vez.
 - CSV transacional para receita real, validação e detecção de arquivo duplicado. Modelo em `public/modelo-receita.csv`.
 - Meta OAuth, seleção de conta pela sincronização individual, Ads por anúncio/dia e criativos. Facebook/Instagram importam conteúdos e imagens.
 - Catálogo de integrações por cliente com estágio explícito. Meta e Windsor/Google Ads aparecem como operacionais; TikTok Ads, TikTok orgânico, HubSpot, RD Station, CRM genérico e Stract podem ter sua base registrada sem expor segredos no navegador.
@@ -66,3 +67,5 @@ O repositório está ligado à Vercel. `vercel.json` seleciona Next.js e build p
 Em bancos já instalados antes desta atualização, execute `supabase/organic-counters.sql` uma única vez. Em novos bancos, a coluna já consta do schema.
 
 Em bancos já instalados, execute também `supabase/migrations/20260930000000_move_ingest_key_hash.sql` (move o hash da chave de ingestão para `integration_ingest_keys`, inacessível ao navegador) e republique as funções `engaje-ingest`, `engaje-integrations` e `meta-auth`. Cargas externas (Stract) para Meta Ads, Google Ads, Facebook e Instagram orgânico são recusadas enquanto o cliente tiver o conector nativo ativo.
+
+Em bancos já instalados, execute também `supabase/migrations/20260930120000_expand_funnel_models.sql` e `supabase/migrations/20260930200000_user_dashboard_layouts.sql`.

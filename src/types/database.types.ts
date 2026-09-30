@@ -232,6 +232,7 @@ export type Database = {
           enabled_pages: (string)[];
           enabled_metrics: (string)[];
           widget_order: (string)[];
+          default_layouts: Json;
           only_platforms_with_data: boolean;
           comparison_enabled: boolean;
           preferred_revenue_source: Database['public']['Enums']['revenue_source'];
@@ -250,6 +251,7 @@ export type Database = {
           enabled_pages?: (string)[];
           enabled_metrics?: (string)[];
           widget_order?: (string)[];
+          default_layouts?: Json;
           only_platforms_with_data?: boolean;
           comparison_enabled?: boolean;
           preferred_revenue_source?: Database['public']['Enums']['revenue_source'];
@@ -268,6 +270,7 @@ export type Database = {
           enabled_pages?: (string)[];
           enabled_metrics?: (string)[];
           widget_order?: (string)[];
+          default_layouts?: Json;
           only_platforms_with_data?: boolean;
           comparison_enabled?: boolean;
           preferred_revenue_source?: Database['public']['Enums']['revenue_source'];
@@ -1120,6 +1123,32 @@ export type Database = {
         };
         Relationships: [
           { foreignKeyName: "platform_organizations_connection_id_fkey"; columns: ["connection_id"]; isOneToOne: false; referencedRelation: "platform_connections"; referencedColumns: ["id"]; }
+        ];
+      };
+      user_dashboard_layouts: {
+        Row: {
+          user_id: string;
+          organization_id: string;
+          scope: string;
+          layout: Json;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          organization_id: string;
+          scope: string;
+          layout: Json;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          organization_id?: string;
+          scope?: string;
+          layout?: Json;
+          updated_at?: string;
+        };
+        Relationships: [
+          { foreignKeyName: "user_dashboard_layouts_organization_id_fkey"; columns: ["organization_id"]; isOneToOne: false; referencedRelation: "organizations"; referencedColumns: ["id"]; }
         ];
       };
       profiles: {

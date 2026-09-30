@@ -18,6 +18,7 @@ import type {CampaignPerformance, Platform} from '@/types/domain';
 import type {PerformanceRankingGroups} from '@/lib/metrics/rankings';
 import {paidSummary} from '@/lib/metrics/paid-summary';
 import {SortableCardGrid} from '@/components/dashboard/sortable-card-grid';
+import {Block} from '@/components/layout/block';
 
 type TimelineRow = {date: string; spend: number | null; revenue: number | null};
 
@@ -185,7 +186,6 @@ export function CampaignWorkspace({
   enabledMetrics,
   rankings,
   funnelSteps,
-  widgetOrder,
   storageKey,
 }: {
   rows: CampaignPerformance[];
@@ -196,7 +196,6 @@ export function CampaignWorkspace({
   enabledMetrics: string[];
   rankings: PerformanceRankingGroups;
   funnelSteps: FunnelStep[];
-  widgetOrder: string[];
   storageKey: string;
 }) {
   const measuredRows = rows.filter(hasMeasuredPerformance);
@@ -210,27 +209,26 @@ export function CampaignWorkspace({
     format: (value:number|null)=>formatPaidMetric(item.key,value,currency),
   }));
   const showLeadBreakdown=['leads','registration_leads','message_leads','cpl','cost_per_registration','cost_per_message'].some((key)=>enabledMetrics.includes(key));
-  const widgetRank=(key:string)=>{const index=widgetOrder.indexOf(key);return index<0?widgetOrder.length:index;};
 
   return <div className="flex flex-col gap-5">
-    <section style={{order:widgetRank('kpis')}}><SortableCardGrid storageKey={storageKey} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6" items={kpis.map(({key,...kpi})=>({id:key,content:<KpiCard {...kpi}/>}))}/></section>
-    {showLeadBreakdown?<div style={{order:widgetRank('kpis')}}><LeadBreakdown totalLeads={current.leads} registrationLeads={current.registrationLeads} messageLeads={current.messageLeads} totalCost={current.cpl} registrationCost={current.costPerRegistration} messageCost={current.costPerMessage} currency={currency} /></div>:null}
-    {showPlatforms ? <div style={{order:widgetRank('platforms')}}><PlatformBreakdown rows={measuredRows} currency={currency} enabledMetrics={enabledMetrics} /></div> : null}
-    <section style={{order:widgetRank('funnel')}}>
+    <Block id="kpis"><SortableCardGrid gridId="kpis" storageKey={storageKey} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6" items={kpis.map(({key,...kpi})=>({id:key,content:<KpiCard {...kpi}/>}))}/></Block>
+    {showLeadBreakdown?<Block id="kpis"><LeadBreakdown totalLeads={current.leads} registrationLeads={current.registrationLeads} messageLeads={current.messageLeads} totalCost={current.cpl} registrationCost={current.costPerRegistration} messageCost={current.costPerMessage} currency={currency} /></Block>:null}
+    {showPlatforms ? <Block id="platforms"><PlatformBreakdown rows={measuredRows} currency={currency} enabledMetrics={enabledMetrics} /></Block> : null}
+    <Block id="funnel">
       <TrafficFunnel steps={funnelSteps} currency={currency} comparing={previousRows.length>0} />
-    </section>
-    <section style={{order:widgetRank('timeline')}}>
+    </Block>
+    <Block id="timeline">
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-4"><div><p className="eyebrow">Evolução temporal</p><h2 className="mt-2 text-lg font-semibold">Investimento e receita atribuída</h2></div><p className="max-w-md text-right text-xs text-zinc-500">Receita real conciliada quando disponível; receita da plataforma como alternativa.</p></div>
         <TimelineLazy rows={timeline} currency={currency} />
       </Card>
-    </section>
-    <div style={{order:widgetRank('campaigns')}}><Card>
+    </Block>
+    <Block id="campaigns"><Card>
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="eyebrow">Análise detalhada</p><h2 className="mt-2 text-lg font-semibold">Ranking de campanhas</h2></div><p className="text-xs text-zinc-500">Ordene por investimento, retorno ou receita.</p></div>
       <Ranking rows={rows} currency={currency} />
-    </Card></div>
-    <div style={{order:widgetRank('creatives')}}><PerformanceRankings rankings={rankings} currency={currency} /></div>
-    <section className="grid gap-5 2xl:grid-cols-2" style={{order:widgetOrder.length+1}}>
+    </Card></Block>
+    <Block id="creatives"><PerformanceRankings rankings={rankings} currency={currency} /></Block>
+    <section className="grid gap-5 2xl:grid-cols-2" style={{order:999}}>
       <ComparisonPanel currentRows={measuredRows} previousRows={measuredPreviousRows} currency={currency} />
       <AttentionPanel rows={measuredRows} currency={currency} />
     </section>

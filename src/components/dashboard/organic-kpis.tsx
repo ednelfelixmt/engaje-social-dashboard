@@ -83,5 +83,5 @@ export function OrganicKpis({current, previous, accountCurrent, accountPrevious,
   }));
   const accountKeys=new Set(['followers','follower_growth','profile_views','profile_visits','website_clicks']);
   const items=metrics.map((metric)=>({id:metric.key,content:<Card className="!p-5"><div className="flex items-start justify-between gap-3"><p className="muted text-xs">{metric.label}</p><span className="rounded-full border border-white/10 px-2 py-0.5 text-[9px] uppercase tracking-wider text-zinc-500">{accountKeys.has(metric.key)?'Conta':'Desempenho'}</span></div><strong className="mt-4 block text-2xl tracking-tight">{number(metric.current, metric.suffix ? 2 : 0)}{metric.current === null ? '' : metric.suffix}</strong><Delta current={metric.current} previous={metric.previous}/></Card>}));
-  return <SortableCardGrid items={items} storageKey={storageKey} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6"/>;
+  return <SortableCardGrid items={items} gridId="organic-kpis" storageKey={storageKey} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6"/>;
 }
