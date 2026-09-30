@@ -69,3 +69,11 @@ Em bancos já instalados antes desta atualização, execute `supabase/organic-co
 Em bancos já instalados, execute também `supabase/migrations/20260930000000_move_ingest_key_hash.sql` (move o hash da chave de ingestão para `integration_ingest_keys`, inacessível ao navegador) e republique as funções `engaje-ingest`, `engaje-integrations` e `meta-auth`. Cargas externas (Stract) para Meta Ads, Google Ads, Facebook e Instagram orgânico são recusadas enquanto o cliente tiver o conector nativo ativo.
 
 Em bancos já instalados, execute também `supabase/migrations/20260930120000_expand_funnel_models.sql` e `supabase/migrations/20260930200000_user_dashboard_layouts.sql`.
+
+## Sincronização automática
+
+Um job do `pg_cron` (`engaje-scheduled-sync`) roda às 09:00 e 21:00 UTC (06:00 e 18:00 em Brasília) e dispara uma chamada por integração (Meta Ads, Facebook e Instagram orgânico, Windsor) para a função `meta-auth`, que executa a mesma sincronização do botão manual. A chamada é autenticada pelo segredo `engaje_cron_secret` guardado no Vault do banco (validado por `verify_cron_secret`), sem secrets de Edge Function. Contas com token expirado ou revogado passam a `expired` e exigem reconexão; falhas passageiras (limite da Meta, timeout) mantêm a conta ativa e são tentadas de novo na janela seguinte. Para testar uma conta: `select private.run_scheduled_syncs('<id da integração>');`. Migração: `supabase/migrations/20260930210000_scheduled_sync.sql` (ajuste a URL em `engaje_functions_url` ao adaptar para outro projeto).
+
+## Login da Meta com configuração (opcional)
+
+Se o secret `META_LOGIN_CONFIG_ID` estiver definido na função, o login usa o ID da configuração de Login do Facebook para Empresas (`config_id`, com `override_default_response_type=true`) em vez de `scope`. Sem ele, nada muda. `engaje-integrations` e `meta-auth` devem ser publicadas com o mesmo código.

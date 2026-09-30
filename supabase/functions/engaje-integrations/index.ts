@@ -8,6 +8,9 @@ const json=(value:unknown,status=200)=>new Response(JSON.stringify(value),{statu
 const graphVersion=Deno.env.get('META_GRAPH_VERSION')||'v26.0';
 const metaId=Deno.env.get('META_APP_ID'),metaSecret=Deno.env.get('META_APP_SECRET');
 const windsorKey=Deno.env.get('WINDSOR_API_KEY');
+// ID da configuração de Login do Facebook para Empresas. Quando definido, o login usa a configuração
+// (permissões e ativos vêm dela) em vez de `scope`. Sem ele, o comportamento anterior é mantido.
+const loginConfigId=Deno.env.get('META_LOGIN_CONFIG_ID')||'';
 type Integration={id:string;organization_id:string;provider:string;external_account_id:string;config:Record<string,unknown>;status:string;account_name:string};
 type MetaErrorDetails={code:string;subcode:string|null;endpoint:string;stage:string;rawMessage:string;occurredAt:string};
 class MetaGraphError extends Error{
@@ -325,6 +328,34 @@ async function sync(i:Integration){if(i.provider==='windsor')return syncWindsor(
  await check(await service.from('integrations').update({status:'connected',is_enabled:true,last_synced_at:completedAt,config:completedConfig,last_error:warning}).eq('id',i.id));
  return {message:`Sincronização ${partial?'parcial':'concluída'}: ${rows} métricas de conteúdo, ${accountMetricRows} métricas diárias de conta e ${creativeCount} criativos gravados no Supabase.${partial?' '+warning:''}`,rows,accountMetrics:accountMetricRows,creatives:creativeCount,partial};
 }
+const scheduledProviders=['meta_ads','facebook_organic','instagram_organic','windsor'];
+async function scheduledSync(req:Request,body:any){
+ const secret=req.headers.get('x-cron-secret')||'';
+ if(secret.length<32||secret.length>256)return json({message:'Não autorizado.'},401);
+ const {data:authorized,error:secretError}=await service.rpc('verify_cron_secret',{p_secret:secret});
+ if(secretError||authorized!==true)return json({message:'Não autorizado.'},401);
+ const id=String(body.integrationId||'');
+ if(!/^[0-9a-f-]{36}$/.test(id))return json({message:'Integração inválida.'},400);
+ const {data:i}=await service.from('integrations').select('*,organizations!inner(status)').eq('id',id).maybeSingle();
+ if(!i||!i.is_enabled||(i.organizations as any)?.status!=='active'||!scheduledProviders.includes(i.provider))return json({message:'Integração fora da agenda.',skipped:true});
+ // Só sincroniza contas saudáveis ou com erro passageiro; 'syncing' só é retomada se travou há mais de 30 minutos.
+ const stale=new Date(Date.now()-30*60*1000).toISOString();
+ const {data:locked}=await service.from('integrations').update({status:'syncing',last_sync_started_at:new Date().toISOString(),last_error:null}).eq('id',i.id).or('status.in.(connected,error),and(status.eq.syncing,last_sync_started_at.lt.'+stale+')').select('id').maybeSingle();
+ if(!locked)return json({message:'Conta indisponível para sincronização agora.',skipped:true});
+ try{
+  const result=await sync({...i,status:'syncing'} as Integration);
+  console.info('[scheduled-sync]',{integration_id:i.id,provider:i.provider,ok:true});
+  return json({message:'Sincronização agendada concluída.',result});
+ }catch(error){
+  const details=error instanceof MetaGraphError?error.details:null;
+  const message=error instanceof Error?error.message:'Falha na sincronização agendada.';
+  // Token revogado/expirado exige reconexão; qualquer outra falha é tratada como passageira e tentada de novo na próxima janela.
+  const needsReconnect=details?.code==='190'||message.includes('sem autorização');
+  console.error('[scheduled-sync]',{integration_id:i.id,provider:i.provider,message,code:details?.code??null});
+  await service.from('integrations').update({status:needsReconnect?'expired':'error',is_enabled:!needsReconnect,config:diagnosticConfig(i.config||{},{syncStatus:'error',lastError:details}),last_error:message.slice(0,300)}).eq('id',i.id);
+  return json({message,failed:true});
+ }
+}
 Deno.serve(async(req:Request)=>{
  if(req.method==='OPTIONS')return new Response(null,{headers:cors});const url=new URL(req.url);let activeId:string|undefined;
  try{
@@ -334,8 +365,11 @@ Deno.serve(async(req:Request)=>{
    activeId=id;const actorId=pending.config.user_id;if(!actorId)throw new Error('Reconecte para renovar a autorização.');const {data:members}=await service.from('organization_members').select('organization_id,role,is_active,organizations!inner(status,is_agency)').eq('user_id',actorId).eq('is_active',true);const authorized=members?.some((m:any)=>m.organizations.status==='active'&&((m.organizations.is_agency&&m.role==='super_admin')||(m.organization_id===pending.organization_id&&['client_admin','editor'].includes(m.role))));if(!authorized)throw new Error('Permissão revogada durante a autorização.');const {data:org}=await service.from('organizations').select('slug,status').eq('id',pending.organization_id).single();if(!org||org.status!=='active')throw new Error('Cliente indisponível.');
    const code=url.searchParams.get('code');if(!code)throw new Error('Código ausente.');
    const result=await graph('oauth/access_token',null,{client_id:metaId!,client_secret:metaSecret!,redirect_uri:callback,code},'a troca do código OAuth');let token=result.access_token;if(!token)throw new Error('Token não recebido.');
-   const long=await graph('oauth/access_token',null,{grant_type:'fb_exchange_token',client_id:metaId!,client_secret:metaSecret!,fb_exchange_token:token},'a renovação do token');token=long.access_token||token;
-   const granted=await grantedPermissions(token);const identity=await graph('me',token,{fields:'id,name'},'a identificação do usuário');
+   if(loginConfigId){try{const long=await graph('oauth/access_token',null,{grant_type:'fb_exchange_token',client_id:metaId!,client_secret:metaSecret!,fb_exchange_token:token},'a renovação do token');token=long.access_token||token;}catch{/* tokens de usuário do sistema não precisam de troca */}}
+   else{const long=await graph('oauth/access_token',null,{grant_type:'fb_exchange_token',client_id:metaId!,client_secret:metaSecret!,fb_exchange_token:token},'a renovação do token');token=long.access_token||token;}
+   let granted:string[]=[];
+   try{granted=await grantedPermissions(token);}catch(error){if(!loginConfigId)throw error;}
+   if(loginConfigId&&!granted.length)granted=metaOAuthPermissions();const identity=await graph('me',token,{fields:'id,name'},'a identificação do usuário');
    const {data:agency}=await service.from('organizations').select('id').eq('is_agency',true).order('created_at').limit(1).maybeSingle();
    const savedConnection=await check(await service.from('platform_connections').upsert({agency_organization_id:agency?.id||pending.organization_id,target_organization_id:pending.organization_id,provider:pending.provider,external_user_id:String(identity.id),account_name:String(identity.name||'Conta Meta'),status:'syncing',scopes:granted,config:{connected_by:actorId},last_error:null},{onConflict:'agency_organization_id,provider,external_user_id'}).select('id').single());
    await setConnectionToken(savedConnection.id,token);
@@ -344,7 +378,7 @@ Deno.serve(async(req:Request)=>{
    return Response.redirect(origin+'/'+org.slug+'/settings/integrations?select_assets=1&connection_id='+encodeURIComponent(savedConnection.id)+'&found='+imported,303);
   }
   if(req.method!=='POST')return json({message:'Método inválido.'},405);
-  const body=await req.json();const org=String(body.organizationId||'');if(!/^[0-9a-f-]{36}$/.test(org))throw new Error('Cliente inválido.');const actor=await allowed(req,org);
+  const body=await req.json();if(body.action==='scheduled_sync')return await scheduledSync(req,body);const org=String(body.organizationId||'');if(!/^[0-9a-f-]{36}$/.test(org))throw new Error('Cliente inválido.');const actor=await allowed(req,org);
   if(body.action==='disconnect_client'||body.action==='delete_client'){
    const {client,user}=await superAdminClient(req);const confirmation=String(body.confirmation||'');
    const {data:organization,error:organizationError}=await service.from('organizations').select('id,name,is_agency').eq('id',org).single();
@@ -542,7 +576,7 @@ Deno.serve(async(req:Request)=>{
    await archiveStaleMetaSelections(org);
    const nonce=crypto.randomUUID();const pending=await check(await service.from('integrations').insert({organization_id:org,provider:body.provider,external_account_id:'pending:'+nonce,account_name:'Autorização em andamento',status:'pending',config:{nonce,user_id:actor.id}}).select('id').single());
    const signed=[pending.id,Date.now()+600000,nonce].join('.');const state=signed+'.'+await stateHmac(signed);const scopes=metaOAuthPermissions().join(',');
-   const login=new URL('https://www.facebook.com/'+graphVersion+'/dialog/oauth');login.search=new URLSearchParams({client_id:metaId,redirect_uri:callback,state,scope:scopes,response_type:'code'}).toString();return json({url:login.href});
+   const login=new URL('https://www.facebook.com/'+graphVersion+'/dialog/oauth');login.search=new URLSearchParams(loginConfigId?{client_id:metaId,redirect_uri:callback,state,config_id:loginConfigId,response_type:'code',override_default_response_type:'true'}:{client_id:metaId,redirect_uri:callback,state,scope:scopes,response_type:'code'}).toString();return json({url:login.href});
   }
   if(body.action==='sync'){
    const {data:i}=await service.from('integrations').select('*').eq('id',body.integrationId).eq('organization_id',org).single();if(!i)throw new Error('Conta não encontrada.');activeId=i.id;
