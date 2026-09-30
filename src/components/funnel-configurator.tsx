@@ -6,7 +6,7 @@ import {defaultFunnelIcons, funnelAutoColor, funnelIconKeys, funnelIconLabels, f
 import {Funnel} from '@/components/dashboard/funnel';
 import {useSortableList} from '@/hooks/use-sortable-list';
 
-export function FunnelConfigurator({initialModel,initialSteps}:{initialModel:FunnelModel;initialSteps:FunnelStepConfig[]}){
+export function FunnelConfigurator({initialModel,initialSteps,suggestedModel=null,suggestionReason=null}:{initialModel:FunnelModel;initialSteps:FunnelStepConfig[];suggestedModel?:FunnelModel|null;suggestionReason?:string|null}){
   const [model,setModel]=useState<FunnelModel>(initialModel);
   const [steps,setSteps]=useState<FunnelStepConfig[]>(initialSteps);
   const unused=funnelMetricDefinitions.filter((definition)=>!steps.some((step)=>step.metric===definition.key));
@@ -15,6 +15,7 @@ export function FunnelConfigurator({initialModel,initialSteps}:{initialModel:Fun
   const reorder=(active:FunnelMetricKey,target:FunnelMetricKey)=>{setModel('custom');setSteps((current)=>{const from=current.findIndex((item)=>item.metric===active);const to=current.findIndex((item)=>item.metric===target);if(from===to||from<0||to<0)return current;const next=[...current];const [item]=next.splice(from,1);next.splice(to,0,item);return next;});};
   const {dragging,over,selected,start,selectOrMove}=useSortableList<FunnelMetricKey>({selector:'[data-funnel-step]',attribute:'data-funnel-step',onMove:reorder});
   const selectedPreset=funnelPresets.find((preset)=>preset.id===model);
+  const suggestedPreset=suggestedModel?funnelPresets.find((preset)=>preset.id===suggestedModel):null;
   const patchStep=(index:number,patch:Partial<FunnelStepConfig>)=>setSteps((current)=>current.map((item,itemIndex)=>itemIndex===index?{...item,...patch}:item));
   // Valores ilustrativos apenas para o desenho do cone; a pré-visualização é sinalizada como exemplo.
   const previewSteps=steps.map((step,index)=>({label:step.label,value:Math.max(1,Math.round(120000/Math.pow(3.1,index))),color:step.color,icon:step.icon??defaultFunnelIcons[step.metric]}));
@@ -26,6 +27,7 @@ export function FunnelConfigurator({initialModel,initialSteps}:{initialModel:Fun
       <label className="text-xs font-medium text-zinc-400">Modelo do negócio<select className="mt-2 w-full" value={model} onChange={(event)=>applyModel(event.target.value as FunnelModel)}>{funnelPresets.map((preset)=><option key={preset.id} value={preset.id}>{preset.label}</option>)}</select></label>
       <div className="rounded-xl border border-primary/15 bg-primary/[.06] p-4"><div className="flex items-center justify-between gap-3"><strong className="text-sm">{selectedPreset?.label??'Funil personalizado'}</strong><span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-primary">{steps.length} etapas</span></div><p className="muted mt-2 text-xs leading-5">{selectedPreset?.description??'Jornada criada especialmente para este projeto.'}</p></div>
     </div>
+    {suggestedPreset&&suggestedPreset.id!==model?<div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/25 bg-primary/[.06] p-4"><p className="text-sm"><strong>Modelo sugerido: {suggestedPreset.label}.</strong> <span className="muted">{suggestionReason??'Com base no nicho e no modelo de vendas do cliente.'}</span></p><button type="button" className="rounded-lg bg-primary px-3.5 py-2 text-xs font-bold text-black" onClick={()=>applyModel(suggestedPreset.id)}>Usar modelo sugerido</button></div>:null}
     <div className="rounded-2xl border border-white/10 bg-white/[.025] p-4 sm:p-5"><div className="flex items-center justify-between gap-3"><div><h3 className="text-sm font-semibold">Pré-visualização do funil</h3><p className="muted mt-1 text-xs">É assim que o cone aparece no dashboard, na ordem, nomes, cores e ícones escolhidos.</p></div><span className="text-xs text-zinc-600">{steps.length}/12</span></div><Funnel steps={previewSteps} preview/></div>
     <details className="group overflow-hidden rounded-2xl border border-white/10 bg-black/10">
       <summary className="flex cursor-pointer list-none items-center gap-3 p-4 sm:p-5"><SlidersIcon/><span className="min-w-0 flex-1"><strong className="block text-sm">Editar, adicionar e ordenar etapas</strong><span className="muted mt-1 block text-xs">Renomeie, mova ou escolha entre todas as métricas disponíveis.</span></span><ChevronDown className="text-zinc-600 transition group-open:rotate-180" size={17}/></summary>

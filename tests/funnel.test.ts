@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseFunnelSteps, funnelPresets, funnelModelIds, funnelMetricDefinitions, funnelIconKeys, funnelAutoColor} from '../src/lib/metrics/funnel-config';
+import {parseFunnelSteps, funnelPresets, funnelModelIds, funnelMetricDefinitions, funnelIconKeys, funnelAutoColor, suggestFunnelModel, businessNiches, salesModels, funnelPresetFor} from '../src/lib/metrics/funnel-config';
 import {coneProfile} from '../src/components/dashboard/funnel';
 
 test('parseFunnelSteps mantém cor, ícone e meta válidos', () => {
@@ -59,4 +59,35 @@ test('funnelAutoColor vai do vermelho ao verde', () => {
   assert.ok(g5 > r5, 'última cor é esverdeada');
   assert.equal(new Set(colors).size, 6);
   assert.match(funnelAutoColor(0, 1), /^#[0-9A-F]{6}$/);
+});
+
+test('suggestFunnelModel: lançamento digital e nichos com modelo próprio têm prioridade', () => {
+  assert.equal(suggestFunnelModel('retail', 'digital_launch'), 'infoproduct');
+  assert.equal(suggestFunnelModel('real_estate', 'lead_form'), 'real_estate');
+  assert.equal(suggestFunnelModel('health', 'appointments'), 'clinic');
+  assert.equal(suggestFunnelModel('education', 'whatsapp'), 'education');
+  assert.equal(suggestFunnelModel('food', 'online_store'), 'delivery');
+  assert.equal(suggestFunnelModel('digital', 'other'), 'infoproduct');
+});
+
+test('suggestFunnelModel: nos demais nichos vale o modelo de vendas', () => {
+  assert.equal(suggestFunnelModel('retail', 'online_store'), 'ecommerce');
+  assert.equal(suggestFunnelModel('beauty', 'whatsapp'), 'messages');
+  assert.equal(suggestFunnelModel('automotive', 'lead_form'), 'lead_generation');
+  assert.equal(suggestFunnelModel('services', 'appointments'), 'appointments');
+  assert.equal(suggestFunnelModel('leisure', 'physical_store'), 'local_business');
+  assert.equal(suggestFunnelModel('b2b', 'consultative'), 'inside_sales');
+  assert.equal(suggestFunnelModel('other', 'other'), 'custom');
+  assert.equal(suggestFunnelModel(null, null), 'lead_generation');
+});
+
+test('toda combinação de nicho e modelo gera um funil válido com etapas prontas', () => {
+  const models = new Set<string>(funnelModelIds);
+  for (const niche of businessNiches) for (const sales of salesModels) {
+    const model = suggestFunnelModel(niche.id, sales.id);
+    assert.ok(models.has(model), `${niche.id}+${sales.id}`);
+    const preset = funnelPresetFor(model);
+    assert.equal(preset.id, model);
+    assert.ok(preset.steps.length >= 2);
+  }
 });

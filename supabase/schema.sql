@@ -22,6 +22,8 @@ create table public.organizations (
   status public.organization_status not null default 'active',
   currency text not null default 'BRL' check (currency ~ '^[A-Z]{3}$'),
   timezone text not null default 'America/Sao_Paulo',
+  niche text check (niche is null or niche ~ '^[a-z_]{2,40}$'),
+  sales_model text check (sales_model is null or sales_model ~ '^[a-z_]{2,40}$'),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

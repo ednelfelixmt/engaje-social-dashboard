@@ -941,6 +941,8 @@ export type Database = {
           status: Database['public']['Enums']['organization_status'];
           currency: string;
           timezone: string;
+          niche: string | null;
+          sales_model: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -952,6 +954,8 @@ export type Database = {
           status?: Database['public']['Enums']['organization_status'];
           currency?: string;
           timezone?: string;
+          niche?: string | null;
+          sales_model?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -963,6 +967,8 @@ export type Database = {
           status?: Database['public']['Enums']['organization_status'];
           currency?: string;
           timezone?: string;
+          niche?: string | null;
+          sales_model?: string | null;
           created_at?: string;
           updated_at?: string;
         };

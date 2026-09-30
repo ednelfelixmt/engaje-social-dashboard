@@ -71,6 +71,69 @@ export const funnelPresets:{id:FunnelModel;label:string;description:string;steps
   {id:'custom',label:'Personalizado',description:'Escolha qualquer etapa, renomeie e ordene a jornada.',steps:[{metric:'impressions',label:'Impressões'},{metric:'reach',label:'Alcance'},{metric:'clicks',label:'Cliques'},{metric:'page_views',label:'Visitas'},{metric:'leads',label:'Leads'}]},
 ];
 
+/** Nichos e modelos de venda informados no cadastro do cliente; definem o funil inicial. */
+export const businessNiches = [
+  {id: 'real_estate', label: 'Imobiliária e construção'},
+  {id: 'health', label: 'Clínica, saúde e laboratório'},
+  {id: 'education', label: 'Educação e cursos'},
+  {id: 'food', label: 'Restaurante, bar e delivery'},
+  {id: 'retail', label: 'Varejo e loja virtual'},
+  {id: 'beauty', label: 'Beleza, barbearia e estética'},
+  {id: 'automotive', label: 'Automotivo, motos e veículos'},
+  {id: 'leisure', label: 'Náutica, turismo e lazer'},
+  {id: 'services', label: 'Serviços profissionais (advocacia, contabilidade…)'},
+  {id: 'b2b', label: 'Indústria e B2B'},
+  {id: 'digital', label: 'Infoprodutos e lançamentos'},
+  {id: 'other', label: 'Outro nicho'},
+] as const;
+export type BusinessNiche = typeof businessNiches[number]['id'];
+
+export const salesModels = [
+  {id: 'online_store', label: 'Loja virtual (compra direta no site)'},
+  {id: 'whatsapp', label: 'Conversa no WhatsApp ou Direct'},
+  {id: 'lead_form', label: 'Formulário de captação de leads'},
+  {id: 'appointments', label: 'Agendamento de horário ou visita'},
+  {id: 'physical_store', label: 'Loja física (visita presencial)'},
+  {id: 'consultative', label: 'Venda consultiva com time comercial/CRM'},
+  {id: 'digital_launch', label: 'Produto digital ou lançamento'},
+  {id: 'other', label: 'Outro modelo'},
+] as const;
+export type SalesModel = typeof salesModels[number]['id'];
+
+const nicheSpecificFunnel: Partial<Record<BusinessNiche, FunnelModel>> = {
+  real_estate: 'real_estate',
+  health: 'clinic',
+  education: 'education',
+  food: 'delivery',
+  digital: 'infoproduct',
+};
+
+const salesModelFunnel: Record<SalesModel, FunnelModel> = {
+  online_store: 'ecommerce',
+  whatsapp: 'messages',
+  lead_form: 'lead_generation',
+  appointments: 'appointments',
+  physical_store: 'local_business',
+  consultative: 'inside_sales',
+  digital_launch: 'infoproduct',
+  other: 'custom',
+};
+
+/**
+ * Escolhe o funil inicial. O lançamento digital sempre usa o funil de infoprodutos; nichos com modelo
+ * próprio (imobiliária, saúde, educação, delivery) usam o dele; nos demais, vale o modelo de vendas.
+ */
+export function suggestFunnelModel(niche: BusinessNiche | null | undefined, salesModel: SalesModel | null | undefined): FunnelModel {
+  if (salesModel === 'digital_launch') return 'infoproduct';
+  const byNiche = niche ? nicheSpecificFunnel[niche] : undefined;
+  if (byNiche) return byNiche;
+  return salesModel ? salesModelFunnel[salesModel] : 'lead_generation';
+}
+
+export function funnelPresetFor(model: FunnelModel) {
+  return funnelPresets.find((preset) => preset.id === model) ?? funnelPresets[0];
+}
+
 export function parseFunnelSteps(value:unknown):FunnelStepConfig[]{
   if(!Array.isArray(value))return funnelPresets[0].steps;
   const allowed=new Set(funnelMetricDefinitions.map((item)=>item.key));

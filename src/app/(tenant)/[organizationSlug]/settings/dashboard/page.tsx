@@ -6,7 +6,7 @@ import {ActionForm} from '@/components/action-form';
 import {WidgetOrder} from '@/components/widget-order';
 import {FunnelConfigurator} from '@/components/funnel-configurator';
 import {MetricSelector} from '@/components/metric-selector';
-import {parseFunnelSteps, type FunnelModel} from '@/lib/metrics/funnel-config';
+import {parseFunnelSteps, type FunnelModel, businessNiches, salesModels, suggestFunnelModel, type BusinessNiche, type SalesModel} from '@/lib/metrics/funnel-config';
 import {saveDashboard} from '../actions';
 
 const pages = [
@@ -49,7 +49,7 @@ export default async function Page({params: params_}:{params:Promise<{organizati
         <MetricSelector initial={config.enabled_metrics}/>
       </SettingsSection>
       <SettingsSection number="3" title="Funil de conversão" description="Escolha o modelo do negócio e ajuste as etapas somente se necessário." icon={Filter}>
-        <FunnelConfigurator initialModel={config.funnel_model as FunnelModel} initialSteps={parseFunnelSteps(config.funnel_steps)}/>
+        <FunnelConfigurator initialModel={config.funnel_model as FunnelModel} initialSteps={parseFunnelSteps(config.funnel_steps)} suggestedModel={org.niche&&org.sales_model?suggestFunnelModel(org.niche as BusinessNiche,org.sales_model as SalesModel):null} suggestionReason={org.niche&&org.sales_model?`${businessNiches.find((item)=>item.id===org.niche)?.label??''} · ${salesModels.find((item)=>item.id===org.sales_model)?.label??''}`:null}/>
       </SettingsSection>
       <SettingsSection number="4" title="Metas e fonte de receita" description="Defina objetivos para destacar desempenho bom ou abaixo do esperado." icon={Target}>
         <div className="field-grid">{targetFields.map(([key,label,placeholder])=><label key={key}>{label}<input type="number" step={key==='target_purchases'?'1':'0.01'} name={key} placeholder={placeholder} defaultValue={config[key]??''}/></label>)}</div>

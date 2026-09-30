@@ -153,6 +153,12 @@ check((await db.query(`update public.dashboard_configs set default_layouts='{"ov
 await db.exec(`select set_config('request.jwt.claim.sub','${editor}',false)`);
 check((await db.query(`update public.dashboard_configs set default_layouts='{"overview":{}}' where organization_id='${orgA}' returning *`)).rows.length === 1, 'Editor define o layout padrão do cliente');
 await db.exec('reset role');
+// Nicho e modelo de vendas do cliente: só aceitam identificadores em minúsculas.
+await db.exec('reset role');
+await db.exec(`update public.organizations set niche='health', sales_model='whatsapp' where id='${orgA}'`);
+check(await scalar(`select niche||'/'||sales_model from public.organizations where id='${orgA}'`) === 'health/whatsapp', 'Nicho e modelo de vendas são gravados no cliente');
+await denied(`update public.organizations set niche='Clínica e Saúde' where id='${orgA}'`, '23514', 'Nicho fora do formato é recusado');
+await denied(`update public.organizations set sales_model='1 venda' where id='${orgA}'`, '23514', 'Modelo de vendas fora do formato é recusado');
 await db.exec('set role anon');
 await denied('select * from public.organizations','42501','Anon não enumera organizações');
 await denied('select * from public.daily_performance','42501','Anon não lê performance');
