@@ -43,7 +43,14 @@ export const funnelIconKeys=['eye','users','click','globe','form','user-plus','m
 export type FunnelIconKey=typeof funnelIconKeys[number];
 export const funnelIconLabels:Record<FunnelIconKey,string>={eye:'Visibilidade',users:'Pessoas',click:'Clique',globe:'Site',form:'Formulário','user-plus':'Novo contato',message:'Conversa',phone:'Telefone',cart:'Carrinho',card:'Pagamento',bag:'Compra',calendar:'Agenda',pin:'Local',download:'Instalação',star:'Destaque',target:'Meta',handshake:'Negócio',receipt:'Proposta',play:'Vídeo',heart:'Engajamento',repeat:'Recompra',home:'Imóvel',health:'Saúde',school:'Educação',food:'Alimentação',navigation:'Rota'};
 export const defaultFunnelIcons:Record<string,FunnelIconKey>={impressions:'eye',reach:'users',video_views:'play',engagements:'heart',clicks:'click',page_views:'globe',content_views:'eye',form_starts:'form',leads:'user-plus',registration_leads:'form',message_leads:'message',phone_calls:'phone',qualified_leads:'star',mql:'star',sql:'target',opportunities:'handshake',meetings:'calendar',proposals:'receipt',add_to_cart:'cart',checkouts:'card',purchases:'bag',repeat_purchases:'repeat',store_visits:'pin',directions:'navigation',app_installs:'download',subscriptions:'star'};
-export const funnelDefaultColors=['#4DD4FF','#5BA7FF','#8B7CFF','#F4D35E','#5CE1A4','#35C982'] as const;
+/** Cores padrão: do vermelho ao verde, distribuídas pelo número de etapas do funil. */
+export function funnelAutoColor(index:number,count:number){
+  const hue=count<=1?0:2+(index/(count-1))*126;
+  const s=0.82,l=0.5;
+  const a=s*Math.min(l,1-l);
+  const channel=(n:number)=>{const k=(n+hue/30)%12;const value=l-a*Math.max(-1,Math.min(k-3,9-k,1));return Math.round(255*value).toString(16).padStart(2,'0');};
+  return `#${channel(0)}${channel(8)}${channel(4)}`.toUpperCase();
+}
 export const funnelColorPattern=/^#[0-9a-fA-F]{6}$/;
 export type FunnelStepConfig={metric:FunnelMetricKey;label:string;color?:string;icon?:FunnelIconKey;target?:number|null};
 export const funnelModelIds=['lead_generation','messages','ecommerce','local_business','inside_sales','appointments','real_estate','clinic','education','delivery','infoproduct','custom'] as const;

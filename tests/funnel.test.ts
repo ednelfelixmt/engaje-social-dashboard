@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseFunnelSteps, funnelPresets, funnelModelIds, funnelMetricDefinitions, funnelIconKeys} from '../src/lib/metrics/funnel-config';
-import {coneRatios} from '../src/components/dashboard/funnel';
+import {parseFunnelSteps, funnelPresets, funnelModelIds, funnelMetricDefinitions, funnelIconKeys, funnelAutoColor} from '../src/lib/metrics/funnel-config';
+import {coneProfile} from '../src/components/dashboard/funnel';
 
 test('parseFunnelSteps mantém cor, ícone e meta válidos', () => {
   const steps = parseFunnelSteps([
@@ -35,18 +35,28 @@ test('todo modelo pronto tem etapas válidas, sem repetição e ícones existent
   assert.deepEqual(new Set(funnelPresets.map((preset) => preset.id)), new Set(funnelModelIds));
 });
 
-test('coneRatios: escala logarítmica, piso mínimo e ordem preservada', () => {
-  const ratios = coneRatios([120000, 2520, 960, 40, 10]);
-  assert.equal(ratios[0], 1);
-  assert.ok(ratios.every((ratio) => ratio >= 0.24 && ratio <= 1));
-  for (let index = 1; index < ratios.length; index++) assert.ok(ratios[index] < ratios[index - 1], `camada ${index} deveria ser mais estreita`);
-  assert.equal(ratios.at(-1), 0.24);
+test('coneProfile: afunilamento uniforme, contínuo e sempre positivo', () => {
+  for (const count of [2, 5, 12]) {
+    const profile = coneProfile(count);
+    assert.equal(profile.length, count);
+    assert.equal(profile[0].top, 1);
+    profile.forEach((layer, index) => {
+      assert.ok(layer.bottom < layer.top, 'cada camada afunila');
+      assert.ok(layer.bottom >= 0.34 - 1e-9, 'a base nunca fica mais estreita que o piso');
+      if (index) assert.ok(Math.abs(layer.top - profile[index - 1].bottom) < 1e-9, 'sem degraus entre camadas');
+    });
+    const widths = profile.map((layer) => layer.top - layer.bottom);
+    assert.ok(widths.every((width) => Math.abs(width - widths[0]) < 1e-9), 'afunilamento igual em todas as camadas');
+  }
 });
 
-test('coneRatios: valores iguais, nulos e zero não quebram', () => {
-  assert.deepEqual(coneRatios([500, 500, 500]), [1, 1, 1]);
-  const withGap = coneRatios([1000, null, 10]);
-  assert.ok(withGap[1] < withGap[0] && withGap[1] >= 0.24);
-  assert.ok(coneRatios([null, null]).every((ratio) => ratio >= 0.24 && ratio <= 1));
-  assert.ok(coneRatios([100, 0]).every((ratio) => Number.isFinite(ratio)));
+test('funnelAutoColor vai do vermelho ao verde', () => {
+  const colors = Array.from({length: 6}, (_, index) => funnelAutoColor(index, 6));
+  assert.ok(colors.every((color) => /^#[0-9A-F]{6}$/.test(color)));
+  const [r0, g0] = [parseInt(colors[0].slice(1, 3), 16), parseInt(colors[0].slice(3, 5), 16)];
+  const [r5, g5] = [parseInt(colors[5].slice(1, 3), 16), parseInt(colors[5].slice(3, 5), 16)];
+  assert.ok(r0 > g0, 'primeira cor é avermelhada');
+  assert.ok(g5 > r5, 'última cor é esverdeada');
+  assert.equal(new Set(colors).size, 6);
+  assert.match(funnelAutoColor(0, 1), /^#[0-9A-F]{6}$/);
 });

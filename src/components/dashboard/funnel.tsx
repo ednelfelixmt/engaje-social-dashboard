@@ -1,7 +1,7 @@
 import {useId, type ReactNode} from 'react';
 import {ArrowDownRight, ArrowUpRight, CalendarCheck, CreditCard, Download, Eye, FileText, Globe, GraduationCap, Handshake, Heart, House, MapPin, MessageCircle, MousePointerClick, Navigation, Phone, Play, Receipt, Repeat, ShoppingBag, ShoppingCart, Stethoscope, Star, Target, UserPlus, Users, Utensils, TrendingDown, Route, CheckCircle2} from 'lucide-react';
 import {money, number} from '@/lib/utils';
-import {funnelDefaultColors, type FunnelIconKey} from '@/lib/metrics/funnel-config';
+import {funnelAutoColor, type FunnelIconKey} from '@/lib/metrics/funnel-config';
 
 export type FunnelStep = {
   label: string;
@@ -40,28 +40,27 @@ function mix(hex: string, target: number, amount: number) {
   return `#${[16, 8, 0].map((shift) => channel(shift).toString(16).padStart(2, '0')).join('')}`;
 }
 
+/** Luminância percebida (0 a 1) para decidir entre texto claro e escuro sobre a cor da camada. */
+export function isLightColor(hex: string) {
+  const value = parseInt(hex.slice(1), 16);
+  const [r, g, b] = [(value >> 16) & 255, (value >> 8) & 255, value & 255];
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6;
+}
+
 // Geometria em unidades do viewBox (largura 400, altura = altura da linha).
 const HALF = 190;
-const MIN_RATIO = 0.24;
+const MIN_RATIO = 0.34;
+const GAP = 4;
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 /**
- * Largura de cada camada em escala logarítmica: os volumes de um funil variam em
- * várias ordens de grandeza (120 mil impressões contra 10 vendas) e, numa escala
- * linear, quase todas as camadas ficariam no piso mínimo. Os valores exatos e as
- * taxas de avanço aparecem sempre ao lado de cada camada.
+ * Perfil do cone: afunilamento uniforme, igual ao de um funil clássico. O formato é
+ * ilustrativo (a largura NÃO representa o volume); volumes, taxas e custos aparecem
+ * em cada camada e ao lado dela.
  */
-export function coneRatios(values: (number | null)[]) {
-  const positives = values.filter((value): value is number => value != null && value > 0);
-  const max = Math.max(...positives, 1);
-  const min = Math.min(...positives, max);
-  const span = Math.log(max / min);
-  let last = 1;
-  return values.map((value) => {
-    if (value == null || value <= 0) return last = Math.max(MIN_RATIO, last * 0.86);
-    const ratio = span === 0 ? 1 : MIN_RATIO + (1 - MIN_RATIO) * (Math.log(value / min) / span);
-    return last = clamp(ratio, MIN_RATIO, 1);
-  });
+export function coneProfile(count: number) {
+  const step = (1 - MIN_RATIO) / Math.max(count, 1);
+  return Array.from({length: count}, (_, index) => ({top: 1 - step * index, bottom: 1 - step * (index + 1)}));
 }
 
 function rowHeight(count: number) {
@@ -103,7 +102,7 @@ export function Funnel({steps: suppliedSteps, values, currency = 'BRL', comparin
 
   const height = rowHeight(steps.length);
   const compact = height < 56;
-  const ratios = coneRatios(steps.map((step) => step.value));
+  const profile = coneProfile(steps.length);
   const rates = steps.map((step, index) => index ? conversion(step.value, steps[index - 1].value) : null);
   let leak = -1;
   rates.forEach((rate, index) => { if (rate != null && (leak < 0 || rate < (rates[leak] as number))) leak = index; });
@@ -113,10 +112,10 @@ export function Funnel({steps: suppliedSteps, values, currency = 'BRL', comparin
 
   const rows: FunnelRow[] = steps.map((step, index) => ({
     step, index,
-    color: step.color ?? funnelDefaultColors[index % funnelDefaultColors.length],
+    color: step.color ?? funnelAutoColor(index, steps.length),
     missing: step.value == null,
-    topRatio: ratios[index],
-    bottomRatio: index < steps.length - 1 ? ratios[index + 1] : ratios[index] * 0.78,
+    topRatio: profile[index].top,
+    bottomRatio: profile[index].bottom,
     rate: rates[index],
     isLeak: index === leak && index > 0,
   }));
@@ -132,31 +131,40 @@ export function Funnel({steps: suppliedSteps, values, currency = 'BRL', comparin
       {rows.map((row) => {
         const {step, index, color, missing, topRatio, bottomRatio, isLeak} = row;
         const wt = topRatio * HALF, wb = bottomRatio * HALF;
-        const ryt = clamp(wt * 0.11, 3, 13), ryb = clamp(wb * 0.11, 3, 13);
+        const ryt = clamp(wt * 0.13, 4, 17), ryb = clamp(wb * 0.13, 4, 17);
         const cx = 200;
-        const body = `M ${cx - wt} 0 A ${wt} ${ryt} 0 0 0 ${cx + wt} 0 L ${cx + wb} ${height} A ${wb} ${ryb} 0 0 1 ${cx - wb} ${height} Z`;
+        const bottom = height - GAP;
+        const body = `M ${cx - wt} 0 A ${wt} ${ryt} 0 0 0 ${cx + wt} 0 L ${cx + wb} ${bottom} A ${wb} ${ryb} 0 0 1 ${cx - wb} ${bottom} Z`;
         const topArc = `M ${cx - wt} 0 A ${wt} ${ryt} 0 0 0 ${cx + wt} 0`;
         const gid = `${uid}g${index}`;
+        const gloss = `${uid}s${index}`;
         const sliceWidthPct = (wt + wb) / 400 * 100;
-        const labelFits = !compact && sliceWidthPct >= 40;
+        const labelFits = !compact && sliceWidthPct >= 46;
+        const darkText = !missing && isLightColor(mix(color, 255, 0));
         return <li className="grid grid-cols-1 items-center sm:grid-cols-[minmax(0,44%)_minmax(0,1fr)] sm:gap-x-6" style={{height}} key={`${step.label}-${index}`} data-funnel-step-row>
           <div className="relative h-full" aria-hidden>
             <svg className="cone-slice absolute inset-0 h-full w-full overflow-visible" viewBox={`0 0 400 ${height}`} preserveAspectRatio="none" style={{animationDelay: `${index * 55}ms`, filter: missing ? undefined : 'drop-shadow(0 8px 10px rgba(0,0,0,.35))'}}>
               <defs>
                 <linearGradient id={gid} x1="0" x2="1" y1="0" y2="0">
-                  <stop offset="0" stopColor={mix(color, 0, .55)} />
-                  <stop offset=".22" stopColor={mix(color, 255, .28)} />
-                  <stop offset=".55" stopColor={color} />
-                  <stop offset="1" stopColor={mix(color, 0, .6)} />
+                  <stop offset="0" stopColor={mix(color, 0, .5)} />
+                  <stop offset=".18" stopColor={mix(color, 255, .3)} />
+                  <stop offset=".5" stopColor={color} />
+                  <stop offset="1" stopColor={mix(color, 0, .55)} />
+                </linearGradient>
+                <linearGradient id={gloss} x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0" stopColor="#fff" stopOpacity=".26" />
+                  <stop offset=".55" stopColor="#fff" stopOpacity="0" />
+                  <stop offset="1" stopColor="#000" stopOpacity=".22" />
                 </linearGradient>
               </defs>
-              {index === 0 ? <ellipse cx={cx} cy="0" rx={wt} ry={ryt} fill="#05070b" stroke={mix(color, 255, .35)} strokeWidth="1.5" /> : null}
+              {index === 0 ? <><ellipse cx={cx} cy="0" rx={wt} ry={ryt} fill={mix(color, 255, .38)} stroke={mix(color, 255, .55)} strokeWidth="1.2" /><ellipse cx={cx} cy={ryt * 0.12} rx={wt * 0.93} ry={ryt * 0.8} fill={mix(color, 0, .28)} opacity=".55" /></> : null}
               <path d={body} fill={missing ? 'rgba(255,255,255,.035)' : `url(#${gid})`} stroke={missing ? 'rgba(255,255,255,.22)' : 'none'} strokeDasharray={missing ? '4 4' : undefined} />
-              {!missing ? <path d={topArc} fill="none" stroke={isLeak ? '#fb7185' : 'rgba(255,255,255,.38)'} strokeWidth={isLeak ? 2.4 : 1.2} /> : null}
+              {!missing ? <path d={body} fill={`url(#${gloss})`} /> : null}
+              {!missing ? <path d={topArc} fill="none" stroke={isLeak ? '#fb7185' : 'rgba(255,255,255,.55)'} strokeWidth={isLeak ? 2.6 : 1.4} /> : null}
             </svg>
-            <div className={`pointer-events-none absolute left-1/2 flex -translate-x-1/2 flex-col items-center justify-center text-center ${missing ? 'text-zinc-500' : 'text-white'}`} style={{top: 0, height: `${height}px`, paddingTop: ryt, width: `${Math.max(sliceWidthPct * 0.82, 22)}%`}}>
-              <strong className={`data-value leading-none drop-shadow-[0_1px_3px_rgba(0,0,0,.65)] ${compact ? 'text-sm' : 'text-lg sm:text-xl'}`}>{number(step.value)}</strong>
-              {labelFits ? <span className="mt-1 max-w-full truncate text-[9px] font-extrabold uppercase tracking-[.14em] text-white/85 drop-shadow-[0_1px_2px_rgba(0,0,0,.7)] sm:text-[10px]">{step.label}</span> : null}
+            <div className={`pointer-events-none absolute left-1/2 flex -translate-x-1/2 flex-col items-center justify-center text-center ${missing ? 'text-zinc-500' : darkText ? 'text-zinc-950' : 'text-white'}`} style={{top: 0, height: `${height}px`, paddingTop: ryt, width: `${Math.max(sliceWidthPct * 0.82, 22)}%`}}>
+              <strong className={`data-value leading-none ${darkText ? '' : 'drop-shadow-[0_1px_3px_rgba(0,0,0,.65)]'} ${compact ? 'text-sm' : 'text-lg sm:text-xl'}`}>{number(step.value)}</strong>
+              {labelFits ? <span className={`mt-1 max-w-full truncate text-[9px] font-extrabold uppercase tracking-[.14em] sm:text-[10px] ${darkText ? 'text-zinc-900/80' : 'text-white/85 drop-shadow-[0_1px_2px_rgba(0,0,0,.7)]'}`}>{step.label}</span> : null}
             </div>
           </div>
           <div className={`hidden min-w-0 sm:block ${isLeak ? 'rounded-xl border-l-2 border-rose-400/70 bg-rose-400/[.05] pl-3' : 'pl-1'}`}>
@@ -171,6 +179,6 @@ export function Funnel({steps: suppliedSteps, values, currency = 'BRL', comparin
         <StepDetails row={row} compact={false} currency={currency} comparing={comparing} />
       </li>)}
     </ul>
-    <p className="border-t border-white/[.06] px-5 py-3 text-[10px] leading-4 text-zinc-500">{preview ? 'Pré-visualização com valores de exemplo, apenas para mostrar o formato. ' : ''}A largura de cada camada usa escala logarítmica (indica a ordem de grandeza); os valores exatos e as taxas estão ao lado. As taxas relacionam eventos agregados do período, não uma coorte individual.</p>
+    <p className="border-t border-white/[.06] px-5 py-3 text-[10px] leading-4 text-zinc-500">{preview ? 'Pré-visualização com valores de exemplo, apenas para mostrar o formato. ' : ''}O formato do funil é ilustrativo: a largura das camadas não representa o volume. Volumes, taxas de avanço e custos estão em cada camada e ao lado dela. As taxas relacionam eventos agregados do período, não uma coorte individual.</p>
   </div>;
 }
