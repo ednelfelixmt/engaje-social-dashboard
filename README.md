@@ -37,7 +37,7 @@ Crie o primeiro usuário no Supabase Auth, uma organização com `is_agency=true
 
 ## Meta
 
-Publique `supabase/functions/engaje-integrations/index.ts` como `engaje-integrations` e `meta-auth`, com verify_jwt=false. POST valida o usuário e a organização no código; callback valida state assinado e nonce de uso único. Configure secrets `META_APP_ID`, `META_APP_SECRET`; Supabase fornece URL e service_role no runtime. O callback cadastrado no app Meta deve corresponder exatamente à constante callback. A origem padrão é `https://mediahub.engajeperformance.com.br`.
+Publique `supabase/functions/engaje-integrations/index.ts` como `engaje-integrations` e `meta-auth`, com verify_jwt=false. POST valida o usuário e a organização no código; callback valida state assinado e nonce de uso único. Configure secrets `META_APP_ID`, `META_APP_SECRET` e, opcionalmente, `META_STATE_SECRET` (chave própria para assinar o state do OAuth; sem ela usa `META_APP_SECRET`); Supabase fornece URL e service_role no runtime. O callback cadastrado no app Meta deve corresponder exatamente à constante callback. A origem padrão é `https://mediahub.engajeperformance.com.br`.
 
 Tokens são guardados no Vault por RPC exclusiva de service_role. Contas autorizadas são criadas desabilitadas; sincronizar uma conta ativa sua importação. Ads busca os últimos 30 dias e criativos. Não há agendamento automático nesta versão. Validar OAuth e permissões com uma conta real antes de considerar o conector homologado.
 
@@ -64,3 +64,5 @@ Google Business, YouTube, TikTok, Stract e conectores CRM ainda precisam dos res
 O repositório está ligado à Vercel. `vercel.json` seleciona Next.js e build padrão. A branch main publica produção. Validar login, RLS, conta real e importação após configurar o projeto.
 
 Em bancos já instalados antes desta atualização, execute `supabase/organic-counters.sql` uma única vez. Em novos bancos, a coluna já consta do schema.
+
+Em bancos já instalados, execute também `supabase/migrations/20260930000000_move_ingest_key_hash.sql` (move o hash da chave de ingestão para `integration_ingest_keys`, inacessível ao navegador) e republique as funções `engaje-ingest`, `engaje-integrations` e `meta-auth`. Cargas externas (Stract) para Meta Ads, Google Ads, Facebook e Instagram orgânico são recusadas enquanto o cliente tiver o conector nativo ativo.

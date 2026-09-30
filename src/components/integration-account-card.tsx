@@ -34,7 +34,7 @@ export function IntegrationAccountCard({organizationId, item, providerName, sour
   const missingPermissions = Array.isArray(diagnostics.missingPermissions) ? diagnostics.missingPermissions.map(String) : [];
   const technicalError = diagnostics.lastError && typeof diagnostics.lastError === 'object' && !Array.isArray(diagnostics.lastError) ? diagnostics.lastError as Record<string, unknown> : null;
   const supportsIngest = item.provider === 'stract' || item.provider === 'generic_crm';
-  const ingestConfigured = typeof config.ingest_key_hash === 'string';
+  const ingestConfigured = config.ingest_configured === true;
   const staleOauth = item.status === 'pending' && item.external_account_id.startsWith('pending:') && Date.now() - new Date(item.updated_at).getTime() > 10 * 60 * 1000;
   const permissionRequired = missingPermissions.length > 0 || technicalError?.code === '10' || technicalError?.code === '200' || item.last_error?.includes('pages_read_user_content');
   const tokenExpired = staleOauth || item.status === 'expired' || technicalError?.code === '190';

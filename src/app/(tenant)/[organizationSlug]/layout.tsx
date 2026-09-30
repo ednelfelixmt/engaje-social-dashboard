@@ -2,7 +2,8 @@ import type {CSSProperties} from 'react';
 import {dashboardConfig, tenant} from '@/lib/auth/session';
 import {Navigation} from '@/components/navigation';
 
-export default async function Layout({children, params}: {children: React.ReactNode; params: {organizationSlug: string}}) {
+export default async function Layout({children, params: params_}: {children: React.ReactNode; params: Promise<{organizationSlug: string}>}) {
+  const params = await params_;
   const {db, org} = await tenant(params.organizationSlug);
   const [{data: branding}, {data: config}] = await Promise.all([
     db.from('branding').select('*').eq('organization_id', org.id).single(),

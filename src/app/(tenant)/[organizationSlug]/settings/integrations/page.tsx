@@ -42,7 +42,9 @@ function ConnectorCard({connector, organizationId, prepared}: {connector: Connec
   );
 }
 
-export default async function Page({params, searchParams}: {params: {organizationSlug: string}; searchParams: Record<string, string | undefined>}) {
+export default async function Page({params: params_, searchParams: searchParams_}: {params: Promise<{organizationSlug: string}>; searchParams: Promise<Record<string, string | undefined>>}) {
+  const params = await params_;
+  const searchParams = await searchParams_;
   const {db, org} = await tenant(params.organizationSlug);
   const [{data, error}, {data: assignmentRows, error: assignmentError}] = await Promise.all([
     db.from('integrations').select('id,provider,external_account_id,account_name,status,is_enabled,last_synced_at,last_error,config,updated_at').eq('organization_id', org.id).order('created_at', {ascending: false}),

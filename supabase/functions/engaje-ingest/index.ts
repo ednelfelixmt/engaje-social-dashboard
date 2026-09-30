@@ -12,6 +12,49 @@ const dimensions = new Set(['audience', 'creative', 'gender', 'age', 'device', '
 
 type Row = Record<string, unknown>;
 
+const maxBodyBytes = 2_000_000;
+const providerDatasets: Record<string, Set<string>> = {
+  stract: new Set(['ads', 'ads_breakdowns', 'creatives', 'organic']),
+  generic_crm: new Set(['crm']),
+};
+// Plataformas que já têm conector nativo: a ingestão externa não pode sobrescrever essas linhas,
+// porque as chaves de upsert não incluem integration_id.
+const nativeProviders: Record<string, string[]> = {
+  meta_ads: ['meta_ads'],
+  google_ads: ['windsor'],
+  facebook_organic: ['facebook_organic'],
+  instagram_organic: ['instagram_organic'],
+};
+const attempts = new Map<string, {count: number; resetAt: number}>();
+function limited(bucket: string, max: number, windowMs = 60_000) {
+  const now = Date.now();
+  if (attempts.size > 5000) for (const [name, entry] of attempts) if (entry.resetAt <= now) attempts.delete(name);
+  const entry = attempts.get(bucket);
+  if (!entry || entry.resetAt <= now) { attempts.set(bucket, {count: 1, resetAt: now + windowMs}); return false; }
+  entry.count += 1;
+  return entry.count > max;
+}
+async function readJson(request: Request) {
+  const declared = Number(request.headers.get('content-length') || 0);
+  if (declared > maxBodyBytes) throw new HttpError('Carga maior que 2 MB.', 413);
+  if (!request.body) throw new Error('Corpo da requisição ausente.');
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  for (;;) {
+    const {done, value} = await reader.read();
+    if (done) break;
+    received += value.byteLength;
+    if (received > maxBodyBytes) { await reader.cancel(); throw new HttpError('Carga maior que 2 MB.', 413); }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(received);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  try { return JSON.parse(new TextDecoder().decode(bytes)); } catch { throw new Error('JSON inválido.'); }
+}
+class HttpError extends Error { constructor(message: string, public status: number) { super(message); } }
+
 function text(value: unknown, field: string, max = 240) {
   const result = String(value ?? '').trim();
   if (!result || result.length > max) throw new Error(`Campo ${field} inválido.`);
@@ -78,24 +121,34 @@ Deno.serve(async (request: Request) => {
   let authenticated = false;
   try {
     if (request.method !== 'POST') return json({message: 'Use POST.'}, 405);
-    const length = Number(request.headers.get('content-length') || 0);
-    if (length > 2_000_000) return json({message: 'Carga maior que 2 MB.'}, 413);
+    const clientIp = (request.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown';
+    if (limited('ip:' + clientIp, 120)) return json({message: 'Muitas requisições. Tente novamente em instantes.'}, 429);
     integrationId = new URL(request.url).searchParams.get('integration_id') || '';
     if (!/^[0-9a-f-]{36}$/.test(integrationId)) throw new Error('integration_id inválido.');
     const key = request.headers.get('x-engaje-key') || '';
     if (key.length !== 64) throw new Error('Chave de ingestão ausente ou inválida.');
 
-    const {data: integration, error: integrationError} = await service.from('integrations').select('id,organization_id,provider,is_enabled,config').eq('id', integrationId).single();
-    if (integrationError || !integration || !['stract', 'generic_crm'].includes(integration.provider) || !integration.is_enabled) throw new Error('Integração indisponível.');
-    const expected = String(integration.config?.ingest_key_hash || '');
+    if (limited('key:' + integrationId, 30)) return json({message: 'Muitas tentativas. Tente novamente em instantes.'}, 429);
+    const {data: integration, error: integrationError} = await service.from('integrations').select('id,organization_id,provider,is_enabled').eq('id', integrationId).single();
+    if (integrationError || !integration || !providerDatasets[integration.provider] || !integration.is_enabled) throw new Error('Integração indisponível.');
+    const {data: keyRow} = await service.from('integration_ingest_keys').select('key_hash').eq('integration_id', integration.id).maybeSingle();
+    const expected = String(keyRow?.key_hash || '');
     if (!expected || !safeEqual(await hash(key), expected)) throw new Error('Chave de ingestão inválida.');
     authenticated = true;
 
-    const body = await request.json();
+    const body = await readJson(request);
     const dataset = String(body.dataset || '');
     const sourceRows = Array.isArray(body.rows) ? body.rows as Row[] : [];
     if (!['ads', 'ads_breakdowns', 'crm', 'creatives', 'organic'].includes(dataset)) throw new Error('dataset inválido.');
+    if (!providerDatasets[integration.provider].has(dataset)) throw new Error('Esta integração não aceita o dataset informado.');
     if (!sourceRows.length || sourceRows.length > 1000) throw new Error('Envie entre 1 e 1000 linhas.');
+    const requestedPlatforms = [...new Set(sourceRows.map((row) => String(row?.platform ?? '')).filter((platform) => nativeProviders[platform]))];
+    if (requestedPlatforms.length) {
+      const nativeList = [...new Set(requestedPlatforms.flatMap((platform) => nativeProviders[platform]))];
+      const {data: native, error: nativeError} = await service.from('integrations').select('id,provider').eq('organization_id', integration.organization_id).in('provider', nativeList).neq('status', 'disconnected').limit(1);
+      if (nativeError) throw new Error('Não foi possível validar conflito com conectores nativos.');
+      if (native?.length) throw new Error('Esta plataforma já possui conector nativo neste cliente; a ingestão externa foi bloqueada para não sobrescrever os dados.');
+    }
     const now = new Date().toISOString();
 
     if (dataset === 'ads') {
@@ -164,6 +217,6 @@ Deno.serve(async (request: Request) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Falha na ingestão.';
     if (authenticated && integrationId) await service.from('integrations').update({status: 'error', last_error: message.slice(0, 300)}).eq('id', integrationId);
-    return json({status: 'error', message}, 400);
+    return json({status: 'error', message}, error instanceof HttpError ? error.status : 400);
   }
 });

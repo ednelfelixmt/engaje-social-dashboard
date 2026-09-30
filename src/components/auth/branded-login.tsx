@@ -4,7 +4,7 @@ import {serverClient} from '@/lib/supabase/server';
 import {notFound} from 'next/navigation';
 import type {CSSProperties} from 'react';
 export async function BrandedLogin({slug}:{slug:string}){
- const db=serverClient();const {data,error}=await db.rpc('login_branding',{p_slug:slug});
+ const db=await serverClient();const {data,error}=await db.rpc('login_branding',{p_slug:slug});
  if(error)throw error;if(!data)notFound();
  const b=data as {name:string;logo:string|null;background:string|null;primary:string;color:string};
  const sign=async(path:string|null)=>path?(await db.storage.from('branding').createSignedUrl(path,3600)).data?.signedUrl:null;

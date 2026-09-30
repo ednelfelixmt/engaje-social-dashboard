@@ -38,4 +38,14 @@ create function private.is_login_asset(p_path text) returns boolean language sql
 revoke all on function private.is_login_asset(text) from public;
 grant execute on function private.is_login_asset(text) to anon,authenticated;
 create policy engaje_login_assets on storage.objects for select to anon,authenticated using(bucket_id='branding' and private.is_login_asset(name));
+-- Hash da chave de ingestão fora de integrations.config (legível pelos usuários do cliente).
+create table if not exists public.integration_ingest_keys (
+  integration_id uuid primary key references public.integrations(id) on delete cascade,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  key_hash text not null check (key_hash ~ '^[0-9a-f]{64}$'),
+  rotated_at timestamptz not null default now()
+);
+alter table public.integration_ingest_keys enable row level security;
+revoke all on public.integration_ingest_keys from anon, authenticated;
+grant all on public.integration_ingest_keys to service_role;
 commit;

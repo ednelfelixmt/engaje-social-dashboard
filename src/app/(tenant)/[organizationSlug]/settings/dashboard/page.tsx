@@ -29,7 +29,8 @@ function SettingsSection({number,title,description,icon:Icon,children,open=false
   </details>;
 }
 
-export default async function Page({params}:{params:{organizationSlug:string}}){
+export default async function Page({params: params_}:{params:Promise<{organizationSlug:string}>}){
+  const params=await params_;
   const {db,org}=await tenant(params.organizationSlug);
   const {data:config,error}=await db.from('dashboard_configs').select('*').eq('organization_id',org.id).single();
   if(error)throw error;

@@ -1,1 +1,1 @@
-import {BrandedLogin} from '@/components/auth/branded-login';export default function Login({params}:{params:{organizationSlug:string}}){return <BrandedLogin slug={params.organizationSlug}/>;}
+import {BrandedLogin} from '@/components/auth/branded-login';export default async function Login({params}:{params:Promise<{organizationSlug:string}>}){const {organizationSlug}=await params;return <BrandedLogin slug={organizationSlug}/>;}

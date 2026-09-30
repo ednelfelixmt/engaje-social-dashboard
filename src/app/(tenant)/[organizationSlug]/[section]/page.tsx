@@ -46,7 +46,9 @@ function configuredFunnel(rows:CampaignPerformance[],rawSteps:unknown){
 
 function byWidgetOrder(order:string[]){return (a:{id:string},b:{id:string})=>{const ai=order.indexOf(a.id);const bi=order.indexOf(b.id);return (ai<0?order.length:ai)-(bi<0?order.length:bi);};}
 
-export default async function Page({params, searchParams}: {params: {organizationSlug: string; section: string}; searchParams: Record<string, string | undefined>}) {
+export default async function Page({params: params_, searchParams: searchParams_}: {params: Promise<{organizationSlug: string; section: string}>; searchParams: Promise<Record<string, string | undefined>>}) {
+  const params = await params_;
+  const searchParams = await searchParams_;
   if(params.section==='creatives')redirect(`/${params.organizationSlug}/paid-creatives`);
   const {db, org, user, superAdmin} = await tenant(params.organizationSlug);
   const platformPage = platformDashboardByRoute.get(params.section);
