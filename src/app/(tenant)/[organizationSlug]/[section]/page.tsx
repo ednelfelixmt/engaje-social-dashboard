@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import {notFound, redirect} from 'next/navigation';
 import {dashboardConfig, tenant} from '@/lib/auth/session';
-import {filters, dashboardData} from '@/lib/metrics/query';
+import {filters, dashboardData, previous as previousRange} from '@/lib/metrics/query';
+import {Ranking} from '@/components/dashboard/ranking';
 import {campaigns} from '@/lib/metrics/campaigns';
 import {preparePerformanceRankings} from '@/lib/metrics/rankings';
 import {defaultFunnelIcons, funnelMetricDefinitions, parseFunnelSteps, type FunnelDataKey} from '@/lib/metrics/funnel-config';
@@ -77,7 +78,7 @@ export default async function Page({params: params_, searchParams: searchParams_
   if (!config.enabled_pages.includes(requiredPage)) return <Card>Esta página foi desativada nas configurações do dashboard.</Card>;
 
   const blockCatalog = params.section === 'overview'
-    ? [{id: 'campaigns', label: 'Visão de campanhas'}, {id: 'funnel', label: 'Funil geral'}]
+    ? [{id: 'campaigns', label: 'Visão de campanhas'}, {id: 'campaign-list', label: 'Lista de campanhas'}, {id: 'funnel', label: 'Funil geral'}]
     : sectionGroup === 'paid'
       ? [{id: 'kpis', label: 'Indicadores'}, ...(!platformPage ? [{id: 'platforms', label: 'Plataformas'}] : []), {id: 'funnel', label: 'Funil de campanhas'}, {id: 'timeline', label: 'Evolução temporal'}, {id: 'campaigns', label: 'Ranking de campanhas'}, {id: 'creatives', label: 'Rankings de desempenho'}]
       : [];
@@ -147,7 +148,7 @@ export default async function Page({params: params_, searchParams: searchParams_
 
     {params.section === 'overview' ? <div className="flex flex-col gap-5">
       {!campaignsWithMovement.length && latestMovement?.metric_date ? <Card style={{order: -1}} className="border-amber-400/20 bg-amber-400/[0.05] !py-4"><p className="text-sm text-amber-100">Não houve veiculação no intervalo selecionado. O último investimento registrado foi em <strong>{latestMovement.metric_date.split('-').reverse().join('/')}</strong>.</p></Card> : null}
-      <Block id="campaigns"><CampaignOverview rows={campaignsWithMovement} currency={f.currency} enabledMetrics={config.enabled_metrics} /></Block><Block id="funnel"><Card><div><p className="eyebrow">Jornada completa</p><h2 className="mt-2 text-lg font-semibold">Funil geral de campanhas</h2><p className="muted mt-2 text-sm">Inclui leads de formulários e conversas iniciadas por mensagens.</p></div><Funnel currency={f.currency} steps={funnelSteps} comparing={f.compare!=='none'} /></Card></Block>
+      <Block id="campaigns"><CampaignOverview rows={campaignsWithMovement} currency={f.currency} enabledMetrics={config.enabled_metrics} previousRows={f.compare==='none'?[]:previousCampaignsWithMovement} comparing={f.compare!=='none'} previousRange={f.compare==='none'?null:(()=>{const range=previousRange(f);return {from:range.from,to:range.to};})()} /></Block><Block id="campaign-list"><Card><div className="mb-5"><p className="eyebrow">Campanhas do período</p><h2 className="mt-2 text-lg font-semibold">Todas as campanhas com veiculação</h2><p className="muted mt-2 text-sm">Somente campanhas com investimento, impressões ou resultados no intervalo selecionado. Campanhas pausadas e sem movimento ficam de fora.</p></div><Ranking rows={campaignsWithMovement} currency={f.currency} /></Card></Block><Block id="funnel"><Card><div><p className="eyebrow">Jornada completa</p><h2 className="mt-2 text-lg font-semibold">Funil geral de campanhas</h2><p className="muted mt-2 text-sm">Inclui leads de formulários e conversas iniciadas por mensagens.</p></div><Funnel currency={f.currency} steps={funnelSteps} comparing={f.compare!=='none'} /></Card></Block>
     </div> : null}
 
     {sectionGroup === 'paid' ? <CampaignWorkspace rows={currentCampaigns} previousRows={f.compare === 'none' ? [] : previousCampaigns} timeline={timelineRows(ads)} currency={f.currency} showPlatforms={!platformPage && !chosen} enabledMetrics={config.enabled_metrics} rankings={performanceRankings} funnelSteps={funnelSteps} storageKey={`${org.id}:${params.section}:${chosen??'all'}:paid-metrics`} /> : null}

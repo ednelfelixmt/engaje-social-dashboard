@@ -283,11 +283,17 @@ async function syncWindsor(i:Integration){
  await check(await service.from('integrations').update({status:'connected',is_enabled:true,last_synced_at:syncedAt,config,last_error:null}).eq('id',i.id));
  return {message:`Sincronização Windsor concluída: ${facts.length} métricas e ${breakdownRows.length} detalhamentos do Google Ads gravados no Supabase.`,rows:facts.length,creatives:0};
 }
-async function sync(i:Integration){if(i.provider==='windsor')return syncWindsor(i);const token=await check(await service.rpc('integration_token',{p_id:i.id}));if(!token)throw new Error('Conta sem autorização. Reconecte.');let rows=0,creativeCount=0,coverageFailures=0,accountMetricRows=0,accountMetricAvailability:string[]=[];
+// Janelas de 30 dias, da mais recente para a mais antiga, para importar histórico sem estourar a API da Meta.
+function historyWindows(days:number){const windows:{since:string;until:string}[]=[];const end=new Date();for(let offset=0;offset<days;offset+=30){const until=new Date(end);until.setUTCDate(until.getUTCDate()-offset);const since=new Date(until);since.setUTCDate(since.getUTCDate()-29);windows.push({since:isoDate(since),until:isoDate(until)});}return windows;}
+async function sync(i:Integration,options:{days?:number}={}){if(i.provider==='windsor')return syncWindsor(i);const token=await check(await service.rpc('integration_token',{p_id:i.id}));if(!token)throw new Error('Conta sem autorização. Reconecte.');let rows=0,creativeCount=0,coverageFailures=0,accountMetricRows=0,accountMetricAvailability:string[]=[];
  if(i.provider==='meta_ads'){
   const normalizedAccountId=metaAccountId(i.external_account_id);
   const statuses=new Map<string,string>();try{const campaignRows=await pages(i.external_account_id+'/campaigns',token,{fields:'id,name,effective_status,status'});for(const campaign of campaignRows){const status=campaignStatus(campaign.effective_status||campaign.status);if(status)statuses.set(String(campaign.id),status);}if(campaignRows.length)await check(await service.from('ad_campaigns').upsert(campaignRows.map((campaign:any)=>({organization_id:i.organization_id,integration_id:i.id,platform:'meta_ads',account_id:normalizedAccountId,external_id:String(campaign.id),name:String(campaign.name||campaign.id),status:campaignStatus(campaign.effective_status||campaign.status),last_seen_at:new Date().toISOString()})),{onConflict:'organization_id,platform,account_id,external_id'}));}catch(error){console.warn('[meta-campaign-status]',{integration_id:i.id,message:error instanceof Error?error.message:'Falha desconhecida'});}
-  const data=await pages(i.external_account_id+'/insights',token,{level:'ad',date_preset:'last_30d',time_increment:'1',action_attribution_windows:'["7d_click"]',fields:'account_id,account_currency,campaign_id,campaign_name,adset_id,ad_id,date_start,spend,impressions,reach,clicks,inline_link_clicks,outbound_clicks,unique_clicks,actions,action_values,video_play_actions,video_thruplay_watched_actions,video_p25_watched_actions,video_p50_watched_actions,video_p75_watched_actions,video_p95_watched_actions,video_p100_watched_actions'});
+  const adFields='account_id,account_currency,campaign_id,campaign_name,adset_id,ad_id,date_start,spend,impressions,reach,clicks,inline_link_clicks,outbound_clicks,unique_clicks,actions,action_values,video_play_actions,video_thruplay_watched_actions,video_p25_watched_actions,video_p50_watched_actions,video_p75_watched_actions,video_p95_watched_actions,video_p100_watched_actions';
+  const historyDays=Math.max(30,Math.min(400,Math.trunc(Number(options.days))||30));
+  let data:Record<string,any>[]=[];
+  if(historyDays<=30)data=await pages(i.external_account_id+'/insights',token,{level:'ad',date_preset:'last_30d',time_increment:'1',action_attribution_windows:'["7d_click"]',fields:adFields});
+  else for(const window of historyWindows(historyDays))data=data.concat(await pages(i.external_account_id+'/insights',token,{level:'ad',time_range:JSON.stringify(window),time_increment:'1',action_attribution_windows:'["7d_click"]',fields:adFields}));
   const facts=data.map(d=>({organization_id:i.organization_id,integration_id:i.id,platform:'meta_ads',metric_date:d.date_start,currency:d.account_currency,account_id:metaAccountId(d.account_id||normalizedAccountId),campaign_id:String(d.campaign_id),campaign_name:d.campaign_name,campaign_status:statuses.get(String(d.campaign_id))||null,adset_id:d.adset_id,ad_id:String(d.ad_id),...metaPaidMetrics(d),attribution_window:'7d_click',synced_at:new Date().toISOString()}));
   for(let n=0;n<facts.length;n+=200){await check(await service.from('metrics_ads').upsert(facts.slice(n,n+200),{onConflict:'organization_id,platform,account_id,campaign_id,ad_id,metric_date,currency'}));rows+=facts.slice(n,n+200).length;}
   const insightFields='account_id,account_currency,campaign_id,campaign_name,date_start,spend,impressions,clicks,actions,action_values';
@@ -349,8 +355,8 @@ async function scheduledSync(req:Request,body:any){
  const {data:locked}=await service.from('integrations').update({status:'syncing',last_sync_started_at:new Date().toISOString(),last_error:null}).eq('id',i.id).or('status.in.(connected,error),and(status.eq.syncing,last_sync_started_at.lt.'+stale+')').select('id').maybeSingle();
  if(!locked)return json({message:'Conta indisponível para sincronização agora.',skipped:true});
  try{
-  const result=await sync({...i,status:'syncing'} as Integration);
-  console.info('[scheduled-sync]',{integration_id:i.id,provider:i.provider,ok:true});
+  const result=await sync({...i,status:'syncing'} as Integration,{days:Number(body.historyDays)||30});
+  console.info('[scheduled-sync]',{integration_id:i.id,provider:i.provider,ok:true,history_days:Number(body.historyDays)||30});
   return json({message:'Sincronização agendada concluída.',result});
  }catch(error){
   const details=error instanceof MetaGraphError?error.details:null;
