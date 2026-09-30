@@ -93,13 +93,13 @@ function KpiCard({
   </Card>;
 }
 
-function TrafficFunnel({steps, currency}: {steps:FunnelStep[]; currency: string}) {
+function TrafficFunnel({steps, currency, comparing}: {steps:FunnelStep[]; currency: string; comparing: boolean}) {
   return <Card className="h-full">
     <div className="flex items-center justify-between gap-4">
       <div><p className="eyebrow">Jornada de conversão</p><h2 className="mt-2 text-lg font-semibold">Funil de campanhas</h2></div>
       <Target className="text-primary" size={20} />
     </div>
-    <Funnel steps={steps} currency={currency} />
+    <Funnel steps={steps} currency={currency} comparing={comparing} />
   </Card>;
 }
 
@@ -217,7 +217,7 @@ export function CampaignWorkspace({
     {showLeadBreakdown?<div style={{order:widgetRank('kpis')}}><LeadBreakdown totalLeads={current.leads} registrationLeads={current.registrationLeads} messageLeads={current.messageLeads} totalCost={current.cpl} registrationCost={current.costPerRegistration} messageCost={current.costPerMessage} currency={currency} /></div>:null}
     {showPlatforms ? <div style={{order:widgetRank('platforms')}}><PlatformBreakdown rows={measuredRows} currency={currency} enabledMetrics={enabledMetrics} /></div> : null}
     <section style={{order:widgetRank('funnel')}}>
-      <TrafficFunnel steps={funnelSteps} currency={currency} />
+      <TrafficFunnel steps={funnelSteps} currency={currency} comparing={previousRows.length>0} />
     </section>
     <section style={{order:widgetRank('timeline')}}>
       <Card>

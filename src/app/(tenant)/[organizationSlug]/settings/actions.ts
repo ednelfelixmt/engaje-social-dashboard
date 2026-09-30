@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {revalidatePath} from 'next/cache';
 import {editorAccess} from '@/lib/auth/session';
 import {dashboardMetricKeys} from '@/lib/metrics/catalog';
-import {funnelMetricDefinitions} from '@/lib/metrics/funnel-config';
+import {funnelMetricDefinitions,funnelModelIds,funnelIconKeys,funnelColorPattern} from '@/lib/metrics/funnel-config';
 import type {ActionState} from '@/components/action-form';
 
 const imageSignatures:Record<string,(bytes:Uint8Array)=>boolean>={
@@ -57,9 +57,9 @@ export async function saveDashboard(_:ActionState,f:FormData):Promise<ActionStat
   const allowedPages=new Set(['overview','paid','meta_ads','google_ads','tiktok_ads','funnel','organic','facebook_organic','instagram_organic','tiktok_organic','creatives','external']);
   const enabledPages=[...new Set(f.getAll('enabled_pages').map(String))];
   if(enabledPages.some((page)=>!allowedPages.has(page)))return {ok:false,message:'Uma das páginas selecionadas é inválida.'};
-  const funnelModel=z.enum(['lead_generation','messages','ecommerce','local_business','inside_sales','appointments','custom']).catch('custom').parse(f.get('funnel_model'));
+  const funnelModel=z.enum(funnelModelIds).catch('custom').parse(f.get('funnel_model'));
   let funnelSteps:unknown;try{funnelSteps=JSON.parse(String(f.get('funnel_steps')||'[]'));}catch{return {ok:false,message:'Configuração do funil inválida.'};}
-  const funnelStepSchema=z.array(z.object({metric:z.enum(funnelMetricDefinitions.map((item)=>item.key) as [typeof funnelMetricDefinitions[number]['key'],...typeof funnelMetricDefinitions[number]['key'][]]),label:z.string().trim().min(1).max(40)})).min(2).max(12).refine((steps)=>new Set(steps.map((step)=>step.metric)).size===steps.length,'Etapas repetidas');
+  const funnelStepSchema=z.array(z.object({metric:z.enum(funnelMetricDefinitions.map((item)=>item.key) as [typeof funnelMetricDefinitions[number]['key'],...typeof funnelMetricDefinitions[number]['key'][]]),label:z.string().trim().min(1).max(40),color:z.string().regex(funnelColorPattern).optional(),icon:z.enum(funnelIconKeys).optional(),target:z.number().finite().nonnegative().nullable().optional()})).min(2).max(12).refine((steps)=>new Set(steps.map((step)=>step.metric)).size===steps.length,'Etapas repetidas');
   const parsedFunnel=funnelStepSchema.safeParse(funnelSteps);if(!parsedFunnel.success)return {ok:false,message:'Escolha entre 2 e 12 etapas válidas, sem repetições.'};
   const allowedWidgets=new Set(['kpis','funnel','campaigns','timeline','creatives','platforms']);
   const widgetOrder=[...new Set(f.getAll('widget_order').map(String))];

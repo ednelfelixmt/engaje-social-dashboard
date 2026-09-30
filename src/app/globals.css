@@ -114,15 +114,8 @@ td { color: #c9d1dc; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .status-warning, .status-attention { color: #f4d35e; background: rgba(244,211,94,.07); border-color: rgba(244,211,94,.22); }
 .status-unknown { color: #7d899b; background: rgba(125,137,155,.06); }
 
-.funnel-stage { --stage-color: #4dd4ff; isolation: isolate; position: relative; display: grid; place-items: center; min-height: 74px; padding: 12px 12%; clip-path: polygon(0 0, 100% 0, 93% 100%, 7% 100%); color: white; background: linear-gradient(112deg, color-mix(in srgb, var(--stage-color) 62%, #05070b), var(--stage-color) 56%, color-mix(in srgb, var(--stage-color) 74%, #05070b)); filter: drop-shadow(0 12px 18px rgba(0,0,0,.26)); transition: filter .22s ease, transform .22s ease; }
-.funnel-stage::before { content: ""; position: absolute; inset: 1px 5% auto; height: 44%; background: linear-gradient(180deg, rgba(255,255,255,.22), transparent); clip-path: polygon(0 0, 100% 0, 94% 100%, 6% 100%); pointer-events: none; }
-.funnel-stage::after { content: ""; position: absolute; inset: auto 7% 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.42), transparent); pointer-events: none; }
-.funnel-stage:hover { z-index: 4; filter: saturate(1.14) brightness(1.08) drop-shadow(0 16px 24px rgba(0,0,0,.34)); transform: translateY(-2px) scale(1.008); }
-
-@media (max-width: 639px) {
-  .funnel-stage { min-height: 68px; padding-inline: 14%; }
-  .funnel-stage .data-value { font-size: 1.1rem; }
-}
+@keyframes cone-in { from { opacity: 0; transform: translateY(-8px) scaleY(.92); } to { opacity: 1; transform: none; } }
+.cone-slice { animation: cone-in .55s cubic-bezier(.2,.8,.2,1) both; transform-origin: top center; }
 
 @media (max-width: 1023px) {
   .dashboard-shell { padding-bottom: 5.5rem; }

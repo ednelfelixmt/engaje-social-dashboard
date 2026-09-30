@@ -4,7 +4,7 @@ import {dashboardConfig, tenant} from '@/lib/auth/session';
 import {filters, dashboardData} from '@/lib/metrics/query';
 import {campaigns} from '@/lib/metrics/campaigns';
 import {preparePerformanceRankings} from '@/lib/metrics/rankings';
-import {funnelMetricDefinitions, parseFunnelSteps} from '@/lib/metrics/funnel-config';
+import {defaultFunnelIcons, funnelMetricDefinitions, parseFunnelSteps, type FunnelDataKey} from '@/lib/metrics/funnel-config';
 import {platformDashboardByRoute, platformDashboards, type DashboardPlatform} from '@/lib/metrics/platforms';
 import {Filters} from '@/components/dashboard/filters';
 import {OrganicKpis} from '@/components/dashboard/organic-kpis';
@@ -35,12 +35,18 @@ function timelineRows(rows: Row<'metrics_ads'>[]) {
   return [...grouped.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
-function configuredFunnel(rows:CampaignPerformance[],rawSteps:unknown){
+function funnelValue(rows:CampaignPerformance[],key:FunnelDataKey|undefined){
+  const available=key?rows.filter((row)=>row[key]!=null):[];
+  return {value:key&&available.length?available.reduce((total,row)=>total+Number(row[key]),0):null,spend:available.reduce((total,row)=>total+row.spend,0)};
+}
+
+function configuredFunnel(rows:CampaignPerformance[],rawSteps:unknown,previousRows:CampaignPerformance[]=[]){
   return parseFunnelSteps(rawSteps).map((step)=>{
     const definition=funnelMetricDefinitions.find((item)=>item.key===step.metric)!;const key='dataKey' in definition?definition.dataKey:undefined;
-    const available=key?rows.filter((row)=>row[key]!=null):[];const value=key&&available.length?available.reduce((total,row)=>total+Number(row[key]),0):null;const spend=available.reduce((total,row)=>total+row.spend,0);
+    const {value,spend}=funnelValue(rows,key);
+    const previous=previousRows.length?funnelValue(previousRows,key).value:null;
     const cost=value?spend/value*('costMultiplier' in definition&&definition.costMultiplier?definition.costMultiplier:1):null;
-    return {label:step.label,value,costLabel:definition.costLabel,cost};
+    return {label:step.label,value,costLabel:definition.costLabel,cost,color:step.color,icon:step.icon??defaultFunnelIcons[step.metric],target:step.target??null,previousValue:previous};
   });
 }
 
@@ -77,10 +83,10 @@ export default async function Page({params: params_, searchParams: searchParams_
   const data = await dashboardData(db,org.id,f,{
     platform:chosen,
     ads:needsCampaignData,
-    adsComparison:sectionGroup==='paid'&&f.compare!=='none',
+    adsComparison:(sectionGroup==='paid'||params.section==='overview'||params.section==='funnel')&&f.compare!=='none',
     breakdowns:sectionGroup==='paid',
     crm:needsCampaignData||params.section==='external',
-    crmComparison:sectionGroup==='paid'&&f.compare!=='none',
+    crmComparison:(sectionGroup==='paid'||params.section==='overview'||params.section==='funnel')&&f.compare!=='none',
     organic:sectionGroup==='organic',
     organicComparison:sectionGroup==='organic'&&f.compare!=='none',
     organicAccounts:sectionGroup==='organic',
@@ -101,7 +107,8 @@ export default async function Page({params: params_, searchParams: searchParams_
   const currentCampaigns = campaigns(ads, data.crm, config.preferred_revenue_source, catalog);
   const previousCampaigns = campaigns(previousAds, data.crmComparison, config.preferred_revenue_source, catalog);
   const campaignsWithMovement = currentCampaigns.filter((row) => row.spend > 0 || Number(row.impressions ?? 0) > 0 || Number(row.clicks ?? 0) > 0 || Number(row.leads ?? 0) > 0 || Number(row.purchases ?? 0) > 0);
-  const funnelSteps=configuredFunnel(campaignsWithMovement,config.funnel_steps);
+  const previousCampaignsWithMovement = previousCampaigns.filter((row) => row.spend > 0 || Number(row.impressions ?? 0) > 0 || Number(row.clicks ?? 0) > 0 || Number(row.leads ?? 0) > 0 || Number(row.purchases ?? 0) > 0);
+  const funnelSteps=configuredFunnel(campaignsWithMovement,config.funnel_steps,f.compare==='none'?[]:previousCampaignsWithMovement);
   const paidCreativePlatforms=new Set(['meta_ads','google_ads','tiktok_ads']);
   const organicCreativePlatforms=new Set(['facebook_organic','instagram_organic','tiktok_organic','youtube','google_business']);
   const movingAdIds=new Set(data.ads.map((row)=>row.ad_id));
@@ -126,12 +133,12 @@ export default async function Page({params: params_, searchParams: searchParams_
 
     {params.section === 'overview' ? <div className="space-y-5">
       {!campaignsWithMovement.length && latestMovement?.metric_date ? <Card className="border-amber-400/20 bg-amber-400/[0.05] !py-4"><p className="text-sm text-amber-100">Não houve veiculação no intervalo selecionado. O último investimento registrado foi em <strong>{latestMovement.metric_date.split('-').reverse().join('/')}</strong>.</p></Card> : null}
-      {[{id:'campaigns',content:<CampaignOverview key="campaigns" rows={campaignsWithMovement} currency={f.currency} enabledMetrics={config.enabled_metrics} />},{id:'funnel',content:<Card key="funnel"><div><p className="eyebrow">Jornada completa</p><h2 className="mt-2 text-lg font-semibold">Funil geral de campanhas</h2><p className="muted mt-2 text-sm">Inclui leads de formulários e conversas iniciadas por mensagens.</p></div><Funnel currency={f.currency} steps={funnelSteps} /></Card>}].sort(byWidgetOrder(config.widget_order)).map((widget)=>widget.content)}
+      {[{id:'campaigns',content:<CampaignOverview key="campaigns" rows={campaignsWithMovement} currency={f.currency} enabledMetrics={config.enabled_metrics} />},{id:'funnel',content:<Card key="funnel"><div><p className="eyebrow">Jornada completa</p><h2 className="mt-2 text-lg font-semibold">Funil geral de campanhas</h2><p className="muted mt-2 text-sm">Inclui leads de formulários e conversas iniciadas por mensagens.</p></div><Funnel currency={f.currency} steps={funnelSteps} comparing={f.compare!=='none'} /></Card>}].sort(byWidgetOrder(config.widget_order)).map((widget)=>widget.content)}
     </div> : null}
 
     {sectionGroup === 'paid' ? <CampaignWorkspace rows={currentCampaigns} previousRows={f.compare === 'none' ? [] : previousCampaigns} timeline={timelineRows(ads)} currency={f.currency} showPlatforms={!platformPage && !chosen} enabledMetrics={config.enabled_metrics} rankings={performanceRankings} funnelSteps={funnelSteps} widgetOrder={config.widget_order} storageKey={`${org.id}:${params.section}:${chosen??'all'}:paid-metrics`} /> : null}
 
-    {params.section === 'funnel' ? <Card><h2 className="font-semibold">Funil do modelo de negócio</h2><p className="muted mt-2 text-sm">Etapas configuradas para este cliente. As taxas são relações entre eventos agregados e não representam uma coorte individual.</p><Funnel currency={f.currency} steps={funnelSteps} /></Card> : null}
+    {params.section === 'funnel' ? <Card><h2 className="font-semibold">Funil do modelo de negócio</h2><p className="muted mt-2 text-sm">Etapas configuradas para este cliente. As taxas são relações entre eventos agregados e não representam uma coorte individual.</p><Funnel currency={f.currency} steps={funnelSteps} comparing={f.compare!=='none'} /></Card> : null}
 
     {sectionGroup === 'organic' ? <><Card><p className="muted text-sm">Métricas da conta e das publicações são tratadas separadamente. Arraste os cards para organizar a grade; a posição fica salva neste navegador. O valor 0 é um resultado válido da plataforma; — significa que a fonte não forneceu o indicador.</p></Card>{organicIntegrationIssue?<Card className="border-amber-400/25 bg-amber-400/[.06] !py-4"><strong className="text-sm text-amber-200">Sincronização orgânica parcial</strong><p className="mt-1 text-xs leading-5 text-amber-100/70">{organicIntegrationIssue} Os indicadores já coletados continuam visíveis; somente os dados ausentes aparecem como —.</p></Card>:null}<OrganicKpis current={organic} previous={f.compare === 'none' ? undefined : previousOrganic} accountCurrent={data.organicAccounts} accountPrevious={f.compare === 'none' ? undefined : data.organicAccountsComparison} enabledMetrics={config.enabled_metrics} storageKey={`${org.id}:${params.section}:${chosen??'all'}:organic-metrics`}/></> : null}
 

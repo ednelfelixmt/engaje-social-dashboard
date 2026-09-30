@@ -235,7 +235,7 @@ export type Database = {
           only_platforms_with_data: boolean;
           comparison_enabled: boolean;
           preferred_revenue_source: Database['public']['Enums']['revenue_source'];
-          funnel_model: 'lead_generation' | 'messages' | 'ecommerce' | 'local_business' | 'inside_sales' | 'appointments' | 'custom';
+          funnel_model: 'lead_generation' | 'messages' | 'ecommerce' | 'local_business' | 'inside_sales' | 'appointments' | 'real_estate' | 'clinic' | 'education' | 'delivery' | 'infoproduct' | 'custom';
           funnel_steps: Json;
           target_roas: number | null;
           target_roi: number | null;
@@ -253,7 +253,7 @@ export type Database = {
           only_platforms_with_data?: boolean;
           comparison_enabled?: boolean;
           preferred_revenue_source?: Database['public']['Enums']['revenue_source'];
-          funnel_model?: 'lead_generation' | 'messages' | 'ecommerce' | 'local_business' | 'inside_sales' | 'appointments' | 'custom';
+          funnel_model?: 'lead_generation' | 'messages' | 'ecommerce' | 'local_business' | 'inside_sales' | 'appointments' | 'real_estate' | 'clinic' | 'education' | 'delivery' | 'infoproduct' | 'custom';
           funnel_steps?: Json;
           target_roas?: number | null;
           target_roi?: number | null;
@@ -271,7 +271,7 @@ export type Database = {
           only_platforms_with_data?: boolean;
           comparison_enabled?: boolean;
           preferred_revenue_source?: Database['public']['Enums']['revenue_source'];
-          funnel_model?: 'lead_generation' | 'messages' | 'ecommerce' | 'local_business' | 'inside_sales' | 'appointments' | 'custom';
+          funnel_model?: 'lead_generation' | 'messages' | 'ecommerce' | 'local_business' | 'inside_sales' | 'appointments' | 'real_estate' | 'clinic' | 'education' | 'delivery' | 'infoproduct' | 'custom';
           funnel_steps?: Json;
           target_roas?: number | null;
           target_roi?: number | null;

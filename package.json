@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "node --import tsx --test tests/*.test.ts"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",

@@ -39,8 +39,15 @@ export const funnelMetricDefinitions = [
 ] as const satisfies ReadonlyArray<{key:string;label:string;costLabel:string;group:string;dataKey?:FunnelDataKey;costMultiplier?:number}>;
 
 export type FunnelMetricKey=typeof funnelMetricDefinitions[number]['key'];
-export type FunnelStepConfig={metric:FunnelMetricKey;label:string};
-export type FunnelModel='lead_generation'|'messages'|'ecommerce'|'local_business'|'inside_sales'|'appointments'|'custom';
+export const funnelIconKeys=['eye','users','click','globe','form','user-plus','message','phone','cart','card','bag','calendar','pin','download','star','target','handshake','receipt','play','heart','repeat','home','health','school','food','navigation'] as const;
+export type FunnelIconKey=typeof funnelIconKeys[number];
+export const funnelIconLabels:Record<FunnelIconKey,string>={eye:'Visibilidade',users:'Pessoas',click:'Clique',globe:'Site',form:'Formulário','user-plus':'Novo contato',message:'Conversa',phone:'Telefone',cart:'Carrinho',card:'Pagamento',bag:'Compra',calendar:'Agenda',pin:'Local',download:'Instalação',star:'Destaque',target:'Meta',handshake:'Negócio',receipt:'Proposta',play:'Vídeo',heart:'Engajamento',repeat:'Recompra',home:'Imóvel',health:'Saúde',school:'Educação',food:'Alimentação',navigation:'Rota'};
+export const defaultFunnelIcons:Record<string,FunnelIconKey>={impressions:'eye',reach:'users',video_views:'play',engagements:'heart',clicks:'click',page_views:'globe',content_views:'eye',form_starts:'form',leads:'user-plus',registration_leads:'form',message_leads:'message',phone_calls:'phone',qualified_leads:'star',mql:'star',sql:'target',opportunities:'handshake',meetings:'calendar',proposals:'receipt',add_to_cart:'cart',checkouts:'card',purchases:'bag',repeat_purchases:'repeat',store_visits:'pin',directions:'navigation',app_installs:'download',subscriptions:'star'};
+export const funnelDefaultColors=['#4DD4FF','#5BA7FF','#8B7CFF','#F4D35E','#5CE1A4','#35C982'] as const;
+export const funnelColorPattern=/^#[0-9a-fA-F]{6}$/;
+export type FunnelStepConfig={metric:FunnelMetricKey;label:string;color?:string;icon?:FunnelIconKey;target?:number|null};
+export const funnelModelIds=['lead_generation','messages','ecommerce','local_business','inside_sales','appointments','real_estate','clinic','education','delivery','infoproduct','custom'] as const;
+export type FunnelModel=typeof funnelModelIds[number];
 
 export const funnelPresets:{id:FunnelModel;label:string;description:string;steps:FunnelStepConfig[]}[]=[
   {id:'lead_generation',label:'Geração de leads',description:'Serviços, educação, saúde, imóveis e B2B.',steps:[{metric:'impressions',label:'Impressões'},{metric:'reach',label:'Alcance'},{metric:'clicks',label:'Cliques'},{metric:'page_views',label:'Visitas'},{metric:'registration_leads',label:'Cadastros'}]},
@@ -49,12 +56,30 @@ export const funnelPresets:{id:FunnelModel;label:string;description:string;steps
   {id:'local_business',label:'Negócio local',description:'Visibilidade, contato, rota e visita ao estabelecimento.',steps:[{metric:'impressions',label:'Impressões'},{metric:'reach',label:'Alcance'},{metric:'clicks',label:'Interações'},{metric:'message_leads',label:'Contatos'},{metric:'directions',label:'Rotas'},{metric:'store_visits',label:'Visitas à loja'}]},
   {id:'inside_sales',label:'Inside Sales',description:'Aquisição, qualificação, oportunidade, proposta e venda.',steps:[{metric:'leads',label:'Leads'},{metric:'qualified_leads',label:'Leads qualificados'},{metric:'mql',label:'MQL'},{metric:'sql',label:'SQL'},{metric:'opportunities',label:'Oportunidades'},{metric:'meetings',label:'Reuniões'},{metric:'proposals',label:'Propostas'},{metric:'purchases',label:'Vendas'}]},
   {id:'appointments',label:'Agendamentos',description:'Clínicas, consultorias, serviços e atendimento comercial.',steps:[{metric:'impressions',label:'Impressões'},{metric:'reach',label:'Alcance'},{metric:'clicks',label:'Cliques'},{metric:'page_views',label:'Visitas'},{metric:'leads',label:'Leads'},{metric:'qualified_leads',label:'Qualificados'},{metric:'meetings',label:'Agendamentos'}]},
+  {id:'real_estate',label:'Imobiliária',description:'Do anúncio ao lead e à venda fechada, com as etapas que as integrações já fornecem.',steps:[{metric:'impressions',label:'Impressões',icon:'eye'},{metric:'clicks',label:'Cliques no anúncio',icon:'click'},{metric:'page_views',label:'Visitas ao portfólio',icon:'home'},{metric:'leads',label:'Interessados',icon:'user-plus'},{metric:'purchases',label:'Vendas fechadas',icon:'handshake'}]},
+  {id:'clinic',label:'Clínica e saúde',description:'Da divulgação à conversa no WhatsApp e ao paciente fechado.',steps:[{metric:'impressions',label:'Impressões',icon:'eye'},{metric:'clicks',label:'Cliques',icon:'click'},{metric:'message_leads',label:'Conversas no WhatsApp',icon:'message'},{metric:'purchases',label:'Pacientes fechados',icon:'health'}]},
+  {id:'education',label:'Escola e cursos',description:'Interessados, visita à página do curso e matrículas.',steps:[{metric:'impressions',label:'Impressões',icon:'eye'},{metric:'clicks',label:'Cliques',icon:'click'},{metric:'page_views',label:'Página do curso',icon:'school'},{metric:'leads',label:'Interessados',icon:'user-plus'},{metric:'purchases',label:'Matrículas',icon:'bag'}]},
+  {id:'delivery',label:'Delivery e restaurantes',description:'Cardápio, carrinho, pedido iniciado e pedido concluído.',steps:[{metric:'impressions',label:'Impressões',icon:'eye'},{metric:'clicks',label:'Cliques',icon:'click'},{metric:'page_views',label:'Cardápio visto',icon:'food'},{metric:'add_to_cart',label:'Itens no carrinho',icon:'cart'},{metric:'checkouts',label:'Pedidos iniciados',icon:'card'},{metric:'purchases',label:'Pedidos concluídos',icon:'bag'}]},
+  {id:'infoproduct',label:'Infoprodutos e lançamentos',description:'Tráfego, página de vendas, checkout e venda.',steps:[{metric:'impressions',label:'Impressões',icon:'eye'},{metric:'clicks',label:'Cliques',icon:'click'},{metric:'page_views',label:'Página de vendas',icon:'globe'},{metric:'checkouts',label:'Checkouts',icon:'card'},{metric:'purchases',label:'Vendas',icon:'bag'}]},
   {id:'custom',label:'Personalizado',description:'Escolha qualquer etapa, renomeie e ordene a jornada.',steps:[{metric:'impressions',label:'Impressões'},{metric:'reach',label:'Alcance'},{metric:'clicks',label:'Cliques'},{metric:'page_views',label:'Visitas'},{metric:'leads',label:'Leads'}]},
 ];
 
 export function parseFunnelSteps(value:unknown):FunnelStepConfig[]{
   if(!Array.isArray(value))return funnelPresets[0].steps;
   const allowed=new Set(funnelMetricDefinitions.map((item)=>item.key));
-  const parsed=value.flatMap((item)=>{if(!item||typeof item!=='object'||Array.isArray(item))return [];const row=item as Record<string,unknown>;const metric=String(row.metric||'') as FunnelMetricKey;const label=String(row.label||'').trim();return allowed.has(metric)&&label.length>=1&&label.length<=40?[{metric,label}]:[];});
+  const icons=new Set<string>(funnelIconKeys);
+  const parsed=value.flatMap((item)=>{
+    if(!item||typeof item!=='object'||Array.isArray(item))return [];
+    const row=item as Record<string,unknown>;
+    const metric=String(row.metric||'') as FunnelMetricKey;
+    const label=String(row.label||'').trim();
+    if(!allowed.has(metric)||label.length<1||label.length>40)return [];
+    const step:FunnelStepConfig={metric,label};
+    if(typeof row.color==='string'&&funnelColorPattern.test(row.color))step.color=row.color.toUpperCase();
+    if(typeof row.icon==='string'&&icons.has(row.icon))step.icon=row.icon as FunnelIconKey;
+    const target=row.target==null||row.target===''?null:Number(row.target);
+    if(target!=null&&Number.isFinite(target)&&target>=0)step.target=target;
+    return [step];
+  });
   return parsed.length>=2&&parsed.length<=12&&new Set(parsed.map((item)=>item.metric)).size===parsed.length?parsed:funnelPresets[0].steps;
 }
