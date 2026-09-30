@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import {notFound, redirect} from 'next/navigation';
-import {tenant} from '@/lib/auth/session';
+import {dashboardConfig, tenant} from '@/lib/auth/session';
 import {filters, dashboardData} from '@/lib/metrics/query';
 import {campaigns} from '@/lib/metrics/campaigns';
 import {preparePerformanceRankings} from '@/lib/metrics/rankings';
@@ -55,32 +55,18 @@ export default async function Page({params, searchParams}: {params: {organizatio
   const sectionGroup = platformPage?.group ?? (params.section === 'paid' || params.section === 'organic' ? params.section : null);
   const contentMode=params.section==='paid-creatives'?'paid':params.section==='organic-posts'?'organic':null;
 
-  const [{data: config}, {data: orgs}, {data: membership}, {data: activeIntegrations}, {data: latestMovement}] = await Promise.all([
-    db.from('dashboard_configs').select('*').eq('organization_id', org.id).single(),
-    db.from('organizations').select('name,slug').eq('status', 'active').order('name'),
-    db.from('organization_members').select('role').eq('organization_id', org.id).eq('user_id', user.id).maybeSingle(),
+  const [config, {data: orgs}, {data: membership}, {data: activeIntegrations}, {data: latestMovement}] = await Promise.all([
+    dashboardConfig(params.organizationSlug),
+    superAdmin?db.from('organizations').select('name,slug').eq('status', 'active').order('name'):Promise.resolve({data:[{name:org.name,slug:org.slug}]}),
+    superAdmin?Promise.resolve({data:null}):db.from('organization_members').select('role').eq('organization_id', org.id).eq('user_id', user.id).maybeSingle(),
     db.from('integrations').select('id,provider,last_synced_at,status,last_error').eq('organization_id', org.id).eq('is_enabled', true).in('provider', ['meta_ads', 'windsor', 'stract', 'facebook_organic', 'instagram_organic', 'tiktok_organic', 'youtube', 'google_business']),
     params.section==='overview'?db.from('metrics_ads').select('metric_date').eq('organization_id', org.id).gt('spend', 0).order('metric_date', {ascending: false}).limit(1).maybeSingle():Promise.resolve({data:null}),
   ]);
-  if (!config) throw new Error('Configuração do dashboard não encontrada.');
   const requiredPage = params.section==='paid-creatives'?'creatives':params.section==='organic-posts'?'organic':platformPage?.group ?? params.section;
   if (!config.enabled_pages.includes(requiredPage)) return <Card>Esta página foi desativada nas configurações do dashboard.</Card>;
 
   const f = filters(searchParams, org.timezone, org.currency);
-  const visibleChecks = await Promise.all(platformDashboards.filter((item) => item.group === sectionGroup).map(async (item) => {
-    const table = item.group === 'paid' ? 'metrics_ads' : 'metrics_organic';
-    const {data:sample, error} = await db.from(table).select('id').eq('organization_id', org.id).eq('platform', item.platform as never).limit(1);
-    if (error) throw error;
-    if (sample?.length) return item.platform;
-    if (item.group === 'organic') {
-      const {data:creativeSample, error: creativeError} = await db.from('creatives').select('id').eq('organization_id', org.id).eq('platform', item.platform as never).limit(1);
-      if (creativeError) throw creativeError;
-      if (creativeSample?.length) return item.platform;
-    }
-    return null;
-  }));
-  const visible = visibleChecks.filter((item): item is DashboardPlatform => item !== null);
-  const platformHasData=!platformPage||visible.includes(platformPage.platform);
+  const visible = platformDashboards.filter((item)=>item.group===sectionGroup).map((item)=>item.platform);
   const requestedPlatform = visible.find((platform) => platform === searchParams.platform);
   const organicPostPlatform=contentMode==='organic'&&['facebook_organic','instagram_organic','tiktok_organic','youtube','google_business'].includes(searchParams.platform??'')?searchParams.platform as DashboardPlatform:null;
   const chosen = platformPage?.platform ?? organicPostPlatform ?? requestedPlatform ?? null;
@@ -102,6 +88,7 @@ export default async function Page({params, searchParams}: {params: {organizatio
     creativePeriod:contentMode==='organic',
     adCampaigns:needsCampaignData,
   });
+  const platformHasData=!platformPage||data.ads.length>0||data.organic.length>0||data.organicAccounts.length>0;
   const needsReachSync = data.ads.some((row) => Number(row.impressions ?? 0) > 0 && row.reach == null);
   const ads = data.ads;
   const breakdowns = data.breakdowns;
@@ -132,7 +119,7 @@ export default async function Page({params, searchParams}: {params: {organizatio
     <Filters value={f} organizations={orgs ?? []} slug={org.slug} />
     {platformPage&&!platformHasData?<Card className="border-amber-400/25 bg-amber-400/[.06]"><strong className="text-sm text-amber-200">{platformPage.label} ainda não possui dados</strong><p className="mt-2 text-sm leading-6 text-amber-100/70">Conecte e selecione o ativo correspondente em Integrações. A página permanecerá disponível e começará a exibir métricas após a primeira sincronização.</p><Link className="mt-4 inline-flex rounded-lg border border-amber-300/20 px-4 py-2 text-sm font-semibold text-amber-100 hover:bg-amber-300/10" href={`/${org.slug}/settings/integrations`}>Abrir integrações</Link></Card>:null}
 
-    {sectionGroup && !platformPage ? <div className="flex flex-wrap gap-3"><Link className={`rounded-lg px-4 py-2 text-sm ${chosen ? 'bg-white/5' : 'bg-primary text-black'}`} href={`?${new URLSearchParams(queryWithoutPlatform).toString()}`}>Todas com dados</Link>{visible.map((platform) => {const definition = platformDashboards.find((item) => item.platform === platform); return <Link key={platform} className={`rounded-lg px-4 py-2 text-sm ${chosen === platform ? 'bg-primary text-black' : 'bg-white/5'}`} href={`?${new URLSearchParams({...queryWithoutPlatform, platform}).toString()}`}>{definition?.label ?? platform}</Link>;})}</div> : null}
+    {sectionGroup && !platformPage ? <div className="flex flex-wrap gap-3"><Link prefetch className={`rounded-lg px-4 py-2 text-sm ${chosen ? 'bg-white/5' : 'bg-primary text-black'}`} href={`?${new URLSearchParams(queryWithoutPlatform).toString()}`}>Todas</Link>{visible.map((platform) => {const definition = platformDashboards.find((item) => item.platform === platform); return <Link prefetch key={platform} className={`rounded-lg px-4 py-2 text-sm ${chosen === platform ? 'bg-primary text-black' : 'bg-white/5'}`} href={`?${new URLSearchParams({...queryWithoutPlatform, platform}).toString()}`}>{definition?.label ?? platform}</Link>;})}</div> : null}
     {contentMode==='organic'?<div className="flex flex-wrap gap-3"><Link className={`rounded-lg px-4 py-2 text-sm ${chosen?'bg-white/5':'bg-primary text-black'}`} href={`?${new URLSearchParams(queryWithoutPlatform).toString()}`}>Todos os posts</Link>{platformDashboards.filter((item)=>item.group==='organic').map((item)=><Link key={item.platform} className={`rounded-lg px-4 py-2 text-sm ${chosen===item.platform?'bg-primary text-black':'bg-white/5'}`} href={`?${new URLSearchParams({...queryWithoutPlatform,platform:item.platform}).toString()}`}>{item.label}</Link>)}</div>:null}
 
     {params.section === 'overview' ? <div className="space-y-5">
