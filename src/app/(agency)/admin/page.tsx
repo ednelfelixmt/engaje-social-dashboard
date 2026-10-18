@@ -1,10 +1,9 @@
 import Link from 'next/link';
-import {Activity, ArrowUpRight, Building2, CircleDollarSign, Eye, MessageSquareText, Plug, Radio} from 'lucide-react';
+import {Activity, ArrowUpRight, Building2, CircleDollarSign, Eye, MessageSquareText, Radio} from 'lucide-react';
 import {requireAdmin} from '@/lib/auth/session';
 import {all} from '@/lib/metrics/query';
 import {money, number} from '@/lib/utils';
 import {Card} from '@/components/ui/card';
-import {Button} from '@/components/ui/button';
 import type {Row} from '@/types/database.types';
 
 type Organization = Row<'organizations'>;
@@ -60,8 +59,6 @@ export default async function Admin(){
   const agencySummary=summarize(metrics.filter((row)=>active.some((item)=>item.org.id===row.organization_id)));
   const commonCurrency=currencies.length===1?currencies[0]:null;
   const maximumSpend=Math.max(1,...clientsWithData.map((item)=>item.summary.spend));
-  const activeIds=new Set(active.map((item)=>item.org.id));
-  const activeConnections=(integrations??[]).filter((item)=>activeIds.has(item.organization_id));
 
   return <div className="mx-auto max-w-[1900px] space-y-7">
     <header className="dashboard-hero flex flex-wrap items-end justify-between gap-6"><div className="relative z-10"><p className="eyebrow mb-3">CENTRAL DE PERFORMANCE</p><h1 className="display-title !text-[clamp(2rem,3.5vw,4rem)]">Visão da agência</h1><p className="muted mt-3 max-w-2xl text-sm">Dados reais dos últimos 30 dias, consolidados por cliente.</p></div></header>
@@ -85,7 +82,5 @@ export default async function Admin(){
         </Card>;
       })}</div>:<Card className="py-16 text-center"><Activity className="mx-auto text-zinc-600" size={32}/><h3 className="mt-4">Nenhum cliente ativo possui dados no período</h3><p className="muted mt-2 text-sm">Clientes integrados sem métricas sincronizadas permanecem ocultos desta visão.</p></Card>}
     </section>
-
-    <Card className="flex flex-wrap items-center justify-between gap-4 !p-5"><div className="flex items-center gap-3"><Plug className="text-primary"/><div><strong>Integrações operacionais</strong><p className="muted mt-1 text-xs">{activeConnections.filter((item)=>item.status==='connected').length} conexões de clientes ativos</p></div></div><Button variant="outline" asChild><Link href="/admin/integrations">Gerenciar integrações</Link></Button></Card>
   </div>;
 }

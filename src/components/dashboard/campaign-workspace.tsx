@@ -83,7 +83,7 @@ function KpiCard({
     <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent opacity-0 transition group-hover:opacity-100" />
     <div className="flex items-start justify-between gap-4">
       <div>
-        <p className="text-xs font-medium uppercase tracking-[0.12em] text-zinc-500">{label}</p>
+        <p className="text-sm font-extrabold uppercase tracking-[0.08em] text-zinc-100">{label}</p>
         <strong className="mt-4 block text-2xl tracking-tight text-white">{format(value)}</strong>
       </div>
       <span className="rounded-xl border border-white/10 bg-white/[0.04] p-2.5 text-primary"><Icon size={18} /></span>
