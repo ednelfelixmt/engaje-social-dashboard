@@ -9,11 +9,8 @@ import {Button} from '@/components/ui/button';
 type Candidate = {id: string; accountName: string; externalAccountId: string};
 
 const providerLabels: Record<string, string> = {
-  meta_ads: 'Meta Ads',
-  facebook_organic: 'Facebook orgânico',
-  instagram_organic: 'Instagram orgânico',
+  meta_ads: 'Meta — Facebook e Instagram',
   tiktok_ads: 'TikTok Ads',
-  tiktok_organic: 'TikTok orgânico',
   windsor: 'Windsor.ai',
   stract: 'Stract',
   hubspot: 'HubSpot',
@@ -36,7 +33,7 @@ export function MetaAccountSelector({organizationId, provider, batchId, candidat
 
   return <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/80 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby={`account-selector-${provider}`}>
     <div className="w-full max-w-5xl rounded-3xl border border-primary/30 bg-[#141419] p-5 shadow-2xl md:p-7">
-    <div className="flex items-start gap-3"><CheckSquare2 className="mt-0.5 shrink-0 text-primary" size={22} /><div><p className="eyebrow mb-2">Etapa obrigatória · {providerName}</p><h2 className="text-2xl font-semibold" id={`account-selector-${provider}`}>Quais contas pertencem a este cliente?</h2><p className="muted mt-2 text-sm">A autorização encontrou {candidates.length} conta(s). Marque somente as que devem alimentar este workspace. Nenhuma conta será integrada antes da sua confirmação.</p></div></div>
+    <div className="flex items-start gap-3"><CheckSquare2 className="mt-0.5 shrink-0 text-primary" size={22} /><div><p className="eyebrow mb-2">Etapa obrigatória · {providerName}</p><h2 className="text-2xl font-semibold" id={`account-selector-${provider}`}>Quais contas pertencem a este cliente?</h2><p className="muted mt-2 text-sm">A autorização encontrou {candidates.length} conta(s). Marque somente as que devem alimentar este workspace. Páginas, perfis do Instagram e demais ativos serão escolhidos dentro desta mesma conexão.</p></div></div>
     <div className="mt-5 flex items-center justify-between gap-4 border-y border-white/10 py-3">
       <span className="text-sm"><strong>{selected.size}</strong> de {candidates.length} selecionada(s)</span>
       <button className="text-sm font-semibold text-primary hover:underline" type="button" disabled={busy} onClick={() => setSelected(allSelected ? new Set() : new Set(candidates.map((candidate) => candidate.id)))}>{allSelected ? 'Desmarcar todas' : 'Selecionar todas'}</button>

@@ -15,7 +15,7 @@ export type ConnectorDefinition = {
 };
 
 export const connectorCatalog: ConnectorDefinition[] = [
-  {provider: 'meta_ads', name: 'Meta Ads', description: 'Campanhas, custos, conversões e criativos.', group: 'official', stage: 'live', mode: 'oauth', capabilities: ['métricas de anúncios', 'criativos'], requiredSecrets: ['META_APP_ID', 'META_APP_SECRET']},
+  {provider: 'meta_ads', name: 'Meta', description: 'Uma única conexão para Facebook, Instagram e todos os ativos de mídia paga.', group: 'official', stage: 'live', mode: 'oauth', capabilities: ['contas de anúncio', 'Páginas e Instagram', 'pixels e formulários', 'catálogos e conversões'], requiredSecrets: ['META_APP_ID', 'META_APP_SECRET']},
   {provider: 'tiktok_ads', name: 'TikTok Ads', description: 'Estrutura para campanhas, investimento e conversões.', group: 'official', stage: 'foundation', mode: 'oauth', capabilities: ['métricas de anúncios', 'criativos'], requiredSecrets: ['TIKTOK_APP_ID', 'TIKTOK_APP_SECRET']},
   {provider: 'windsor', name: 'Windsor.ai', description: 'Camada de dados para campanhas do Google Ads.', group: 'extractor', stage: 'live', mode: 'extractor', capabilities: ['Google Ads'], requiredSecrets: ['WINDSOR_API_KEY']},
   {provider: 'stract', name: 'Stract', description: 'Extrator alternativo com destino no Supabase.', group: 'extractor', stage: 'foundation', mode: 'extractor', capabilities: ['múltiplas plataformas', 'cargas programadas'], requiredSecrets: []},

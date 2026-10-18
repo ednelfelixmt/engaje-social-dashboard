@@ -64,8 +64,7 @@ export default async function Page({params: params_, searchParams: searchParams_
   const configOf = (item: typeof integrations[number]) => item.config && typeof item.config === 'object' && !Array.isArray(item.config) ? item.config as Record<string, unknown> : {};
   const organicProviders = new Set(['facebook_organic','instagram_organic','tiktok_organic','youtube','google_business']);
   const candidates = integrations.filter((item) => !organicProviders.has(item.provider) && configOf(item).selection_pending === true);
-  const legacyMetaProviders = new Set(['meta_ads','facebook_organic','instagram_organic']);
-  const candidateGroups = Array.from(new Set(candidates.filter((item)=>!legacyMetaProviders.has(item.provider)).map((item) => `${item.provider}:${String(configOf(item).batch_id ?? 'unbatched')}`))).map((key) => {
+  const candidateGroups = Array.from(new Set(candidates.filter((item)=>item.provider !== 'meta_ads').map((item) => `${item.provider}:${String(configOf(item).batch_id ?? 'unbatched')}`))).map((key) => {
     const [provider, batchValue] = key.split(':');
     return {
       provider,
@@ -86,7 +85,7 @@ export default async function Page({params: params_, searchParams: searchParams_
       <header><p className="eyebrow mb-2">{org.name}</p><h1 className="text-3xl font-semibold">Central de integradores</h1><p className="muted mt-2 max-w-3xl">Conectores organizados por estágio real. Toda conta pertence exclusivamente a este workspace e os segredos permanecem no backend do Supabase.</p></header>
       {searchParams.select_assets && !availableDiscoveredRows.length ? <Card className="border-amber-500/40 bg-amber-500/5 text-amber-200">A descoberta foi concluída, mas não há novos ativos disponíveis. Os ativos já vinculados permanecem na área deste cliente.</Card> : null}
       {searchParams.select_accounts && !candidates.length ? <Card className="border-amber-500/40 bg-amber-500/5 text-amber-200">Nenhuma conta disponível foi encontrada.</Card> : null}
-      {candidates.some((item)=>legacyMetaProviders.has(item.provider)) ? <Card className="border-blue-500/30 bg-blue-500/[.05] text-blue-100"><strong>Seleção Meta atualizada</strong><p className="muted mt-2 text-sm">O seletor antigo mostrava somente contas de anúncios. Use “Conectar e selecionar” no card da Meta para escolher, no mesmo fluxo, contas, Páginas do Facebook, Instagram, pixels, formulários, catálogos e conversões.</p></Card> : null}
+      {candidates.some((item)=>item.provider === 'meta_ads') ? <Card className="border-blue-500/30 bg-blue-500/[.05] text-blue-100"><strong>Uma única integração Meta</strong><p className="muted mt-2 text-sm">Use “Conectar e selecionar” no card da Meta. A mesma autorização permite escolher contas de anúncios, Páginas do Facebook, perfis do Instagram, pixels, formulários, catálogos e conversões.</p></Card> : null}
       {searchParams.error ? <Card className="border-red-500/40 bg-red-500/5 text-red-300">A conexão não foi concluída. Verifique permissões e credenciais.</Card> : null}
 
       <IntegrationDiagnostics organizationId={org.id} />
@@ -108,7 +107,7 @@ export default async function Page({params: params_, searchParams: searchParams_
       </div>
 
       <section className="space-y-4">
-        <div><h2 className="text-xl font-semibold">Plataformas oficiais</h2><p className="muted mt-1 text-sm">Meta está operacional. TikTok fica registrado e pronto para receber OAuth e sincronização na etapa de homologação.</p></div>
+        <div><h2 className="text-xl font-semibold">Plataformas oficiais</h2><p className="muted mt-1 text-sm">A conexão Meta reúne Facebook, Instagram e todos os ativos vinculados. Não é necessário conectar cada produto separadamente.</p></div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{official.map((connector) => <ConnectorCard connector={connector} organizationId={org.id} prepared={preparedProviders.has(connector.provider)} key={connector.provider} />)}</div>
       </section>
 

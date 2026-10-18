@@ -16,7 +16,7 @@ type PlatformCard = {
 };
 
 const platforms: PlatformCard[] = [
-  {key:'meta',name:'Meta',description:'Ecossistema oficial para mídia paga e presença orgânica.',icon:Facebook,color:'text-blue-400',stage:'available',method:'OAuth',capabilities:['Meta Ads','Facebook','Instagram','Pixels e formulários']},
+  {key:'meta',name:'Meta',description:'Uma única conexão para Facebook, Instagram e todos os ativos vinculados.',icon:Facebook,color:'text-blue-400',stage:'available',method:'OAuth',capabilities:['Contas de anúncio','Páginas e Instagram','Pixels e formulários','Catálogos e conversões']},
   {key:'google',name:'Google',description:'Aquisição, presença local e conteúdo em vídeo.',icon:Search,color:'text-red-300',stage:'available',method:'Extrator',capabilities:['Google Ads','Google Business','YouTube']},
   {key:'tiktok',name:'TikTok',description:'Campanhas, criativos, vídeos e desempenho orgânico.',icon:Activity,color:'text-cyan-300',stage:'preparing',method:'OAuth',capabilities:['TikTok Ads','TikTok orgânico']},
   {key:'hubspot',name:'HubSpot',description:'Negócios, receita real, leads e etapas comerciais.',icon:Blocks,color:'text-orange-300',stage:'preparing',method:'OAuth',capabilities:['Negócios','Receita','Funil de vendas']},
