@@ -12,7 +12,6 @@ import {Filters} from '@/components/dashboard/filters';
 import {Funnel} from '@/components/dashboard/funnel';
 import {CampaignWorkspace} from '@/components/dashboard/campaign-workspace';
 import {CampaignOverview} from '@/components/dashboard/campaign-overview';
-import {DataFreshness} from '@/components/dashboard/data-freshness';
 import {DisplayModeController} from '@/components/dashboard/display-mode-controller';
 import {CreativeSummary} from '@/components/dashboard/creative-summary';
 import {CreativeLibrary} from '@/components/dashboard/creative-library';
@@ -70,11 +69,10 @@ export default async function Page({params: params_, searchParams: searchParams_
   const sectionGroup = platformPage?.group ?? (params.section === 'paid' ? 'paid' : null);
   const contentMode=params.section==='paid-creatives'?'paid':null;
 
-  const [config, {data: orgs}, {data: membership}, {data: activeIntegrations}, {data: latestMovement}, {data: personalLayout}, {data: branding}] = await Promise.all([
+  const [config, {data: orgs}, {data: membership}, {data: latestMovement}, {data: personalLayout}, {data: branding}] = await Promise.all([
     dashboardConfig(params.organizationSlug),
     superAdmin?db.from('organizations').select('name,slug').eq('status', 'active').order('name'):Promise.resolve({data:[{name:org.name,slug:org.slug}]}),
     superAdmin?Promise.resolve({data:null}):db.from('organization_members').select('role').eq('organization_id', org.id).eq('user_id', user.id).maybeSingle(),
-    db.from('integrations').select('id,provider,last_synced_at,status,last_error').eq('organization_id', org.id).eq('is_enabled', true).in('provider', ['meta_ads', 'windsor', 'stract']),
     params.section==='overview'?db.from('metrics_ads').select('metric_date').eq('organization_id', org.id).gt('spend', 0).order('metric_date', {ascending: false}).limit(1).maybeSingle():Promise.resolve({data:null}),
     db.from('user_dashboard_layouts').select('layout').eq('user_id', user.id).eq('organization_id', org.id).eq('scope', params.section).maybeSingle(),
     db.from('branding').select('logo_path').eq('organization_id', org.id).maybeSingle(),
@@ -111,7 +109,6 @@ export default async function Page({params: params_, searchParams: searchParams_
     adCampaigns:needsCampaignData,
   });
   const platformHasData=!platformPage||data.ads.length>0;
-  const needsReachSync = data.ads.some((row) => Number(row.impressions ?? 0) > 0 && row.reach == null);
   const ads = data.ads;
   const breakdowns = data.breakdowns;
   const previousAds = data.adsComparison;
@@ -126,14 +123,10 @@ export default async function Page({params: params_, searchParams: searchParams_
   const filteredCreatives = data.creatives.filter((creative) => contentMode==='paid'&&paidCreativePlatforms.has(creative.platform)&&(!movingAdIds.size||movingAdIds.has(creative.ad_id??'')));
   const performanceRankings = sectionGroup==='paid'||params.section==='overview'?preparePerformanceRankings(campaignsWithMovement, ads, breakdowns, filteredCreatives):{campaign:[],audience:[],creative:[],gender:[],age:[],device:[],state:[],city:[]};
   const queryWithoutPlatform = Object.fromEntries(Object.entries(f));
-  const paidIntegrations=(activeIntegrations??[]).filter((item)=>['meta_ads','windsor','stract'].includes(item.provider));
-  const refreshIntegrations=paidIntegrations;
-
   return <DashboardLayoutProvider slug={org.slug} scope={params.section} initialLayout={initialLayout} initialPersonalized={personalized} canPromote={canCustomizeClient} blocks={blockCatalog} defaultBlockOrder={config.widget_order}>
   <div className="dashboard-content mx-auto max-w-[1780px] space-y-6 lg:space-y-8">
     <Suspense fallback={null}><DisplayModeController /></Suspense>
-    <header className="dashboard-hero flex flex-wrap items-end justify-between gap-6"><div className="relative z-10 flex min-w-0 items-center gap-5">{clientLogoUrl?<span className="client-logo"><img src={clientLogoUrl} alt={`Logo ${org.name}`} /></span>:<span className="client-logo client-logo-fallback" aria-hidden="true">{org.name.slice(0,2).toUpperCase()}</span>}<div className="min-w-0"><p className="eyebrow mb-4">{org.name} · INTELIGÊNCIA DE MARKETING</p><h1 className="display-title">{title}</h1><p className="muted mt-4 max-w-2xl text-sm leading-6">Desempenho, eficiência e oportunidades do período. Dados indisponíveis aparecem como —.</p></div></div><div className="relative z-10 rounded-full border border-white/10 bg-black/20 px-4 py-2 text-xs font-medium text-zinc-300 shadow-inner">{f.from.split('-').reverse().join('/')} <span className="mx-2 text-primary">→</span> {f.to.split('-').reverse().join('/')}</div></header>
-    <div className="tv-freshness"><DataFreshness organizationId={org.id} integrations={refreshIntegrations.map((item) => ({id: item.id, provider: item.provider, lastSyncedAt: item.last_synced_at, status: item.status}))} canSync={superAdmin || ['client_admin', 'editor'].includes(membership?.role ?? '')} renderedAt={Date.now()} timezone={org.timezone} needsReachSync={(sectionGroup==='paid'||contentMode==='paid')&&needsReachSync} /></div>
+    <header className="dashboard-hero flex flex-wrap items-end justify-between gap-6"><div className="relative z-10 flex min-w-0 items-center gap-5">{clientLogoUrl?<span className="client-logo"><img src={clientLogoUrl} alt={`Logo ${org.name}`} /></span>:<span className="client-logo client-logo-fallback" aria-hidden="true">{org.name.slice(0,2).toUpperCase()}</span>}<div className="min-w-0"><p className="eyebrow mb-4">{params.section==='overview'?'INTELIGÊNCIA DE MARKETING':org.name}</p><h1 className="display-title">{params.section==='overview'?org.name:title}</h1><p className="muted mt-4 max-w-2xl text-sm leading-6">{params.section==='overview'?'Desempenho, eficiência e oportunidades para tomada de decisão.':'Dados indisponíveis aparecem como —.'}</p></div></div></header>
     <div className="tv-hide"><Filters value={f} organizations={orgs ?? []} slug={org.slug} /></div>
     {customizable ? <div className="tv-hide"><PersonalizeBar /></div> : null}
     {platformPage&&!platformHasData?<Card className="border-amber-400/25 bg-amber-400/[.06]"><strong className="text-sm text-amber-200">{platformPage.label} ainda não possui dados</strong><p className="mt-2 text-sm leading-6 text-amber-100/70">Conecte e selecione o ativo correspondente em Integrações. A página permanecerá disponível e começará a exibir métricas após a primeira sincronização.</p><Link className="mt-4 inline-flex rounded-lg border border-amber-300/20 px-4 py-2 text-sm font-semibold text-amber-100 hover:bg-amber-300/10" href={`/${org.slug}/settings/integrations`}>Abrir integrações</Link></Card>:null}
@@ -141,7 +134,7 @@ export default async function Page({params: params_, searchParams: searchParams_
     {sectionGroup && !platformPage ? <div className="tv-hide flex flex-wrap gap-3"><Link prefetch className={`rounded-lg px-4 py-2 text-sm ${chosen ? 'bg-white/5' : 'bg-primary text-black'}`} href={`?${new URLSearchParams(queryWithoutPlatform).toString()}`}>Todas</Link>{visible.map((platform) => {const definition = platformDashboards.find((item) => item.platform === platform); return <Link prefetch key={platform} className={`rounded-lg px-4 py-2 text-sm ${chosen === platform ? 'bg-primary text-black' : 'bg-white/5'}`} href={`?${new URLSearchParams({...queryWithoutPlatform, platform}).toString()}`}>{definition?.label ?? platform}</Link>;})}</div> : null}
     {params.section === 'overview' ? <div className="flex flex-col gap-5">
       {!campaignsWithMovement.length && latestMovement?.metric_date ? <Card style={{order: -1}} className="border-amber-400/20 bg-amber-400/[0.05] !py-4"><p className="text-sm text-amber-100">Não houve veiculação no intervalo selecionado. O último investimento registrado foi em <strong>{latestMovement.metric_date.split('-').reverse().join('/')}</strong>.</p></Card> : null}
-      <Block id="executive"><ExecutiveIntelligence rows={campaignsWithMovement} previousRows={f.compare==='none'?[]:previousCampaignsWithMovement} currency={f.currency} from={f.from} to={f.to} slug={org.slug} targets={{spend:config.target_spend,leads:config.target_leads,cpl:config.target_cpl,ctr:config.target_ctr,frequency:config.target_frequency}} integrations={paidIntegrations.map((item)=>({status:item.status,lastSyncedAt:item.last_synced_at,hasError:Boolean(item.last_error)}))}/></Block>
+      <Block id="executive"><ExecutiveIntelligence rows={campaignsWithMovement} previousRows={f.compare==='none'?[]:previousCampaignsWithMovement} currency={f.currency} from={f.from} to={f.to} slug={org.slug} targets={{spend:config.target_spend,leads:config.target_leads,cpl:config.target_cpl,ctr:config.target_ctr,frequency:config.target_frequency}} /></Block>
       <Block id="campaigns"><CampaignOverview rows={campaignsWithMovement} currency={f.currency} enabledMetrics={config.enabled_metrics} previousRows={f.compare==='none'?[]:previousCampaignsWithMovement} comparing={f.compare!=='none'} previousRange={f.compare==='none'?null:(()=>{const range=previousRange(f);return {from:range.from,to:range.to};})()} /></Block>
       <Block id="analytics"><section className="grid gap-5 2xl:grid-cols-[minmax(460px,.9fr)_minmax(620px,1.35fr)]"><Card className="h-full"><div className="mb-4 flex items-start justify-between gap-4"><div><p className="eyebrow">Jornada de conversão</p><h2 className="mt-2 text-xl font-semibold">Funil de campanhas</h2><p className="muted mt-2 text-xs">Conversão entre etapas e custo real por resultado.</p></div><span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-primary">Visão BI</span></div><Funnel currency={f.currency} steps={funnelSteps} comparing={f.compare!=='none'} /></Card><AudienceControl rankings={performanceRankings} currency={f.currency}/></section></Block>
       <Block id="campaign-list"><Card><div className="mb-5"><p className="eyebrow">Análise detalhada</p><h2 className="mt-2 text-lg font-semibold">Desempenho por origem</h2><p className="muted mt-2 text-sm">Dados com investimento, entrega ou resultado no intervalo selecionado.</p></div><Ranking rows={campaignsWithMovement} currency={f.currency} /></Card></Block>
