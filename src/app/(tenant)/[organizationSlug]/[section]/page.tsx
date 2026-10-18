@@ -68,14 +68,18 @@ export default async function Page({params: params_, searchParams: searchParams_
   const sectionGroup = platformPage?.group ?? (params.section === 'paid' ? 'paid' : null);
   const contentMode=params.section==='paid-creatives'?'paid':null;
 
-  const [config, {data: orgs}, {data: membership}, {data: activeIntegrations}, {data: latestMovement}, {data: personalLayout}] = await Promise.all([
+  const [config, {data: orgs}, {data: membership}, {data: activeIntegrations}, {data: latestMovement}, {data: personalLayout}, {data: branding}] = await Promise.all([
     dashboardConfig(params.organizationSlug),
     superAdmin?db.from('organizations').select('name,slug').eq('status', 'active').order('name'):Promise.resolve({data:[{name:org.name,slug:org.slug}]}),
     superAdmin?Promise.resolve({data:null}):db.from('organization_members').select('role').eq('organization_id', org.id).eq('user_id', user.id).maybeSingle(),
     db.from('integrations').select('id,provider,last_synced_at,status,last_error').eq('organization_id', org.id).eq('is_enabled', true).in('provider', ['meta_ads', 'windsor', 'stract']),
     params.section==='overview'?db.from('metrics_ads').select('metric_date').eq('organization_id', org.id).gt('spend', 0).order('metric_date', {ascending: false}).limit(1).maybeSingle():Promise.resolve({data:null}),
     db.from('user_dashboard_layouts').select('layout').eq('user_id', user.id).eq('organization_id', org.id).eq('scope', params.section).maybeSingle(),
+    db.from('branding').select('logo_path').eq('organization_id', org.id).maybeSingle(),
   ]);
+  const clientLogoUrl = branding?.logo_path
+    ? (await db.storage.from('branding').createSignedUrl(branding.logo_path, 3600)).data?.signedUrl ?? null
+    : null;
   const requiredPage = params.section==='paid-creatives'?'creatives':platformPage?.group ?? params.section;
   if (!config.enabled_pages.includes(requiredPage)) return <Card>Esta página foi desativada nas configurações do dashboard.</Card>;
 
@@ -126,7 +130,7 @@ export default async function Page({params: params_, searchParams: searchParams_
   return <DashboardLayoutProvider slug={org.slug} scope={params.section} initialLayout={initialLayout} initialPersonalized={personalized} canPromote={canCustomizeClient} blocks={blockCatalog} defaultBlockOrder={config.widget_order}>
   <div className="dashboard-content mx-auto max-w-[1780px] space-y-6 lg:space-y-8">
     <Suspense fallback={null}><DisplayModeController /></Suspense>
-    <header className="dashboard-hero flex flex-wrap items-end justify-between gap-6"><div className="relative z-10 max-w-4xl"><p className="eyebrow mb-4">{org.name} · INTELIGÊNCIA DE MARKETING</p><h1 className="display-title">{title}</h1><p className="muted mt-4 max-w-2xl text-sm leading-6">Performance consolidada, leitura executiva e origem identificada. Sem maquiagem estatística: dados indisponíveis aparecem como —.</p></div><div className="relative z-10 rounded-full border border-white/10 bg-black/20 px-4 py-2 text-xs font-medium text-zinc-300 shadow-inner">{f.from.split('-').reverse().join('/')} <span className="mx-2 text-primary">→</span> {f.to.split('-').reverse().join('/')}</div></header>
+    <header className="dashboard-hero flex flex-wrap items-end justify-between gap-6"><div className="relative z-10 flex min-w-0 items-center gap-5">{clientLogoUrl?<span className="client-logo"><img src={clientLogoUrl} alt={`Logo ${org.name}`} /></span>:<span className="client-logo client-logo-fallback" aria-hidden="true">{org.name.slice(0,2).toUpperCase()}</span>}<div className="min-w-0"><p className="eyebrow mb-4">{org.name} · INTELIGÊNCIA DE MARKETING</p><h1 className="display-title">{title}</h1><p className="muted mt-4 max-w-2xl text-sm leading-6">Desempenho, eficiência e oportunidades do período. Dados indisponíveis aparecem como —.</p></div></div><div className="relative z-10 rounded-full border border-white/10 bg-black/20 px-4 py-2 text-xs font-medium text-zinc-300 shadow-inner">{f.from.split('-').reverse().join('/')} <span className="mx-2 text-primary">→</span> {f.to.split('-').reverse().join('/')}</div></header>
     <div className="tv-freshness"><DataFreshness organizationId={org.id} integrations={refreshIntegrations.map((item) => ({id: item.id, provider: item.provider, lastSyncedAt: item.last_synced_at, status: item.status}))} canSync={superAdmin || ['client_admin', 'editor'].includes(membership?.role ?? '')} renderedAt={Date.now()} timezone={org.timezone} needsReachSync={(sectionGroup==='paid'||contentMode==='paid')&&needsReachSync} /></div>
     <div className="tv-hide"><Filters value={f} organizations={orgs ?? []} slug={org.slug} /></div>
     {customizable ? <div className="tv-hide"><PersonalizeBar /></div> : null}
