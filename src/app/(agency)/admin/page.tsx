@@ -61,7 +61,7 @@ export default async function Admin(){
   const maximumSpend=Math.max(1,...clientRows.map((item)=>item.summary.spend));
 
   return <div className="mx-auto max-w-[1900px] space-y-7">
-    <header className="dashboard-hero flex flex-wrap items-end justify-between gap-6"><div className="relative z-10"><p className="eyebrow mb-3">CENTRAL DE PERFORMANCE</p><h1 className="display-title !text-[clamp(2rem,3.5vw,4rem)]">Visão da agência</h1><p className="muted mt-3 max-w-2xl text-sm">Dados reais dos últimos 30 dias, consolidados por cliente.</p></div><Button className="relative z-10" asChild><Link href="/admin/organizations">+ Novo cliente</Link></Button></header>
+    <header className="dashboard-hero flex flex-wrap items-end justify-between gap-6"><div className="relative z-10"><p className="eyebrow mb-3">CENTRAL DE PERFORMANCE</p><h1 className="display-title !text-[clamp(2rem,3.5vw,4rem)]">Visão da agência</h1><p className="muted mt-3 max-w-2xl text-sm">Dados reais dos últimos 30 dias, consolidados por cliente.</p></div></header>
 
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <Card className="!p-5"><Building2 className="text-primary" size={19}/><p className="muted mt-5 text-xs">Clientes ativos</p><strong className="data-value mt-1 block text-3xl">{active.length}</strong></Card>

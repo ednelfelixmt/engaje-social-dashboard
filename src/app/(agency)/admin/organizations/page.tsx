@@ -3,9 +3,9 @@ import {ArrowUpRight, Plug} from 'lucide-react';
 import {requireAdmin} from '@/lib/auth/session';
 import {Card} from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
-import {ActionForm} from '@/components/action-form';
 import {ClientLifecycleControls} from '@/components/client-lifecycle-controls';
-import {createOrganization, updateOrganization} from '../actions';
+import {ActionForm} from '@/components/action-form';
+import {updateOrganization} from '../actions';
 import {businessNiches, salesModels, suggestFunnelModel, funnelPresetFor, type BusinessNiche, type SalesModel} from '@/lib/metrics/funnel-config';
 import {currencyOptions, timezoneOptions} from '@/lib/organization-options';
 
@@ -24,21 +24,8 @@ export default async function Page() {
       <div>
         <p className="eyebrow mb-2">Gestão de workspaces</p>
         <h1 className="text-3xl font-semibold">Clientes</h1>
-        <p className="muted mt-2">Crie o cliente e acesse o workspace para configurar suas contas e fontes de dados.</p>
+        <p className="muted mt-2">Administre os clientes existentes. Novos clientes são cadastrados no início do fluxo de Integrações.</p>
       </div>
-
-      <Card>
-        <h2 className="text-lg mb-5">Criar workspace</h2>
-        <ActionForm action={createOrganization} label="Criar cliente">
-          <div className="field-grid">
-            <label>Nome do cliente<input name="name" required /></label>
-            <label>Endereço do dashboard<input name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="nome-do-cliente" /></label>
-            <label>Nicho do cliente<select name="niche" required defaultValue=""><option value="" disabled>Selecione o nicho</option>{businessNiches.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
-            <label>Modelo de vendas<select name="sales_model" required defaultValue=""><option value="" disabled>Selecione como o cliente vende</option>{salesModels.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
-          </div>
-          <p className="muted mt-3 text-xs">O nicho e o modelo de vendas definem o funil inicial do dashboard (por exemplo, imobiliária, clínica ou loja virtual). Depois de criado, ele pode ser ajustado em Configurar dashboard.</p>
-        </ActionForm>
-      </Card>
 
       {data?.map((organization) => (
         <Card key={organization.id}>
