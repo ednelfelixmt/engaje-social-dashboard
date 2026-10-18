@@ -65,7 +65,7 @@ export async function saveDashboard(_:ActionState,f:FormData):Promise<ActionStat
   const widgetOrder=[...new Set(f.getAll('widget_order').map(String))];
   if(!widgetOrder.length||widgetOrder.some((widget)=>!allowedWidgets.has(widget)))return {ok:false,message:'A ordem dos blocos é inválida.'};
   const targets:Record<string,number|null>={};
-  for(const key of ['target_roas','target_roi','target_cpa','target_revenue','target_purchases']){const value=String(f.get(key)||'');targets[key]=value===''?null:Number(value);if(targets[key]!=null&&(!Number.isFinite(targets[key])||(key!=='target_roi'&&targets[key]!<0)))return {ok:false,message:'Metas inválidas.'};}
+  for(const key of ['target_spend','target_leads','target_cpl','target_ctr','target_frequency','target_roas','target_roi','target_cpa','target_revenue','target_purchases']){const value=String(f.get(key)||'');targets[key]=value===''?null:Number(value);if(targets[key]!=null&&(!Number.isFinite(targets[key])||(key!=='target_roi'&&targets[key]!<0)))return {ok:false,message:'Metas inválidas.'};}
   const {error}=await db.from('dashboard_configs').update({enabled_pages:enabledPages,enabled_metrics:enabledMetrics,widget_order:widgetOrder,preferred_revenue_source:f.get('preferred_revenue_source')==='spreadsheet'?'spreadsheet':'crm',funnel_model:funnelModel,funnel_steps:parsedFunnel.data,only_platforms_with_data:true,...targets}).eq('organization_id',org.id);
   revalidatePath('/'+slug,'layout');
   return {ok:!error,message:error?'Configuração inválida.':'Dashboard atualizado com as métricas selecionadas.'};

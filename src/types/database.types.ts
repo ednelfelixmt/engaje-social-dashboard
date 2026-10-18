@@ -243,6 +243,11 @@ export type Database = {
           target_cpa: number | null;
           target_revenue: number | null;
           target_purchases: number | null;
+          target_spend: number | null;
+          target_leads: number | null;
+          target_cpl: number | null;
+          target_ctr: number | null;
+          target_frequency: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -262,6 +267,11 @@ export type Database = {
           target_cpa?: number | null;
           target_revenue?: number | null;
           target_purchases?: number | null;
+          target_spend?: number | null;
+          target_leads?: number | null;
+          target_cpl?: number | null;
+          target_ctr?: number | null;
+          target_frequency?: number | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -281,6 +291,11 @@ export type Database = {
           target_cpa?: number | null;
           target_revenue?: number | null;
           target_purchases?: number | null;
+          target_spend?: number | null;
+          target_leads?: number | null;
+          target_cpl?: number | null;
+          target_ctr?: number | null;
+          target_frequency?: number | null;
           created_at?: string;
           updated_at?: string;
         };

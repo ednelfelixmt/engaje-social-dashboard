@@ -15,6 +15,11 @@ const pages = [
 ] as const;
 
 const targetFields=[
+  ['target_spend','Investimento planejado','Ex.: 10000,00'],
+  ['target_leads','Meta de leads','Ex.: 250'],
+  ['target_cpl','CPL máximo','Ex.: 40,00'],
+  ['target_ctr','CTR mínimo (%)','Ex.: 1,50'],
+  ['target_frequency','Frequência máxima','Ex.: 3,50'],
   ['target_roas','ROAS desejado','Ex.: 4,00'],
   ['target_roi','ROI desejado (%)','Ex.: 150'],
   ['target_cpa','CPA máximo','Ex.: 50,00'],

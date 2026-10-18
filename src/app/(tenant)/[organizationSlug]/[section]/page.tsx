@@ -17,6 +17,7 @@ import {DisplayModeController} from '@/components/dashboard/display-mode-control
 import {CreativeSummary} from '@/components/dashboard/creative-summary';
 import {CreativeLibrary} from '@/components/dashboard/creative-library';
 import {AudienceControl} from '@/components/dashboard/performance-rankings';
+import {ExecutiveIntelligence} from '@/components/dashboard/executive-intelligence';
 import {Card} from '@/components/ui/card';
 import {UploadForm} from '@/components/upload-form';
 import {DashboardLayoutProvider} from '@/components/layout/dashboard-layout';
@@ -85,7 +86,7 @@ export default async function Page({params: params_, searchParams: searchParams_
   if (!config.enabled_pages.includes(requiredPage)) return <Card>Esta página foi desativada nas configurações do dashboard.</Card>;
 
   const blockCatalog = params.section === 'overview'
-    ? [{id: 'campaigns', label: 'Indicadores de campanhas'}, {id: 'analytics', label: 'Funil e dados demográficos'}, {id: 'campaign-list', label: 'Lista de campanhas'}]
+    ? [{id: 'executive', label: 'Controle executivo'}, {id: 'campaigns', label: 'Indicadores de mídia'}, {id: 'analytics', label: 'Funil e dados demográficos'}, {id: 'campaign-list', label: 'Análise detalhada'}]
     : sectionGroup === 'paid'
       ? [{id: 'kpis', label: 'Indicadores'}, ...(!platformPage ? [{id: 'platforms', label: 'Plataformas'}] : []), {id: 'funnel', label: 'Funil de campanhas'}, {id: 'timeline', label: 'Evolução temporal'}, {id: 'campaigns', label: 'Ranking de campanhas'}, {id: 'creatives', label: 'Rankings de desempenho'}]
       : [];
@@ -140,6 +141,7 @@ export default async function Page({params: params_, searchParams: searchParams_
     {sectionGroup && !platformPage ? <div className="tv-hide flex flex-wrap gap-3"><Link prefetch className={`rounded-lg px-4 py-2 text-sm ${chosen ? 'bg-white/5' : 'bg-primary text-black'}`} href={`?${new URLSearchParams(queryWithoutPlatform).toString()}`}>Todas</Link>{visible.map((platform) => {const definition = platformDashboards.find((item) => item.platform === platform); return <Link prefetch key={platform} className={`rounded-lg px-4 py-2 text-sm ${chosen === platform ? 'bg-primary text-black' : 'bg-white/5'}`} href={`?${new URLSearchParams({...queryWithoutPlatform, platform}).toString()}`}>{definition?.label ?? platform}</Link>;})}</div> : null}
     {params.section === 'overview' ? <div className="flex flex-col gap-5">
       {!campaignsWithMovement.length && latestMovement?.metric_date ? <Card style={{order: -1}} className="border-amber-400/20 bg-amber-400/[0.05] !py-4"><p className="text-sm text-amber-100">Não houve veiculação no intervalo selecionado. O último investimento registrado foi em <strong>{latestMovement.metric_date.split('-').reverse().join('/')}</strong>.</p></Card> : null}
+      <Block id="executive"><ExecutiveIntelligence rows={campaignsWithMovement} previousRows={f.compare==='none'?[]:previousCampaignsWithMovement} currency={f.currency} from={f.from} to={f.to} slug={org.slug} targets={{spend:config.target_spend,leads:config.target_leads,cpl:config.target_cpl,ctr:config.target_ctr,frequency:config.target_frequency}} integrations={paidIntegrations.map((item)=>({status:item.status,lastSyncedAt:item.last_synced_at,hasError:Boolean(item.last_error)}))}/></Block>
       <Block id="campaigns"><CampaignOverview rows={campaignsWithMovement} currency={f.currency} enabledMetrics={config.enabled_metrics} previousRows={f.compare==='none'?[]:previousCampaignsWithMovement} comparing={f.compare!=='none'} previousRange={f.compare==='none'?null:(()=>{const range=previousRange(f);return {from:range.from,to:range.to};})()} /></Block>
       <Block id="analytics"><section className="grid gap-5 2xl:grid-cols-[minmax(460px,.9fr)_minmax(620px,1.35fr)]"><Card className="h-full"><div className="mb-4 flex items-start justify-between gap-4"><div><p className="eyebrow">Jornada de conversão</p><h2 className="mt-2 text-xl font-semibold">Funil de campanhas</h2><p className="muted mt-2 text-xs">Conversão entre etapas e custo real por resultado.</p></div><span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-primary">Visão BI</span></div><Funnel currency={f.currency} steps={funnelSteps} comparing={f.compare!=='none'} /></Card><AudienceControl rankings={performanceRankings} currency={f.currency}/></section></Block>
       <Block id="campaign-list"><Card><div className="mb-5"><p className="eyebrow">Análise detalhada</p><h2 className="mt-2 text-lg font-semibold">Desempenho por origem</h2><p className="muted mt-2 text-sm">Dados com investimento, entrega ou resultado no intervalo selecionado.</p></div><Ranking rows={campaignsWithMovement} currency={f.currency} /></Card></Block>
