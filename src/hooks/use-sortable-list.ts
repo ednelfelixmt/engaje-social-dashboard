@@ -3,7 +3,8 @@
 import {useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent} from 'react';
 
 const interactiveSelector='button,input,select,textarea,a,[contenteditable="true"]';
-const dragThreshold=6;
+const mouseDragThreshold=6;
+const touchDragThreshold=12;
 const edgeSize=72;
 
 export function useSortableList<T extends string>({selector,attribute,onMove}:{
@@ -16,6 +17,7 @@ export function useSortableList<T extends string>({selector,attribute,onMove}:{
   const [selected,setSelected]=useState<T|null>(null);
   const active=useRef<T|null>(null);
   const pointerId=useRef<number|null>(null);
+  const pointerType=useRef('mouse');
   const origin=useRef({x:0,y:0});
   const moved=useRef(false);
   const lastTarget=useRef<T|null>(null);
@@ -34,6 +36,7 @@ export function useSortableList<T extends string>({selector,attribute,onMove}:{
     captureTarget.current=null;
     lastTarget.current=null;
     moved.current=false;
+    document.documentElement.classList.remove('is-touch-dragging');
     setDragging(null);
     setOver(null);
   },[]);
@@ -43,12 +46,15 @@ export function useSortableList<T extends string>({selector,attribute,onMove}:{
       const item=active.current;
       if(!item||pointerId.current!==event.pointerId)return;
       const distance=Math.hypot(event.clientX-origin.current.x,event.clientY-origin.current.y);
-      if(!moved.current&&distance<dragThreshold)return;
+      const threshold=pointerType.current==='touch'?touchDragThreshold:mouseDragThreshold;
+      if(!moved.current&&distance<threshold)return;
       if(!moved.current){
         moved.current=true;
         suppressClick.current=true;
         setSelected(null);
         setDragging(item);
+        document.documentElement.classList.add('is-touch-dragging');
+        if(pointerType.current==='touch'&&'vibrate' in navigator)navigator.vibrate(8);
       }
       event.preventDefault();
       if(event.clientY<edgeSize)window.scrollBy({top:-18,behavior:'auto'});
@@ -81,6 +87,7 @@ export function useSortableList<T extends string>({selector,attribute,onMove}:{
     if(event.button!==0||(!force&&(event.target as HTMLElement).closest(interactiveSelector)))return;
     active.current=item;
     pointerId.current=event.pointerId;
+    pointerType.current=event.pointerType;
     origin.current={x:event.clientX,y:event.clientY};
     lastTarget.current=null;
     moved.current=false;

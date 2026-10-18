@@ -71,6 +71,7 @@ input:disabled, select:disabled, textarea:disabled { cursor: not-allowed; color:
 label { display: flex; flex-direction: column; gap: 8px; color: #99a4b5; font-size: 12px; font-weight: 600; }
 button, a, input, select { touch-action: manipulation; }
 button, a { -webkit-tap-highlight-color: transparent; }
+button { user-select: none; }
 a { text-decoration: none; }
 ::selection { background: var(--primary); color: #0a0c10; }
 
@@ -177,6 +178,22 @@ html.tv-mode { scroll-snap-type: y mandatory; }
   .tv-mode-entry { position: static; width: 100%; justify-content: center; border-radius: 14px; }
   .tv-controls span { display: none; }
 }
+
+/* Touchscreen: alvos confortáveis, feedback sem hover e rolagem previsível. */
+@media (hover: none), (pointer: coarse) {
+  button, select, input:not([type="checkbox"]):not([type="radio"]):not([type="color"]), textarea { min-height: 44px; }
+  input[type="checkbox"], input[type="radio"] { width: 22px; height: 22px; min-width: 22px; }
+  nav a, .status-pill { min-height: 44px; }
+  button:active, a:active { filter: brightness(1.16); transform: scale(.98); }
+  .group:hover, [class*="hover:-translate"]:hover { transform: none !important; }
+  .overflow-x-auto, .overflow-y-auto { -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+  table { min-width: 720px; }
+  th, td { padding-block: 16px; }
+  .glass-panel { backdrop-filter: none; }
+}
+
+html.is-touch-dragging, html.is-touch-dragging body { overscroll-behavior: none; user-select: none; }
+html.is-touch-dragging * { cursor: grabbing !important; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
