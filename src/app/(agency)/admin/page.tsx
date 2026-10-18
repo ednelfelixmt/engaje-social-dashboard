@@ -55,10 +55,13 @@ export default async function Admin(){
     return {org,summary:summarize(rows),connections,lastSync:latestSync(connections),logo:logos.get(org.id)??null};
   });
   const active=clientRows.filter((item)=>item.org.status==='active');
+  const clientsWithData=active.filter((item)=>(rowsByOrg.get(item.org.id)?.length??0)>0);
   const currencies=[...new Set(active.filter((item)=>item.summary.spend>0).map((item)=>item.org.currency))];
   const agencySummary=summarize(metrics.filter((row)=>active.some((item)=>item.org.id===row.organization_id)));
   const commonCurrency=currencies.length===1?currencies[0]:null;
-  const maximumSpend=Math.max(1,...clientRows.map((item)=>item.summary.spend));
+  const maximumSpend=Math.max(1,...clientsWithData.map((item)=>item.summary.spend));
+  const activeIds=new Set(active.map((item)=>item.org.id));
+  const activeConnections=(integrations??[]).filter((item)=>activeIds.has(item.organization_id));
 
   return <div className="mx-auto max-w-[1900px] space-y-7">
     <header className="dashboard-hero flex flex-wrap items-end justify-between gap-6"><div className="relative z-10"><p className="eyebrow mb-3">CENTRAL DE PERFORMANCE</p><h1 className="display-title !text-[clamp(2rem,3.5vw,4rem)]">Visão da agência</h1><p className="muted mt-3 max-w-2xl text-sm">Dados reais dos últimos 30 dias, consolidados por cliente.</p></div></header>
@@ -71,7 +74,7 @@ export default async function Admin(){
     </section>
 
     <section><div className="mb-5 flex flex-wrap items-end justify-between gap-4"><div><p className="eyebrow">CARTEIRA DE CLIENTES</p><h2 className="mt-2 text-2xl font-semibold">Desempenho por cliente</h2></div><p className="muted text-xs">Ordenação alfabética · período móvel de 30 dias</p></div>
-      {clientRows.length?<div className="grid gap-5 lg:grid-cols-2 2xl:grid-cols-3">{clientRows.map(({org,summary,connections,lastSync,logo})=>{
+      {clientsWithData.length?<div className="grid gap-5 lg:grid-cols-2 2xl:grid-cols-3">{clientsWithData.map(({org,summary,connections,lastSync,logo})=>{
         const connected=connections.some((item)=>item.status==='connected');
         return <Card className="group relative overflow-hidden !p-0 transition hover:-translate-y-1 hover:border-primary/30" key={org.id}>
           <div className="h-1 bg-white/[.05]"><div className="h-full bg-gradient-to-r from-primary to-cyan-300" style={{width:`${summary.spend/maximumSpend*100}%`}}/></div>
@@ -80,9 +83,9 @@ export default async function Admin(){
             <div className="mt-5 flex items-center justify-between border-t border-white/[.07] pt-4"><span className={`status-pill ${org.status==='active'?'status-active':'status-inactive'}`}>{org.status==='active'?'Ativo':'Pausado'}</span><Link href={`/${org.slug}/paid`} className="text-xs font-semibold text-primary hover:underline">Analisar desempenho</Link></div>
           </div>
         </Card>;
-      })}</div>:<Card className="py-16 text-center"><Activity className="mx-auto text-zinc-600" size={32}/><h3 className="mt-4">Nenhum cliente cadastrado</h3></Card>}
+      })}</div>:<Card className="py-16 text-center"><Activity className="mx-auto text-zinc-600" size={32}/><h3 className="mt-4">Nenhum cliente ativo possui dados no período</h3><p className="muted mt-2 text-sm">Clientes integrados sem métricas sincronizadas permanecem ocultos desta visão.</p></Card>}
     </section>
 
-    <Card className="flex flex-wrap items-center justify-between gap-4 !p-5"><div className="flex items-center gap-3"><Plug className="text-primary"/><div><strong>Integrações operacionais</strong><p className="muted mt-1 text-xs">{(integrations??[]).filter((item)=>item.status==='connected').length} conexões ativas na carteira</p></div></div><Button variant="outline" asChild><Link href="/admin/integrations">Gerenciar integrações</Link></Button></Card>
+    <Card className="flex flex-wrap items-center justify-between gap-4 !p-5"><div className="flex items-center gap-3"><Plug className="text-primary"/><div><strong>Integrações operacionais</strong><p className="muted mt-1 text-xs">{activeConnections.filter((item)=>item.status==='connected').length} conexões de clientes ativos</p></div></div><Button variant="outline" asChild><Link href="/admin/integrations">Gerenciar integrações</Link></Button></Card>
   </div>;
 }
