@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {useEffect, useState} from 'react';
-import {Building2, ChartNoAxesCombined, ChevronDown, Crown, Database, Facebook, Filter, Images, Instagram, LayoutDashboard, Leaf, LogOut, Megaphone, Palette, Plug, Settings, Users, type LucideIcon} from 'lucide-react';
+import {Building2, ChartNoAxesCombined, ChevronDown, Crown, Database, Filter, Images, LayoutDashboard, LogOut, Megaphone, Palette, Plug, Settings, Users, type LucideIcon} from 'lucide-react';
 
 type NavItem={key:string;label:string;icon:LucideIcon;requires?:string};
 type NavGroup={id:string;label:string;icon:LucideIcon;items:NavItem[];/** Grupos recolhíveis começam abertos só se contiverem a página atual (ou se defaultOpen). */collapsible?:boolean;defaultOpen?:boolean};
@@ -14,12 +14,6 @@ const workspaceGroups:NavGroup[]=[
     {key:'paid',label:'Campanhas e métricas',icon:ChartNoAxesCombined,requires:'paid'},
     {key:'funnel',label:'Funil de conversão',icon:Filter,requires:'funnel'},
     {key:'paid-creatives',label:'Criativos dos anúncios',icon:Images,requires:'creatives'},
-  ]},
-  {id:'organic',label:'Orgânico',icon:Leaf,collapsible:true,defaultOpen:true,items:[
-    {key:'organic',label:'Visão orgânica',icon:Leaf,requires:'organic'},
-    {key:'facebook_organic',label:'Facebook',icon:Facebook,requires:'organic'},
-    {key:'instagram_organic',label:'Instagram',icon:Instagram,requires:'organic'},
-    {key:'organic-posts',label:'Posts publicados',icon:Images,requires:'organic'},
   ]},
   {id:'data',label:'Receita e dados externos',icon:Database,items:[{key:'external',label:'Receita e dados externos',icon:Database,requires:'external'}]},
   {id:'settings',label:'Configurações',icon:Settings,collapsible:true,items:[

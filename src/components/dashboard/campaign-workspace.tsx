@@ -211,7 +211,7 @@ export function CampaignWorkspace({
   const showLeadBreakdown=['leads','registration_leads','message_leads','cpl','cost_per_registration','cost_per_message'].some((key)=>enabledMetrics.includes(key));
 
   return <div className="flex flex-col gap-5">
-    <Block id="kpis"><SortableCardGrid gridId="kpis" storageKey={storageKey} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6" items={kpis.map(({key,...kpi})=>({id:key,content:<KpiCard {...kpi}/>}))}/></Block>
+    <Block id="kpis"><SortableCardGrid gridId="kpis" storageKey={storageKey} className="tv-kpi-grid grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6" items={kpis.map(({key,...kpi})=>({id:key,content:<KpiCard {...kpi}/>}))}/></Block>
     {showLeadBreakdown?<Block id="kpis"><LeadBreakdown totalLeads={current.leads} registrationLeads={current.registrationLeads} messageLeads={current.messageLeads} totalCost={current.cpl} registrationCost={current.costPerRegistration} messageCost={current.costPerMessage} currency={currency} /></Block>:null}
     {showPlatforms ? <Block id="platforms"><PlatformBreakdown rows={measuredRows} currency={currency} enabledMetrics={enabledMetrics} /></Block> : null}
     <Block id="funnel">

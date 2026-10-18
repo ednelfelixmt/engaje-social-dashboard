@@ -11,7 +11,7 @@ import {saveDashboard} from '../actions';
 
 const pages = [
   ['overview','Visão geral'],['paid','Tráfego pago'],['funnel','Funil de vendas'],
-  ['organic','Tráfego orgânico'],['creatives','Criativos e posts'],['external','Dados externos'],
+  ['creatives','Criativos de mídia paga'],['external','Dados externos'],
 ] as const;
 
 const targetFields=[

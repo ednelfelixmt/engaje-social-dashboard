@@ -5,22 +5,24 @@ import {CheckCheck, Search, X} from 'lucide-react';
 import {dashboardMetricGroups, dashboardMetricKeys, type DashboardMetricScope} from '@/lib/metrics/catalog';
 
 type Scope='all'|'selected'|DashboardMetricScope;
-const tabs:{id:Scope;label:string}[]=[{id:'all',label:'Todas'},{id:'selected',label:'Selecionadas'},{id:'paid',label:'Mídia paga'},{id:'organic',label:'Orgânico'},{id:'sales',label:'CRM e vendas'}];
+const tabs:{id:Scope;label:string}[]=[{id:'all',label:'Todas'},{id:'selected',label:'Selecionadas'},{id:'paid',label:'Mídia paga'},{id:'sales',label:'CRM e vendas'}];
+const selectableGroups=dashboardMetricGroups.filter((group)=>group.id!=='organic');
+const selectableMetricKeys=selectableGroups.flatMap((group)=>group.metrics.map((metric)=>metric.key));
 const presets=[
   {label:'Essenciais',description:'Visão executiva e objetiva',keys:['spend','impressions','reach','frequency','clicks','ctr','cpc','leads','cpl','purchases','revenue','roas']},
   {label:'Geração de leads',description:'Cadastros, mensagens e custos',keys:['spend','impressions','reach','frequency','clicks','ctr','cpc','page_views','leads','registration_leads','message_leads','cpl','cost_per_registration','cost_per_message']},
   {label:'E-commerce',description:'Produto, carrinho e receita',keys:['spend','impressions','reach','frequency','clicks','ctr','cpc','content_views','add_to_cart','checkouts','purchases','cpa','revenue','roas']},
-  {label:'Conteúdo orgânico',description:'Alcance e engajamento',keys:['impressions','reach','interactions','engagement_rate','likes','comments','shares','saves','video_views','followers','follower_growth','profile_views']},
+  {label:'Vídeo completo',description:'Reproduções, retenção e custo',keys:['spend','impressions','reach','video_views','video_2s_views','video_3s_views','video_6s_views','thruplays','video_25','video_50','video_75','video_95','video_100','cost_per_thruplay']},
 ] as const;
 
 function normalize(value:string){return value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
 
 export function MetricSelector({initial}:{initial:string[]}){
-  const [selected,setSelected]=useState(()=>new Set(initial));
+  const [selected,setSelected]=useState(()=>new Set(initial.filter((key)=>(selectableMetricKeys as readonly string[]).includes(key))));
   const [scope,setScope]=useState<Scope>('all');
   const [query,setQuery]=useState('');
   const normalizedQuery=normalize(query.trim());
-  const visibleGroups=useMemo(()=>dashboardMetricGroups.map((group)=>({...group,metrics:group.metrics.filter((metric)=>{
+  const visibleGroups=useMemo(()=>selectableGroups.map((group)=>({...group,metrics:group.metrics.filter((metric)=>{
     const matchesScope=scope==='all'||(scope==='selected'?selected.has(metric.key):(metric.scopes as readonly DashboardMetricScope[]).includes(scope));
     const haystack=normalize([metric.label,metric.description,...metric.platforms,group.title].join(' '));
     return matchesScope&&(!normalizedQuery||haystack.includes(normalizedQuery));
@@ -30,7 +32,7 @@ export function MetricSelector({initial}:{initial:string[]}){
   const selectVisible=()=>setSelected((current)=>new Set([...current,...visibleKeys]));
   const clearVisible=()=>setSelected((current)=>{const next=new Set(current);visibleKeys.forEach((key)=>next.delete(key));return next;});
   const applyPreset=(keys:readonly string[])=>setSelected(new Set(keys.filter((key)=>(dashboardMetricKeys as readonly string[]).includes(key))));
-  const metricLabels=new Map<string,string>(dashboardMetricGroups.flatMap((group)=>group.metrics.map((metric)=>[metric.key,metric.label])));
+  const metricLabels=new Map<string,string>(selectableGroups.flatMap((group)=>group.metrics.map((metric)=>[metric.key,metric.label])));
   const selectedLabels=[...selected].flatMap((key)=>{const label=metricLabels.get(key);return label?[label]:[];});
   const isPresetActive=(keys:readonly string[])=>selected.size===keys.length&&keys.every((key)=>selected.has(key));
 

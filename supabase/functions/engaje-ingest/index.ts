@@ -157,7 +157,33 @@ Deno.serve(async (request: Request) => {
         if (!adsPlatforms.has(platform)) throw new Error('Plataforma de anúncios inválida.');
         const campaignId = text(row.campaign_id, 'campaign_id');
         const campaignStatus = optionalText(row.campaign_status, 64)?.toUpperCase().replace(/[^A-Z0-9_]/g, '_') ?? null;
-        return {organization_id: integration.organization_id, integration_id: integration.id, metric_date: date(row.metric_date), platform, account_id: text(row.account_id, 'account_id'), campaign_id: campaignId, campaign_name: text(row.campaign_name ?? campaignId, 'campaign_name'), campaign_status: campaignStatus, adset_id: optionalText(row.adset_id, 240), ad_id: text(row.ad_id ?? `${campaignId}:aggregate`, 'ad_id'), currency: currency(row.currency), spend: numberValue(row.spend, 'spend', false), revenue: numberValue(row.revenue, 'revenue', true, false), impressions: integer(row.impressions, 'impressions'), clicks: integer(row.clicks, 'clicks'), page_views: integer(row.page_views, 'page_views'), leads: integer(row.leads, 'leads'), message_leads: integer(row.message_leads, 'message_leads'), checkouts: integer(row.checkouts, 'checkouts'), purchases: integer(row.purchases, 'purchases'), attribution_window: text(row.attribution_window ?? 'source_default', 'attribution_window', 80), synced_at: now};
+        return {
+          organization_id: integration.organization_id, integration_id: integration.id, metric_date: date(row.metric_date), platform,
+          account_id: text(row.account_id, 'account_id'), campaign_id: campaignId, campaign_name: text(row.campaign_name ?? campaignId, 'campaign_name'),
+          campaign_status: campaignStatus, adset_id: optionalText(row.adset_id, 240), ad_id: text(row.ad_id ?? `${campaignId}:aggregate`, 'ad_id'),
+          currency: currency(row.currency), spend: numberValue(row.spend, 'spend', false), revenue: numberValue(row.revenue, 'revenue', true, false),
+          conversion_value: numberValue(row.conversion_value, 'conversion_value', true, false), impressions: integer(row.impressions, 'impressions'),
+          reach: integer(row.reach, 'reach'), clicks: integer(row.clicks, 'clicks'), link_clicks: integer(row.link_clicks, 'link_clicks'),
+          outbound_clicks: integer(row.outbound_clicks, 'outbound_clicks'), unique_clicks: integer(row.unique_clicks, 'unique_clicks'),
+          page_views: integer(row.page_views, 'page_views'), video_views: integer(row.video_views, 'video_views'),
+          video_2s_views: integer(row.video_2s_views, 'video_2s_views'), video_3s_views: integer(row.video_3s_views, 'video_3s_views'),
+          video_6s_views: integer(row.video_6s_views, 'video_6s_views'), thruplays: integer(row.thruplays, 'thruplays'),
+          video_25: integer(row.video_25, 'video_25'), video_50: integer(row.video_50, 'video_50'), video_75: integer(row.video_75, 'video_75'),
+          video_95: integer(row.video_95, 'video_95'), video_100: integer(row.video_100, 'video_100'),
+          leads: integer(row.leads, 'leads'), registration_leads: integer(row.registration_leads, 'registration_leads'),
+          message_leads: integer(row.message_leads, 'message_leads'), phone_calls: integer(row.phone_calls, 'phone_calls'),
+          form_starts: integer(row.form_starts, 'form_starts'), form_completions: integer(row.form_completions, 'form_completions'),
+          content_views: integer(row.content_views, 'content_views'), add_to_cart: integer(row.add_to_cart, 'add_to_cart'),
+          checkouts: integer(row.checkouts, 'checkouts'), purchases: integer(row.purchases, 'purchases'),
+          catalog_sales: integer(row.catalog_sales, 'catalog_sales'), subscriptions: integer(row.subscriptions, 'subscriptions'),
+          conversions: integer(row.conversions, 'conversions'), all_conversions: integer(row.all_conversions, 'all_conversions'),
+          view_through_conversions: integer(row.view_through_conversions, 'view_through_conversions'),
+          search_impression_share: numberValue(row.search_impression_share, 'search_impression_share', true, false),
+          search_top_impression_share: numberValue(row.search_top_impression_share, 'search_top_impression_share', true, false),
+          search_absolute_top_impression_share: numberValue(row.search_absolute_top_impression_share, 'search_absolute_top_impression_share', true, false),
+          quality_score: numberValue(row.quality_score, 'quality_score', true, false),
+          attribution_window: text(row.attribution_window ?? 'source_default', 'attribution_window', 80), synced_at: now,
+        };
       });
       await upsert('metrics_ads', rows, 'organization_id,platform,account_id,campaign_id,ad_id,metric_date,currency');
       const campaigns = [...new Map(rows.map((row) => [`${row.platform}:${row.account_id}:${row.campaign_id}`, {organization_id: integration.organization_id, integration_id: integration.id, platform: row.platform, account_id: row.account_id, external_id: row.campaign_id, name: row.campaign_name, status: row.campaign_status, last_seen_at: now}])).values()];

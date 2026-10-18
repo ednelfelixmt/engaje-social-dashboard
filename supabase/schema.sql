@@ -76,8 +76,8 @@ create table public.branding (
 
 create table public.dashboard_configs (
   organization_id uuid primary key references public.organizations(id) on delete cascade,
-  enabled_pages text[] not null default array['overview','paid','funnel','organic','creatives','external'],
-  enabled_metrics text[] not null default array['spend','impressions','clicks','ctr','leads','registration_leads','message_leads','cpl','purchases','cpa','revenue','roas'],
+  enabled_pages text[] not null default array['overview','paid','funnel','creatives','external'],
+  enabled_metrics text[] not null default array['spend','impressions','reach','clicks','ctr','leads','registration_leads','message_leads','cpl','purchases','cpa','revenue','roas','video_views','video_2s_views','video_3s_views','video_6s_views','thruplays','video_25','video_50','video_75','video_95','video_100','cost_per_thruplay'],
   widget_order text[] not null default array['kpis','funnel','campaigns','timeline'],
   only_platforms_with_data boolean not null default true,
   comparison_enabled boolean not null default true,
