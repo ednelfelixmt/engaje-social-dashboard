@@ -52,7 +52,7 @@ export function CampaignOverview({rows, currency, enabledMetrics, previousRows =
 
   return <div className="campaign-report overflow-hidden rounded-2xl border border-white/10 bg-[#121218]">
     <div className="flex items-center justify-between border-b border-white/10 bg-black/30 px-6 py-4">
-      <div><p className="eyebrow">Tráfego pago</p><h2 className="mt-1 text-lg font-semibold tracking-wide">PERFORMANCE DE CAMPANHAS</h2></div>
+      <div><p className="eyebrow">Tráfego pago</p><h2 className="mt-1 text-lg font-semibold tracking-wide">DESEMPENHO DE MÍDIA</h2></div>
       <BarChart3 className="text-primary" size={20} />
     </div>
 
