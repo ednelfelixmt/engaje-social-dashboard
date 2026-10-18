@@ -7,22 +7,17 @@ import {Button} from '@/components/ui/button';
 import {useRouter} from 'next/navigation';
 
 type Extractor = 'windsor' | 'stract';
-type Source = 'google_ads' | 'google_business' | 'youtube' | 'meta_ads' | 'facebook_organic' | 'instagram_organic' | 'tiktok_ads' | 'tiktok_organic';
+type Source = 'google_ads' | 'meta_ads' | 'tiktok_ads';
 
 const sourceLabels: Record<Source, string> = {
   google_ads: 'Google Ads',
-  google_business: 'Google Business Profile',
-  youtube: 'YouTube',
   meta_ads: 'Meta Ads',
-  facebook_organic: 'Facebook orgânico',
-  instagram_organic: 'Instagram orgânico',
   tiktok_ads: 'TikTok Ads',
-  tiktok_organic: 'TikTok orgânico',
 };
 
 const sources: Record<Extractor, Source[]> = {
-  windsor: ['google_ads', 'google_business', 'youtube'],
-  stract: ['google_ads', 'google_business', 'youtube', 'meta_ads', 'facebook_organic', 'instagram_organic', 'tiktok_ads', 'tiktok_organic'],
+  windsor: ['google_ads'],
+  stract: ['google_ads', 'meta_ads', 'tiktok_ads'],
 };
 
 export function ExtractorSetup({organizationId, provider}: {organizationId: string; provider: Extractor}) {

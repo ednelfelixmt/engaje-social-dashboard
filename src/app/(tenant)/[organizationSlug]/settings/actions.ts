@@ -54,7 +54,7 @@ export async function saveDashboard(_:ActionState,f:FormData):Promise<ActionStat
   const allowed=new Set<string>(dashboardMetricKeys);
   const enabledMetrics=[...new Set(f.getAll('enabled_metrics').map(String))];
   if(!enabledMetrics.length||enabledMetrics.some((metric)=>!allowed.has(metric)))return {ok:false,message:'Selecione ao menos uma métrica válida.'};
-  const allowedPages=new Set(['overview','paid','meta_ads','google_ads','tiktok_ads','funnel','organic','facebook_organic','instagram_organic','tiktok_organic','creatives','external']);
+  const allowedPages=new Set(['overview','paid','meta_ads','google_ads','tiktok_ads','funnel','creatives','external']);
   const enabledPages=[...new Set(f.getAll('enabled_pages').map(String))];
   if(enabledPages.some((page)=>!allowedPages.has(page)))return {ok:false,message:'Uma das páginas selecionadas é inválida.'};
   const funnelModel=z.enum(funnelModelIds).catch('custom').parse(f.get('funnel_model'));

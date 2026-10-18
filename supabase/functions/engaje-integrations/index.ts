@@ -202,7 +202,8 @@ function metaPaidMetrics(d:any){
   impressions:d.impressions==null?null:numeric(d.impressions),reach:d.reach==null?null:numeric(d.reach),
   clicks:d.clicks==null?null:numeric(d.clicks),link_clicks:d.inline_link_clicks==null?optionalActionValue(d.actions,'link_click'):numeric(d.inline_link_clicks),
   outbound_clicks:metricArrayValue(d.outbound_clicks),unique_clicks:d.unique_clicks==null?null:numeric(d.unique_clicks),
-  page_views:optionalActionValue(d.actions,'landing_page_view'),video_views:videoViews,video_3s_views:videoViews,
+  page_views:optionalActionValue(d.actions,'landing_page_view'),video_views:videoViews,
+  video_2s_views:metricArrayValue(d.video_continuous_2_sec_watched_actions),video_3s_views:videoViews,
   thruplays:metricArrayValue(d.video_thruplay_watched_actions),video_25:metricArrayValue(d.video_p25_watched_actions),video_50:metricArrayValue(d.video_p50_watched_actions),
   video_75:metricArrayValue(d.video_p75_watched_actions),video_95:metricArrayValue(d.video_p95_watched_actions),video_100:metricArrayValue(d.video_p100_watched_actions),
   leads:registrationLeads+messageLeads,registration_leads:registrationLeads,message_leads:messageLeads,
@@ -289,7 +290,7 @@ async function sync(i:Integration,options:{days?:number}={}){if(i.provider==='wi
  if(i.provider==='meta_ads'){
   const normalizedAccountId=metaAccountId(i.external_account_id);
   const statuses=new Map<string,string>();try{const campaignRows=await pages(i.external_account_id+'/campaigns',token,{fields:'id,name,effective_status,status'});for(const campaign of campaignRows){const status=campaignStatus(campaign.effective_status||campaign.status);if(status)statuses.set(String(campaign.id),status);}if(campaignRows.length)await check(await service.from('ad_campaigns').upsert(campaignRows.map((campaign:any)=>({organization_id:i.organization_id,integration_id:i.id,platform:'meta_ads',account_id:normalizedAccountId,external_id:String(campaign.id),name:String(campaign.name||campaign.id),status:campaignStatus(campaign.effective_status||campaign.status),last_seen_at:new Date().toISOString()})),{onConflict:'organization_id,platform,account_id,external_id'}));}catch(error){console.warn('[meta-campaign-status]',{integration_id:i.id,message:error instanceof Error?error.message:'Falha desconhecida'});}
-  const adFields='account_id,account_currency,campaign_id,campaign_name,adset_id,ad_id,date_start,spend,impressions,reach,clicks,inline_link_clicks,outbound_clicks,unique_clicks,actions,action_values,video_play_actions,video_thruplay_watched_actions,video_p25_watched_actions,video_p50_watched_actions,video_p75_watched_actions,video_p95_watched_actions,video_p100_watched_actions';
+  const adFields='account_id,account_currency,campaign_id,campaign_name,adset_id,ad_id,date_start,spend,impressions,reach,clicks,inline_link_clicks,outbound_clicks,unique_clicks,actions,action_values,video_play_actions,video_continuous_2_sec_watched_actions,video_thruplay_watched_actions,video_p25_watched_actions,video_p50_watched_actions,video_p75_watched_actions,video_p95_watched_actions,video_p100_watched_actions';
   const historyDays=Math.max(30,Math.min(400,Math.trunc(Number(options.days))||30));
   let data:Record<string,any>[]=[];
   if(historyDays<=30)data=await pages(i.external_account_id+'/insights',token,{level:'ad',date_preset:'last_30d',time_increment:'1',action_attribution_windows:'["7d_click"]',fields:adFields});

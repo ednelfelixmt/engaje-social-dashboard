@@ -1,5 +1,5 @@
 import type {ReactNode} from 'react';
-import {Activity, Blocks, Cable, CheckCircle2, Database, Facebook, Instagram, LineChart, MessageSquareText, TriangleAlert, Webhook} from 'lucide-react';
+import {Activity, Blocks, Cable, CheckCircle2, Database, LineChart, MessageSquareText, TriangleAlert, Webhook} from 'lucide-react';
 import {tenant} from '@/lib/auth/session';
 import {connectorCatalog, connectorByProvider, type ConnectorDefinition} from '@/lib/integrations/catalog';
 import {Card} from '@/components/ui/card';
@@ -13,9 +13,8 @@ import {PlatformAssetSelector} from '@/components/platform-asset-selector';
 import {ClientPlatformAssets} from '@/components/client-platform-assets';
 
 const icons: Record<string, ReactNode> = {
-  meta_ads: <LineChart className="text-blue-400" />, facebook_organic: <Facebook className="text-blue-500" />,
-  instagram_organic: <Instagram className="text-pink-400" />, tiktok_ads: <Activity className="text-cyan-300" />,
-  tiktok_organic: <Activity className="text-cyan-300" />, windsor: <Database className="text-indigo-300" />,
+  meta_ads: <LineChart className="text-blue-400" />, tiktok_ads: <Activity className="text-cyan-300" />,
+  windsor: <Database className="text-indigo-300" />,
   stract: <Database className="text-orange-300" />, hubspot: <MessageSquareText className="text-orange-400" />,
   rd_station: <Blocks className="text-teal-300" />, generic_crm: <Webhook className="text-zinc-300" />,
 };
@@ -63,7 +62,8 @@ export default async function Page({params: params_, searchParams: searchParams_
   const assignedAssets = (assignmentRows ?? []).flatMap((assignment) => {const asset=assetById.get(assignment.asset_id);return asset?[{assignmentId:assignment.id,name:asset.name,externalId:asset.external_id,assetType:asset.asset_type,syncEnabled:assignment.sync_enabled}]:[];});
   const integrations = data ?? [];
   const configOf = (item: typeof integrations[number]) => item.config && typeof item.config === 'object' && !Array.isArray(item.config) ? item.config as Record<string, unknown> : {};
-  const candidates = integrations.filter((item) => configOf(item).selection_pending === true);
+  const organicProviders = new Set(['facebook_organic','instagram_organic','tiktok_organic','youtube','google_business']);
+  const candidates = integrations.filter((item) => !organicProviders.has(item.provider) && configOf(item).selection_pending === true);
   const legacyMetaProviders = new Set(['meta_ads','facebook_organic','instagram_organic']);
   const candidateGroups = Array.from(new Set(candidates.filter((item)=>!legacyMetaProviders.has(item.provider)).map((item) => `${item.provider}:${String(configOf(item).batch_id ?? 'unbatched')}`))).map((key) => {
     const [provider, batchValue] = key.split(':');
@@ -74,7 +74,7 @@ export default async function Page({params: params_, searchParams: searchParams_
     };
   });
   const representedIntegrationIds = new Set((assignmentRows ?? []).map((item) => item.integration_id).filter(Boolean));
-  const visibleIntegrations = integrations.filter((item) => configOf(item).selection_pending !== true && configOf(item).hidden !== true && !representedIntegrationIds.has(item.id));
+  const visibleIntegrations = integrations.filter((item) => !organicProviders.has(item.provider) && configOf(item).selection_pending !== true && configOf(item).hidden !== true && !representedIntegrationIds.has(item.id));
   const connected = visibleIntegrations.filter((item) => item.status === 'connected' && item.is_enabled).length + assignedAssets.filter((item) => item.syncEnabled).length;
   const attention = visibleIntegrations.filter((item) => ['error', 'expired'].includes(item.status)).length;
   const preparedProviders = new Set(integrations.map((item) => item.provider));
@@ -113,9 +113,9 @@ export default async function Page({params: params_, searchParams: searchParams_
       </section>
 
       <section className="space-y-4">
-        <div><h2 className="text-xl font-semibold">Extratores e serviços Google</h2><p className="muted mt-1 text-sm">Uma única fonte por plataforma evita duplicidade de investimento e conversões.</p></div>
+        <div><h2 className="text-xl font-semibold">Extratores de mídia paga</h2><p className="muted mt-1 text-sm">Uma única fonte por plataforma evita duplicidade de investimento e conversões.</p></div>
         <div className="grid gap-4 xl:grid-cols-2">
-          <Card><div className="mb-4 flex items-start justify-between gap-3"><div className="integration-brand">{icons.windsor}<div><h3>Windsor.ai</h3><p>Google Ads operacional; Google Business e YouTube com base registrada.</p></div></div><StageBadge stage="live" /></div><p className="muted mb-4 text-xs">Cadastre as contas disponíveis e confirme quais pertencem a este cliente.</p><ExtractorSetup organizationId={org.id} provider="windsor" /></Card>
+          <Card><div className="mb-4 flex items-start justify-between gap-3"><div className="integration-brand">{icons.windsor}<div><h3>Windsor.ai</h3><p>Google Ads operacional para campanhas e conversões.</p></div></div><StageBadge stage="live" /></div><p className="muted mb-4 text-xs">Cadastre as contas disponíveis e confirme quais pertencem a este cliente.</p><ExtractorSetup organizationId={org.id} provider="windsor" /></Card>
           <Card><div className="mb-4 flex items-start justify-between gap-3"><div className="integration-brand">{icons.stract}<div><h3>Stract</h3><p>Destino Supabase e contas por cliente preparados para a carga externa.</p></div></div><StageBadge stage="foundation" /></div><p className="muted mb-4 text-xs">Cadastre as contas disponíveis e confirme quais pertencem a este cliente.</p><ExtractorSetup organizationId={org.id} provider="stract" /></Card>
         </div>
       </section>

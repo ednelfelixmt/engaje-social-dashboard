@@ -15,10 +15,10 @@ type TimelineRow = {date: string; spend: number | null; revenue: number | null};
 
 export function Timeline({rows, currency = 'BRL'}: {rows: TimelineRow[]; currency?: string}) {
   if (!rows.length) {
-    return <div className="grid h-72 place-items-center text-sm text-zinc-500">Sem dados sincronizados neste período.</div>;
+    return <div className="timeline-chart grid place-items-center text-sm text-zinc-500">Sem dados sincronizados neste período.</div>;
   }
 
-  return <div className="mt-6 h-72 w-full">
+  return <div className="timeline-chart mt-6 w-full">
     <ResponsiveContainer width="100%" height="100%">
       <AreaChart data={rows} margin={{top: 8, right: 6, left: -18, bottom: 0}}>
         <defs>
