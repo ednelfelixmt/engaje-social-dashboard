@@ -54,7 +54,10 @@ export function ExecutiveIntelligence({rows,previousRows,currency,from,to,slug,t
   const broken=integrations.filter((item)=>item.hasError||item.status==='error').length;
   const health=Math.max(0,Math.round((available/required.length)*70+(integrations.length?(1-(stale+broken)/Math.max(integrations.length,1))*30:0)));
   const signals:Signal[]=[];
+  const configured=Object.values(targets).filter((value)=>value!=null).length;
   if(!rows.length)signals.push({level:'critical',title:'Sem dados no período',detail:'Nenhuma entrega, investimento ou resultado foi encontrado.',action:'Verifique o intervalo e a sincronização das integrações.'});
+  if(configured===0)signals.push({level:'info',title:'Metas ainda não configuradas',detail:'O painel pode medir os resultados, mas ainda não consegue classificar o desempenho contra objetivos do negócio.',action:'Defina investimento, leads, CPL, CTR e frequência em Configurar metas.'});
+  if(!integrations.length)signals.push({level:'warning',title:'Fonte sem monitoramento ativo',detail:'Existem dados históricos, mas nenhuma integração habilitada foi encontrada para monitorar atualizações.',action:'Revise a conexão da plataforma antes de considerar a base atualizada.'});
   if(spend>0&&leads===0)signals.push({level:'critical',title:'Investimento sem leads',detail:`Há ${money(spend,currency)} investidos sem geração de lead registrada.`,action:'Revise rastreamento, objetivo, formulário e destino antes de ampliar orçamento.'});
   if(targets.cpl!=null&&cpl!=null&&cpl>targets.cpl)signals.push({level:'warning',title:'CPL acima da meta',detail:`CPL atual ${money(cpl,currency)}, ${number((cpl/targets.cpl-1)*100,0)}% acima do limite.`,action:'Priorize campanhas e públicos com menor custo por lead.'});
   if(targets.ctr!=null&&ctr!=null&&ctr<targets.ctr)signals.push({level:'warning',title:'CTR abaixo da meta',detail:`CTR atual ${number(ctr,2)}% versus meta de ${number(targets.ctr,2)}%.`,action:'Renove criativos, proposta de valor e alinhamento entre anúncio e público.'});
@@ -64,8 +67,7 @@ export function ExecutiveIntelligence({rows,previousRows,currency,from,to,slug,t
   if(previous.cpl!=null&&cpl!=null&&cpl>previous.cpl*1.2)signals.push({level:'warning',title:'Eficiência em queda',detail:`O CPL aumentou ${number((cpl/previous.cpl-1)*100,0)}% frente ao período anterior.`,action:'Compare campanhas, públicos e criativos que perderam eficiência.'});
   const {best,worst}=bestAndWorst(rows);
   if(best&&worst&&best.campaignId!==worst.campaignId)signals.push({level:'info',title:'Oportunidade de redistribuição',detail:`${best.campaignName} tem CPL de ${money(best.unit,currency)}, contra ${money(worst.unit,currency)} em ${worst.campaignName}.`,action:'Considere transferir verba gradualmente, mantendo teste controlado e volume mínimo.'});
-  if(!signals.length&&rows.length)signals.push({level:'positive',title:'Operação dentro dos parâmetros',detail:'Nenhum desvio relevante foi detectado nas metas configuradas.',action:'Mantenha o acompanhamento e valide qualidade dos leads no CRM.'});
-  const configured=Object.values(targets).filter((value)=>value!=null).length;
+  if(!signals.length&&rows.length&&configured>0)signals.push({level:'positive',title:'Operação dentro dos parâmetros',detail:'Nenhum desvio relevante foi detectado nas metas configuradas.',action:'Mantenha o acompanhamento e valide qualidade dos leads no CRM.'});
 
   return <section data-tv-panel className="space-y-5">
     <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="eyebrow">Centro de decisão</p><h2 className="mt-2 text-xl font-semibold">Controle executivo</h2><p className="muted mt-2 max-w-3xl text-sm">Metas, projeção, alertas e prioridades calculados com os dados disponíveis.</p></div><Link className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[.04] px-4 text-sm font-semibold text-zinc-200 hover:border-primary/30 hover:text-primary" href={`/${slug}/settings/dashboard`}><Settings2 size={16}/>Configurar metas</Link></div>

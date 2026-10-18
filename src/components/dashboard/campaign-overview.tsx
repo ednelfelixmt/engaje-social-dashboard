@@ -45,7 +45,11 @@ export function CampaignOverview({rows, currency, enabledMetrics, previousRows =
   const hasPrevious = comparing && previousRows.length > 0;
   const groups = platforms.map((platform) => ({platform, rows: rows.filter((row) => row.platform === platform)}));
   const showLeadBreakdown=['leads','registration_leads','message_leads','cpl','cost_per_registration','cost_per_message'].some((key)=>enabledMetrics.includes(key));
-  const quickMetrics=metricOptions.slice(0,3);
+  const quickPriority=['spend','reach','leads','cpl'];
+  const quickMetrics=[...metricOptions].sort((a,b)=>{
+    const ai=quickPriority.indexOf(a.key),bi=quickPriority.indexOf(b.key);
+    return (ai<0?99:ai)-(bi<0?99:bi);
+  }).slice(0,4);
   const activeMetric=metricOptions.some((option)=>option.key===metric)?metric:metricOptions[0]?.key;
 
   if(!metricOptions.length)return <Card><p className="muted text-sm">Nenhuma métrica de mídia paga foi selecionada. Escolha os indicadores em Configurar dashboard.</p></Card>;
@@ -78,13 +82,13 @@ export function CampaignOverview({rows, currency, enabledMetrics, previousRows =
           return <Card className="min-h-52 !rounded-xl !p-5" key={platform}>
             <div className="flex items-start justify-between"><div><p className="text-xs font-bold text-primary">{platformNames[platform] ?? platform}</p><strong className="mt-3 block text-2xl">{formatMetric(activeMetric!, value, currency)}</strong><span className="text-xs text-zinc-500">{metricOptions.find((item) => item.key === activeMetric)?.label}</span><br /><DeltaChip current={value} previous={previousPlatform[activeMetric!]} metric={activeMetric!} comparing={hasPrevious} /></div><CircleDollarSign className="text-zinc-600" size={22} /></div>
             <div className="mt-8 h-3 overflow-hidden rounded-full bg-white/5"><div className="h-full rounded-full bg-primary" style={{width: `${value == null ? 0 : Math.max(4, Number(value) / max * 100)}%`}} /></div>
-            <div className="mt-6 grid grid-cols-3 gap-3 border-t border-white/10 pt-4 text-xs">{quickMetrics.map((option)=><div key={option.key}><span className="text-zinc-600">{option.label}</span><strong className="mt-1 block">{formatMetric(option.key,current[option.key as keyof typeof current] as number|null,currency)}</strong></div>)}</div>
+            <div className="mt-6 grid grid-cols-2 gap-3 border-t border-white/10 pt-4 text-xs xl:grid-cols-4">{quickMetrics.map((option)=><div key={option.key}><span className="text-zinc-600">{option.label}</span><strong className="mt-1 block">{formatMetric(option.key,current[option.key as keyof typeof current] as number|null,currency)}</strong></div>)}</div>
           </Card>;
         })}
       </section>
 
       <Card className="!rounded-xl !p-5">
-        <div className="mb-5 flex items-center justify-between"><div><p className="eyebrow">Consolidado por fonte</p><h3 className="mt-2 font-semibold">Investimento e geração de demanda</h3></div><MousePointerClick className="text-primary" size={19} /></div>
+        <div className="mb-5 flex items-center justify-between"><div><p className="eyebrow">Leitura por fonte</p><h3 className="mt-2 font-semibold">Investimento e geração de demanda</h3></div><MousePointerClick className="text-primary" size={19} /></div>
         <div className="overflow-x-auto"><table><thead><tr><th>Fonte</th>{metricOptions.map((option)=><th key={option.key}>{option.label}</th>)}</tr></thead><tbody>{groups.map(({platform, rows: platformRows}) => {const item = summary(platformRows); return <tr key={platform}><td><strong>{platformNames[platform] ?? platform}</strong></td>{metricOptions.map((option)=><td key={option.key}>{formatMetric(option.key,item[option.key as keyof typeof item] as number|null,currency)}</td>)}</tr>;})}</tbody></table></div>
         {!rows.length ? <div className="grid min-h-48 place-items-center text-center"><div><Users className="mx-auto text-zinc-700" /><p className="mt-3 text-sm text-zinc-400">Nenhuma campanha com movimento no período selecionado.</p><p className="mt-1 text-xs text-zinc-600">Atualize os integradores ou selecione um intervalo com veiculação.</p></div></div> : null}
       </Card>
