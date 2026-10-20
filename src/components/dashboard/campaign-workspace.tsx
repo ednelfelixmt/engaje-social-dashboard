@@ -121,7 +121,7 @@ function PlatformBreakdown({rows, currency, enabledMetrics}: {rows: CampaignPerf
 }
 
 function ComparisonPanel({currentRows, previousRows, currency}: {currentRows: CampaignPerformance[]; previousRows: CampaignPerformance[]; currency: string}) {
-  if (!previousRows.length) return null;
+  if (!previousRows.length) return <Card><p className="eyebrow">Comparativo</p><h2 className="mt-2 text-lg font-semibold">Período atual versus período comparado</h2><p className="mt-3 text-sm leading-6 text-amber-200">Sem histórico no período de comparação escolhido. Selecione outra faixa de datas para comparar dados existentes. Nenhuma variação foi estimada.</p></Card>;
   const current = metrics(currentRows);
   const previous = metrics(previousRows);
   const comparisonRows = [
