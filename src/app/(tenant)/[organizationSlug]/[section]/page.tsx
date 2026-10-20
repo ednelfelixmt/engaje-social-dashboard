@@ -17,6 +17,7 @@ import {CreativeSummary} from '@/components/dashboard/creative-summary';
 import {CreativeLibrary} from '@/components/dashboard/creative-library';
 import {AudienceControl} from '@/components/dashboard/performance-rankings';
 import {ExecutiveIntelligence} from '@/components/dashboard/executive-intelligence';
+import {DataFreshnessPanel} from '@/components/dashboard/data-freshness-panel';
 import {StrategicDecisionBrief} from '@/components/dashboard/strategic-decision-brief';
 import {DecisionAnalysis, type DecisionTimelinePoint} from '@/components/dashboard/decision-analysis';
 import {Card} from '@/components/ui/card';
@@ -116,6 +117,15 @@ export default async function Page({params: params_, searchParams: searchParams_
     creativePeriod:false,
     adCampaigns:needsCampaignData,
   });
+  const showHealth=params.section==='overview'||params.section==='paid'||params.section==='funnel'||Boolean(platformPage);
+  const health=showHealth?await Promise.all([
+    db.from('integrations').select('provider,status,is_enabled,last_synced_at,last_error').eq('organization_id',org.id),
+    ...(['meta_ads','google_ads','tiktok_ads'] as const).map(platform=>db.from('metrics_ads').select('platform,metric_date,synced_at').eq('organization_id',org.id).eq('platform',platform).order('metric_date',{ascending:false}).limit(1))
+  ]):null;
+  if(health&&health.some(item=>item.error))throw new Error('Não foi possível verificar a atualização das integrações.');
+  const healthSources=(health?.[0].data??[]) as {provider:string;status:string;is_enabled:boolean;last_synced_at:string|null;last_error:string|null}[];
+  const healthDates=(health?.slice(1).flatMap(item=>item.data??[])??[]) as {platform:string;metric_date:string;synced_at:string|null}[];
+  const healthToday=new Intl.DateTimeFormat('en-CA',{timeZone:org.timezone}).format(new Date());
   const platformHasData=!platformPage||data.ads.length>0;
   const ads = data.ads;
   const breakdowns = data.breakdowns;
@@ -136,6 +146,7 @@ export default async function Page({params: params_, searchParams: searchParams_
     <Suspense fallback={null}><DisplayModeController /></Suspense>
     <header className="dashboard-hero flex flex-wrap items-end justify-between gap-6"><div className="relative z-10 flex min-w-0 items-center gap-5">{clientLogoUrl?<span className="client-logo"><img src={clientLogoUrl} alt={`Logo ${org.name}`} /></span>:<span className="client-logo client-logo-fallback" aria-hidden="true">{org.name.slice(0,2).toUpperCase()}</span>}<div className="min-w-0"><p className="eyebrow mb-4">{params.section==='overview'?'INTELIGÊNCIA DE MARKETING':org.name}</p><h1 className="display-title">{params.section==='overview'?org.name:title}</h1><p className="muted mt-4 max-w-2xl text-sm leading-6">{params.section==='overview'?'Desempenho, eficiência e oportunidades para tomada de decisão.':'Dados indisponíveis aparecem como —.'}</p></div></div></header>
     <div className="tv-hide"><Filters value={f} organizations={orgs ?? []} slug={org.slug} /></div>
+    {showHealth?<DataFreshnessPanel sources={healthSources} latest={healthDates} slug={org.slug} today={healthToday}/>:null}
     {customizable ? <div className="tv-hide"><PersonalizeBar /></div> : null}
     {platformPage&&!platformHasData?<Card className="border-amber-400/25 bg-amber-400/[.06]"><strong className="text-sm text-amber-200">{platformPage.label} ainda não possui dados</strong><p className="mt-2 text-sm leading-6 text-amber-100/70">Conecte e selecione o ativo correspondente em Integrações. A página permanecerá disponível e começará a exibir métricas após a primeira sincronização.</p><Link className="mt-4 inline-flex rounded-lg border border-amber-300/20 px-4 py-2 text-sm font-semibold text-amber-100 hover:bg-amber-300/10" href={`/${org.slug}/settings/integrations`}>Abrir integrações</Link></Card>:null}
 
