@@ -149,7 +149,7 @@ export default async function Page({params: params_, searchParams: searchParams_
       <Block id="campaign-list"><Card><div className="mb-5"><p className="eyebrow">Análise detalhada</p><h2 className="mt-2 text-lg font-semibold">Desempenho por origem</h2><p className="muted mt-2 text-sm">Dados com investimento, entrega ou resultado no intervalo selecionado.</p></div><Ranking rows={campaignsWithMovement} currency={f.currency} /></Card></Block>
     </div> : null}
 
-    {sectionGroup === 'paid' ? <CampaignWorkspace rows={currentCampaigns} previousRows={f.compare === 'none' ? [] : previousCampaigns} timeline={timelineRows(ads)} currency={f.currency} showPlatforms={!platformPage && !chosen} enabledMetrics={config.enabled_metrics} rankings={performanceRankings} funnelSteps={funnelSteps} storageKey={`${org.id}:${params.section}:${chosen??'all'}:paid-metrics`} /> : null}
+    {sectionGroup === 'paid' ? <CampaignWorkspace rows={currentCampaigns} previousRows={f.compare === 'none' ? [] : previousCampaigns} comparing={f.compare!=='none'} timeline={timelineRows(ads)} currency={f.currency} showPlatforms={!platformPage && !chosen} enabledMetrics={config.enabled_metrics} rankings={performanceRankings} funnelSteps={funnelSteps} storageKey={`${org.id}:${params.section}:${chosen??'all'}:paid-metrics`} /> : null}
 
     {params.section === 'funnel' ? <section data-tv-panel><Card><h2 className="font-semibold">Funil do modelo de negócio</h2><p className="muted mt-2 text-sm">Etapas configuradas para este cliente. As taxas são relações entre eventos agregados e não representam uma coorte individual.</p><Funnel currency={f.currency} steps={funnelSteps} comparing={f.compare!=='none'} /></Card></section> : null}
 

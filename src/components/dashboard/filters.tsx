@@ -17,7 +17,7 @@ export function Filters({value, organizations, slug}: {value: FilterType; organi
       <form className="flex flex-1 flex-wrap items-end gap-3" onSubmit={(event) => {event.preventDefault(); const form = new FormData(event.currentTarget); router.push(path + '?' + new URLSearchParams(Array.from(form.entries()).map(([key, entry]) => [key, String(entry)])).toString());}}>
         <label>De<input type="date" name="from" defaultValue={value.from} required /></label>
         <label>Até<input type="date" name="to" defaultValue={value.to} required /></label>
-        <label className="min-w-44">Comparação<select name="compare" defaultValue={value.compare}><option value="none">Não comparar</option><option value="previous_period">Período anterior</option><option value="previous_year">Ano anterior</option></select></label>
+        <label className="min-w-44">Comparação<select name="compare" defaultValue={value.compare}><option value="previous_period">Período anterior (padrão)</option><option value="previous_year">Ano anterior</option><option value="none">Não comparar</option></select></label>
         <label>Moeda<input className="w-20" name="currency" defaultValue={value.currency} pattern="[A-Z]{3}" maxLength={3} /></label>
         <Button className="min-w-36" type="submit">Aplicar filtros</Button>
       </form>

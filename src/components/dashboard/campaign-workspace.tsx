@@ -121,7 +121,7 @@ function PlatformBreakdown({rows, currency, enabledMetrics}: {rows: CampaignPerf
 }
 
 function ComparisonPanel({currentRows, previousRows, currency}: {currentRows: CampaignPerformance[]; previousRows: CampaignPerformance[]; currency: string}) {
-  if (!previousRows.length) return null;
+  if (!previousRows.length) return <Card><p className="eyebrow">Comparativo</p><h2 className="mt-2 text-lg font-semibold">Período atual versus período comparado</h2><p className="mt-3 text-sm leading-6 text-amber-200">Sem histórico no período de comparação escolhido. Selecione outra faixa de datas para comparar dados existentes. Nenhuma variação foi estimada.</p></Card>;
   const current = metrics(currentRows);
   const previous = metrics(previousRows);
   const comparisonRows = [
@@ -180,6 +180,7 @@ function AttentionPanel({rows, currency}: {rows: CampaignPerformance[]; currency
 export function CampaignWorkspace({
   rows,
   previousRows,
+  comparing = true,
   timeline,
   currency,
   showPlatforms = false,
@@ -190,6 +191,7 @@ export function CampaignWorkspace({
 }: {
   rows: CampaignPerformance[];
   previousRows: CampaignPerformance[];
+  comparing?: boolean;
   timeline: TimelineRow[];
   currency: string;
   showPlatforms?: boolean;
@@ -229,7 +231,7 @@ export function CampaignWorkspace({
     </Card></Block>
     <Block id="creatives"><PerformanceRankings rankings={rankings} currency={currency} /></Block>
     <section className="grid gap-5 2xl:grid-cols-2" style={{order:999}}>
-      <ComparisonPanel currentRows={measuredRows} previousRows={measuredPreviousRows} currency={currency} />
+      {comparing ? <ComparisonPanel currentRows={measuredRows} previousRows={measuredPreviousRows} currency={currency} /> : null}
       <AttentionPanel rows={measuredRows} currency={currency} />
     </section>
   </div>;
