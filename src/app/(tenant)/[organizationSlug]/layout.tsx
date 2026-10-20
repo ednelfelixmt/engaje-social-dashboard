@@ -4,17 +4,19 @@ import {Navigation} from '@/components/navigation';
 
 export default async function Layout({children, params: params_}: {children: React.ReactNode; params: Promise<{organizationSlug: string}>}) {
   const params = await params_;
-  const {db, org} = await tenant(params.organizationSlug);
+  const {db, org, superAdmin, user} = await tenant(params.organizationSlug);
   const [{data: branding}, {data: config}] = await Promise.all([
     db.from('branding').select('*').eq('organization_id', org.id).single(),
     dashboardConfig(params.organizationSlug).then((data)=>({data})),
   ]);
+  const {data:membership}=superAdmin?{data:null}:await db.from('organization_members').select('role,is_active').eq('organization_id',org.id).eq('user_id',user.id).maybeSingle();
+  const canShare=superAdmin||Boolean(membership?.is_active&&['editor','client_admin'].includes(membership.role));
   const image = branding?.dashboard_background_path
     ? (await db.storage.from('branding').createSignedUrl(branding.dashboard_background_path, 3600)).data?.signedUrl
     : null;
 
   return <div style={{'--primary': branding?.primary_color, '--background': branding?.background_color} as CSSProperties}>
-    <Navigation slug={org.slug} enabled={config?.enabled_pages}/>
+    <Navigation slug={org.slug} enabled={config?.enabled_pages} canShare={canShare}/>
     <main className="dashboard-shell min-h-screen px-4 py-6 sm:px-6 lg:ml-[272px] lg:px-8 lg:py-9 2xl:px-12" style={{background: image ? `linear-gradient(#080b12ed,#080b12ed),url("${image}") center/cover fixed` : undefined}}>{children}</main>
   </div>;
 }
