@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {useEffect, useState} from 'react';
-import {Building2, ChartNoAxesCombined, ChevronDown, Crown, Database, Filter, Images, LayoutDashboard, LogOut, Megaphone, Palette, Plug, Settings, Users, type LucideIcon} from 'lucide-react';
+import {Building2, ChartNoAxesCombined, ChevronDown, Crown, Database, Filter, Images, LayoutDashboard, LogOut, Megaphone, Palette, Plug, Settings, Share2, Users, type LucideIcon} from 'lucide-react';
 
 type NavItem={key:string;label:string;icon:LucideIcon;requires?:string};
 type NavGroup={id:string;label:string;icon:LucideIcon;items:NavItem[];/** Grupos recolhíveis começam abertos só se contiverem a página atual (ou se defaultOpen). */collapsible?:boolean;defaultOpen?:boolean};
@@ -20,6 +20,7 @@ const workspaceGroups:NavGroup[]=[
     {key:'settings/dashboard',label:'Dashboard e funil',icon:Settings},
     {key:'settings/integrations',label:'Integrações',icon:Plug},
     {key:'settings/branding',label:'Aparência',icon:Palette},
+    {key:'sharing',label:'Compartilhar dashboards',icon:Share2},
   ]},
 ];
 
@@ -34,10 +35,10 @@ const agencyGroups:NavGroup[]=[
 
 const storagePrefix='engaje:nav:v1:';
 
-export function Navigation({slug,admin=false,enabled=[]}:{slug?:string;admin?:boolean;enabled?:string[]}){
+export function Navigation({slug,admin=false,enabled=[],canShare=false}:{slug?:string;admin?:boolean;enabled?:string[];canShare?:boolean}){
   const path=usePathname();
   const scope=admin?'admin':slug??'workspace';
-  const groups=(admin?agencyGroups:workspaceGroups).map((group)=>({...group,items:group.items.filter((item)=>!item.requires||enabled.includes(item.requires))})).filter((group)=>group.items.length);
+  const groups=(admin?agencyGroups:workspaceGroups).map((group)=>({...group,items:group.items.filter((item)=>(item.key!=='sharing'||canShare)&&(!item.requires||enabled.includes(item.requires)))})).filter((group)=>group.items.length);
   const hrefOf=(key:string)=>admin?`/${key}`:`/${slug}/${key}`;
   const isActive=(key:string)=>path===hrefOf(key);
 
