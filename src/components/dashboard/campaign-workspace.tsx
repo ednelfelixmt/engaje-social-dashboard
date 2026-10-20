@@ -180,6 +180,7 @@ function AttentionPanel({rows, currency}: {rows: CampaignPerformance[]; currency
 export function CampaignWorkspace({
   rows,
   previousRows,
+  comparing = true,
   timeline,
   currency,
   showPlatforms = false,
@@ -190,6 +191,7 @@ export function CampaignWorkspace({
 }: {
   rows: CampaignPerformance[];
   previousRows: CampaignPerformance[];
+  comparing?: boolean;
   timeline: TimelineRow[];
   currency: string;
   showPlatforms?: boolean;
@@ -229,7 +231,7 @@ export function CampaignWorkspace({
     </Card></Block>
     <Block id="creatives"><PerformanceRankings rankings={rankings} currency={currency} /></Block>
     <section className="grid gap-5 2xl:grid-cols-2" style={{order:999}}>
-      <ComparisonPanel currentRows={measuredRows} previousRows={measuredPreviousRows} currency={currency} />
+      {comparing ? <ComparisonPanel currentRows={measuredRows} previousRows={measuredPreviousRows} currency={currency} /> : null}
       <AttentionPanel rows={measuredRows} currency={currency} />
     </section>
   </div>;
