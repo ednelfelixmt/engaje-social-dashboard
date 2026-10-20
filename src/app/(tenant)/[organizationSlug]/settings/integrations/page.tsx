@@ -126,7 +126,7 @@ export default async function Page({params: params_, searchParams: searchParams_
 
       <section className="space-y-4">
         <div><h2 className="text-xl font-semibold">Ativos e bases deste cliente</h2><p className="muted mt-1 text-sm">Somente os ativos atribuídos nesta área podem alimentar o dashboard de {org.name}.</p></div>
-        {assignedAssets.length ? <ClientPlatformAssets organizationId={org.id} assets={assignedAssets} /> : null}
+        {assignedAssets.length ? <ClientPlatformAssets organizationId={org.id} assets={assignedAssets} clientName={org.name} /> : null}
         {visibleIntegrations.length ? <div className="grid gap-3">{visibleIntegrations.map((item) => {
           const config = item.config && typeof item.config === 'object' && !Array.isArray(item.config) ? item.config as Record<string, unknown> : {};
           const sourceKey = typeof config.source_platform === 'string' ? config.source_platform : null;
