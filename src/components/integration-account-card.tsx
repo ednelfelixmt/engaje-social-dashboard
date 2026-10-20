@@ -38,9 +38,11 @@ export function IntegrationAccountCard({organizationId, item, providerName, sour
   const staleOauth = item.status === 'pending' && item.external_account_id.startsWith('pending:') && Date.now() - new Date(item.updated_at).getTime() > 10 * 60 * 1000;
   const permissionRequired = missingPermissions.length > 0 || technicalError?.code === '10' || technicalError?.code === '200' || item.last_error?.includes('pages_read_user_content');
   const tokenExpired = staleOauth || item.status === 'expired' || technicalError?.code === '190';
-  const connected = !tokenExpired && !['disconnected', 'pending'].includes(item.status);
+  const connected = item.status === 'connected' && item.is_enabled && !tokenExpired;
   const syncing = item.status === 'syncing';
-  const synchronized = item.status === 'connected' && Boolean(item.last_synced_at);
+  const syncAgeHours = item.last_synced_at ? (Date.now() - new Date(item.last_synced_at).getTime()) / 3600000 : null;
+  const synchronized = item.status === 'connected' && item.is_enabled && syncAgeHours !== null && syncAgeHours >= 0 && syncAgeHours <= 48;
+  const outdated = syncAgeHours !== null && syncAgeHours > 48;
   const syncError = item.status === 'error' && !permissionRequired;
   const reconnect = permissionRequired || tokenExpired;
   const actionLabel = permissionRequired ? 'Corrigir autorização' : tokenExpired ? 'Renovar acesso' : syncError ? 'Tentar novamente' : 'Sincronizar agora';
@@ -61,10 +63,11 @@ export function IntegrationAccountCard({organizationId, item, providerName, sour
         <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
           <div className="flex items-center gap-2">{stateDot(connected ? 'healthy' : 'idle')}<div><dt className="text-xs text-zinc-500">Conexão</dt><dd>{connected ? 'Conectado' : 'Configuração pendente'}</dd></div></div>
           <div className="flex items-center gap-2">{stateDot(permissionRequired ? 'attention' : connected ? 'healthy' : 'idle')}<div><dt className="text-xs text-zinc-500">Permissões</dt><dd>{permissionRequired ? 'Ação necessária' : connected ? 'Autorizadas' : 'Não validadas'}</dd></div></div>
-          <div className="flex items-center gap-2">{syncing ? <Clock3 aria-hidden className="text-amber-300" size={16} /> : stateDot(synchronized ? 'healthy' : syncError ? 'error' : permissionRequired ? 'attention' : 'idle')}<div><dt className="text-xs text-zinc-500">Sincronização</dt><dd>{syncing ? 'Em andamento' : synchronized ? 'Atualizada' : permissionRequired ? 'Bloqueada' : syncError ? 'Com erro' : 'Ainda não realizada'}</dd></div></div>
+          <div className="flex items-center gap-2">{syncing ? <Clock3 aria-hidden className="text-amber-300" size={16} /> : stateDot(synchronized ? 'healthy' : syncError ? 'error' : permissionRequired ? 'attention' : 'idle')}<div><dt className="text-xs text-zinc-500">Sincronização</dt><dd>{syncing ? 'Em andamento' : synchronized ? 'Atualizada' : outdated ? 'Desatualizada' : permissionRequired ? 'Bloqueada' : syncError ? 'Com erro' : 'Ainda não realizada'}</dd></div></div>
         </dl>
 
         <p className="muted mt-4 text-xs">Última sincronização: {item.last_synced_at ? new Date(item.last_synced_at).toLocaleString('pt-BR') : 'ainda não realizada'}</p>
+        {outdated ? <p className="mt-3 rounded-xl border border-amber-400/25 bg-amber-400/[.05] p-3 text-xs leading-5 text-amber-100">Esta conta não registra sincronização há mais de 48 horas. Mesmo com dados históricos, os números atuais podem estar incompletos. Revise o acesso e execute a sincronização após regularizar as permissões.</p> : null}
         {userMessage ? <p className={`mt-3 rounded-xl border p-3 text-sm ${permissionRequired || tokenExpired ? 'border-amber-500/30 bg-amber-500/10 text-amber-200' : 'border-red-500/30 bg-red-500/10 text-red-300'}`}>{userMessage}</p> : null}
         {supportsIngest ? <IngestEndpoint organizationId={organizationId} integrationId={item.id} configured={ingestConfigured} /> : null}
 
