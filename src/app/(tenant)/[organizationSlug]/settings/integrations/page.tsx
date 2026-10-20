@@ -52,14 +52,14 @@ export default async function Page({params: params_, searchParams: searchParams_
   if (error) throw error;
   if (assignmentError) throw assignmentError;
   const assignedIds = (assignmentRows ?? []).map((item) => item.asset_id);
-  const {data: assignedAssetRows, error: assignedAssetError} = assignedIds.length ? await db.from('platform_assets').select('id,name,external_id,asset_type').in('id', assignedIds) : {data: [], error: null};
+  const {data: assignedAssetRows, error: assignedAssetError} = assignedIds.length ? await db.from('platform_assets').select('id,name,external_id,asset_type,connection_id').in('id', assignedIds) : {data: [], error: null};
   if (assignedAssetError) throw assignedAssetError;
   const connectionId = searchParams.connection_id && /^[0-9a-f-]{36}$/.test(searchParams.connection_id) ? searchParams.connection_id : null;
   const {data: discoveredRows, error: discoveredError} = connectionId ? await db.from('platform_assets').select('id,name,external_id,asset_type,asset_status,recommended').eq('connection_id', connectionId).order('asset_type').order('name') : {data: [], error: null};
   if (discoveredError) throw discoveredError;
   const availableDiscoveredRows = (discoveredRows ?? []).filter((item) => item.asset_status !== 'assigned');
   const assetById = new Map((assignedAssetRows ?? []).map((asset) => [asset.id, asset]));
-  const assignedAssets = (assignmentRows ?? []).flatMap((assignment) => {const asset=assetById.get(assignment.asset_id);return asset?[{assignmentId:assignment.id,name:asset.name,externalId:asset.external_id,assetType:asset.asset_type,syncEnabled:assignment.sync_enabled}]:[];});
+  const assignedAssets = (assignmentRows ?? []).flatMap((assignment) => {const asset=assetById.get(assignment.asset_id);return asset?[{assignmentId:assignment.id,assetId:asset.id,connectionId:asset.connection_id,name:asset.name,externalId:asset.external_id,assetType:asset.asset_type,syncEnabled:assignment.sync_enabled}]:[];});
   const integrations = data ?? [];
   const configOf = (item: typeof integrations[number]) => item.config && typeof item.config === 'object' && !Array.isArray(item.config) ? item.config as Record<string, unknown> : {};
   const organicProviders = new Set(['facebook_organic','instagram_organic','tiktok_organic','youtube','google_business']);
