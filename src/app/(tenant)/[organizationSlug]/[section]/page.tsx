@@ -118,13 +118,13 @@ export default async function Page({params: params_, searchParams: searchParams_
     adCampaigns:needsCampaignData,
   });
   const showHealth=params.section==='overview'||params.section==='paid'||params.section==='funnel'||Boolean(platformPage);
-  const health=showHealth?await Promise.all([
+  const [integrationHealth,adsHealth]=showHealth?await Promise.all([
     db.from('integrations').select('provider,status,is_enabled,last_synced_at,last_error').eq('organization_id',org.id),
-    ...(['meta_ads','google_ads','tiktok_ads'] as const).map(platform=>db.from('metrics_ads').select('platform,metric_date,synced_at').eq('organization_id',org.id).eq('platform',platform).order('metric_date',{ascending:false}).limit(1))
-  ]):null;
-  if(health&&health.some(item=>item.error))throw new Error('Não foi possível verificar a atualização das integrações.');
-  const healthSources=(health?.[0].data??[]) as {provider:string;status:string;is_enabled:boolean;last_synced_at:string|null;last_error:string|null}[];
-  const healthDates=(health?.slice(1).flatMap(item=>item.data??[])??[]) as {platform:string;metric_date:string;synced_at:string|null}[];
+    db.from('metrics_ads').select('platform,metric_date,synced_at').eq('organization_id',org.id).order('metric_date',{ascending:false}).limit(1),
+  ]):[{data:[],error:null},{data:[],error:null}];
+  if(integrationHealth.error||adsHealth.error)throw new Error('Não foi possível verificar a atualização das integrações.');
+  const healthSources=integrationHealth.data??[];
+  const healthDates=adsHealth.data??[];
   const healthToday=new Intl.DateTimeFormat('en-CA',{timeZone:org.timezone}).format(new Date());
   const platformHasData=!platformPage||data.ads.length>0;
   const ads = data.ads;
