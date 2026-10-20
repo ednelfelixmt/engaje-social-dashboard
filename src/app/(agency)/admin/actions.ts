@@ -50,7 +50,7 @@ export async function inviteClientUser(_:ActionState,f:FormData):Promise<ActionS
  const admin=createClient(supabaseUrl,secret,{auth:{persistSession:false,autoRefreshToken:false}});
  // Nunca use a chave administrativa no navegador.
  const origin=process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/,'')||'https://mediahub.engajeperformance.com.br';
- const {data:invited,error:inviteError}=await admin.auth.admin.inviteUserByEmail(parsed.data.email,{redirectTo:origin+'/auth/callback'});
+ const {data:invited,error:inviteError}=await admin.auth.admin.inviteUserByEmail(parsed.data.email,{redirectTo:origin+'/auth/invite'});
  if(inviteError||!invited.user)return {ok:false,message:'Não foi possível convidar este e-mail. Se o usuário já existir, vincule sua conta atual pelo UUID.'};
  const {error:memberError}=await admin.from('organization_members').upsert({organization_id:org.id,user_id:invited.user.id,role:parsed.data.role,is_active:true});
  if(memberError)return {ok:false,message:'Convite enviado, mas o vínculo falhou. Verifique as permissões do banco e regularize o acesso antes do primeiro login.'};
