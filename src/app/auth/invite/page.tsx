@@ -47,7 +47,7 @@ export default function InvitePage(){
    <div className="flex size-12 items-center justify-center rounded-xl border border-primary/25 bg-primary/10"><ShieldCheck className="text-primary" size={24}/></div>
    <p className="eyebrow mt-5">Engaje Mídia Hub · Convite de acesso</p>
    <h1 className="mt-2 text-2xl font-semibold text-white">Ative sua conta</h1>
-   <p className="mt-2 text-sm leading-6 text-zinc-400">O administrador já definiu seu cliente e suas permissões. Confirme o e-mail do convite e cadastre uma senha pessoal.</p>
+   <p className="mt-2 text-sm leading-6 text-zinc-400">Confirme o e-mail do convite e cadastre sua senha pessoal. Os clientes e níveis de acesso serão configurados separadamente pelo administrador.</p>
    {done?<p className="mt-5 flex items-center gap-2 text-sm text-emerald-300"><CheckCircle2 size={18}/>Conta ativada. Abrindo o dashboard...</p>:
     ready?<form onSubmit={finish} className="mt-6 space-y-4">
      <label className="block text-xs text-zinc-400"><span className="mb-2 inline-flex items-center gap-2"><Mail size={14}/>E-mail do convidado</span><input type="email" value={email} readOnly aria-label="E-mail confirmado pelo convite" className="!text-zinc-400"/></label>
@@ -55,7 +55,7 @@ export default function InvitePage(){
      <label className="block text-xs text-zinc-400">Confirmar senha<input name="confirm" type="password" minLength={12} required autoComplete="new-password"/></label>
      {error?<p role="alert" className="rounded-lg border border-rose-400/20 bg-rose-400/5 p-3 text-sm text-rose-300">{error}</p>:null}
      <button disabled={busy} className="min-h-11 w-full rounded-xl bg-primary px-4 text-sm font-semibold text-black disabled:opacity-60">{busy?'Ativando acesso…':'Aceitar convite e acessar'}</button>
-     <p className="text-xs leading-5 text-zinc-500">A senha é definida somente por você. Seu perfil não pode ser alterado nesta etapa.</p>
+     <p className="text-xs leading-5 text-zinc-500">A senha é definida somente por você. Os acessos são liberados pelo administrador após o cadastro.</p>
     </form>:
     <div className="mt-6 space-y-3 rounded-xl border border-amber-400/15 bg-amber-400/[.04] p-4"><p className="text-sm text-amber-100">Não foi possível validar a sessão do convite. Use o link recebido por e-mail. Links expirados exigem um novo convite.</p><a href="/login" className="text-sm font-medium text-primary underline">Ir para o login</a></div>}
   </div>
