@@ -10,8 +10,19 @@ type NavGroup={id:string;label:string;icon:LucideIcon;items:NavItem[];/** Grupos
 
 const workspaceGroups:NavGroup[]=[
   {id:'overview',label:'Visão geral',icon:LayoutDashboard,items:[{key:'overview',label:'Visão geral',icon:LayoutDashboard,requires:'overview'}]},
-  {id:'paid',label:'Mídia paga',icon:Megaphone,collapsible:true,defaultOpen:true,items:[
-    {key:'paid',label:'Campanhas e métricas',icon:ChartNoAxesCombined,requires:'paid'},
+  {id:'meta',label:'Meta Ads',icon:Megaphone,collapsible:true,defaultOpen:true,items:[
+    {key:'meta_ads',label:'Campanhas Meta Ads',icon:ChartNoAxesCombined,requires:'paid'},
+    {key:'reports/meta-audience',label:'Público e dispositivos',icon:Users,requires:'paid'},
+  ]},
+  {id:'google',label:'Google Ads',icon:Megaphone,collapsible:true,defaultOpen:true,items:[
+    {key:'google_ads',label:'Campanhas Google Ads',icon:ChartNoAxesCombined,requires:'paid'},
+    {key:'reports/google-audience',label:'Demografia e geografia',icon:Users,requires:'paid'},
+  ]},
+  {id:'analytics',label:'Google Analytics',icon:ChartNoAxesCombined,items:[
+    {key:'reports/google-analytics',label:'Comportamento no site',icon:ChartNoAxesCombined,requires:'overview'},
+  ]},
+  {id:'paid',label:'Outras análises',icon:Filter,collapsible:true,items:[
+    {key:'paid',label:'Mídia paga consolidada',icon:ChartNoAxesCombined,requires:'paid'},
     {key:'funnel',label:'Funil de conversão',icon:Filter,requires:'funnel'},
     {key:'paid-creatives',label:'Criativos dos anúncios',icon:Images,requires:'creatives'},
   ]},
