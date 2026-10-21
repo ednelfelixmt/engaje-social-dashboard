@@ -74,8 +74,17 @@ export default async function Page({params: params_, searchParams: searchParams_
   });
   const representedIntegrationIds = new Set((assignmentRows ?? []).map((item) => item.integration_id).filter(Boolean));
   const visibleIntegrations = integrations.filter((item) => !organicProviders.has(item.provider) && configOf(item).selection_pending !== true && configOf(item).hidden !== true && !representedIntegrationIds.has(item.id));
-  const connected = visibleIntegrations.filter((item) => item.status === 'connected' && item.is_enabled).length + assignedAssets.filter((item) => item.syncEnabled).length;
-  const attention = visibleIntegrations.filter((item) => ['error', 'expired'].includes(item.status)).length;
+  // Include linked advertising and organic accounts: failures must not vanish when a client has assigned the asset.
+  const operationalIntegrations = integrations.filter(item =>
+    configOf(item).selection_pending !== true && configOf(item).hidden !== true &&
+    !String(item.external_account_id).startsWith('foundation:') &&
+    !String(item.external_account_id).startsWith('pending:')
+  );
+  const failingIntegrations = operationalIntegrations.filter(item =>
+    item.status === 'expired' || item.status === 'error' || (item.status === 'connected' && !item.is_enabled)
+  );
+  const connected = operationalIntegrations.filter(item => item.status === 'connected' && item.is_enabled).length;
+  const attention = failingIntegrations.length;
   const preparedProviders = new Set(integrations.map((item) => item.provider));
   const official = connectorCatalog.filter((item) => item.group === 'official');
   const crms = connectorCatalog.filter((item) => item.group === 'crm');
@@ -88,6 +97,16 @@ export default async function Page({params: params_, searchParams: searchParams_
       {candidates.some((item)=>item.provider === 'meta_ads') ? <Card className="border-blue-500/30 bg-blue-500/[.05] text-blue-100"><strong>Uma única integração Meta</strong><p className="muted mt-2 text-sm">Use “Conectar e selecionar” no card da Meta. A mesma autorização permite escolher contas de anúncios, Páginas do Facebook, perfis do Instagram, pixels, formulários, catálogos e conversões.</p></Card> : null}
       {searchParams.error ? <Card className="border-red-500/40 bg-red-500/5 text-red-300">A conexão não foi concluída. Verifique permissões e credenciais.</Card> : null}
 
+      {failingIntegrations.length ? <Card className="border-amber-500/30 bg-amber-500/[.04]">
+        <div className="flex items-center gap-2"><TriangleAlert className="text-amber-300" size={19}/><h2 className="font-semibold text-white">Credenciais e integrações que exigem atenção</h2></div>
+        <p className="muted mt-2 text-sm">Esta área concentra problemas de autorização, erros e sincronização. Avisos técnicos não são exibidos nos dashboards do cliente.</p>
+        <div className="mt-4 space-y-3">{failingIntegrations.map(item => <div key={item.id} className="rounded-xl border border-amber-500/20 bg-black/15 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2"><strong className="text-sm text-white">{item.account_name}</strong><span className="text-xs font-semibold text-amber-200">{item.status === 'expired'?'Autorização expirada':item.status==='error'?'Erro de integração':'Desabilitada'}</span></div>
+          <p className="mt-1 text-xs text-zinc-400">{connectorByProvider.get(item.provider)?.name ?? item.provider} · Última sincronização: {item.last_synced_at ? new Date(item.last_synced_at).toLocaleString('pt-BR',{timeZone:org.timezone}) : 'não realizada'}</p>
+          <p className="mt-2 text-sm text-amber-100">{item.last_error || 'Verifique a credencial, a permissão e o estado da conexão.'}</p>
+          <p className="mt-2 text-xs text-zinc-400">Selecione o ativo na seção abaixo e use Revalidar ou a opção de reconexão da plataforma.</p>
+        </div>)}</div>
+      </Card> : null}
       <IntegrationDiagnostics organizationId={org.id} />
 
       {searchParams.select_assets && connectionId && availableDiscoveredRows.length ? <PlatformAssetSelector organizationId={org.id} connectionId={connectionId} candidates={availableDiscoveredRows.map((item) => ({id:item.id,name:item.name,externalId:item.external_id,assetType:item.asset_type,status:item.asset_status,recommended:item.recommended}))} /> : null}
