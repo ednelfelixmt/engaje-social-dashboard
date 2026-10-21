@@ -35,7 +35,15 @@ export async function updateOrganization(_:ActionState,f:FormData):Promise<Actio
   revalidatePath('/'+updated.slug,'layout');
   return {ok:true,message:'Cliente atualizado.'+funnelMessage+(funnelMessage?'':' O funil só muda se você marcar "Aplicar o funil sugerido".')};
 }
-export async function saveMember(_:ActionState,f:FormData):Promise<ActionState>{const {db}=await requireAdmin();const input=z.object({organization_id:z.string().uuid(),user_id:z.string().uuid(),role:z.enum(['client_admin','editor','viewer']),is_active:z.boolean()}).safeParse({organization_id:f.get('organization_id'),user_id:f.get('user_id'),role:f.get('role'),is_active:f.get('is_active')==='on'});if(!input.success)return {ok:false,message:'Preencha organização, UUID do usuário e role.'};const {data:existing}=await db.from('organization_members').select('role').eq('organization_id',input.data.organization_id).eq('user_id',input.data.user_id).maybeSingle();if(existing?.role==='super_admin')return {ok:false,message:'O acesso de super administrador não pode ser alterado neste formulário.'};const {error}=await db.from('organization_members').upsert(input.data);
+export async function saveMember(_:ActionState,f:FormData):Promise<ActionState>{const {db}=await requireAdmin();const input=z.object({organization_id:z.string().uuid(),user_id:z.string().uuid(),role:z.enum(['client_admin','editor','viewer']),is_active:z.boolean()}).safeParse({organization_id:f.get('organization_id'),user_id:f.get('user_id'),role:f.get('role'),is_active:f.get('is_active')==='on'});if(!input.success)return {ok:false,message:'Preencha organização, UUID do usuário e role.'};const {data:existing}=await db.from('organization_members').select('role').eq('organization_id',input.data.organization_id).eq('user_id',input.data.user_id).maybeSingle();if(existing?.role==='super_admin')return {ok:false,message:'O acesso de super administrador não pode ser alterado neste formulário.'};const secretForCheck=process.env.SUPABASE_SERVICE_ROLE_KEY;
+ if(input.data.is_active&&secretForCheck){
+  const {createClient}=await import('@supabase/supabase-js');
+  const {supabaseUrl}=await import('@/lib/supabase/config');
+  const adminCheck=createClient(supabaseUrl,secretForCheck,{auth:{persistSession:false,autoRefreshToken:false}});
+  const {data:agencyInvite}=await adminCheck.from('agency_user_invitations').select('status').eq('user_id',input.data.user_id).maybeSingle();
+  if(agencyInvite&&agencyInvite.status!=='accepted')return {ok:false,message:'O usuário ainda não concluiu seu cadastro. Não é possível ativar o acesso.'};
+ }
+ const {error}=await db.from('organization_members').upsert(input.data);
  if(!error){
   const secret=process.env.SUPABASE_SERVICE_ROLE_KEY;
   if(secret){
