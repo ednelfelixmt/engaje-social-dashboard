@@ -30,7 +30,7 @@ export function Filters({value,organizations,slug,actions}:{value:FilterType;org
     <label className={label+' hidden xl:flex'}>Moeda<input aria-label="Moeda" className={field+' w-[68px]'} name="currency" defaultValue={value.currency} pattern="[A-Z]{3}" maxLength={3} required/></label>
     <button type="submit" className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-primary/90 px-3 text-xs font-semibold text-black transition hover:bg-primary">Aplicar <ArrowRight size={13}/></button>
    </form>
-   {actions?<div className="flex h-9 shrink-0 items-center lg:ml-auto [&_[data-personalize-bar]]:gap-1 [&_[data-personalize-bar]_button]:!h-9">{actions}</div>:null}
+   {actions?<div className="flex min-h-9 min-w-0 items-center lg:ml-auto [&_[data-personalize-bar]]:gap-1 [&_[data-personalize-bar]_button]:!min-h-9">{actions}</div>:null}
   </div>
  </section>;
 }
