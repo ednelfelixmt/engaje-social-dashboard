@@ -31,6 +31,7 @@ const workspaceGroups:NavGroup[]=[
   {id:'settings',label:'Configurações',icon:Settings,collapsible:true,items:[
     {key:'settings/dashboard',label:'Dashboard e funil',icon:Settings},
     {key:'settings/integrations',label:'Integrações',icon:Plug},
+    {key:'settings/data-quality',label:'Qualidade dos dados',icon:Database},
     {key:'settings/branding',label:'Aparência',icon:Palette},
     {key:'sharing',label:'Compartilhar dashboards',icon:Share2},
   ]},
