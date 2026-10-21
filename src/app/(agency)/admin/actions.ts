@@ -35,7 +35,18 @@ export async function updateOrganization(_:ActionState,f:FormData):Promise<Actio
   revalidatePath('/'+updated.slug,'layout');
   return {ok:true,message:'Cliente atualizado.'+funnelMessage+(funnelMessage?'':' O funil só muda se você marcar "Aplicar o funil sugerido".')};
 }
-export async function saveMember(_:ActionState,f:FormData):Promise<ActionState>{const {db}=await requireAdmin();const input=z.object({organization_id:z.string().uuid(),user_id:z.string().uuid(),role:z.enum(['client_admin','editor','viewer']),is_active:z.boolean()}).safeParse({organization_id:f.get('organization_id'),user_id:f.get('user_id'),role:f.get('role'),is_active:f.get('is_active')==='on'});if(!input.success)return {ok:false,message:'Preencha organização, UUID do usuário e role.'};const {data:existing}=await db.from('organization_members').select('role').eq('organization_id',input.data.organization_id).eq('user_id',input.data.user_id).maybeSingle();if(existing?.role==='super_admin')return {ok:false,message:'O acesso de super administrador não pode ser alterado neste formulário.'};const {error}=await db.from('organization_members').upsert(input.data);revalidatePath('/admin/users');return {ok:!error,message:error?'Usuário não encontrado no Auth ou vínculo inválido.':'Acesso atualizado.'};}
+export async function saveMember(_:ActionState,f:FormData):Promise<ActionState>{const {db}=await requireAdmin();const input=z.object({organization_id:z.string().uuid(),user_id:z.string().uuid(),role:z.enum(['client_admin','editor','viewer']),is_active:z.boolean()}).safeParse({organization_id:f.get('organization_id'),user_id:f.get('user_id'),role:f.get('role'),is_active:f.get('is_active')==='on'});if(!input.success)return {ok:false,message:'Preencha organização, UUID do usuário e role.'};const {data:existing}=await db.from('organization_members').select('role').eq('organization_id',input.data.organization_id).eq('user_id',input.data.user_id).maybeSingle();if(existing?.role==='super_admin')return {ok:false,message:'O acesso de super administrador não pode ser alterado neste formulário.'};const {error}=await db.from('organization_members').upsert(input.data);
+ if(!error){
+  const secret=process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if(secret){
+   const {createClient}=await import('@supabase/supabase-js');
+   const {supabaseUrl}=await import('@/lib/supabase/config');
+   const admin=createClient(supabaseUrl,secret,{auth:{persistSession:false,autoRefreshToken:false}});
+   // Mudança manual de permissões cancela convites anteriores, prevenindo ativação tardia.
+   await admin.from('client_user_invitations').update({status:'revoked'}).eq('organization_id',input.data.organization_id).eq('user_id',input.data.user_id).eq('status','pending');
+  }
+ }
+ revalidatePath('/admin/users');return {ok:!error,message:error?'Usuário não encontrado no Auth ou vínculo inválido.':'Acesso atualizado.'};}
 
 export async function inviteClientUser(_:ActionState,f:FormData):Promise<ActionState>{
  const {db}=await requireAdmin();
