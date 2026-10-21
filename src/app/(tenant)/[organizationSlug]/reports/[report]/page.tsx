@@ -3,6 +3,7 @@ import {notFound} from 'next/navigation';
 import {BarChart3, MapPinned, MonitorSmartphone, MousePointer2, Users, Globe2} from 'lucide-react';
 import {Card} from '@/components/ui/card';
 import {MetricBreakdownCard,AgeGenderStatus} from '@/components/dashboard/metric-breakdown-card';
+import {AudienceOverview} from '@/components/dashboard/audience-overview-v3';
 import {Filters} from '@/components/dashboard/filters';
 import {tenant,dashboardConfig} from '@/lib/auth/session';
 import {filters,dashboardData} from '@/lib/metrics/query';
@@ -51,9 +52,10 @@ export default async function Page({params:pendingParams,searchParams:pendingSea
  const data=await dashboardData(db,org.id,f,{platform:definition.platform,breakdowns:true,ads:true});
  const rows=data.breakdowns;
  const breakdowns=Object.fromEntries(categories.map(({key})=>[key,aggregations(rows,key)])) as Record<Dimension,ReturnType<typeof aggregations>>;
- return <main className="mx-auto max-w-[1680px] space-y-5"><header><p className="eyebrow">Análise segmentada · {org.name}</p><h1 className="mt-2 text-3xl font-semibold text-white">{definition.title}</h1><p className="mt-2 text-sm text-zinc-400">{definition.description}</p></header>
+ return <main className="mx-auto max-w-[1680px] space-y-3"><header><p className="eyebrow">Análise segmentada · {org.name}</p><h1 className="mt-2 text-3xl font-semibold text-white">{definition.title}</h1><p className="mt-2 text-sm text-zinc-400">{definition.description}</p></header>
    <Filters value={f} organizations={organizations??[]} slug={org.slug}/>
    <nav className="flex flex-wrap gap-2 text-xs font-semibold"><Link className="rounded-lg border border-white/15 px-4 py-2 text-zinc-300" href={`/${org.slug}/${definition.platform}`}>Campanhas</Link><span className="rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-primary">Público e dispositivos</span></nav>
+   <AudienceOverview gender={breakdowns.gender} age={breakdowns.age} device={breakdowns.device}/>
    <div className="grid gap-4 xl:grid-cols-2">{categories.map(item=><MetricBreakdownCard key={item.key} title={item.title} rows={breakdowns[item.key]} currency={f.currency} note={item.note}/>)}<Card className="!p-5"><h2 className="text-base font-semibold text-white">País</h2><p className="mt-5 text-sm leading-6 text-zinc-400">A dimensão país ainda não foi incluída no contrato de dados deste integrador. Não será deduzida a partir de estados ou cidades. Esta análise será ativada quando a fonte fornecer o país da veiculação.</p></Card></div>
    {report==='meta-audience'?<AgeGenderStatus hasJointData={false}/>:null}
    {report==='google-audience'?<Card><div className="flex items-center gap-2"><MapPinned size={19} className="text-primary"/><h2 className="font-semibold">Mapa de distribuição geográfica</h2></div><p className="mt-3 text-sm leading-6 text-zinc-400">O mapa de campanhas exige dados geográficos reais do Google Ads ou coordenadas verificadas associadas às localidades reportadas. Não há registros do Google Ads nesta base. Assim que o extrator fornecer dados regionais, será possível desenhar as regiões com impressões, cliques, custos e conversões; até lá, nenhuma localização será inventada.</p></Card>:null}

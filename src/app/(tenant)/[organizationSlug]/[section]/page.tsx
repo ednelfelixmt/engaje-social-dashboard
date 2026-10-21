@@ -18,7 +18,7 @@ import {CreativeLibrary} from '@/components/dashboard/creative-library';
 import {AudienceControl} from '@/components/dashboard/performance-rankings';
 import {ExecutiveIntelligence} from '@/components/dashboard/executive-intelligence';
 import {StrategicDecisionBrief} from '@/components/dashboard/strategic-decision-brief';
-import {SingleScreenCampaigns} from '@/components/dashboard/single-screen-reports';
+import {PlatformAnalyticsV3,type PlatformRow,type PlatformDay} from '@/components/dashboard/platform-analytics-v3';
 import {ExecutiveOverviewV2,type ExecutiveCampaign,type ExecutiveDay} from '@/components/dashboard/executive-overview-v2';
 import {DecisionAnalysis, type DecisionTimelinePoint} from '@/components/dashboard/decision-analysis';
 import {Card} from '@/components/ui/card';
@@ -46,6 +46,8 @@ function timelineRows(rows: Row<'metrics_ads'>[]) {
   return [...grouped.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
+function platformRows(rows:CampaignPerformance[]):PlatformRow[]{return rows.map(r=>({id:[r.platform,r.accountId,r.campaignId].join(':'),name:r.campaignName,spend:r.spend,impressions:r.impressions,clicks:r.clicks,leads:r.leads,reach:r.reach,messages:r.messageLeads,revenue:r.revenue,status:r.campaignStatus}));}
+function platformDays(rows:Row<'metrics_ads'>[]):PlatformDay[]{return executiveDays(rows);}
 function executiveShape(rows:CampaignPerformance[]):ExecutiveCampaign[]{return rows.map(r=>({id:[r.platform,r.accountId,r.campaignId].join(':'),name:r.campaignName,platform:r.platform,spend:r.spend,impressions:r.impressions,clicks:r.clicks,leads:r.leads}));}
 function executiveDays(rows:Row<'metrics_ads'>[]):ExecutiveDay[]{const days=new Map<string,ExecutiveDay>();for(const r of rows){const d=days.get(r.metric_date)??{date:r.metric_date,spend:0,impressions:null,clicks:null,leads:null};d.spend+=r.spend;for(const k of ['impressions','clicks','leads'] as const){if(r[k]!=null)d[k]=(d[k]??0)+r[k];}days.set(r.metric_date,d);}return [...days.values()].sort((a,b)=>a.date.localeCompare(b.date));}
 function decisionTimeline(rows:Row<'metrics_ads'>[]):DecisionTimelinePoint[]{
@@ -145,7 +147,7 @@ export default async function Page({params: params_, searchParams: searchParams_
 
     {sectionGroup && !platformPage ? <div className="tv-hide flex flex-wrap gap-3"><Link prefetch className={`rounded-lg px-4 py-2 text-sm ${chosen ? 'bg-white/5' : 'bg-primary text-black'}`} href={`?${new URLSearchParams(queryWithoutPlatform).toString()}`}>Todas</Link>{visible.map((platform) => {const definition = platformDashboards.find((item) => item.platform === platform); return <Link prefetch key={platform} className={`rounded-lg px-4 py-2 text-sm ${chosen === platform ? 'bg-primary text-black' : 'bg-white/5'}`} href={`?${new URLSearchParams({...queryWithoutPlatform, platform}).toString()}`}>{definition?.label ?? platform}</Link>;})}</div> : null}
     {params.section === 'overview' ? <ExecutiveOverviewV2 rows={executiveShape(campaignsWithMovement)} previous={f.compare==='none'?[]:executiveShape(previousCampaignsWithMovement)} days={executiveDays(ads)} previousDays={f.compare==='none'?[]:executiveDays(previousAds)} currency={f.currency} slug={org.slug} period={f.from+' a '+f.to}/> : null}
-    {platformPage ? <SingleScreenCampaigns rows={campaignsWithMovement} currency={f.currency} platform={platformPage.platform} slug={org.slug}/> : null}
+    {platformPage ? <PlatformAnalyticsV3 rows={platformRows(campaignsWithMovement)} previous={f.compare==='none'?[]:platformRows(previousCampaignsWithMovement)} days={platformDays(ads)} previousDays={f.compare==='none'?[]:platformDays(previousAds)} currency={f.currency} platform={platformPage.platform} slug={org.slug}/> : null}
     {sectionGroup === 'paid' && !platformPage ? <CampaignWorkspace rows={currentCampaigns} previousRows={f.compare === 'none' ? [] : previousCampaigns} comparing={f.compare!=='none'} timeline={timelineRows(ads)} currency={f.currency} showPlatforms={!chosen} enabledMetrics={config.enabled_metrics} rankings={performanceRankings} funnelSteps={funnelSteps} storageKey={`${org.id}:${params.section}:${chosen??'all'}:paid-metrics`} /> : null}
 
     {params.section === 'funnel' ? <section data-tv-panel><Card><h2 className="font-semibold">Funil do modelo de negócio</h2><p className="muted mt-2 text-sm">Etapas configuradas para este cliente. As taxas são relações entre eventos agregados e não representam uma coorte individual.</p><Funnel currency={f.currency} steps={funnelSteps} comparing={f.compare!=='none'} /></Card></section> : null}
