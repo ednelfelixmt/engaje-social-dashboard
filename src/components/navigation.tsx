@@ -31,6 +31,7 @@ const workspaceGroups:NavGroup[]=[
   {id:'settings',label:'Configurações',icon:Settings,collapsible:true,items:[
     {key:'settings/dashboard',label:'Dashboard e funil',icon:Settings},
     {key:'settings/integrations',label:'Integrações',icon:Plug},
+    {key:'settings/data-quality',label:'Qualidade dos dados',icon:Database},
     {key:'settings/branding',label:'Aparência',icon:Palette},
     {key:'sharing',label:'Compartilhar dashboards',icon:Share2},
   ]},
@@ -50,7 +51,7 @@ const storagePrefix='engaje:nav:v1:';
 export function Navigation({slug,admin=false,enabled=[],canShare=false}:{slug?:string;admin?:boolean;enabled?:string[];canShare?:boolean}){
   const path=usePathname();
   const scope=admin?'admin':slug??'workspace';
-  const groups=(admin?agencyGroups:workspaceGroups).map((group)=>({...group,items:group.items.filter((item)=>(item.key!=='sharing'||canShare)&&(!item.requires||enabled.includes(item.requires)))})).filter((group)=>group.items.length);
+  const groups=(admin?agencyGroups:workspaceGroups).map((group)=>({...group,items:group.items.filter((item)=>(!['sharing','settings/data-quality'].includes(item.key)||canShare)&&(!item.requires||enabled.includes(item.requires)))})).filter((group)=>group.items.length);
   const hrefOf=(key:string)=>admin?`/${key}`:`/${slug}/${key}`;
   const isActive=(key:string)=>path===hrefOf(key);
 
