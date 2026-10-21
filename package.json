@@ -10,7 +10,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --import tsx --test tests/*.test.ts"
+    "test": "node --import tsx --test tests/*.test.ts",
+    "prebuild": "npm run test && npm run typecheck"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",
