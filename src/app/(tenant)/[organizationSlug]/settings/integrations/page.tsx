@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type {ReactNode} from 'react';
 import {Activity, Blocks, Cable, CheckCircle2, Database, LineChart, MessageSquareText, TriangleAlert, Webhook} from 'lucide-react';
 import {tenant} from '@/lib/auth/session';
@@ -107,6 +108,7 @@ export default async function Page({params: params_, searchParams: searchParams_
           <p className="mt-2 text-xs text-zinc-400">Selecione o ativo na seção abaixo e use Revalidar ou a opção de reconexão da plataforma.</p>
         </div>)}</div>
       </Card> : null}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[.025] px-4 py-3"><div><h2 className="text-sm font-semibold">Auditoria da qualidade dos dados</h2><p className="mt-1 text-xs text-zinc-400">Datas de cobertura, origem das métricas, dimensões disponíveis e histórico de trabalhos.</p></div><Link href={`/${org.slug}/settings/data-quality`} className="rounded-lg border border-primary/30 px-3 py-2 text-xs font-semibold text-primary">Abrir auditoria</Link></div>
       <IntegrationDiagnostics organizationId={org.id} />
 
       {searchParams.select_assets && connectionId && availableDiscoveredRows.length ? <PlatformAssetSelector organizationId={org.id} connectionId={connectionId} candidates={availableDiscoveredRows.map((item) => ({id:item.id,name:item.name,externalId:item.external_id,assetType:item.asset_type,status:item.asset_status,recommended:item.recommended}))} /> : null}
