@@ -31,13 +31,21 @@ export function SingleScreenOverview({rows,currency,slug}:{rows:CampaignPerforma
  </section>;
 }
 export function SingleScreenCampaigns({rows,currency,platform,slug}:{rows:CampaignPerformance[];currency:string;platform:Channel;slug:string}){
- const m=metrics(rows),list=[...rows].sort((a,b)=>b.spend-a.spend).slice(0,12);
+ const m=metrics(rows),list=[...rows].sort((a,b)=>b.spend-a.spend);
  return <section className="space-y-4"><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
  <Kpi label="Investimento" value={rows.length?money(m.spend,currency):'—'}/>
  <Kpi label="Impressões" value={number(m.impressions)}/>
  <Kpi label="Cliques" value={number(m.clicks)}/>
  <Kpi label="Leads" value={number(m.leads)}/>
  </div>
+ <Card className="!p-4"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-semibold text-white">Funil de campanha</h2><span className="text-xs text-zinc-500">Etapas reportadas, não usuários únicos</span></div>
+  <div className="grid gap-2 md:grid-cols-3">{[
+   {label:'Impressões',value:m.impressions,denom:null},
+   {label:'Cliques',value:m.clicks,denom:m.impressions},
+   {label:'Leads',value:m.leads,denom:m.clicks},
+  ].map((step,i)=><div key={step.label} className="rounded-lg border border-white/10 bg-black/15 p-3"><div className="flex items-center justify-between"><p className="text-xs text-zinc-400">{step.label}</p><strong className="text-lg text-white">{number(step.value)}</strong></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full" style={{background:['#58adff','#ffd524','#56d8a3'][i],width:`${step.value!=null&&m.impressions?Math.min(100,step.value/m.impressions*100):0}%`}}/></div><p className="mt-2 text-xs text-zinc-500">{step.denom&&step.value!=null?number(step.value/step.denom*100,2)+'% da etapa anterior':'—'}</p></div>)}</div>
+  <p className="mt-3 text-xs text-zinc-500">Atribuição por plataforma. Comparações entre etapas representam relações entre eventos agregados.</p>
+ </Card>
  <Card className="!p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="eyebrow">Performance por campanha</p><h2 className="mt-2 text-lg font-semibold text-white">{channelNames[platform]} · Campanhas</h2></div><Link href={`/${slug}/reports/${platform==='meta_ads'?'meta-audience':'google-audience'}`} className="inline-flex rounded-xl border border-primary/30 px-4 py-2 text-sm font-semibold text-primary">Públicos, geografia e dispositivos <ArrowUpRight size={15}/></Link></div>
  <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[790px] text-left text-sm"><thead className="border-b border-white/10 text-xs uppercase tracking-wider text-zinc-500"><tr><th className="py-3">Campanha</th><th>Investimento</th><th>Impressões</th><th>Cliques</th><th>Leads</th><th>CPL</th></tr></thead><tbody>{list.map(r=><tr key={r.accountId+':'+r.campaignId} className="border-b border-white/[.06]"><td className="max-w-[340px] truncate py-3 pr-5 font-medium text-zinc-200" title={r.campaignName}>{r.campaignName}</td><td>{money(r.spend,currency)}</td><td>{number(r.impressions)}</td><td>{number(r.clicks)}</td><td>{number(r.leads)}</td><td>{money(r.cpl,currency)}</td></tr>)}</tbody></table>{!list.length?<p className="py-8 text-center text-sm text-zinc-400">Sem métricas registradas para esta plataforma no intervalo selecionado.</p>:null}</div>
  </Card></section>;
