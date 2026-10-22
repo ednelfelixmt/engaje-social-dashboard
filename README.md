@@ -1,6 +1,6 @@
 # Engaje Mídia Hub
 
-Next.js 14 App Router, TypeScript, Tailwind, componentes shadcn/ui, Recharts e Supabase. Tema escuro com destaque amarelo. Sem métricas fictícias.
+Next.js 16 App Router, TypeScript, Tailwind, componentes shadcn/ui, Recharts e Supabase. Tema escuro com destaque amarelo. Sem métricas fictícias.
 
 ## Executar
 
@@ -77,3 +77,7 @@ Um job do `pg_cron` (`engaje-scheduled-sync`) roda às 09:00 e 21:00 UTC (06:00 
 ## Login da Meta com configuração (opcional)
 
 O ID fica no Vault do banco (segredo `meta_login_config_id`, lido por `public.meta_login_config_id()`); o secret `META_LOGIN_CONFIG_ID` da função, se existir, tem prioridade. Para voltar ao login por permissões: `delete from vault.secrets where name = 'meta_login_config_id';`. Quando há ID, o login usa o ID da configuração de Login do Facebook para Empresas (`config_id`, com `override_default_response_type=true`) em vez de `scope`. Sem ele, nada muda. `engaje-integrations` e `meta-auth` devem ser publicadas com o mesmo código.
+
+## Engenharia e implantação por fases
+
+Consulte [docs/engineering/02-architecture-and-gates.md](docs/engineering/02-architecture-and-gates.md) para a arquitetura, regras de segurança e gate de qualidade; [docs/engineering/04-roadmap-continuous-delivery.md](docs/engineering/04-roadmap-continuous-delivery.md) para o roadmap vivo e as pendências rastreáveis. O CI GitHub Actions em `.github/workflows/quality.yml` executa testes, tipos e build. CI aprovado **não** substitui teste de autorização entre empresas nem homologação visual autenticada.
