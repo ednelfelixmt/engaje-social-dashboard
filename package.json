@@ -11,7 +11,8 @@
     "build": "next build",
     "start": "next start",
     "test": "node --import tsx --test tests/*.test.ts",
-    "prebuild": "npm run test && npm run typecheck"
+    "prebuild": "npm run test && npm run typecheck",
+    "check:architecture": "node --import tsx scripts/check-architecture.ts"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",
