@@ -30,3 +30,9 @@ Critério: pipelines verdes, regressão básica reproduzível e segurança da al
 - Cada pendência aceita para adiamento possui issue e teste de aceite.
 - Decisão de avanço explícita: somente engenharia reversível e interna até homologação.
 O gate completo de segurança, autorização e UX permanece em andamento.
+
+## Atualização 22/10/2026 — fechamento de ciclo Fase 01
+- Núcleo de qualidade passou em CI: ESLint incremental, testes, tipos, verificação de dependências e build. Evidência: PR #51 e `docs/engineering/05-phase01-homologation-evidence.md`.
+- Trilha Fase 02 liberada para código de segurança e testes sem aumento de privilégios. Homologação comercial e E2E continuam bloqueadas por #37/#38/#39/#50.
+- #49 permanece aberto para ESLint no lockfile e lint em todo o repositório; #47 para semântica de métricas/calendário.
+- Critério de reavaliação: confirmar as pendências P1/P0 antes de habilitar novos clientes ou aumentar exposição dos dados.
