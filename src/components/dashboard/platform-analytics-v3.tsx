@@ -4,6 +4,7 @@ import Link from 'next/link';
 import {Bar,BarChart,CartesianGrid,Cell,ComposedChart,Line,Pie,PieChart,ResponsiveContainer,Scatter,ScatterChart,Tooltip,XAxis,YAxis,ZAxis} from 'recharts';
 import {ArrowUpRight,Download,Filter,Layers3,ChartNoAxesCombined,Target} from 'lucide-react';
 import {money,number} from '@/lib/utils';
+import {paidMetric,paidTotals,sumKnown,percentChange} from '@/lib/metrics/paid-metrics';
 import {Card} from '@/components/ui/card';
 
 export type PlatformRow={id:string;name:string;spend:number;impressions:number|null;clicks:number|null;leads:number|null;reach:number|null;messages:number|null;revenue:number|null;status:string|null};
@@ -12,17 +13,12 @@ type Metric='spend'|'impressions'|'clicks'|'leads'|'ctr'|'cpc'|'cpm'|'cpl';
 const labels:Record<Metric,string>={spend:'Investimento',impressions:'Impressões',clicks:'Cliques',leads:'Leads',ctr:'CTR',cpc:'CPC',cpm:'CPM',cpl:'CPL'};
 const palette=['#facc15','#5bb8ff','#b49cff','#50d4a0','#f59e75','#f27aa8'];
 function total(rows:PlatformRow[]){
- const sum=(key:'impressions'|'clicks'|'leads'|'reach'|'messages')=>rows.some(r=>r[key]!=null)?rows.reduce((v,r)=>v+(r[key]??0),0):null;
- const spend=rows.reduce((v,r)=>v+r.spend,0),impressions=sum('impressions'),clicks=sum('clicks'),leads=sum('leads'),reach=sum('reach'),messages=sum('messages');
- return {spend,impressions,clicks,leads,reach,messages,ctr:impressions&&clicks!=null?100*clicks/impressions:null,cpc:clicks?spend/clicks:null,cpm:impressions?1000*spend/impressions:null,cpl:leads?spend/leads:null};
+ const result=paidTotals(rows);
+ const reach=sumKnown(rows,r=>r.reach);
+ const messages=sumKnown(rows,r=>r.messages);
+ return {...result,reach,messages};
 }
-function metric(row:{spend:number;impressions:number|null;clicks:number|null;leads:number|null},key:Metric){
- if(key==='ctr')return row.impressions&&row.clicks!=null?100*row.clicks/row.impressions:null;
- if(key==='cpc')return row.clicks?row.spend/row.clicks:null;
- if(key==='cpm')return row.impressions?1000*row.spend/row.impressions:null;
- if(key==='cpl')return row.leads?row.spend/row.leads:null;
- return row[key];
-}
+function metric(row:{spend:number;impressions:number|null;clicks:number|null;leads:number|null},key:Metric){return paidMetric(row,key);}
 function fmt(value:number|null|undefined,key:Metric,currency:string){return value==null?'—':(['spend','cpc','cpm','cpl'].includes(key)?money(value,currency):key==='ctr'?number(value,2)+'%':number(value));}
 function csv(rows:PlatformRow[],currency:string){
  const matrix=[['Campanha','Investimento '+currency,'Impressões','Cliques','Leads','CTR','CPC','CPL'],...rows.map(r=>[r.name,r.spend,r.impressions,r.clicks,r.leads,metric(r,'ctr'),metric(r,'cpc'),metric(r,'cpl')])];
@@ -33,7 +29,7 @@ function csv(rows:PlatformRow[],currency:string){
 export function PlatformAnalyticsV3({rows,previous,days,previousDays,currency,platform,slug}:{rows:PlatformRow[];previous:PlatformRow[];days:PlatformDay[];previousDays:PlatformDay[];currency:string;platform:'meta_ads'|'google_ads'|'tiktok_ads';slug:string}){
  const [metricKey,setMetricKey]=useState<Metric>('leads'),[rankKey,setRankKey]=useState<Metric>('spend'),[search,setSearch]=useState('');
  const current=total(rows),prior=total(previous);
- const comparison=(key:Metric)=>previous.length&&metric(prior,key)!=null&&metric(prior,key)!>0&&metric(current,key)!=null?(metric(current,key)!/metric(prior,key)!-1)*100:null;
+ const comparison=(key:Metric)=>previous.length?percentChange(metric(current,key),metric(prior,key)):null;
  const rank=useMemo(()=>rows.filter(r=>r.name.toLocaleLowerCase('pt-BR').includes(search.toLocaleLowerCase('pt-BR'))).sort((a,b)=>(metric(b,rankKey)??-1)-(metric(a,rankKey)??-1)),[rows,rankKey,search]);
  const trend=useMemo(()=>Array.from({length:Math.max(days.length,previousDays.length)},(_,i)=>({day:i+1,current:days[i]?metric(days[i],metricKey):null,previous:previousDays[i]?metric(previousDays[i],metricKey):null})),[days,previousDays,metricKey]);
  const leaders=rank.filter(r=>metric(r,rankKey)!=null).slice(0,7).map((r,i)=>({name:r.name.length>32?r.name.slice(0,29)+'…':r.name,value:metric(r,rankKey),fill:palette[i%palette.length]}));

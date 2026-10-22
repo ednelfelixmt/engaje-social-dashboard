@@ -4,6 +4,7 @@ import {useMemo,useState} from 'react';
 import {Area,AreaChart,Bar,BarChart,CartesianGrid,Cell,ComposedChart,Legend,Line,Pie,PieChart,ResponsiveContainer,Scatter,ScatterChart,Tooltip,XAxis,YAxis,ZAxis} from 'recharts';
 import {ArrowUpRight,Activity,BarChart3,Layers3,Target,ChartScatter,Info,TrendingUp} from 'lucide-react';
 import {money,number} from '@/lib/utils';
+import {paidMetric,paidTotals,sumKnown,percentChange} from '@/lib/metrics/paid-metrics';
 import {BudgetTreemap,PeriodBridge} from '@/components/dashboard/analytics-chart-library';
 export type ExecutiveCampaign={id:string;name:string;platform:string;spend:number;impressions:number|null;clicks:number|null;leads:number|null};
 export type ExecutiveDay={date:string;spend:number;impressions:number|null;clicks:number|null;leads:number|null};
@@ -12,9 +13,8 @@ const labels:Record<Metric,string>={spend:'Investimento',impressions:'Impressõe
 const palette=['#facc15','#53a8f8','#a78bfa','#32c5a0','#fb923c','#f472b6'];
 const channelNames:Record<string,string>={meta_ads:'Meta Ads',google_ads:'Google Ads',tiktok_ads:'TikTok Ads'};
 const theme={backgroundColor:'#101722',border:'1px solid #344154',borderRadius:12,color:'#f1f5f9',fontSize:12};
-function sum(rows:ExecutiveCampaign[],k:'leads'|'impressions'|'clicks'){return rows.some(r=>r[k]!=null)?rows.reduce((n,r)=>n+(r[k]??0),0):null;}
-function rollup(rows:ExecutiveCampaign[]){const spend=rows.reduce((n,r)=>n+r.spend,0),impressions=sum(rows,'impressions'),clicks=sum(rows,'clicks'),leads=sum(rows,'leads');return {spend,impressions,clicks,leads,ctr:impressions&&clicks!=null?100*clicks/impressions:null,cpc:clicks?spend/clicks:null,cpl:leads?spend/leads:null};}
-function metric(r:{spend:number;impressions:number|null;clicks:number|null;leads:number|null},k:Metric):number|null{if(k==='cpl')return r.leads?r.spend/r.leads:null;if(k==='cpc')return r.clicks?r.spend/r.clicks:null;if(k==='ctr')return r.impressions&&r.clicks!=null?r.clicks/r.impressions*100:null;return r[k];}
+function rollup(rows:ExecutiveCampaign[]){return paidTotals(rows);}
+function metric(r:{spend:number;impressions:number|null;clicks:number|null;leads:number|null},k:Metric):number|null{return paidMetric(r,k);}
 function fmt(v:number|null|undefined,k:Metric,currency:string){return v==null?'—':k==='spend'||k==='cpc'||k==='cpl'?money(v,currency):k==='ctr'?number(v,2)+'%':number(v);}
 function Panel({children,className=''}:{children:React.ReactNode;className?:string}){return <div className={`min-w-0 rounded-2xl border border-white/[.09] bg-[radial-gradient(ellipse_at_top_left,rgba(255,255,255,.045),transparent_75%)] bg-[#101722] p-4 shadow-[0_8px_35px_rgba(0,0,0,.12)] ${className}`}>{children}</div>;}
 function SectionHeading({eyebrow,title,aside}:{eyebrow:string;title:string;aside?:React.ReactNode}){return <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><p className="text-[10px] font-bold uppercase tracking-[.15em] text-zinc-500">{eyebrow}</p><h3 className="mt-1 text-sm font-semibold tracking-tight text-white">{title}</h3></div>{aside}</div>;}
@@ -26,7 +26,7 @@ export function ExecutiveOverviewV2({rows,previous,days,previousDays,currency,sl
  const [selected,setSelected]=useState<Metric>('leads');
  const [campaignMetric,setCampaignMetric]=useState<'spend'|'leads'|'cpl'>('spend');
  const aggregate=rollup(rows),prior=rollup(previous);
- const delta=(k:Metric)=>previous.length&&metric(prior,k)!=null&&metric(prior,k)!>0&&metric(aggregate,k)!=null?100*(metric(aggregate,k)!/metric(prior,k)!-1):null;
+ const delta=(k:Metric)=>previous.length?percentChange(metric(aggregate,k),metric(prior,k)):null;
  const timeline=useMemo(()=>Array.from({length:Math.max(days.length,previousDays.length)},(_,i)=>({day:i+1,date:days[i]?.date??null,current:days[i]?metric(days[i],selected):null,previous:previousDays[i]?metric(previousDays[i],selected):null})),[days,previousDays,selected]);
  const channelRows=Object.keys(channelNames).map((platform,i)=>{const values=rows.filter(r=>r.platform===platform);return {platform,name:channelNames[platform],...rollup(values),count:values.length,fill:palette[i]};});
  const activeChannels=channelRows.filter(r=>r.count&&r.spend>0);
