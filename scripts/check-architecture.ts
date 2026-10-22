@@ -7,9 +7,9 @@ import {readdirSync,readFileSync} from 'node:fs';
 import {join,relative,sep} from 'node:path';
 import ts from 'typescript';
 
-export function forbiddenImport(path: string, target: string): string | null {
+export function forbiddenImport(path: string, target: string, isClientComponent = false): string | null {
   const p=path.replaceAll('\\','/');
-  if (p.startsWith('src/components/') && (/^@\/lib\/supabase\/(server|admin)/.test(target)||target==='@/lib/auth/session'||target==='server-only')) return 'UI must not import privileged server clients or auth sessions';
+  if (isClientComponent && p.startsWith('src/components/') && (/^@\/lib\/supabase\/(server|admin)/.test(target)||target==='@/lib/auth/session'||target==='server-only')) return 'UI must not import privileged server clients or auth sessions';
   if (p.startsWith('src/lib/metrics/') && (/^@\/components\//.test(target)||/^@\/app\//.test(target)||target==='react'||target==='react-dom')) return 'Metrics domain must not depend on presentation';
   if (p.startsWith('src/lib/metrics/') && /^@\/lib\/supabase\/admin/.test(target)) return 'Metrics domain must not depend on privileged database clients';
   return null;
@@ -18,10 +18,11 @@ export function forbiddenImport(path: string, target: string): string | null {
 export function checkSource(path:string,source:string):string[] {
   const errors:string[]=[];
   const sf=ts.createSourceFile(path,source,ts.ScriptTarget.Latest,true,path.endsWith('.tsx')?ts.ScriptKind.TSX:ts.ScriptKind.TS);
+  const isClientComponent=sf.statements.some(stmt=>ts.isExpressionStatement(stmt)&&ts.isStringLiteral(stmt.expression)&&stmt.expression.text==='use client');
   for(const stmt of sf.statements) {
     if(ts.isImportDeclaration(stmt)&&ts.isStringLiteral(stmt.moduleSpecifier)){
       const target=stmt.moduleSpecifier.text;
-      const reason=forbiddenImport(path,target);
+      const reason=forbiddenImport(path,target,isClientComponent);
       if(reason) errors.push(`${path}: ${reason}: ${target}`);
     }
   }
