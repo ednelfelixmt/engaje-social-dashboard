@@ -1,4 +1,5 @@
-'use server';import {z} from 'zod';import {revalidatePath} from 'next/cache';import {requireAdmin} from '@/lib/auth/session';import type {ActionState} from '@/components/action-form';import {businessNiches,salesModels,suggestFunnelModel,funnelPresetFor} from '@/lib/metrics/funnel-config';import {isValidTimezone} from '@/lib/organization-options';
+'use server';import {z} from 'zod';import {revalidatePath} from 'next/cache';import {requireAdmin} from '@/lib/auth/session';
+import {canActivateMembership} from '@/lib/auth/membership-guards';import type {ActionState} from '@/components/action-form';import {businessNiches,salesModels,suggestFunnelModel,funnelPresetFor} from '@/lib/metrics/funnel-config';import {isValidTimezone} from '@/lib/organization-options';
 const nicheIds=businessNiches.map((item)=>item.id) as [typeof businessNiches[number]['id'],...typeof businessNiches[number]['id'][]];
 const salesModelIds=salesModels.map((item)=>item.id) as [typeof salesModels[number]['id'],...typeof salesModels[number]['id'][]];
 export async function createOrganization(_:ActionState,f:FormData):Promise<ActionState>{
@@ -36,12 +37,16 @@ export async function updateOrganization(_:ActionState,f:FormData):Promise<Actio
   return {ok:true,message:'Cliente atualizado.'+funnelMessage+(funnelMessage?'':' O funil só muda se você marcar "Aplicar o funil sugerido".')};
 }
 export async function saveMember(_:ActionState,f:FormData):Promise<ActionState>{const {db}=await requireAdmin();const input=z.object({organization_id:z.string().uuid(),user_id:z.string().uuid(),role:z.enum(['client_admin','editor','viewer']),is_active:z.boolean()}).safeParse({organization_id:f.get('organization_id'),user_id:f.get('user_id'),role:f.get('role'),is_active:f.get('is_active')==='on'});if(!input.success)return {ok:false,message:'Preencha organização, UUID do usuário e role.'};const {data:existing}=await db.from('organization_members').select('role').eq('organization_id',input.data.organization_id).eq('user_id',input.data.user_id).maybeSingle();if(existing?.role==='super_admin')return {ok:false,message:'O acesso de super administrador não pode ser alterado neste formulário.'};const secretForCheck=process.env.SUPABASE_SERVICE_ROLE_KEY;
+ const preliminary=canActivateMembership({isActive:input.data.is_active,serviceConfigured:!!secretForCheck,invitationLookupFailed:false,invitationStatus:null});
+ if(!preliminary.allowed)return {ok:false,message:'O serviço de validação de acessos está indisponível. Nenhuma permissão foi alterada.'};
  if(input.data.is_active&&secretForCheck){
   const {createClient}=await import('@supabase/supabase-js');
   const {supabaseUrl}=await import('@/lib/supabase/config');
   const adminCheck=createClient(supabaseUrl,secretForCheck,{auth:{persistSession:false,autoRefreshToken:false}});
-  const {data:agencyInvite}=await adminCheck.from('agency_user_invitations').select('status').eq('user_id',input.data.user_id).maybeSingle();
-  if(agencyInvite&&agencyInvite.status!=='accepted')return {ok:false,message:'O usuário ainda não concluiu seu cadastro. Não é possível ativar o acesso.'};
+  const {data:agencyInvite,error:invitationError}=await adminCheck.from('agency_user_invitations').select('status').eq('user_id',input.data.user_id).maybeSingle();
+  const status=agencyInvite?.status==='accepted'?'accepted':agencyInvite?.status==='pending'?'pending':agencyInvite?.status==='revoked'?'revoked':agencyInvite?.status==='expired'?'expired':null;
+  const decision=canActivateMembership({isActive:true,serviceConfigured:true,invitationLookupFailed:!!invitationError,invitationStatus:status});
+  if(!decision.allowed)return {ok:false,message:decision.reason==='invitation_unaccepted'?'O usuário ainda não concluiu seu cadastro. Não é possível ativar o acesso.':'Não foi possível validar o cadastro do usuário. Nenhuma permissão foi alterada.'};
  }
  const {error}=await db.from('organization_members').upsert(input.data);
  if(!error){
