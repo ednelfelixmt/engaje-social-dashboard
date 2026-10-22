@@ -12,7 +12,8 @@
     "start": "next start",
     "test": "node --import tsx --test tests/*.test.ts",
     "prebuild": "npm run test && npm run typecheck",
-    "check:architecture": "node --import tsx scripts/check-architecture.ts"
+    "check:architecture": "node --import tsx scripts/check-architecture.ts",
+    "lint": "eslint src/lib/metrics/paid-metrics.ts src/lib/metrics/calendar.ts scripts/check-architecture.ts tests/paid-metrics.test.ts tests/calendar.test.ts tests/architecture.test.ts"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",
