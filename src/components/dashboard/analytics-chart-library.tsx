@@ -17,16 +17,31 @@ export function BudgetTreemap({rows,currency}:{rows:AnalysisCampaign[];currency:
 }
 export function PeriodBridge({current,previous,currency}:{current:AnalysisCampaign[];previous:AnalysisCampaign[];currency:string}){
  const [metric,setMetric]=useState<'spend'|'leads'|'clicks'>('spend');
- const sum=(data:AnalysisCampaign[])=>data.reduce((s,r)=>s+(metric==='spend'?r.spend:(r[metric]??0)),0);
- const has=metric==='spend'||[...current,...previous].some(r=>r[metric]!=null);
- const currentValue=has?sum(current):null,previousValue=has&&previous.length?sum(previous):null;
- const names=new Map<string,{name:string;current:number;previous:number}>();
- for(const row of current){const existing=names.get(row.id)??{name:row.name,current:0,previous:0};existing.current+=metric==='spend'?row.spend:(row[metric]??0);names.set(row.id,existing);}
- for(const row of previous){const existing=names.get(row.id)??{name:row.name,current:0,previous:0};existing.previous+=metric==='spend'?row.spend:(row[metric]??0);names.set(row.id,existing);}
- const changes=[...names.values()].map(r=>({...r,delta:r.current-r.previous})).filter(r=>r.delta!==0).sort((a,b)=>Math.abs(b.delta)-Math.abs(a.delta));
- const max=Math.max(1,...changes.map(c=>Math.abs(c.delta)));
- const format=(value:number)=>metric==='spend'?money(value,currency):number(value);
- const unknown=metric!=='spend'&&[...current,...previous].some(r=>r[metric]==null);
- return <section className={PANEL}><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-[10px] uppercase tracking-[.15em] text-zinc-500">Variação entre períodos</p><h3 className="mt-1 text-sm font-semibold text-white">Cascata de contribuições</h3></div><select aria-label="Métrica da cascata" value={metric} onChange={e=>setMetric(e.target.value as 'spend'|'leads'|'clicks')} className="!h-8 !min-h-0 !text-xs"><option value="spend">Investimento</option><option value="leads">Leads</option><option value="clicks">Cliques</option></select></div>
- {previousValue==null||currentValue==null?<div className="grid h-[210px] place-items-center text-sm text-zinc-500">Comparação indisponível neste período.</div>:<><div className="mt-4 flex items-center justify-between rounded-lg border border-white/10 p-3 text-xs"><span>Anterior <strong className="ml-2 text-white">{format(previousValue)}</strong></span><span className={currentValue>=previousValue?'text-emerald-300':'text-rose-300'}>{format(currentValue-previousValue)}</span><span>Atual <strong className="ml-2 text-white">{format(currentValue)}</strong></span></div><div className="mt-3 space-y-2.5">{changes.slice(0,7).map((r,i)=><div key={r.name+i}><div className="mb-1 flex justify-between gap-2 text-[11px]"><span className="max-w-[68%] truncate text-zinc-300" title={r.name}>{r.name}</span><strong className={r.delta>=0?'text-emerald-300':'text-rose-300'}>{r.delta>0?'+':''}{format(r.delta)}</strong></div><div className="relative h-2 rounded-full bg-white/[.07]"><div className="absolute top-0 h-2 rounded-full" style={{background:r.delta>=0?'#34d399':'#fb7185',width:`${Math.max(1,Math.abs(r.delta)/max*100)}%`,left:r.delta>=0?'50%':undefined,right:r.delta<0?'50%':undefined,maxWidth:'50%'}}/></div></div>)}{!changes.length?<p className="text-sm text-zinc-400">Sem alteração mensurável entre campanhas.</p>:null}</div><p className="mt-3 text-[11px] leading-5 text-zinc-500">Contribuições aritméticas por campanha, comparando registros disponíveis. {unknown?'Atenção: alguns eventos não foram reportados; o gráfico não constitui uma reconciliação completa.':'Não representa causas comprovadas das mudanças.'}</p></>}</section>;
+ const measure=(r:AnalysisCampaign)=>metric==='spend'?r.spend:(r[metric]??0);
+ const available=previous.length>0&&(metric==='spend'||[...current,...previous].some(r=>r[metric]!=null));
+ const sum=(rs:AnalysisCampaign[])=>rs.reduce((n,r)=>n+measure(r),0);
+ const from=sum(previous),to=sum(current);
+ const map=new Map<string,{name:string;prior:number;now:number}>();
+ for(const r of previous){const v=map.get(r.id)??{name:r.name,prior:0,now:0};v.prior+=measure(r);map.set(r.id,v);}
+ for(const r of current){const v=map.get(r.id)??{name:r.name,prior:0,now:0};v.now+=measure(r);map.set(r.id,v);}
+ const all=[...map].map(([id,r])=>({id,name:r.name,delta:r.now-r.prior})).filter(r=>r.delta!==0).sort((a,b)=>Math.abs(b.delta)-Math.abs(a.delta));
+ const top=all.slice(0,5);const rest=all.slice(5).reduce((n,r)=>n+r.delta,0);
+ const steps=rest!==0?[...top,{id:'others',name:'Outras',delta:rest}]:top;
+ const sumSteps=steps.reduce((n,r)=>n+r.delta,from);
+ const min=Math.min(0,from,to,...steps.map((_,i)=>from+steps.slice(0,i+1).reduce((s,r)=>s+r.delta,0)));
+ const max=Math.max(1,from,to,...steps.map((_,i)=>from+steps.slice(0,i+1).reduce((s,r)=>s+r.delta,0)));
+ const sx=(i:number,count:number)=>38+(i+.5)*(600/count);
+ const sy=(v:number)=>213-180*(v-min)/(max-min);
+ const bars=[{name:'Anterior',begin:0,end:from,value:from,total:true},...steps.map((step,i)=>({name:step.name,begin:from+steps.slice(0,i).reduce((n,r)=>n+r.delta,0),end:from+steps.slice(0,i+1).reduce((n,r)=>n+r.delta,0),value:step.delta,total:false})),{name:'Atual',begin:0,end:to,value:to,total:true}];
+ const format=(v:number)=>metric==='spend'?money(v,currency):number(v);
+ const missing=metric!=='spend'&&[...current,...previous].some(r=>r[metric]==null);
+ return <section className={PANEL}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[.15em] text-zinc-500">Decomposição matemática</p><h3 className="mt-1 text-base font-semibold text-white">Cascata de contribuições</h3><p className="mt-1 text-xs text-zinc-400">Como cada campanha contribuiu para a diferença entre os períodos.</p></div><select aria-label="Métrica da cascata" value={metric} onChange={e=>setMetric(e.target.value as typeof metric)} className="!h-8 !min-h-0 !text-xs"><option value="spend">Investimento</option><option value="leads">Leads</option><option value="clicks">Cliques</option></select></div>
+ {!available?<div className="mt-4 grid h-[260px] place-items-center text-sm text-zinc-500">Sem período comparativo com dados suficientes.</div>:<>
+ <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/10 px-3 py-2 text-xs"><span>Anterior: <strong className="text-white">{format(from)}</strong></span><span className={to>=from?'text-emerald-300':'text-rose-300'}>Diferença: {to-from>0?'+':''}{format(to-from)}</span><span>Atual: <strong className="text-white">{format(to)}</strong></span></div>
+ <svg role="img" aria-label="Cascata de contribuições por campanha com início, variações positivas, negativas e total" viewBox="0 0 680 260" className="mt-3 w-full">
+ {[0,.25,.5,.75,1].map(t=>{const val=min+t*(max-min),y=sy(val);return <g key={t}><line x1="35" x2="665" y1={y} y2={y} stroke="#2b3546" strokeDasharray="3 6"/><text x="29" y={y+3} fill="#8292a6" textAnchor="end" fontSize="9">{number(val,0)}</text></g>})}
+ {bars.map((r,i)=>{const x=sx(i,bars.length),top=Math.min(sy(r.begin),sy(r.end)),bottom=Math.max(sy(r.begin),sy(r.end));const color=r.total?'#60a5fa':r.value>=0?'#34d399':'#fb7185';return <g key={i}><rect x={x-20} y={top} width="40" height={Math.max(3,bottom-top)} rx="3" fill={color}/><title>{r.name}: {format(r.value)}</title><text x={x} y={Math.max(10,top-7)} fontSize="9" fontWeight="600" fill="#e2e8f0" textAnchor="middle">{r.value>0&&!r.total?'+':''}{number(r.value,0)}</text><text x={x} y="235" fontSize="9" fill="#a3afbd" textAnchor="middle">{r.name.length>12?r.name.slice(0,11)+'…':r.name}</text>{i<bars.length-1?<line x1={x+20} x2={sx(i+1,bars.length)-20} y1={sy(r.end)} y2={sy(r.end)} stroke="#64748b" strokeDasharray="2 3" opacity=".65"/>:null}</g>})}
+ </svg>
+ <p className="text-[11px] text-zinc-500">Total reconciliado: {format(sumSteps)}. {missing?'Existem métricas não reportadas: a comparação é parcial.':'São contribuições aritméticas, não causas comprovadas.'}</p></>}
+ </section>;
 }
