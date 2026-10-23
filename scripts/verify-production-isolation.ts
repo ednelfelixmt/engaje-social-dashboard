@@ -12,7 +12,7 @@ export function validate(env:NodeJS.ProcessEnv){
  const files=[env.MEDIAHUB_A_BRANDING_FILE||'',env.MEDIAHUB_B_BRANDING_FILE||''];
  if(!a.email.endsWith('.test')||!b.email.endsWith('.test')||!a.password||!b.password||!a.slug||!b.slug||a.email.toLowerCase()===b.email.toLowerCase()||a.slug.toLowerCase()===b.slug.toLowerCase())throw new Error('Two distinct synthetic fixtures required');
  if(files.some(path=>!path||path.includes('..')||path.startsWith('/'))||files[0]===files[1])throw new Error('Two distinct private branding file fixtures required');
- if(!files[0].startsWith(a.slug+'/')||!files[1].startsWith(b.slug+'/'))throw new Error('Private file fixtures must match own tenant slug');
+ if(files.some(path=>!/^[0-9a-fA-F-]{36}\/.+/.test(path)))throw new Error('Private file fixtures require organization UUID prefix');
  return {url,key,a,b,files};
 }
 function assert(value:unknown,message:string):asserts value{if(!value)throw new Error('Isolation failure: '+message);}
@@ -36,6 +36,7 @@ export async function verifyProductionIsolation(env:NodeJS.ProcessEnv){
    assert(!adminError&&admin===false,'not superadmin');
   }
   assert(ids[0]!==ids[1]&&users[0]!==users[1],'different orgs and users');
+  assert(cfg.files.every((path,i)=>path.split('/')[0].toLowerCase()===ids[i].toLowerCase()),'private fixtures must use actual organization UUID prefix');
   const tables=['organizations','organization_members','dashboard_configs','integrations','metrics_ads','metrics_ads_breakdowns','metrics_organic','metrics_crm','creatives','client_asset_assignments','sync_jobs','integration_alerts'];
   for(let i=0;i<2;i++){
    const client=clients[i],foreign=ids[1-i];
