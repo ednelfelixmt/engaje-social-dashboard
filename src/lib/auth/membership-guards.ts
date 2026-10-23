@@ -38,3 +38,16 @@ export function membershipRevocationFeedback(input:{
  if(input.revocationFailed)return {ok:false,message:'O acesso foi atualizado, mas não foi possível revogar os convites pendentes. Revise os convites antes de concluir.'};
  return {ok:true,message:'Acesso atualizado e convites pendentes revogados.'};
 }
+
+/**
+ * Privilege-preserving precondition for an agency membership edit.
+ * An unreadable current role is not equivalent to a missing membership.
+ */
+export function canEditExistingMembership(input:{
+ readFailed:boolean;
+ existingRole:string|null;
+}):{allowed:true}|{allowed:false;reason:'lookup_failed'|'protected_super_admin'}{
+ if(input.readFailed)return {allowed:false,reason:'lookup_failed'};
+ if(input.existingRole==='super_admin')return {allowed:false,reason:'protected_super_admin'};
+ return {allowed:true};
+}
