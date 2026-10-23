@@ -7,7 +7,7 @@ export type MembershipActivationCheck = {
   isActive: boolean;
   serviceConfigured: boolean;
   invitationLookupFailed: boolean;
-  invitationStatus: 'pending' | 'accepted' | 'revoked' | 'expired' | null;
+  invitationStatus: string | null;
 };
 export type MembershipActivationDecision =
   | {allowed:true}
