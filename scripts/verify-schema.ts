@@ -81,6 +81,12 @@ await db.exec(`
     ('${assetA}','${connectionA}','meta_ads','ad_account','act_a','Conta A','assigned');
   insert into public.client_asset_assignments(id,organization_id,asset_id,integration_id) values
     ('${assignmentA}','${orgA}','${assetA}','${intA}');
+  insert into public.platform_connections(id,agency_organization_id,target_organization_id,provider,external_user_id,account_name,status) values
+    ('60000000-0000-0000-0000-000000000002','${agency}','${orgB}','meta_ads','meta-user-b','Meta User B','connected');
+  insert into public.platform_assets(id,connection_id,provider,asset_type,external_id,name,asset_status) values
+    ('70000000-0000-0000-0000-000000000002','60000000-0000-0000-0000-000000000002','meta_ads','ad_account','act_b','Conta B','assigned');
+  insert into public.client_asset_assignments(id,organization_id,asset_id,integration_id) values
+    ('80000000-0000-0000-0000-000000000002','${orgB}','70000000-0000-0000-0000-000000000002','${intB}');
   insert into public.sync_configs(assignment_id,metric_family) values ('${assignmentA}','paid');
   insert into public.sync_jobs(organization_id,connection_id,assignment_id,status) values ('${orgA}','${connectionA}','${assignmentA}','completed');
   insert into public.integration_alerts(organization_id,alert_key,code,severity,title) values ('${orgA}','test-alert','stale_sync','warning','Conta sem atualização');
@@ -102,6 +108,12 @@ check(await scalar(`select revenue_source from public.daily_performance where or
 
 await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub','${viewer}',false);`);
 check(await scalar('select count(*)::int from public.organizations') === 1, 'Viewer só vê sua organização');
+
+check(await scalar("select count(*)::int from public.platform_assets") === 1, 'Viewer vê somente o ativo vinculado ao próprio cliente');
+check(await scalar("select count(*)::int from public.platform_assets where name='Conta B'") === 0, 'Viewer não vê ativo atribuído a outro cliente');
+check(await scalar("select count(*)::int from public.client_asset_assignments where organization_id='${orgB}'") === 0, 'Viewer não vê vínculo de ativos de outra empresa');
+check(await scalar("select count(*)::int from public.platform_connections where target_organization_id='${orgB}'") === 0, 'Viewer não enumera conexões de outra empresa');
+
 check(await scalar(`select count(*)::int from public.daily_performance where organization_id='${orgB}'`) === 0, 'View respeita RLS de outro cliente');
 check(await scalar('select public.is_super_admin()') === false, 'Viewer não é super admin');
 for (const table of ['profiles','organization_members','branding','dashboard_configs','ad_campaigns','metrics_ads','metrics_ads_breakdowns','metrics_crm','metrics_organic','metrics_organic_accounts','creatives','spreadsheet_uploads','client_asset_assignments','sync_jobs','integration_alerts']) {
@@ -118,6 +130,7 @@ await denied(`insert into public.metrics_ads default values`, '42501', 'Browser 
 await db.exec(`select set_config('request.jwt.claim.sub','${editor}',false)`);
 check((await db.query(`update public.branding set primary_color='#FFFFFF' where organization_id='${orgA}' returning organization_id`)).rows.length === 1, 'Editor edita branding próprio');
 check((await db.query(`update public.branding set primary_color='#FFFFFF' where organization_id='${orgB}' returning organization_id`)).rows.length === 0, 'Editor não edita outro cliente');
+check(await scalar("select count(*)::int from public.platform_assets where name='Conta B'") === 0, 'Editor não lê ativos do cliente B');
 await denied(`update public.branding set organization_id='${orgB}' where organization_id='${orgA}'`, '23514', 'Movimentação de tenant bloqueada');
 await db.exec(`insert into storage.objects(bucket_id,name) values ('branding','${orgA}/cover.webp')`);
 check(await scalar('select count(*)::int from storage.objects') === 1, 'Upload de branding próprio');
