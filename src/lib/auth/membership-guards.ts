@@ -38,3 +38,15 @@ export function membershipRevocationFeedback(input:{
  if(input.revocationFailed)return {ok:false,message:'O acesso foi atualizado, mas não foi possível revogar os convites pendentes. Revise os convites antes de concluir.'};
  return {ok:true,message:'Acesso atualizado e convites pendentes revogados.'};
 }
+
+/**
+ * Do not attempt to overwrite membership roles if the existing row could
+ * not be read. In particular this protects super_admin role transitions.
+ */
+export function canUpdateExistingMembership(input:{
+ lookupFailed:boolean;existingRole:string|null;
+}):{allowed:true}|{allowed:false;reason:'lookup_failed'|'super_admin_protected'} {
+ if(input.lookupFailed)return {allowed:false,reason:'lookup_failed'};
+ if(input.existingRole==='super_admin')return {allowed:false,reason:'super_admin_protected'};
+ return {allowed:true};
+}
