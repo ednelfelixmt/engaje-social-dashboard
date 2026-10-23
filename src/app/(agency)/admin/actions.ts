@@ -33,7 +33,7 @@ export async function updateOrganization(_:ActionState,f:FormData):Promise<Actio
     if(!parsed.data.niche||!parsed.data.sales_model){revalidatePath('/admin');return {ok:false,message:'Dados salvos, mas para aplicar o funil informe o nicho e o modelo de vendas.'};}
     const funnelModel=suggestFunnelModel(parsed.data.niche,parsed.data.sales_model);
     const preset=funnelPresetFor(funnelModel);
-    const {error:funnelError}=await db.from('dashboard_configs').update({funnel_model:funnelModel,funnel_steps:preset.steps}) .eq('organization_id',id.data);
+    const {error:funnelError}=await db.from('dashboard_configs').update({funnel_model:funnelModel,funnel_steps:preset.steps}).eq('organization_id',id.data);
     if(funnelError){revalidatePath('/admin');return {ok:false,message:'Dados salvos, mas o funil não pôde ser aplicado.'};}
     funnelMessage=` Funil aplicado: ${preset.label}.`;
   }
