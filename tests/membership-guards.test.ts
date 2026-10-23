@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {canActivateMembership,membershipRevocationFeedback,type MembershipActivationCheck} from '../src/lib/auth/membership-guards';
+import {canActivateMembership,canUpdateExistingMembership,membershipRevocationFeedback,type MembershipActivationCheck} from '../src/lib/auth/membership-guards';
 
 const base:MembershipActivationCheck={isActive:true,serviceConfigured:true,invitationLookupFailed:false,invitationStatus:null};
 test('deny activation without privileged validation service',()=>{
@@ -41,4 +41,16 @@ test('missing privileged revocation service reports partial write',()=>{
 test('failed membership write never reports completed access change',()=>{
  const result=membershipRevocationFeedback({membershipUpdated:false,serviceConfigured:true,revocationFailed:false});
  assert.equal(result.ok,false);
+});
+
+test('existing membership lookup failure blocks all permission writes',()=>{
+ assert.deepEqual(canUpdateExistingMembership({lookupFailed:true,existingRole:null}),{allowed:false,reason:'lookup_failed'});
+ assert.deepEqual(canUpdateExistingMembership({lookupFailed:true,existingRole:'viewer'}),{allowed:false,reason:'lookup_failed'});
+});
+test('existing super administrator role is never changed via customer membership form',()=>{
+ assert.deepEqual(canUpdateExistingMembership({lookupFailed:false,existingRole:'super_admin'}),{allowed:false,reason:'super_admin_protected'});
+});
+test('confirmed existing regular member or a missing membership can proceed to remaining gates',()=>{
+ assert.deepEqual(canUpdateExistingMembership({lookupFailed:false,existingRole:'editor'}),{allowed:true});
+ assert.deepEqual(canUpdateExistingMembership({lookupFailed:false,existingRole:null}),{allowed:true});
 });
