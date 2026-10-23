@@ -38,6 +38,11 @@ function getFixture(env:NodeJS.ProcessEnv,suffix:'A'|'B'):Fixture{
   file:required(env,'STAGING_PRIVATE_FILE_'+suffix),
  };
 }
+export function distinctStagingFixtures(a:Fixture,b:Fixture):boolean {
+ return a.email.trim().toLowerCase()!==b.email.trim().toLowerCase()
+  && a.slug.trim().toLowerCase()!==b.slug.trim().toLowerCase()
+  && a.file.trim()!==b.file.trim();
+}
 function invariant(cond:unknown,message:string):asserts cond{
  if(!cond)throw new Error('Isolation assertion failed: '+message);
 }
@@ -80,15 +85,17 @@ export async function runStagingIsolation(env:NodeJS.ProcessEnv):Promise<void>{
  // These are *public/publishable*, never secret/service_role keys.
  invariant(!key.startsWith('sb_secret_')&&!key.includes('service_role'),'use publishable key, not a privileged credential');
  const a=getFixture(env,'A'),b=getFixture(env,'B');
- invariant(a.email!==b.email&&a.slug!==b.slug,'distinct test identities and tenants required');
- const A=await login(target,key,a),B=await login(target,key,b);
- invariant(A.orgId!==B.orgId,'tenant identifiers must differ');
+ invariant(distinctStagingFixtures(a,b),'distinct test identities, tenants and private storage fixtures required');
+ const A=await login(target,key,a);
+ let B:Context|undefined;
  try {
+  B=await login(target,key,b);
+  invariant(A.orgId!==B.orgId,'tenant identifiers must differ');
   await mustDenyForeign(A,B);
   await mustDenyForeign(B,A);
   process.stdout.write('PASS: authenticated cross-tenant read and signed URL isolation for both directions (staging only)\n');
  } finally {
-  await Promise.allSettled([A.client.auth.signOut(),B.client.auth.signOut()]);
+  await Promise.allSettled([A.client.auth.signOut(), ...(B?[B.client.auth.signOut()]:[])]);
  }
 }
 if(process.argv[1]&&/verify-staging-isolation\.(ts|js)$/.test(process.argv[1])){
