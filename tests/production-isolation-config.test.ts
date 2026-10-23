@@ -7,7 +7,8 @@ const base={
  MEDIAHUB_SUPABASE_URL:'https://ityidnsfhgotucgvcifq.supabase.co',
  MEDIAHUB_PUBLISHABLE_KEY:'sb_publishable_abcdefghijklmnopqrstuvwxyz',
  MEDIAHUB_A_EMAIL:'a@example.test',MEDIAHUB_A_PASSWORD:'placeholder-a',MEDIAHUB_A_SLUG:'fixture-a',
- MEDIAHUB_B_EMAIL:'b@example.test',MEDIAHUB_B_PASSWORD:'placeholder-b',MEDIAHUB_B_SLUG:'fixture-b'
+ MEDIAHUB_B_EMAIL:'b@example.test',MEDIAHUB_B_PASSWORD:'placeholder-b',MEDIAHUB_B_SLUG:'fixture-b',
+ MEDIAHUB_A_BRANDING_FILE:'fixture-a/logo.png',MEDIAHUB_B_BRANDING_FILE:'fixture-b/logo.png'
 };
 test('production read-only isolation fails closed without explicit acknowledgement',()=>{
  assert.throws(()=>validate({...base,MEDIAHUB_PROD_READONLY_ACK:''}),/acknowledgement/);
