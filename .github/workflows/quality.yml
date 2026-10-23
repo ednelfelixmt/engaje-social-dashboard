@@ -25,6 +25,7 @@ jobs:
       - run: npm install --no-save --package-lock=false --ignore-scripts eslint@9.39.1 typescript-eslint@8.46.0
       - run: npm run lint
       - run: npm run test
+      - run: npm run verify:schema
       - run: npm run typecheck
       - run: npm run check:architecture
       - run: npm run build
