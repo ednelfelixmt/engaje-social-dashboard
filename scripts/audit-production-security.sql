@@ -34,4 +34,13 @@ select 'sensitive_direct_grants',
 union all
 select 'destructive_rpc_access',
        (select count(*)=1 and coalesce(bool_and(prosecdef and not anon_execute and not authenticated_execute),false) from destructive_rpc),
-       (select count(*) from destructive_rpc)::text;
+       (select count(*) from destructive_rpc)::text
+union all
+select 'private_storage_buckets',
+       (select count(*)=3 and coalesce(bool_and(not public),false) from storage.buckets where id in ('branding','creatives','spreadsheets')),
+       (select count(*) from storage.buckets where id in ('branding','creatives','spreadsheets'))::text
+union all
+select 'private_storage_policies',
+       (select count(*)=5 from pg_catalog.pg_policies where schemaname='storage' and tablename='objects' and policyname in ('engaje_login_assets','engaje_storage_delete','engaje_storage_insert','engaje_storage_read','engaje_storage_update')),
+       (select count(*) from pg_catalog.pg_policies where schemaname='storage' and tablename='objects' and policyname in ('engaje_login_assets','engaje_storage_delete','engaje_storage_insert','engaje_storage_read','engaje_storage_update'))::text;
+
