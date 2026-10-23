@@ -86,7 +86,6 @@ export default async function Page({params: params_, searchParams: searchParams_
   const [config, {data: orgs}, {data: latestMovement}, {data: personalLayout}, {data: branding}] = await Promise.all([
     dashboardConfig(params.organizationSlug),
     superAdmin?db.from('organizations').select('name,slug').eq('status', 'active').order('name'):Promise.resolve({data:[{name:org.name,slug:org.slug}]}),
-    Promise.resolve({data:null}),
     params.section==='overview'?db.from('metrics_ads').select('metric_date').eq('organization_id', org.id).gt('spend', 0).order('metric_date', {ascending: false}).limit(1).maybeSingle():Promise.resolve({data:null}),
     db.from('user_dashboard_layouts').select('layout').eq('user_id', user.id).eq('organization_id', org.id).eq('scope', params.section).maybeSingle(),
     db.from('branding').select('logo_path').eq('organization_id', org.id).maybeSingle(),
