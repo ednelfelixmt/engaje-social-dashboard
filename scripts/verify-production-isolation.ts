@@ -44,7 +44,7 @@ export async function verifyProductionIsolation(env:NodeJS.ProcessEnv){
    const {data:connections,error:connectionError}=await client.from('platform_connections').select('id').eq('target_organization_id',foreign).limit(1);
    assert(!connectionError&&connections?.length===0,'foreign platform connections');
    const {data:foreignAssets,error:foreignAssetError}=await clients[1-i].from('client_asset_assignments').select('asset_id').eq('organization_id',foreign).limit(100);
-   assert(!foreignAssetError&&foreignAssets,'foreign tenant fixture assets accessible to their owner');
+   assert(!foreignAssetError&&foreignAssets&&foreignAssets.length>0,'foreign tenant requires assigned asset fixture');
    if(foreignAssets.length){
     const {data:assets,error:assetsError}=await client.from('platform_assets').select('id').in('id',foreignAssets.map(row=>row.asset_id)).limit(100);
     assert(!assetsError&&assets?.length===0,'foreign platform assets');
