@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {PRODUCTION_PROJECT_REF,requireStagingUrl,runStagingIsolation} from '../scripts/verify-staging-isolation';
+import {PRODUCTION_PROJECT_REF,requireStagingUrl,runStagingIsolation,distinctStagingFixtures} from '../scripts/verify-staging-isolation';
 
 test('staging guard rejects Engaje production project even with valid HTTPS URL',()=>{
  assert.throws(()=>requireStagingUrl('https://'+PRODUCTION_PROJECT_REF+'.supabase.co'),/non-production/);
@@ -27,4 +27,13 @@ test('authenticated verification rejects privileged public credentials before lo
   STAGING_SUPABASE_URL:'https://abcdefghijklmnopqrst.supabase.co',
   STAGING_SUPABASE_PUBLISHABLE_KEY:'sb_secret_not_allowed',
  }),/publishable key/);
+});
+
+test('isolation refuses aliases of the same identity, tenant or storage object',()=>{
+ const a={email:'alpha@example.test',slug:'tenant-a',file:'tenant-a/logo.png',password:'test'};
+ const b={email:'beta@example.test',slug:'tenant-b',file:'tenant-b/logo.png',password:'test'};
+ assert.equal(distinctStagingFixtures(a,b),true);
+ assert.equal(distinctStagingFixtures(a,{...b,email:' ALPHA@example.test '}),false);
+ assert.equal(distinctStagingFixtures(a,{...b,slug:'TENANT-A'}),false);
+ assert.equal(distinctStagingFixtures(a,{...b,file:a.file}),false);
 });
