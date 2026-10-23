@@ -54,3 +54,9 @@ test('allow normal updates and new membership only when read completed',()=>{
  assert.deepEqual(canEditExistingMembership({readFailed:false,existingRole:'viewer'}),{allowed:true});
  assert.deepEqual(canEditExistingMembership({readFailed:false,existingRole:null}),{allowed:true});
 });
+
+test('unrecognized invitation state fails closed instead of appearing as missing invite',()=>{
+ for(const invitationStatus of ['suspended','cancelled','unknown',''] as const){
+  assert.deepEqual(canActivateMembership({...base,invitationStatus}),{allowed:false,reason:'invitation_unaccepted'});
+ }
+});
