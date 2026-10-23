@@ -30,8 +30,8 @@ export function checkSource(path:string,source:string):string[] {
         errors.push(path+': privileged environment variable referenced in client component: '+node.name.text);
       }
       if(ts.isElementAccessExpression(node)&&ts.isPropertyAccessExpression(node.expression)
-        &&ts.isIdentifier(node.expression.expression.expression)
-        &&node.expression.expression.expression.text==='process'
+        &&ts.isIdentifier(node.expression.expression)
+        &&node.expression.expression.text==='process'
         &&node.expression.name.text==='env'&&ts.isStringLiteral(node.argumentExpression)
         &&forbiddenEnv.test(node.argumentExpression.text)) {
         errors.push(path+': privileged environment variable referenced in client component: '+node.argumentExpression.text);
