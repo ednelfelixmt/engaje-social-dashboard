@@ -1,5 +1,6 @@
 'use server';import {z} from 'zod';import {revalidatePath} from 'next/cache';import {requireAdmin} from '@/lib/auth/session';
-import {canActivateMembership,membershipRevocationFeedback} from '@/lib/auth/membership-guards';import type {ActionState} from '@/components/action-form';import {businessNiches,salesModels,suggestFunnelModel,funnelPresetFor} from '@/lib/metrics/funnel-config';import {isValidTimezone} from '@/lib/organization-options';
+import {canActivateMembership,membershipRevocationFeedback} from '@/lib/auth/membership-guards';
+import {validateOrganizationUpdateRequest} from '@/lib/auth/organization-update-guards';import type {ActionState} from '@/components/action-form';import {businessNiches,salesModels,suggestFunnelModel,funnelPresetFor} from '@/lib/metrics/funnel-config';import {isValidTimezone} from '@/lib/organization-options';
 const nicheIds=businessNiches.map((item)=>item.id) as [typeof businessNiches[number]['id'],...typeof businessNiches[number]['id'][]];
 const salesModelIds=salesModels.map((item)=>item.id) as [typeof salesModels[number]['id'],...typeof salesModels[number]['id'][]];
 export async function createOrganization(_:ActionState,f:FormData):Promise<ActionState>{
@@ -18,17 +19,21 @@ export async function createOrganization(_:ActionState,f:FormData):Promise<Actio
 }
 export async function updateOrganization(_:ActionState,f:FormData):Promise<ActionState>{
   const {db}=await requireAdmin();
-  const id=z.string().uuid().parse(f.get('id'));
+  const id=z.string().uuid().safeParse(f.get('id'));
+  if(!id.success)return {ok:false,message:'Identificador do cliente inválido. Nenhuma alteração foi salva.'};
   const parsed=z.object({name:z.string().trim().min(2).max(160),status:z.enum(['active','paused']),niche:z.enum(nicheIds).nullable(),sales_model:z.enum(salesModelIds).nullable(),timezone:z.string().refine(isValidTimezone),currency:z.string().regex(/^[A-Z]{3}$/)}).safeParse({name:f.get('name'),status:f.get('status'),niche:f.get('niche')||null,sales_model:f.get('sales_model')||null,timezone:f.get('timezone'),currency:f.get('currency')});
   if(!parsed.success)return {ok:false,message:'Confira nome, status, fuso horário e moeda.'};
-  const {data:updated,error}=await db.from('organizations').update(parsed.data).eq('id',id).eq('is_agency',false).select('id,slug').maybeSingle();
+  const applyFunnel=f.get('apply_funnel')==='on';
+  const guard=validateOrganizationUpdateRequest({applyFunnel,niche:parsed.data.niche,salesModel:parsed.data.sales_model});
+  if(!guard.ok)return {ok:false,message:guard.message};
+  const {data:updated,error}=await db.from('organizations').update(parsed.data).eq('id',id.data).eq('is_agency',false).select('id,slug').maybeSingle();
   if(error||!updated)return {ok:false,message:'Não foi possível salvar.'};
   let funnelMessage='';
   if(f.get('apply_funnel')==='on'){
     if(!parsed.data.niche||!parsed.data.sales_model){revalidatePath('/admin');return {ok:false,message:'Dados salvos, mas para aplicar o funil informe o nicho e o modelo de vendas.'};}
     const funnelModel=suggestFunnelModel(parsed.data.niche,parsed.data.sales_model);
     const preset=funnelPresetFor(funnelModel);
-    const {error:funnelError}=await db.from('dashboard_configs').update({funnel_model:funnelModel,funnel_steps:preset.steps}).eq('organization_id',id);
+    const {error:funnelError}=await db.from('dashboard_configs').update({funnel_model:funnelModel,funnel_steps:preset.steps}).eq('organization_id',id.data);
     if(funnelError){revalidatePath('/admin');return {ok:false,message:'Dados salvos, mas o funil não pôde ser aplicado.'};}
     funnelMessage=` Funil aplicado: ${preset.label}.`;
   }
