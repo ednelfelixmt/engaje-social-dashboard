@@ -12,7 +12,7 @@ export function validate(env:NodeJS.ProcessEnv){
  const files=[env.MEDIAHUB_A_BRANDING_FILE||'',env.MEDIAHUB_B_BRANDING_FILE||''];
  if(!a.email.endsWith('.test')||!b.email.endsWith('.test')||!a.password||!b.password||!a.slug||!b.slug||a.email.toLowerCase()===b.email.toLowerCase()||a.slug.toLowerCase()===b.slug.toLowerCase())throw new Error('Two distinct synthetic fixtures required');
  if(files.some(path=>!path||path.includes('..')||path.startsWith('/'))||files[0]===files[1])throw new Error('Two distinct private branding file fixtures required');
- if(files.some(path=>!/^[0-9a-fA-F-]{36}\/.+/.test(path)))throw new Error('Private file fixtures require organization UUID prefix');
+ if(files.some(path=>!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\/.+/.test(path)))throw new Error('Private file fixtures require organization UUID prefix');
  return {url,key,a,b,files};
 }
 function assert(value:unknown,message:string):asserts value{if(!value)throw new Error('Isolation failure: '+message);}
