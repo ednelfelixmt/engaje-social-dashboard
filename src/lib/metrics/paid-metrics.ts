@@ -25,6 +25,13 @@ export function sumKnown<T>(rows: readonly T[], selector: (row: T) => number | n
   return Number.isFinite(total) ? total : null;
 }
 
+/** Ratios must never leak NaN or Infinity to charts, even for malformed facts. */
+function finiteRatio(numerator: number, denominator: number, multiplier = 1): number | null {
+  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0) return null;
+  const result = numerator / denominator * multiplier;
+  return Number.isFinite(result) ? result : null;
+}
+
 /** A weighted ratio of aggregate numerators/denominators, never an average of ratios. */
 export function paidMetric(row: PaidFact, metric: PaidMetricKey): number | null {
   switch (metric) {
@@ -32,11 +39,11 @@ export function paidMetric(row: PaidFact, metric: PaidMetricKey): number | null 
     case 'impressions':
     case 'clicks':
     case 'leads': return row[metric] != null && Number.isFinite(row[metric]) ? row[metric] : null;
-    case 'ctr': return row.impressions != null && row.impressions > 0 && row.clicks != null
-      ? row.clicks / row.impressions * 100 : null;
-    case 'cpc': return row.clicks != null && row.clicks > 0 ? row.spend / row.clicks : null;
-    case 'cpm': return row.impressions != null && row.impressions > 0 ? row.spend / row.impressions * 1000 : null;
-    case 'cpl': return row.leads != null && row.leads > 0 ? row.spend / row.leads : null;
+    case 'ctr': return row.impressions != null && row.clicks != null
+      ? finiteRatio(row.clicks, row.impressions, 100) : null;
+    case 'cpc': return row.clicks != null ? finiteRatio(row.spend, row.clicks) : null;
+    case 'cpm': return row.impressions != null ? finiteRatio(row.spend, row.impressions, 1000) : null;
+    case 'cpl': return row.leads != null ? finiteRatio(row.spend, row.leads) : null;
   }
 }
 
