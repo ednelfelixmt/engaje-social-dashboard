@@ -83,10 +83,9 @@ export default async function Page({params: params_, searchParams: searchParams_
   const sectionGroup = platformPage?.group ?? (params.section === 'paid' ? 'paid' : null);
   const contentMode=params.section==='paid-creatives'?'paid':null;
 
-  const [config, {data: orgs}, {data: membership}, {data: latestMovement}, {data: personalLayout}, {data: branding}] = await Promise.all([
+  const [config, {data: orgs}, {data: latestMovement}, {data: personalLayout}, {data: branding}] = await Promise.all([
     dashboardConfig(params.organizationSlug),
     superAdmin?db.from('organizations').select('name,slug').eq('status', 'active').order('name'):Promise.resolve({data:[{name:org.name,slug:org.slug}]}),
-    superAdmin?Promise.resolve({data:null}):db.from('organization_members').select('role').eq('organization_id', org.id).eq('user_id', user.id).maybeSingle(),
     params.section==='overview'?db.from('metrics_ads').select('metric_date').eq('organization_id', org.id).gt('spend', 0).order('metric_date', {ascending: false}).limit(1).maybeSingle():Promise.resolve({data:null}),
     db.from('user_dashboard_layouts').select('layout').eq('user_id', user.id).eq('organization_id', org.id).eq('scope', params.section).maybeSingle(),
     db.from('branding').select('logo_path').eq('organization_id', org.id).maybeSingle(),
@@ -105,7 +104,7 @@ export default async function Page({params: params_, searchParams: searchParams_
   const customizable = blockCatalog.length > 0 || contentMode !== null;
   const layoutDefaults = (config.default_layouts && typeof config.default_layouts === 'object' && !Array.isArray(config.default_layouts) ? (config.default_layouts as Record<string, unknown>)[params.section] : null) ?? null;
   const {layout: initialLayout, personalized} = effectiveLayout(personalLayout?.layout, layoutDefaults);
-  const canCustomizeClient = superAdmin || ['client_admin', 'editor'].includes(membership?.role ?? '');
+  const canCustomizeClient = superAdmin;
   const f = filters(searchParams, org.timezone, org.currency);
   const visible = platformDashboards.filter((item)=>item.group===sectionGroup).map((item)=>item.platform);
   const requestedPlatform = visible.find((platform) => platform === searchParams.platform);
