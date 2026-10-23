@@ -49,7 +49,7 @@ export async function saveMember(_:ActionState,f:FormData):Promise<ActionState>{
   const {supabaseUrl}=await import('@/lib/supabase/config');
   const adminCheck=createClient(supabaseUrl,secretForCheck,{auth:{persistSession:false,autoRefreshToken:false}});
   const {data:agencyInvite,error:invitationError}=await adminCheck.from('agency_user_invitations').select('status').eq('user_id',input.data.user_id).maybeSingle();
-  const status=agencyInvite?.status==='accepted'?'accepted':agencyInvite?.status==='pending'?'pending':agencyInvite?.status==='revoked'?'revoked':agencyInvite?.status==='expired'?'expired':null;
+  const status=agencyInvite?.status??null; // Preserve unknown statuses: only explicit 'accepted' permits activation.
   const decision=canActivateMembership({isActive:true,serviceConfigured:true,invitationLookupFailed:!!invitationError,invitationStatus:status});
   if(!decision.allowed)return {ok:false,message:decision.reason==='invitation_unaccepted'?'O usuário ainda não concluiu seu cadastro. Não é possível ativar o acesso.':'Não foi possível validar o cadastro do usuário. Nenhuma permissão foi alterada.'};
  }
