@@ -1,0 +1,33 @@
+name: Staging Auth Isolation
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: staging-auth-isolation
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Real authenticated RLS and Storage checks (staging only)
+        run: npm run verify:staging
+        env:
+          STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          STAGING_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}
+          STAGING_USER_A_EMAIL: ${{ secrets.STAGING_USER_A_EMAIL }}
+          STAGING_USER_A_PASSWORD: ${{ secrets.STAGING_USER_A_PASSWORD }}
+          STAGING_ORG_A_SLUG: ${{ vars.STAGING_ORG_A_SLUG }}
+          STAGING_PRIVATE_FILE_A: ${{ vars.STAGING_PRIVATE_FILE_A }}
+          STAGING_USER_B_EMAIL: ${{ secrets.STAGING_USER_B_EMAIL }}
+          STAGING_USER_B_PASSWORD: ${{ secrets.STAGING_USER_B_PASSWORD }}
+          STAGING_ORG_B_SLUG: ${{ vars.STAGING_ORG_B_SLUG }}
+          STAGING_PRIVATE_FILE_B: ${{ vars.STAGING_PRIVATE_FILE_B }}
