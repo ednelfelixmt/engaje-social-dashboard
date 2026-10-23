@@ -587,7 +587,7 @@ create policy platform_org_read on public.platform_organizations for select to a
 );
 create policy asset_read on public.platform_assets for select to authenticated using (
   exists(select 1 from public.platform_connections c where c.id=connection_id and ((select private.is_super_admin()) or private.user_belongs_to_org(c.target_organization_id)))
-  or exists(select 1 from public.client_asset_assignments a where a.asset_id=id and a.assignment_status='assigned' and private.user_belongs_to_org(a.organization_id))
+  or exists(select 1 from public.client_asset_assignments a where a.asset_id=platform_assets.id and a.assignment_status='assigned' and private.user_belongs_to_org(a.organization_id))
 );
 create policy assignment_read on public.client_asset_assignments for select to authenticated using (private.user_belongs_to_org(organization_id));
 create policy sync_config_read on public.sync_configs for select to authenticated using (
