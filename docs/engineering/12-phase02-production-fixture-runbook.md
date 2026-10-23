@@ -12,7 +12,7 @@ Ambiente alvo: `ityidnsfhgotucgvcifq` (produção). **Não execute SQL diretamen
 1. Criar **duas contas Auth sintéticas distintas** com e-mails de domínio `.test` por `supabase.auth.admin.createUser` no servidor protegido, sem publicar passwords ou tokens.
 2. Criar duas organizações de teste isoladas, não agência, com slugs distintos (ex.: `homologacao-a` e `homologacao-b`). Confirmar ausência de conflitos antes de inserir.
 3. Associar cada usuário **somente** à sua própria organização com papel `viewer` e vínculo ativo. Verificar ausência de `super_admin`.
-4. Criar um ativo sintético com vínculo por organização e um arquivo `branding` privado por organização, nos caminhos correspondentes aos próprios slugs. Não usar assets, integração, credencial ou arquivos de clientes reais.
+4. Criar um ativo sintético com vínculo por organização e um arquivo `branding` privado por organização, nos caminhos iniciados pelo UUID real da organização (ex.: `<organization_uuid>/logo.png`), conforme `private.storage_org`; o slug não funciona como prefixo. Não usar assets, integração, credencial ou arquivos de clientes reais.
 5. Guardar inventário interno com IDs dos itens de fixture, expiração/remoção planejada e rollback. Não imprimir segredos nos logs.
 
 ## Executar o gate já implementado
