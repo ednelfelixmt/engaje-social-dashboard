@@ -12,6 +12,7 @@ export function validate(env:NodeJS.ProcessEnv){
  const files=[env.MEDIAHUB_A_BRANDING_FILE||'',env.MEDIAHUB_B_BRANDING_FILE||''];
  if(!a.email.endsWith('.test')||!b.email.endsWith('.test')||!a.password||!b.password||!a.slug||!b.slug||a.email.toLowerCase()===b.email.toLowerCase()||a.slug.toLowerCase()===b.slug.toLowerCase())throw new Error('Two distinct synthetic fixtures required');
  if(files.some(path=>!path||path.includes('..')||path.startsWith('/'))||files[0]===files[1])throw new Error('Two distinct private branding file fixtures required');
+ if(!files[0].startsWith(a.slug+'/')||!files[1].startsWith(b.slug+'/'))throw new Error('Private file fixtures must match own tenant slug');
  return {url,key,a,b,files};
 }
 function assert(value:unknown,message:string):asserts value{if(!value)throw new Error('Isolation failure: '+message);}
