@@ -24,8 +24,8 @@ test('contract formulas match the calculation engine with explicit denominator h
  const fact={spend:120,impressions:3000,clicks:60,leads:6};
  for(const metric of ['ctr','cpc','cpm','cpl'] as const){
   const c=getMetricContract(metric);
-  const numerator=fact[c.numerator!];
-  const denominator=fact[c.denominator!];
+  const numerator=fact[c.numerator! as keyof typeof fact];
+  const denominator=fact[c.denominator! as keyof typeof fact];
   assert.equal(paidMetric(fact,metric),numerator/denominator*c.multiplier);
  }
  assert.equal(paidMetric({...fact,leads:0},'cpl'),null);
