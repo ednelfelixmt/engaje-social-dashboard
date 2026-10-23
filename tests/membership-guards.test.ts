@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {canActivateMembership,type MembershipActivationCheck} from '../src/lib/auth/membership-guards';
+import {canActivateMembership,membershipRevocationFeedback,type MembershipActivationCheck} from '../src/lib/auth/membership-guards';
 
 const base:MembershipActivationCheck={isActive:true,serviceConfigured:true,invitationLookupFailed:false,invitationStatus:null};
 test('deny activation without privileged validation service',()=>{
@@ -22,4 +22,23 @@ test('allow existing user with no recorded invitation after successful lookup',(
 });
 test('do not block deactivation when validation provider unavailable',()=>{
  assert.deepEqual(canActivateMembership({...base,isActive:false,serviceConfigured:false,invitationLookupFailed:true}),{allowed:true});
+});
+
+test('confirmed revocation returns complete success',()=>{
+ assert.deepEqual(membershipRevocationFeedback({membershipUpdated:true,serviceConfigured:true,revocationFailed:false}),{ok:true,message:'Acesso atualizado e convites pendentes revogados.'});
+});
+test('revocation error reports partial write instead of success',()=>{
+ const result=membershipRevocationFeedback({membershipUpdated:true,serviceConfigured:true,revocationFailed:true});
+ assert.equal(result.ok,false);
+ assert.match(result.message,/acesso foi atualizado/i);
+ assert.match(result.message,/convites pendentes/i);
+});
+test('missing privileged revocation service reports partial write',()=>{
+ const result=membershipRevocationFeedback({membershipUpdated:true,serviceConfigured:false,revocationFailed:false});
+ assert.equal(result.ok,false);
+ assert.match(result.message,/serviço está indisponível/i);
+});
+test('failed membership write never reports completed access change',()=>{
+ const result=membershipRevocationFeedback({membershipUpdated:false,serviceConfigured:true,revocationFailed:false});
+ assert.equal(result.ok,false);
 });
