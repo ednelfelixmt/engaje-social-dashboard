@@ -10,7 +10,7 @@ export function reconcilePaidFacts(rows:readonly ReconciliationRow[]):Reconcilia
  const seen=new Set<string>();
  const currency=rows[0].currency;
  for(const row of rows){
-  if(!row.platform||!row.accountId||!row.campaignId||!/^\\d{4}-\\d{2}-\\d{2}$/.test(row.date)||!/^\\w{3}$/.test(row.currency))
+  if(!row.platform||!row.accountId||!row.campaignId||!/^\d{4}-\d{2}-\d{2}$/.test(row.date)||!/^\w{3}$/.test(row.currency))
    return {status:'invalid',reason:'Malformed fact grain'};
   if(row.currency!==currency)return {status:'mixed_currency',reason:'Currency conversion is required upstream'};
   if(!Number.isFinite(row.spend)||row.spend<0||[row.impressions,row.clicks,row.leads].some(v=>v!==null&&(!Number.isFinite(v)||v<0)))
