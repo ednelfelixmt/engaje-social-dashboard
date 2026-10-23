@@ -51,3 +51,18 @@ export function canEditExistingMembership(input:{
  if(input.existingRole==='super_admin')return {allowed:false,reason:'protected_super_admin'};
  return {allowed:true};
 }
+
+/**
+ * Membership administration is scoped to client organizations only.
+ * A failed organization lookup must not be treated as an eligible tenant.
+ */
+export function canAssignClientMembership(input:{
+ lookupFailed:boolean;
+ organizationExists:boolean;
+ isAgency:boolean;
+}):{allowed:true}|{allowed:false;reason:'lookup_failed'|'organization_not_found'|'agency_protected'}{
+ if(input.lookupFailed)return {allowed:false,reason:'lookup_failed'};
+ if(!input.organizationExists)return {allowed:false,reason:'organization_not_found'};
+ if(input.isAgency)return {allowed:false,reason:'agency_protected'};
+ return {allowed:true};
+}

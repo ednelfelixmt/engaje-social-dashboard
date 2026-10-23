@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {canActivateMembership,canEditExistingMembership,membershipRevocationFeedback,type MembershipActivationCheck} from '../src/lib/auth/membership-guards';
+import {canActivateMembership,canEditExistingMembership,canAssignClientMembership,membershipRevocationFeedback,type MembershipActivationCheck} from '../src/lib/auth/membership-guards';
 
 const base:MembershipActivationCheck={isActive:true,serviceConfigured:true,invitationLookupFailed:false,invitationStatus:null};
 test('deny activation without privileged validation service',()=>{
@@ -59,4 +59,15 @@ test('unrecognized invitation state fails closed instead of appearing as missing
  for(const invitationStatus of ['suspended','cancelled','unknown',''] as const){
   assert.deepEqual(canActivateMembership({...base,invitationStatus}),{allowed:false,reason:'invitation_unaccepted'});
  }
+});
+
+test('deny membership assignment to the agency organization',()=>{
+ assert.deepEqual(canAssignClientMembership({lookupFailed:false,organizationExists:true,isAgency:true}),{allowed:false,reason:'agency_protected'});
+});
+test('deny membership writes on missing or unreadable organizations',()=>{
+ assert.deepEqual(canAssignClientMembership({lookupFailed:true,organizationExists:false,isAgency:false}),{allowed:false,reason:'lookup_failed'});
+ assert.deepEqual(canAssignClientMembership({lookupFailed:false,organizationExists:false,isAgency:false}),{allowed:false,reason:'organization_not_found'});
+});
+test('allow assignment only to confirmed client organization',()=>{
+ assert.deepEqual(canAssignClientMembership({lookupFailed:false,organizationExists:true,isAgency:false}),{allowed:true});
 });
