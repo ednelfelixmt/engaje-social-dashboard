@@ -9,8 +9,10 @@ export function validate(env:NodeJS.ProcessEnv){
  if(key.length<20||key.startsWith('sb_secret_')||key.includes('service_role'))throw new Error('Requires publishable key');
  const a={email:env.MEDIAHUB_A_EMAIL||'',password:env.MEDIAHUB_A_PASSWORD||'',slug:env.MEDIAHUB_A_SLUG||''};
  const b={email:env.MEDIAHUB_B_EMAIL||'',password:env.MEDIAHUB_B_PASSWORD||'',slug:env.MEDIAHUB_B_SLUG||''};
+ const files=[env.MEDIAHUB_A_BRANDING_FILE||'',env.MEDIAHUB_B_BRANDING_FILE||''];
  if(!a.email.endsWith('.test')||!b.email.endsWith('.test')||!a.password||!b.password||!a.slug||!b.slug||a.email.toLowerCase()===b.email.toLowerCase()||a.slug.toLowerCase()===b.slug.toLowerCase())throw new Error('Two distinct synthetic fixtures required');
- return {url,key,a,b};
+ if(files.some(path=>!path||path.includes('..')||path.startsWith('/'))||files[0]===files[1])throw new Error('Two distinct private branding file fixtures required');
+ return {url,key,a,b,files};
 }
 function assert(value:unknown,message:string):asserts value{if(!value)throw new Error('Isolation failure: '+message);}
 export async function verifyProductionIsolation(env:NodeJS.ProcessEnv){
@@ -49,6 +51,10 @@ export async function verifyProductionIsolation(env:NodeJS.ProcessEnv){
     const {data:assets,error:assetsError}=await client.from('platform_assets').select('id').in('id',foreignAssets.map(row=>row.asset_id)).limit(100);
     assert(!assetsError&&assets?.length===0,'foreign platform assets');
    }
+   const {data:otherSigned,error:otherSignedError}=await client.storage.from('branding').createSignedUrl(cfg.files[1-i],60);
+   assert(!!otherSignedError&&!otherSigned?.signedUrl,'foreign private file signed URL denied');
+   const {data:ownSigned,error:ownSignedError}=await client.storage.from('branding').createSignedUrl(cfg.files[i],60);
+   assert(!ownSignedError&&!!ownSigned?.signedUrl,'own private file signed URL permitted');
    const {data:own,error:ownError}=await client.from('organizations').select('id').eq('id',ids[i]);
    assert(!ownError&&own?.length===1,'own org accessible');
   }
