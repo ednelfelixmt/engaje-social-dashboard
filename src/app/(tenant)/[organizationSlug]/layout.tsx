@@ -4,13 +4,12 @@ import {Navigation} from '@/components/navigation';
 
 export default async function Layout({children, params: params_}: {children: React.ReactNode; params: Promise<{organizationSlug: string}>}) {
   const params = await params_;
-  const {db, org, superAdmin, user} = await tenant(params.organizationSlug);
+  const {db, org, superAdmin} = await tenant(params.organizationSlug);
   const [{data: branding}, {data: config}] = await Promise.all([
     db.from('branding').select('*').eq('organization_id', org.id).single(),
     dashboardConfig(params.organizationSlug).then((data)=>({data})),
   ]);
-  const {data:membership}=superAdmin?{data:null}:await db.from('organization_members').select('role,is_active').eq('organization_id',org.id).eq('user_id',user.id).maybeSingle();
-  const canShare=superAdmin||Boolean(membership?.is_active&&['editor','client_admin'].includes(membership.role));
+  const canShare=superAdmin;
   const image = branding?.dashboard_background_path
     ? (await db.storage.from('branding').createSignedUrl(branding.dashboard_background_path, 3600)).data?.signedUrl
     : null;
