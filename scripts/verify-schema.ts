@@ -111,7 +111,7 @@ check(await scalar('select count(*)::int from public.organizations') === 1, 'Vie
 
 check(await scalar("select count(*)::int from public.platform_assets") === 1, 'Viewer vê somente o ativo vinculado ao próprio cliente');
 check(await scalar("select count(*)::int from public.platform_assets where name='Conta B'") === 0, 'Viewer não vê ativo atribuído a outro cliente');
-check(await scalar("select count(*)::int from public.client_asset_assignments where organization_id='${orgB}'") === 0, 'Viewer não vê vínculo de ativos de outra empresa');
+check(await scalar(`select count(*)::int from public.client_asset_assignments where organization_id='${orgB}'`) === 0, 'Viewer não vê vínculo de ativos de outra empresa');
 check(await scalar("select count(*)::int from public.platform_connections where target_organization_id='${orgB}'") === 0, 'Viewer não enumera conexões de outra empresa');
 
 check(await scalar(`select count(*)::int from public.daily_performance where organization_id='${orgB}'`) === 0, 'View respeita RLS de outro cliente');
