@@ -41,10 +41,18 @@ export async function verifyProductionIsolation(env:NodeJS.ProcessEnv){
     const {data,error}=await client.from(table).select(field).eq(field,foreign).limit(1);
     assert(!error&&data?.length===0,'foreign table '+table);
    }
+   const {data:connections,error:connectionError}=await client.from('platform_connections').select('id').eq('target_organization_id',foreign).limit(1);
+   assert(!connectionError&&connections?.length===0,'foreign platform connections');
+   const {data:foreignAssets,error:foreignAssetError}=await clients[1-i].from('client_asset_assignments').select('asset_id').eq('organization_id',foreign).limit(100);
+   assert(!foreignAssetError&&foreignAssets,'foreign tenant fixture assets accessible to their owner');
+   if(foreignAssets.length){
+    const {data:assets,error:assetsError}=await client.from('platform_assets').select('id').in('id',foreignAssets.map(row=>row.asset_id)).limit(100);
+    assert(!assetsError&&assets?.length===0,'foreign platform assets');
+   }
    const {data:own,error:ownError}=await client.from('organizations').select('id').eq('id',ids[i]);
    assert(!ownError&&own?.length===1,'own org accessible');
   }
-  process.stdout.write('PASS: two-way authenticated table read isolation (production; read-only)\n');
+  process.stdout.write('PASS: two-way authenticated table, connection and asset read isolation (production; read-only)\n');
  }finally{await Promise.allSettled(clients.map(c=>c.auth.signOut()));}
 }
 if(process.argv[1]&&/verify-production-isolation\.(ts|js)$/.test(process.argv[1])){
