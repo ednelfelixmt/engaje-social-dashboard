@@ -57,3 +57,14 @@ test('rejects missing and invalid numeric facts',()=>{
  assert.equal(sumKnown([{x:2},{x:Number.POSITIVE_INFINITY}],r=>r.x),null);
  assert.equal(paidMetric({spend:100,impressions:0,clicks:1,leads:1},'cpm'),null);
 });
+
+test('ratios fail closed for malformed nonfinite inputs and overflow',()=>{
+ const fact={spend:Number.NaN,impressions:100,clicks:10,leads:2};
+ assert.equal(paidMetric(fact,'cpc'),null);
+ assert.equal(paidMetric(fact,'cpm'),null);
+ assert.equal(paidMetric(fact,'cpl'),null);
+ assert.equal(paidMetric({...fact,spend:10,clicks:Number.POSITIVE_INFINITY},'ctr'),null);
+ assert.equal(paidMetric({spend:1e308,impressions:1e-300,clicks:1,leads:1},'cpm'),null);
+ assert.equal(paidMetric({spend:10,impressions:100,clicks:-5,leads:2},'cpc'),null);
+ assert.equal(paidMetric({spend:10,impressions:100,clicks:5,leads:0},'cpl'),null);
+});
