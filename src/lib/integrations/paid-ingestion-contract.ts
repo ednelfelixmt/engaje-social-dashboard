@@ -6,7 +6,7 @@ export const PaidIngestionFactSchema=z.object({
  platform:z.enum(['meta_ads','google_ads','tiktok_ads','microsoft_ads']),
  accountId:z.string().trim().min(1),
  campaignId:z.string().trim().min(1),
- date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v=>!Number.isNaN(Date.parse(v+'T00:00:00Z')),'Invalid date'),
+ date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v=>{const d=new Date(v+'T00:00:00Z');return !Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===v},'Invalid date'),
  currency:z.string().regex(/^[A-Z]{3}$/),
  spend:z.number().finite().nonnegative(),
  impressions:z.number().int().nonnegative().nullable(),
