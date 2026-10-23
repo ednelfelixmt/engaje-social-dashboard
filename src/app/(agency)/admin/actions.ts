@@ -1,5 +1,5 @@
 'use server';import {z} from 'zod';import {revalidatePath} from 'next/cache';import {requireAdmin} from '@/lib/auth/session';
-import {canActivateMembership} from '@/lib/auth/membership-guards';import type {ActionState} from '@/components/action-form';import {businessNiches,salesModels,suggestFunnelModel,funnelPresetFor} from '@/lib/metrics/funnel-config';import {isValidTimezone} from '@/lib/organization-options';
+import {canActivateMembership,membershipRevocationFeedback} from '@/lib/auth/membership-guards';import type {ActionState} from '@/components/action-form';import {businessNiches,salesModels,suggestFunnelModel,funnelPresetFor} from '@/lib/metrics/funnel-config';import {isValidTimezone} from '@/lib/organization-options';
 const nicheIds=businessNiches.map((item)=>item.id) as [typeof businessNiches[number]['id'],...typeof businessNiches[number]['id'][]];
 const salesModelIds=salesModels.map((item)=>item.id) as [typeof salesModels[number]['id'],...typeof salesModels[number]['id'][]];
 export async function createOrganization(_:ActionState,f:FormData):Promise<ActionState>{
@@ -49,17 +49,22 @@ export async function saveMember(_:ActionState,f:FormData):Promise<ActionState>{
   if(!decision.allowed)return {ok:false,message:decision.reason==='invitation_unaccepted'?'O usuário ainda não concluiu seu cadastro. Não é possível ativar o acesso.':'Não foi possível validar o cadastro do usuário. Nenhuma permissão foi alterada.'};
  }
  const {error}=await db.from('organization_members').upsert(input.data);
- if(!error){
-  const secret=process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if(secret){
-   const {createClient}=await import('@supabase/supabase-js');
-   const {supabaseUrl}=await import('@/lib/supabase/config');
-   const admin=createClient(supabaseUrl,secret,{auth:{persistSession:false,autoRefreshToken:false}});
-   // Mudança manual de permissões cancela convites anteriores, prevenindo ativação tardia.
-   await admin.from('client_user_invitations').update({status:'revoked'}).eq('organization_id',input.data.organization_id).eq('user_id',input.data.user_id).eq('status','pending');
-  }
+ if(error)return {ok:false,message:'Usuário não encontrado no Auth ou vínculo inválido. Nenhum acesso foi atualizado.'};
+ // A revogação acontece após o vínculo: não declarar conclusão integral se falhar.
+ // Até haver transação atômica (issue #54), informar explicitamente efeito parcial.
+ const secret=process.env.SUPABASE_SERVICE_ROLE_KEY;
+ if(!secret){
+  revalidatePath('/admin/users');
+  return membershipRevocationFeedback({membershipUpdated:true,serviceConfigured:false,revocationFailed:false});
  }
- revalidatePath('/admin/users');return {ok:!error,message:error?'Usuário não encontrado no Auth ou vínculo inválido.':'Acesso atualizado.'};}
+ const {createClient}=await import('@supabase/supabase-js');
+ const {supabaseUrl}=await import('@/lib/supabase/config');
+ const admin=createClient(supabaseUrl,secret,{auth:{persistSession:false,autoRefreshToken:false}});
+ const {error:revocationError}=await admin.from('client_user_invitations').update({status:'revoked'})
+  .eq('organization_id',input.data.organization_id).eq('user_id',input.data.user_id).eq('status','pending');
+ revalidatePath('/admin/users');
+ return membershipRevocationFeedback({membershipUpdated:true,serviceConfigured:true,revocationFailed:Boolean(revocationError)});
+}
 
 export async function inviteClientUser(_:ActionState,f:FormData):Promise<ActionState>{
  await requireAdmin();
