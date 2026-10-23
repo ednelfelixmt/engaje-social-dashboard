@@ -1,4 +1,5 @@
 import {createClient} from 'npm:@supabase/supabase-js@2.76.1';
+import {verifiedOAuthScopes} from '../_shared/oauth-permissions.ts';
 const base=Deno.env.get('SUPABASE_URL')!;
 const service=createClient(base,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,{auth:{persistSession:false}});
 const origin='https://mediahub.engajeperformance.com.br';
@@ -383,7 +384,10 @@ Deno.serve(async(req:Request)=>{
    else{const long=await graph('oauth/access_token',null,{grant_type:'fb_exchange_token',client_id:metaId!,client_secret:metaSecret!,fb_exchange_token:token},'a renovação do token');token=long.access_token||token;}
    let granted:string[]=[];
    try{granted=await grantedPermissions(token);}catch(error){if(!loginConfigId)throw error;}
-   if(loginConfigId&&!granted.length)granted=metaOAuthPermissions();const identity=await graph('me',token,{fields:'id,name'},'a identificação do usuário');
+   // Nunca substituir permissões não confirmadas por permissões solicitadas.
+   // Com escopos desconhecidos, a atribuição dos ativos permanece bloqueada
+   // pelas checagens de permissionsFor/assign_assets, em vez de conceder acesso fictício.
+   granted=verifiedOAuthScopes(granted);const identity=await graph('me',token,{fields:'id,name'},'a identificação do usuário');
    const {data:agency}=await service.from('organizations').select('id').eq('is_agency',true).order('created_at').limit(1).maybeSingle();
    const savedConnection=await check(await service.from('platform_connections').upsert({agency_organization_id:agency?.id||pending.organization_id,target_organization_id:pending.organization_id,provider:pending.provider,external_user_id:String(identity.id),account_name:String(identity.name||'Conta Meta'),status:'syncing',scopes:granted,config:{connected_by:actorId},last_error:null},{onConflict:'agency_organization_id,provider,external_user_id'}).select('id').single());
    await setConnectionToken(savedConnection.id,token);
