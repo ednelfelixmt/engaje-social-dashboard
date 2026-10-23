@@ -8,7 +8,7 @@ const base={
  MEDIAHUB_PUBLISHABLE_KEY:'sb_publishable_abcdefghijklmnopqrstuvwxyz',
  MEDIAHUB_A_EMAIL:'a@example.test',MEDIAHUB_A_PASSWORD:'placeholder-a',MEDIAHUB_A_SLUG:'fixture-a',
  MEDIAHUB_B_EMAIL:'b@example.test',MEDIAHUB_B_PASSWORD:'placeholder-b',MEDIAHUB_B_SLUG:'fixture-b',
- MEDIAHUB_A_BRANDING_FILE:'fixture-a/logo.png',MEDIAHUB_B_BRANDING_FILE:'fixture-b/logo.png'
+ MEDIAHUB_A_BRANDING_FILE:'11111111-1111-4111-8111-111111111111/logo.png',MEDIAHUB_B_BRANDING_FILE:'22222222-2222-4222-8222-222222222222/logo.png'
 };
 test('production read-only isolation fails closed without explicit acknowledgement',()=>{
  assert.throws(()=>validate({...base,MEDIAHUB_PROD_READONLY_ACK:''}),/acknowledgement/);
@@ -29,6 +29,6 @@ test('complete independently provisioned test fixtures pass preflight',()=>{
 });
 
 test('isolation preflight refuses files swapped between tenant slugs',()=>{
- assert.throws(()=>validate({...base,MEDIAHUB_A_BRANDING_FILE:'fixture-b/alternate.png'}),/must match own tenant slug/);
- assert.throws(()=>validate({...base,MEDIAHUB_B_BRANDING_FILE:'fixture-a/alternate.png'}),/must match own tenant slug/);
+ assert.throws(()=>validate({...base,MEDIAHUB_A_BRANDING_FILE:'fixture-b/alternate.png'}),/organization UUID prefix/);
+ assert.throws(()=>validate({...base,MEDIAHUB_B_BRANDING_FILE:'fixture-a/alternate.png'}),/organization UUID prefix/);
 });
