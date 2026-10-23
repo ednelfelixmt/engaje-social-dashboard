@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {canActivateMembership,membershipRevocationFeedback,type MembershipActivationCheck} from '../src/lib/auth/membership-guards';
+import {canActivateMembership,canEditExistingMembership,membershipRevocationFeedback,type MembershipActivationCheck} from '../src/lib/auth/membership-guards';
 
 const base:MembershipActivationCheck={isActive:true,serviceConfigured:true,invitationLookupFailed:false,invitationStatus:null};
 test('deny activation without privileged validation service',()=>{
@@ -41,4 +41,16 @@ test('missing privileged revocation service reports partial write',()=>{
 test('failed membership write never reports completed access change',()=>{
  const result=membershipRevocationFeedback({membershipUpdated:false,serviceConfigured:true,revocationFailed:false});
  assert.equal(result.ok,false);
+});
+
+test('deny permission edits when current membership cannot be read',()=>{
+ assert.deepEqual(canEditExistingMembership({readFailed:true,existingRole:null}),{allowed:false,reason:'lookup_failed'});
+ assert.deepEqual(canEditExistingMembership({readFailed:true,existingRole:'viewer'}),{allowed:false,reason:'lookup_failed'});
+});
+test('protect agency super administrator even on otherwise valid edit',()=>{
+ assert.deepEqual(canEditExistingMembership({readFailed:false,existingRole:'super_admin'}),{allowed:false,reason:'protected_super_admin'});
+});
+test('allow normal updates and new membership only when read completed',()=>{
+ assert.deepEqual(canEditExistingMembership({readFailed:false,existingRole:'viewer'}),{allowed:true});
+ assert.deepEqual(canEditExistingMembership({readFailed:false,existingRole:null}),{allowed:true});
 });
