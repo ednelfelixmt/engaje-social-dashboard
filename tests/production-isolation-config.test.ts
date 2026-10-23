@@ -27,3 +27,8 @@ test('production isolation requires distinct synthetic users and tenants',()=>{
 test('complete independently provisioned test fixtures pass preflight',()=>{
  assert.equal(validate(base).a.slug,'fixture-a');
 });
+
+test('isolation preflight refuses files swapped between tenant slugs',()=>{
+ assert.throws(()=>validate({...base,MEDIAHUB_A_BRANDING_FILE:'fixture-b/logo.png'}),/must match own tenant slug/);
+ assert.throws(()=>validate({...base,MEDIAHUB_B_BRANDING_FILE:'fixture-a/logo.png'}),/must match own tenant slug/);
+});
