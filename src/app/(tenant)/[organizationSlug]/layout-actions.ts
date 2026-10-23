@@ -28,7 +28,8 @@ export async function saveUserLayout(slug: string, scope: string, raw: unknown):
 export async function resetUserLayout(slug: string, scope: string): Promise<LayoutResult> {
   const parsedTarget = target.safeParse({slug, scope});
   if (!parsedTarget.success) return {ok: false, message: 'Tela inválida.'};
-  const {db, org, user} = await tenant(parsedTarget.data.slug);
+  const {db, org, user, superAdmin} = await tenant(parsedTarget.data.slug);
+  if (!superAdmin) return {ok:false,message:'Somente administradores podem personalizar dashboards.'};
   const {error} = await db.from('user_dashboard_layouts').delete().eq('user_id', user.id).eq('organization_id', org.id).eq('scope', parsedTarget.data.scope);
   return error ? {ok: false, message: 'Não foi possível restaurar o padrão.'} : {ok: true};
 }
