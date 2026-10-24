@@ -196,3 +196,10 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 
 - **RLS-AB-002 (aprovado no escopo SQL):** para cada viewer sintético com `SET LOCAL ROLE authenticated` e claim `sub`, sua organização é visível (1); organização, membros, configuração de dashboard, branding, ativos atribuídos, conexões e métricas da outra organização retornam zero. As nove tabelas relevantes examinadas estão com `relrowsecurity=true`. Consultas executadas em transações revertidas; script repetível `scripts/verify-phase02-cross-tenant-read-matrix.sql`.
 - **Limites:** algumas tabelas dos fixtures podem estar vazias; zero registros não prova isoladamente todas as regras de leitura. A homologação final ainda requer sessões JWT reais, dados A/B com canários em cada superfície e Storage privado. Não confundir com conclusão de Fase 02.
+
+### 24/10/2026 — Gate único protegido para fechamento da Fase 02
+
+- PR #112 passou Quality Gate #129 e Vercel, integrado em `695da8ec8024ee9ae8c4d062fcacd6e3fa900d25`.
+- Workflow manual `.github/workflows/phase02-final-auth.yml` criado para executar upload Storage oficial das duas fixtures sintéticas e o teste real de login A/B na mesma execução, em `environment: phase02-homologation` com aprovações e Secrets. Sem execução agendada e sem valores de senha no código.
+- Configurar segredos do ambiente: `PHASE02_SERVICE_ROLE_KEY`, `PHASE02_PUBLISHABLE_KEY`, `PHASE02_A_EMAIL`, `PHASE02_A_PASSWORD`, `PHASE02_B_EMAIL`, `PHASE02_B_PASSWORD`. As contas e UUIDs são fixados no teste; conferir escopo antes da execução. O provisionamento inicial falhará se um arquivo de fixture já existir (`upsert:false`), por segurança: neste caso reexecutar com input `provision_private_fixtures=false` após conferir ambos os objetos.
+- **BLOCKER FINAL (operacional):** execução com segredos protegidos e autenticação real ainda não ocorreu. O gate read-only não prova interface, revogação, OAuth e escrita REST; registrar essas pendências separadamente. Não declarar Fase 02 homologada sem evidência do workflow e aceite definido.
