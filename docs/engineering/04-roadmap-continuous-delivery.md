@@ -134,3 +134,7 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 - **Preservar dados:** nenhum tenant real como fixture. Sem criação manual de identidades em `auth.users`; sem segredos em docs/commits.
 - **Sem falsa homologação:** status de fase só muda com evidência comportamental e aceite de todos os gates.
 - **Sem execução em background:** cada rodada de trabalho encerra com as alterações feitas e bloqueios declarados; o progresso permanece no GitHub, no mesmo projeto.
+
+### Registro de regressão — 24/10/2026, após PR #100
+
+- **UX-002 / SEC-004 (P1, confirmado):** a rota `src/app/(tenant)/[organizationSlug]/[section]/page.tsx` calculava `canCustomizeClient = superAdmin`, mas `Filters.actions` renderizava `PersonalizeBar` apenas pela presença de blocos personalizáveis, sem testar a permissão. O PR #101 altera o predicado de renderização para `customizable && canCustomizeClient` e acrescenta teste automatizado. **Situação: correção submetida; não encerrar até CI e Vercel aprovados, merge e teste autenticado como viewer.**
