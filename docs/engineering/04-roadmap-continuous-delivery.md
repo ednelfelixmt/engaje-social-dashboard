@@ -162,3 +162,10 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 - **FIXTURE-001 parcialmente resolvido:** ainda faltam **dois arquivos privados de branding reais** no bucket `branding`, prefixados pelos respectivos UUIDs, criados pela API Storage com credencial administrativa em ambiente protegido. **Não** simular arquivos inserindo diretamente metadados em `storage.objects`.
 - **AUTH-E2E-001 aberto:** requer credenciais em secret store e execução do script read-only e dos cenários negativos de escrita/sessão. Marcar como concluído só após provas A/B de leitura positiva e cruzada negativa.
 - **Limpeza:** remover apenas as conexões/ativos/vínculos com marcadores `mediahub-phase02-`/`mediahub-fixture-` e organizações de homologação depois do teste, nunca ativos reais.
+
+### 24/10/2026 — Prova RLS transacional A/B (parcial) e PR #106
+
+- PR #106: Quality Gate #117 e Vercel aprovados; integrado à main como `cbb3c305ff8d62c4ade1c2344908265b83b4fd03`. Upload de objetos privados **não executado**, pois credencial de Storage protegida não está disponível via ferramenta conectada.
+- **RLS-AB-001 (aprovado para escopo limitado):** executadas transações `BEGIN; set_config('request.jwt.claim.sub', <synthetic-user-uuid>, true); SET LOCAL ROLE authenticated; SELECT ...; ROLLBACK;` independentemente para os dois membros `viewer`. Resultado: usuário A vê organização A=1, B=0, assets=1; usuário B vê organização A=0, B=1, assets=1. Consulta sem JWT autenticado vê zero organizações. **Nenhuma escrita realizada.**
+- **AUTH-E2E-001 continua aberto:** teste RLS SQL com identidade simulada não substitui sessão JWT real, client SDK, URLs assinadas, API, OAuth, revogação, escrita negada nem regressão de frontend.
+- **FIXTURE-001 continua parcial:** falta upload dos dois arquivos privados por Storage API, com paths `c4c77b35-03a4-417a-94c2-e845d48679c1/phase02-isolation-fixture.svg` e `10289f2d-23b9-4c86-a10e-0503bcc2de79/phase02-isolation-fixture.svg`, executado exclusivamente por runner com segredo protegido.
