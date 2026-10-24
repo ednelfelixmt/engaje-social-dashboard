@@ -10,10 +10,16 @@ export function validate(env:NodeJS.ProcessEnv){
  const a={email:env.MEDIAHUB_A_EMAIL||'',password:env.MEDIAHUB_A_PASSWORD||'',slug:env.MEDIAHUB_A_SLUG||''};
  const b={email:env.MEDIAHUB_B_EMAIL||'',password:env.MEDIAHUB_B_PASSWORD||'',slug:env.MEDIAHUB_B_SLUG||''};
  const files=[env.MEDIAHUB_A_BRANDING_FILE||'',env.MEDIAHUB_B_BRANDING_FILE||''];
- if(!a.email.endsWith('.test')||!b.email.endsWith('.test')||!a.password||!b.password||!a.slug||!b.slug||a.email.toLowerCase()===b.email.toLowerCase()||a.slug.toLowerCase()===b.slug.toLowerCase())throw new Error('Two distinct synthetic fixtures required');
+ const allowExisting=env.MEDIAHUB_PROD_EXISTING_FIXTURE_ACK==='YES_EXPLICIT_FIXTURE_USERS';
+ const expectedUserIds=[env.MEDIAHUB_A_USER_ID||'',env.MEDIAHUB_B_USER_ID||''];
+ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+ const existingAuthorized=allowExisting&&a.slug==='homologacao-a-20261024'&&b.slug==='homologacao-b-20261024'
+  &&expectedUserIds.every(id=>uuid.test(id))&&expectedUserIds[0].toLowerCase()!==expectedUserIds[1].toLowerCase();
+ if((!a.email.endsWith('.test')||!b.email.endsWith('.test'))&&!existingAuthorized)throw new Error('Requires synthetic .test accounts or explicit, identity-bound fixture authorization');
+ if(!a.password||!b.password||!a.slug||!b.slug||a.email.toLowerCase()===b.email.toLowerCase()||a.slug.toLowerCase()===b.slug.toLowerCase())throw new Error('Two distinct synthetic fixtures required');
  if(files.some(path=>!path||path.includes('..')||path.startsWith('/'))||files[0]===files[1])throw new Error('Two distinct private branding file fixtures required');
  if(files.some(path=>!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\/.+/.test(path)))throw new Error('Private file fixtures require organization UUID prefix');
- return {url,key,a,b,files};
+ return {url,key,a,b,files,expectedUserIds,existingAuthorized};
 }
 function assert(value:unknown,message:string):asserts value{if(!value)throw new Error('Isolation failure: '+message);}
 export async function verifyProductionIsolation(env:NodeJS.ProcessEnv){
@@ -26,6 +32,7 @@ export async function verifyProductionIsolation(env:NodeJS.ProcessEnv){
    const client=clients[i], fixture=i===0?cfg.a:cfg.b;
    const {data:auth,error:authError}=await client.auth.signInWithPassword({email:fixture.email,password:fixture.password});
    assert(!authError&&auth.user?.id,'fixture sign in');
+   if(cfg.existingAuthorized)assert(auth.user.id.toLowerCase()===cfg.expectedUserIds[i].toLowerCase(),'signed-in user must match exact authorized synthetic identity');
    users.push(auth.user.id);
    const {data:org,error:orgError}=await client.from('organizations').select('id,is_agency').eq('slug',fixture.slug);
    assert(!orgError&&org?.length===1&&!org[0].is_agency,'visible non-agency organization');

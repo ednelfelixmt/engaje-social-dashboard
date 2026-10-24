@@ -32,3 +32,14 @@ test('isolation preflight refuses files swapped between tenant slugs',()=>{
  assert.throws(()=>validate({...base,MEDIAHUB_A_BRANDING_FILE:'fixture-b/alternate.png'}),/organization UUID prefix/);
  assert.throws(()=>validate({...base,MEDIAHUB_B_BRANDING_FILE:'fixture-a/alternate.png'}),/organization UUID prefix/);
 });
+
+test('existing fixture users require exact slugs, acknowledgement and distinct expected UUIDs',()=>{
+ const existing={...base,MEDIAHUB_A_EMAIL:'fixture-a@example.com',MEDIAHUB_B_EMAIL:'fixture-b@example.com',
+  MEDIAHUB_A_SLUG:'homologacao-a-20261024',MEDIAHUB_B_SLUG:'homologacao-b-20261024',
+  MEDIAHUB_A_USER_ID:'079b2713-a99a-41a6-acc3-b129863ef7a6',
+  MEDIAHUB_B_USER_ID:'4fd21c94-e93d-4e35-923b-b1ec4622fd94'};
+ assert.throws(()=>validate(existing),/identity-bound/);
+ assert.throws(()=>validate({...existing,MEDIAHUB_PROD_EXISTING_FIXTURE_ACK:'YES_EXPLICIT_FIXTURE_USERS',MEDIAHUB_A_SLUG:'actual-client'}),/identity-bound/);
+ assert.throws(()=>validate({...existing,MEDIAHUB_PROD_EXISTING_FIXTURE_ACK:'YES_EXPLICIT_FIXTURE_USERS',MEDIAHUB_B_USER_ID:existing.MEDIAHUB_A_USER_ID}),/identity-bound/);
+ assert.equal(validate({...existing,MEDIAHUB_PROD_EXISTING_FIXTURE_ACK:'YES_EXPLICIT_FIXTURE_USERS'}).existingAuthorized,true);
+});
