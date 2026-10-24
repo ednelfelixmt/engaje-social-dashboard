@@ -207,3 +207,8 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 ### 24/10/2026 — Retentativa segura do gate privado
 
 - **FIXTURE-RETRY-001:** upload da fixture privada passa a tolerar reexecuções parciais: se objeto existir, comparar bytes com a imagem sintética esperada e prosseguir; se não existir (404), criar sem sobrescrever; se houver erro de rede/permissão ou diferença de conteúdo, falhar fechado. Somente os UUIDs sintéticos A/B continuam permitidos. Não prova que os secrets do ambiente foram instalados ou que o fluxo de autenticação foi executado.
+
+### 24/10/2026 — Correção de incompatibilidade MIME do gate final
+
+- **FIXTURE-MIME-001 (identificado):** bucket Storage privado `branding` aceita apenas `image/png`, `image/jpeg`, `image/webp` e tipos de ícones, mas o script final tentava enviar `image/svg+xml`. O upload teria falhado. Corrigidos script e workflow para fixture PNG de 1×1 px em paths fixos `phase02-isolation-fixture.png`. Não executar artefatos anteriores com `.svg`.
+- **Fase 02 permanece pendente** da execução real do workflow com segredos protegidos; nenhum objeto foi inserido por esta alteração.
