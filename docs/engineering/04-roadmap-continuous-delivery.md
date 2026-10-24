@@ -148,3 +148,9 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 - **A/B não homologado ainda:** faltam ativos atribuídos sintéticos, arquivos privados de branding, segredos de autenticação em executor protegido e testes E2E bidirecionais, REST/RPC, Storage, revogação e callbacks OAuth.
 - **COMPAT-001:** contas provisionadas possuem e-mails convencionais, mas o executor `scripts/verify-production-isolation.ts` permite somente e-mails `.test`; manter a verificação negativa e adicionar mecanismo de autorização explícita, de uso único e vinculado aos IDs das organizações antes de execução real. **Não alterar ou registrar senhas no repositório.**
 - **Limpeza obrigatória:** excluir somente os objetos/associações criados nesta homologação depois da evidência, preservando organizações/identidades reais; confirmar IDs antes de remover fixtures.
+
+### 24/10/2026 — Gate A/B após PR #103
+
+- **PR #103 integrado** (`3370eeff0a44bd06df34bb36ffdb3288688ffb95`): validação de logins das fixtures condicionada a ACK explícito, slugs exatos e IDs de usuários autorizados; Quality Gate #111 e Vercel aprovados.
+- **FIXTURE-001 (P0 gate de teste, aberto):** consulta live nas organizações `homologacao-a-20261024` e `homologacao-b-20261024`: **0** ativos em `client_asset_assignments` e **0** objetos privados em `storage.objects` bucket `branding` para ambas. O executor reprovará até preparar fixtures próprias, sem reutilizar dados reais.
+- **AUTH-E2E-001 (P0, aberto):** teste autenticado A/B ainda não executado: credenciais dos usuários sintéticos devem estar em secret store de runner autorizado, nunca no chat/repositório. É necessário validar own-read, deny cross-tenant, escrita negada, RPC e Storage, antes de fechar a Fase 02.
