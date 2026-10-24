@@ -5,7 +5,7 @@ import {Card} from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
 import {ClientLifecycleControls} from '@/components/client-lifecycle-controls';
 import {ActionForm} from '@/components/action-form';
-import {updateOrganization} from '../actions';
+import {createOrganization, updateOrganization} from '../actions';
 import {businessNiches, salesModels, suggestFunnelModel, funnelPresetFor, type BusinessNiche, type SalesModel} from '@/lib/metrics/funnel-config';
 import {currencyOptions, timezoneOptions} from '@/lib/organization-options';
 
@@ -24,8 +24,10 @@ export default async function Page() {
       <div>
         <p className="eyebrow mb-2">Gestão de workspaces</p>
         <h1 className="text-3xl font-semibold">Clientes</h1>
-        <p className="muted mt-2">Administre os clientes existentes. Novos clientes são cadastrados no início do fluxo de Integrações.</p>
+        <p className="muted mt-2">Administre os clientes existentes. Cadastre clientes aqui e depois associe integrações e usuários.</p>
       </div>
+
+      <Card><h2 className="mb-2 text-lg font-semibold">Cadastrar novo cliente</h2><p className="muted mb-5 text-sm">Cadastro exclusivo da agência. Clientes acessam apenas os relatórios autorizados, em modo de leitura.</p><ActionForm action={createOrganization} label="Cadastrar cliente"><div className="field-grid"><label>Nome do cliente<input name="name" minLength={2} maxLength={160} required placeholder="Nome do cliente" /></label><label>Endereço do workspace<input name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="nome-do-cliente" /><span className="muted text-xs">Letras minúsculas, números e hífens.</span></label><label>Segmento<select name="niche" required defaultValue=""><option value="" disabled>Selecionar segmento</option>{businessNiches.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select></label><label>Modelo comercial<select name="sales_model" required defaultValue=""><option value="" disabled>Selecionar modelo</option>{salesModels.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select></label></div></ActionForm><p className="muted mt-4 text-xs">Depois do cadastro, libere o acesso em <Link href="/admin/users" className="text-primary underline">Usuários e permissões</Link>.</p></Card>
 
       {data?.map((organization) => (
         <Card key={organization.id}>

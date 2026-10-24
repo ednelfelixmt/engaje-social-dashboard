@@ -180,3 +180,9 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 - PR #108 aprovado pelo Quality Gate #121 e Vercel, integrado à main como `74542a080b2753248f3a8bb22689f63de60c1bb2`.
 - **RPC-001 (prova transacional SQL):** cada um dos dois viewers sintéticos, com `SET LOCAL ROLE authenticated` e claim `sub` correspondente, chamou `public.import_spreadsheet` na própria organização. A função recusou a tentativa com `insufficient_privilege` (SQLSTATE 42501) conforme verificação de exceção e `ROLLBACK`; nenhum dado persistido. Script: `scripts/verify-phase02-viewer-rpc-denial.sql`.
 - **AUTH-E2E-001 permanece aberto:** simulação de contexto SQL não demonstra autenticação JWT real; arquivos privados, sessões reais, API e OAuth seguem pendentes.
+
+### 24/10/2026 — painel administrativo de clientes e níveis de acesso
+
+- **ADMIN-001:** cadastro dedicado de clientes em `/admin/organizations` usando action `createOrganization` protegida por `requireAdmin`, validação de nome, slug, nicho e modelo comercial.
+- **ADMIN-002:** `/admin/users` exibe matriz administrativa; configuração de vínculo em `/admin/users/[userId]` disponibiliza apenas `viewer` e ativação/suspensão. A action `saveMember` também aceita exclusivamente `viewer`, além de validar a organização e preservar superadministradores. `super_admin` pertence somente à agência; clientes apenas consultam dashboards, gráficos, relatórios e filtros.
+- **PENDENTE DE HOMOLOGAÇÃO:** funcionamento com login real e testes de isolamento e de alteração negada; observar eventuais roles legados (`editor`/`client_admin`) e regularizá-los de maneira controlada. Integrações e dados dos cinco clientes reais não foram alterados neste PR.
