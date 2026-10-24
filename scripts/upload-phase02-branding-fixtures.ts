@@ -24,6 +24,17 @@ export async function uploadSyntheticBranding(env:NodeJS.ProcessEnv){
  }
  for(const fixture of cfg.ids){
   const path=fixture.id+'/phase02-isolation-fixture.svg';
+  const {data:existing,error:downloadError}=await db.storage.from('branding').download(path);
+  if(existing){
+   const bytes=new Uint8Array(await existing.arrayBuffer());
+   if(bytes.length!==payload.length||!bytes.every((value,index)=>value===payload[index]))
+    throw new Error('Existing private fixture differs: refusing to overwrite '+fixture.slug);
+   process.stdout.write('VERIFIED '+fixture.slug+' '+path+'\n');
+   continue;
+  }
+  // Only an actual object-not-found response permits provisioning a new fixture.
+  if(!downloadError||!['404','not_found','NoSuchKey'].some(code=>String(downloadError.message).includes(code)||String((downloadError as {statusCode?:string}).statusCode)===code))
+   throw new Error('Cannot verify fixture status for '+fixture.slug+': '+(downloadError?.message??'unknown error'));
   const {error}=await db.storage.from('branding').upload(path,payload,{contentType:'image/svg+xml',upsert:false});
   if(error)throw new Error('Storage fixture upload failed for '+fixture.slug+': '+error.message);
   process.stdout.write('CREATED '+fixture.slug+' '+path+'\n');
