@@ -15,7 +15,7 @@ export function validateStorageFixtures(env:NodeJS.ProcessEnv){
 export async function uploadSyntheticBranding(env:NodeJS.ProcessEnv){
  const cfg=validateStorageFixtures(env);
  const db=createClient(cfg.url,cfg.key,{auth:{persistSession:false,autoRefreshToken:false}});
- const payload=Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9wQ/ZasAAAAASUVORK5CYII=', 'base64'));
+ const payload=Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGPIy8sDAAKYAUtMZgaRAAAAAElFTkSuQmCC', 'base64'));
  for(const fixture of cfg.ids){
   const {data:org,error:orgError}=await db.from('organizations').select('id,is_agency').eq('id',fixture.id).eq('slug',fixture.slug).single();
   if(orgError||!org||org.is_agency)throw new Error('Synthetic organization verification failed');
