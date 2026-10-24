@@ -15,7 +15,7 @@ export function validateStorageFixtures(env:NodeJS.ProcessEnv){
 export async function uploadSyntheticBranding(env:NodeJS.ProcessEnv){
  const cfg=validateStorageFixtures(env);
  const db=createClient(cfg.url,cfg.key,{auth:{persistSession:false,autoRefreshToken:false}});
- const payload=new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><rect width="2" height="2" fill="#777"/></svg>');
+ const payload=Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9wQ/ZasAAAAASUVORK5CYII=', 'base64'));
  for(const fixture of cfg.ids){
   const {data:org,error:orgError}=await db.from('organizations').select('id,is_agency').eq('id',fixture.id).eq('slug',fixture.slug).single();
   if(orgError||!org||org.is_agency)throw new Error('Synthetic organization verification failed');
@@ -23,7 +23,7 @@ export async function uploadSyntheticBranding(env:NodeJS.ProcessEnv){
   if(memberError||members?.length!==1||members[0].role!=='viewer'||members[0].is_active!==true)throw new Error('Expected exactly one synthetic viewer');
  }
  for(const fixture of cfg.ids){
-  const path=fixture.id+'/phase02-isolation-fixture.svg';
+  const path=fixture.id+'/phase02-isolation-fixture.png';
   const {data:existing,error:downloadError}=await db.storage.from('branding').download(path);
   if(existing){
    const bytes=new Uint8Array(await existing.arrayBuffer());
@@ -35,7 +35,7 @@ export async function uploadSyntheticBranding(env:NodeJS.ProcessEnv){
   // Only an actual object-not-found response permits provisioning a new fixture.
   if(!downloadError||!['404','not_found','NoSuchKey'].some(code=>String(downloadError.message).includes(code)||String((downloadError as {statusCode?:string}).statusCode)===code))
    throw new Error('Cannot verify fixture status for '+fixture.slug+': '+(downloadError?.message??'unknown error'));
-  const {error}=await db.storage.from('branding').upload(path,payload,{contentType:'image/svg+xml',upsert:false});
+  const {error}=await db.storage.from('branding').upload(path,payload,{contentType:'image/png',upsert:false});
   if(error)throw new Error('Storage fixture upload failed for '+fixture.slug+': '+error.message);
   process.stdout.write('CREATED '+fixture.slug+' '+path+'\n');
  }
