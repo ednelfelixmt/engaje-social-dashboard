@@ -174,3 +174,9 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 
 - **RLS-WRITE-001 (escopo SQL):** foram executadas transações com `SET LOCAL ROLE authenticated` e claim `sub` de cada identidade sintética; tentativas de `UPDATE` na própria organização, com guarda `ROW_COUNT=0` e `ROLLBACK`, sem persistência. Ambas concluíram sem violação detectada. SQL reproduzível: `scripts/verify-phase02-viewer-denied-updates.sql`.
 - **Não confundir com E2E:** não houve login via JWT, chamada REST/RPC nem criação de arquivo privado. Testes negativos por autenticação real, Storage, OAuth e sessões continuam bloqueando Fase 02.
+
+### 24/10/2026 — Gate RPC de importação como viewer
+
+- PR #108 aprovado pelo Quality Gate #121 e Vercel, integrado à main como `74542a080b2753248f3a8bb22689f63de60c1bb2`.
+- **RPC-001 (prova transacional SQL):** cada um dos dois viewers sintéticos, com `SET LOCAL ROLE authenticated` e claim `sub` correspondente, chamou `public.import_spreadsheet` na própria organização. A função recusou a tentativa com `insufficient_privilege` (SQLSTATE 42501) conforme verificação de exceção e `ROLLBACK`; nenhum dado persistido. Script: `scripts/verify-phase02-viewer-rpc-denial.sql`.
+- **AUTH-E2E-001 permanece aberto:** simulação de contexto SQL não demonstra autenticação JWT real; arquivos privados, sessões reais, API e OAuth seguem pendentes.
