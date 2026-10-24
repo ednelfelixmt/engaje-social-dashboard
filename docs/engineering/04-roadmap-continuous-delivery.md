@@ -154,3 +154,11 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 - **PR #103 integrado** (`3370eeff0a44bd06df34bb36ffdb3288688ffb95`): validação de logins das fixtures condicionada a ACK explícito, slugs exatos e IDs de usuários autorizados; Quality Gate #111 e Vercel aprovados.
 - **FIXTURE-001 (P0 gate de teste, aberto):** consulta live nas organizações `homologacao-a-20261024` e `homologacao-b-20261024`: **0** ativos em `client_asset_assignments` e **0** objetos privados em `storage.objects` bucket `branding` para ambas. O executor reprovará até preparar fixtures próprias, sem reutilizar dados reais.
 - **AUTH-E2E-001 (P0, aberto):** teste autenticado A/B ainda não executado: credenciais dos usuários sintéticos devem estar em secret store de runner autorizado, nunca no chat/repositório. É necessário validar own-read, deny cross-tenant, escrita negada, RPC e Storage, antes de fechar a Fase 02.
+
+### 24/10/2026 — FIXTURE-001: ativos A/B provisionados; branding privado pendente
+
+- PR #104 integrado após Quality Gate #113 e Vercel aprovados (commit `bec21d1cd61b2bf4ae81a6f8aec9bf2d94246157`).
+- Em uma transação no Supabase, criadas **duas** conexões sintéticas `meta_ads` pendentes, sem credenciais e marcadas `fixture:true`, dois ativos fictícios inativos e um vínculo por organização `homologacao-a-20261024`/`homologacao-b-20261024` com `sync_enabled=false`. Conferência posterior: **1 ativo atribuído, sincronização desativada** para cada tenant. Nenhuma API externa foi chamada.
+- **FIXTURE-001 parcialmente resolvido:** ainda faltam **dois arquivos privados de branding reais** no bucket `branding`, prefixados pelos respectivos UUIDs, criados pela API Storage com credencial administrativa em ambiente protegido. **Não** simular arquivos inserindo diretamente metadados em `storage.objects`.
+- **AUTH-E2E-001 aberto:** requer credenciais em secret store e execução do script read-only e dos cenários negativos de escrita/sessão. Marcar como concluído só após provas A/B de leitura positiva e cruzada negativa.
+- **Limpeza:** remover apenas as conexões/ativos/vínculos com marcadores `mediahub-phase02-`/`mediahub-fixture-` e organizações de homologação depois do teste, nunca ativos reais.
