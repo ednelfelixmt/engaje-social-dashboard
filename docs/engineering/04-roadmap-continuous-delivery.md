@@ -191,3 +191,8 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 
 - **ADMIN-003 (implementado para validação):** `/admin/users` lista contas Auth existentes em consulta server-side protegida por `requireAdmin` e credencial server-only, incluindo usuários sem convites ou memberships. Cada conta não privilegiada oferece link para `/admin/users/[userId]`; superadministradores aparecem como protegidos. Falhas de consulta são explicitadas sem abrir permissões.
 - Limitação conhecida: diretório inicial exibe até 200 contas; paginação e busca no Auth Admin ficam para escala maior. Nenhuma conta Auth, membership nem cliente real foi alterado por essa funcionalidade.
+
+### 24/10/2026 — matriz de leitura A/B por sete superfícies
+
+- **RLS-AB-002 (aprovado no escopo SQL):** para cada viewer sintético com `SET LOCAL ROLE authenticated` e claim `sub`, sua organização é visível (1); organização, membros, configuração de dashboard, branding, ativos atribuídos, conexões e métricas da outra organização retornam zero. As nove tabelas relevantes examinadas estão com `relrowsecurity=true`. Consultas executadas em transações revertidas; script repetível `scripts/verify-phase02-cross-tenant-read-matrix.sql`.
+- **Limites:** algumas tabelas dos fixtures podem estar vazias; zero registros não prova isoladamente todas as regras de leitura. A homologação final ainda requer sessões JWT reais, dados A/B com canários em cada superfície e Storage privado. Não confundir com conclusão de Fase 02.
