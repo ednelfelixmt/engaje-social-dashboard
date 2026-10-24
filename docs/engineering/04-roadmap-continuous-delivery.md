@@ -186,3 +186,8 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 - **ADMIN-001:** cadastro dedicado de clientes em `/admin/organizations` usando action `createOrganization` protegida por `requireAdmin`, validação de nome, slug, nicho e modelo comercial.
 - **ADMIN-002:** `/admin/users` exibe matriz administrativa; configuração de vínculo em `/admin/users/[userId]` disponibiliza apenas `viewer` e ativação/suspensão. A action `saveMember` também aceita exclusivamente `viewer`, além de validar a organização e preservar superadministradores. `super_admin` pertence somente à agência; clientes apenas consultam dashboards, gráficos, relatórios e filtros.
 - **PENDENTE DE HOMOLOGAÇÃO:** funcionamento com login real e testes de isolamento e de alteração negada; observar eventuais roles legados (`editor`/`client_admin`) e regularizá-los de maneira controlada. Integrações e dados dos cinco clientes reais não foram alterados neste PR.
+
+### 24/10/2026 — Gestão de contas já cadastradas no Auth
+
+- **ADMIN-003 (implementado para validação):** `/admin/users` lista contas Auth existentes em consulta server-side protegida por `requireAdmin` e credencial server-only, incluindo usuários sem convites ou memberships. Cada conta não privilegiada oferece link para `/admin/users/[userId]`; superadministradores aparecem como protegidos. Falhas de consulta são explicitadas sem abrir permissões.
+- Limitação conhecida: diretório inicial exibe até 200 contas; paginação e busca no Auth Admin ficam para escala maior. Nenhuma conta Auth, membership nem cliente real foi alterado por essa funcionalidade.
