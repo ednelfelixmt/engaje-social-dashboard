@@ -140,3 +140,11 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 - **UX-002 / SEC-004 (P1, confirmado):** a rota `src/app/(tenant)/[organizationSlug]/[section]/page.tsx` calculava `canCustomizeClient = superAdmin`, mas `Filters.actions` renderizava `PersonalizeBar` apenas pela presença de blocos personalizáveis, sem testar a permissão. O PR #101 altera o predicado de renderização para `customizable && canCustomizeClient` e acrescenta teste automatizado. **Situação: correção submetida; não encerrar até CI e Vercel aprovados, merge e teste autenticado como viewer.**
 
 - **TEST-001 (P1, 24/10/2026):** Quality Gate #105 e Vercel reprovaram PR #101 porque `tests/client-viewer-ui.test.ts` ainda esperava renderização sem a guarda administrativa; teste corrigido no mesmo PR e ressubmetido. **Encerrar somente após Quality Gate #106 e Vercel aprovados e merge.**
+
+### Execução 24/10/2026 — provisão de tenants A/B para homologação
+
+- **SEC-010 parcial, verificado no Supabase:** 3 usuários Auth, 2 organizações sintéticas novas `homologacao-a-20261024` e `homologacao-b-20261024` provisionadas em uma única transação, cada uma com **uma conta nova distinta** como membro ativo de papel `viewer`. O pré-check exigiu identidades existentes, sem membership anterior e sem colisão de slugs. Consulta posterior confirmou os 2 vínculos.
+- Clientes reais: 5 cadastros existentes anteriores; **não utilizados para fixtures**.
+- **A/B não homologado ainda:** faltam ativos atribuídos sintéticos, arquivos privados de branding, segredos de autenticação em executor protegido e testes E2E bidirecionais, REST/RPC, Storage, revogação e callbacks OAuth.
+- **COMPAT-001:** contas provisionadas possuem e-mails convencionais, mas o executor `scripts/verify-production-isolation.ts` permite somente e-mails `.test`; manter a verificação negativa e adicionar mecanismo de autorização explícita, de uso único e vinculado aos IDs das organizações antes de execução real. **Não alterar ou registrar senhas no repositório.**
+- **Limpeza obrigatória:** excluir somente os objetos/associações criados nesta homologação depois da evidência, preservando organizações/identidades reais; confirmar IDs antes de remover fixtures.
