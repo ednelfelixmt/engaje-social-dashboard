@@ -140,7 +140,7 @@ export default async function Page({params: params_, searchParams: searchParams_
   <div className="dashboard-content mx-auto max-w-[1780px] space-y-6 lg:space-y-8">
     <Suspense fallback={null}><DisplayModeController /></Suspense>
     <header className="flex min-h-16 items-center gap-3 rounded-2xl border border-white/10 bg-white/[.025] px-4 py-3"><div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-xs font-bold text-primary">{org.name.slice(0,2).toUpperCase()}</div><div className="min-w-0"><p className="truncate text-xs text-zinc-400">{org.name}</p><h1 className="truncate text-xl font-semibold text-white">{params.section==='overview'?'Visão geral consolidada':title}</h1></div></header>
-    <div className="tv-hide"><Filters value={f} organizations={orgs ?? []} slug={org.slug} actions={customizable ? <PersonalizeBar/> : undefined}/></div>
+    <div className="tv-hide"><Filters value={f} organizations={orgs ?? []} slug={org.slug} actions={customizable && canCustomizeClient ? <PersonalizeBar/> : undefined}/></div>
     {platformPage&&ads.length>0?<p className="text-xs text-zinc-500">Métricas registradas de {ads.map(r=>r.metric_date).sort()[0].split('-').reverse().join('/')} a {ads.map(r=>r.metric_date).sort().at(-1)!.split('-').reverse().join('/')} dentro do período filtrado. Dados posteriores dependem da coleta da plataforma.</p>:null}
     {platformPage&&!platformHasData?<Card><strong className="text-sm text-zinc-200">Sem resultados registrados para {platformPage.label}</strong><p className="mt-2 text-sm leading-6 text-zinc-400">Não há métricas disponíveis no período selecionado. Consulte o histórico de outros períodos quando necessário.</p></Card>:null}
 
