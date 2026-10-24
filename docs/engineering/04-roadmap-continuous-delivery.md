@@ -169,3 +169,8 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 - **RLS-AB-001 (aprovado para escopo limitado):** executadas transações `BEGIN; set_config('request.jwt.claim.sub', <synthetic-user-uuid>, true); SET LOCAL ROLE authenticated; SELECT ...; ROLLBACK;` independentemente para os dois membros `viewer`. Resultado: usuário A vê organização A=1, B=0, assets=1; usuário B vê organização A=0, B=1, assets=1. Consulta sem JWT autenticado vê zero organizações. **Nenhuma escrita realizada.**
 - **AUTH-E2E-001 continua aberto:** teste RLS SQL com identidade simulada não substitui sessão JWT real, client SDK, URLs assinadas, API, OAuth, revogação, escrita negada nem regressão de frontend.
 - **FIXTURE-001 continua parcial:** falta upload dos dois arquivos privados por Storage API, com paths `c4c77b35-03a4-417a-94c2-e845d48679c1/phase02-isolation-fixture.svg` e `10289f2d-23b9-4c86-a10e-0503bcc2de79/phase02-isolation-fixture.svg`, executado exclusivamente por runner com segredo protegido.
+
+### 24/10/2026 — tentativa de atualização negada no contexto RLS simulado
+
+- **RLS-WRITE-001 (escopo SQL):** foram executadas transações com `SET LOCAL ROLE authenticated` e claim `sub` de cada identidade sintética; tentativas de `UPDATE` na própria organização, com guarda `ROW_COUNT=0` e `ROLLBACK`, sem persistência. Ambas concluíram sem violação detectada. SQL reproduzível: `scripts/verify-phase02-viewer-denied-updates.sql`.
+- **Não confundir com E2E:** não houve login via JWT, chamada REST/RPC nem criação de arquivo privado. Testes negativos por autenticação real, Storage, OAuth e sessões continuam bloqueando Fase 02.
