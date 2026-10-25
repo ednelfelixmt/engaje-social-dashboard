@@ -19,7 +19,7 @@ Locks seguem cliente → identidade Auth → convite → membership; não há HT
 
 ## Migração e plano operacional
 
-Arquivo criado com a CLI oficial 2.83.0, após consultar --help: 20261025203411_atomic_client_administration.sql. A CLI 2.122.0 tentou criar telemetria fora da área do projeto e foi bloqueada pelo ambiente; a versão compatível foi usada apenas como ferramenta local, sem dependência nova do aplicativo.
+Arquivo criado com a CLI oficial 2.83.0, após consultar --help: 20261025230609_atomic_client_administration.sql. A CLI 2.122.0 tentou criar telemetria fora da área do projeto e foi bloqueada pelo ambiente; a versão compatível foi usada apenas como ferramenta local, sem dependência nova do aplicativo.
 
 Pré-flight live somente leitura confirmou: funções novas/tabela de auditoria ausentes; inicialização cria branding/config; trigger de membership restringe super_admin à agência; índices únicos de convites por usuário e cliente/usuário presentes; Auth possui email_confirmed_at. A migração é aditiva: cria funções, tabela privada e triggers, sem atualizar registros de clientes, Auth ou convites existentes.
 
@@ -38,3 +38,9 @@ Fontes verificadas: [Database Functions](https://supabase.com/docs/guides/databa
 Registro de validação: uma execução local de tipos coincidiu com o rebase da branch e reportou arquivo temporariamente ausente (TS6053). Repetir o gate com a árvore estável; essa execução não conta como aprovação. A correção ANA-015 (#144) da main foi preservada.
 
 Validação local final após ANA-015: 235 testes, 139 checks SQL, lint, tipos, arquitetura e build aprovados. Quality Gate #209 do PR #145 falhou no comando lint por caminhos com parênteses sem aspas no shell Linux; corrigido para citar esses caminhos em Windows/Linux. Exigir nova aprovação remota no head corrigido.
+
+## Integração e banco verificados
+
+PR #145 integrado como f6612cde31470404ea542fe070eba5af8129d7bc após Quality Gate #210 e Vercel aprovados no head f46786c. Migração aplicada pelo MCP ao projeto Engaje: versão real 20261025230609, nome atomic_client_administration, SHA-256 do SQL a087da144979eeede1b24b125ff7476594225fa508bb8b65b09fc412f28bb5dc. O arquivo, inicialmente criado pela CLI, foi renomeado para a versão confirmada no histórico do servidor para evitar reaplicação por divergência de identidade; o conteúdo SQL foi preservado.
+
+Catálogo live confirmou as quatro RPCs públicas invoker, wrappers/helpers com search_path vazio, zero execução anon, quatro triggers ativos, auditoria com RLS e sem SELECT/INSERT direto de authenticated. Advisor sem novo WARN: permanecem pg_net em public e leaked password protection desativada; o novo INFO de auditoria sem policies corresponde ao bloqueio intencional de acesso direto. Não abrir policies permissivas para silenciar o Advisor. Referência: https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy . Não foi executado E2E JWT, nem escrita em cliente para teste.

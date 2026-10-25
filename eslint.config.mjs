@@ -7,6 +7,7 @@ export default tseslint.config(
   {ignores:['node_modules/**','.next/**']},
   {
     files:[
+      'tests/financial-roi-view.test.ts',
       'src/lib/auth/admin-audit.ts',
       'src/app/(agency)/admin/organizations/**/activity/*.tsx',
       'src/app/(agency)/admin/organizations/page.tsx',
