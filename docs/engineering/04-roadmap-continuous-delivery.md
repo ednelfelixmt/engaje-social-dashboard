@@ -229,3 +229,6 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 - **ANA-006 — em validação:** média ponderada das métricas do provedor pode exceder o limite numérico em pesos extremos; proteção contra overflow e regressões sintéticas adicionadas. Não há alteração dos dados reais.
 
 - **ANA-004 — implementação em validação (PR #125):** dashboard passa a discriminar valores ausentes por indicador (leads, cliques e impressões), preservando a diferença entre NULL e zero; exige revisão visual autenticada posterior.
+
+- **ANA-006 — concluído (PR #125):** proteção de overflow e transparência de valores incompletos; testes e publicação validados por CI/Vercel.
+- **ANA-007 — em validação:** exibir cobertura por indicador nos dashboards, distinguindo valor zero registrado de ausência de dado. Testes sintéticos, sem dependência de login real para build; revisão visual autenticada segue em UX-002.
