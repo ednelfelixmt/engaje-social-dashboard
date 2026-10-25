@@ -17,6 +17,8 @@ import {dashboardMetricLabels, paidMetricKeys, type DashboardMetricKey} from '@/
 import type {CampaignPerformance, Platform} from '@/types/domain';
 import type {PerformanceRankingGroups} from '@/lib/metrics/rankings';
 import {paidSummary} from '@/lib/metrics/paid-summary';
+import {paidWeightedMetrics, type WeightedMetricSummary} from '@/lib/metrics/weighted-metrics';
+import {WeightedMetricNote} from '@/components/dashboard/weighted-metric-note';
 import {SortableCardGrid} from '@/components/dashboard/sortable-card-grid';
 import {Block} from '@/components/layout/block';
 
@@ -67,6 +69,8 @@ function KpiCard({
   previous,
   format,
   inverse = false,
+  coverage,
+  comparisonIncomplete,
   icon: Icon,
 }: {
   label: string;
@@ -74,6 +78,8 @@ function KpiCard({
   previous: number | null;
   format: (value: number | null) => string;
   inverse?: boolean;
+  coverage?: WeightedMetricSummary;
+  comparisonIncomplete?: boolean;
   icon: typeof Eye;
 }) {
   const change = delta(value, previous);
@@ -91,6 +97,7 @@ function KpiCard({
     <p className={`mt-4 text-xs ${change == null ? 'text-zinc-600' : positive ? 'text-emerald-400' : 'text-red-400'}`}>
       {change == null ? (value == null ? 'Métrica indisponível' : 'No período selecionado') : `${change > 0 ? '+' : ''}${number(change, 1)}% vs. comparação`}
     </p>
+    <WeightedMetricNote summary={coverage} comparisonIncomplete={comparisonIncomplete} />
   </Card>;
 }
 
@@ -111,10 +118,12 @@ function PlatformBreakdown({rows, currency, enabledMetrics}: {rows: CampaignPerf
 
   return <div className="grid gap-4 lg:grid-cols-3">
     {platforms.map((platform) => {
-      const summary = metrics(rows.filter((row) => row.platform === platform));
+      const platformRows = rows.filter((row) => row.platform === platform);
+      const summary = metrics(platformRows);
+      const coverage: Record<string, WeightedMetricSummary> = paidWeightedMetrics(platformRows);
       return <Card className="!p-5" key={platform}>
         <div className="flex items-center justify-between"><strong>{platformLabels[platform] || platform}</strong><span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary">Com dados</span></div>
-        <div className="mt-5 grid grid-cols-2 gap-4 text-sm">{visibleMetrics.map((metric)=><div key={metric.key}><p className="text-xs text-zinc-500">{metric.label}</p><strong className="mt-1 block">{formatPaidMetric(metric.key, summary[metric.key as keyof typeof summary] as number|null, currency)}</strong></div>)}</div>
+        <div className="mt-5 grid grid-cols-2 gap-4 text-sm">{visibleMetrics.map((metric)=><div key={metric.key}><p className="text-xs text-zinc-500">{metric.label}</p><strong className="mt-1 block">{formatPaidMetric(metric.key, summary[metric.key as keyof typeof summary] as number|null, currency)}</strong><WeightedMetricNote summary={coverage[metric.key]} /></div>)}</div>
       </Card>;
     })}
   </div>;
@@ -204,10 +213,14 @@ export function CampaignWorkspace({
   const measuredPreviousRows = previousRows.filter(hasMeasuredPerformance);
   const current = metrics(measuredRows);
   const previous = metrics(measuredPreviousRows);
+  const coverage: Record<string, WeightedMetricSummary> = paidWeightedMetrics(measuredRows);
+  const previousCoverage: Record<string, WeightedMetricSummary> = paidWeightedMetrics(measuredPreviousRows);
   const kpis = paidCardDefinitions.filter((item)=>enabledMetrics.includes(item.key)).map((item)=>({
     ...item,
     value: current[item.key as keyof typeof current] as number|null,
-    previous: previous[item.key as keyof typeof previous] as number|null,
+    previous: !comparing || (coverage[item.key] && (coverage[item.key].status !== 'complete' || previousCoverage[item.key].status !== 'complete')) ? null : previous[item.key as keyof typeof previous] as number|null,
+    coverage: coverage[item.key],
+    comparisonIncomplete: comparing && !!coverage[item.key] && (coverage[item.key].status !== 'complete' || previousCoverage[item.key].status !== 'complete'),
     format: (value:number|null)=>formatPaidMetric(item.key,value,currency),
   }));
   const showLeadBreakdown=['leads','registration_leads','message_leads','cpl','cost_per_registration','cost_per_message'].some((key)=>enabledMetrics.includes(key));

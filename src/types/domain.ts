@@ -1,3 +1,4 @@
+import type {WeightedMetricSummaries} from '@/lib/metrics/weighted-metrics';
 import type { Database, Row } from './database.types';
 
 export const dashboardPages = [
@@ -47,6 +48,8 @@ export type CampaignPerformance = {
   conversionRate: number | null;
   /** Primitive and derived platform metrics keyed by the dashboard catalog. */
   metricValues: Record<string, number | null>;
+  /** Source-record coverage and sufficient statistics for non-additive estimates. */
+  weightedMetrics?: WeightedMetricSummaries;
 };
 export type SyncResult = {
   integrationId: string;

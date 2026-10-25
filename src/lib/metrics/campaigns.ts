@@ -1,6 +1,7 @@
 import type {Row} from '@/types/database.types';
 import type {CampaignPerformance} from '@/types/domain';
 import {finiteRatio,sum} from './aggregation';
+import {summarizeWeightedMetric, weightedMetricKeys, type WeightedMetricSummaries} from './weighted-metrics';
 
 function normalizedAccountId(value: string) {
   return value.replace(/^act_/, '');
@@ -11,7 +12,6 @@ const primitiveMetricKeys = [
   'video_views','video_2s_views','video_3s_views','video_6s_views','thruplays','video_25','video_50','video_75','video_95','video_100',
   'leads','registration_leads','message_leads','phone_calls','form_starts','form_completions','content_views','add_to_cart',
   'checkouts','purchases','catalog_sales','subscriptions','conversions','all_conversions','view_through_conversions',
-  'search_impression_share','search_top_impression_share','search_absolute_top_impression_share','quality_score',
 ] as const;
 
 export function campaigns(
@@ -34,7 +34,7 @@ export function campaigns(
     if(group)group.push(row);else crmByCampaignDay.set(key,[row]);
   }
 
-  const performance = [...groups.values()].map((rows) => {
+  const performance: CampaignPerformance[] = [...groups.values()].map((rows) => {
     const first = rows[0];
     const spend = sum(rows, 'spend');
     if(spend===null)throw new Error('Invalid campaign spend aggregation');
@@ -71,6 +71,8 @@ export function campaigns(
     const checkouts = sum(rows, 'checkouts');
     const metricValues:Record<string,number|null>={};
     for(const key of primitiveMetricKeys)metricValues[key]=sum(rows,key);
+    const weightedMetrics = Object.fromEntries(weightedMetricKeys.map(key => [key, summarizeWeightedMetric(rows.map(row => ({value: row[key], weight: row.impressions})))])) as WeightedMetricSummaries;
+    for (const key of weightedMetricKeys) metricValues[key] = weightedMetrics[key].value;
     metricValues.spend=spend;metricValues.revenue=revenue;metricValues.registration_leads=registrationLeads;
 
     return {
@@ -109,6 +111,7 @@ export function campaigns(
       ctr: finiteRatio(clicks,impressions,100),
       conversionRate: finiteRatio(purchases,clicks,100),
       metricValues,
+      weightedMetrics,
     };
   });
 

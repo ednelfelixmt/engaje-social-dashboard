@@ -2,6 +2,9 @@
 Status: Fase 00 **ABERTA COM PENDÊNCIAS CONTROLADAS**; trilha Fase 01 **AUTORIZADA PARA TRABALHOS DE FUNDAÇÃO NÃO DESTRUTIVOS**. Não confundir com aprovação de segurança ou release comercial.
 
 ## Regra de não paralisação
+
+**Diretriz reafirmada pelo responsável em 25/10/2026:** registrar bloqueios e continuar a implementação dos módulos independentes. SEC-010/011 (A/B autenticado), SEC-014 (rollout Edge) e UX-002 permanecem pendentes, com condições de desbloqueio no ciclo 02 e em `17-continuity-cycle-evidence.md`; não paralisam analytics e testes sintéticos sem dependência desses acessos.
+
 O andamento pode ser concorrente: a equipe desenvolve infraestrutura modular, testes, contratos e UI sem expandir privilégios nem declarar produção segura. A publicação/ativação de funcionalidades novas depende de seus próprios gates. Pendências não críticas recebem data-alvo ao priorizar sprint e proprietário designado; não inventar nomes ou prazos sem capacidade confirmada.
 
 ## Backlog priorizado e destino
@@ -266,6 +269,14 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 - **Risco e rollback:** se houver regressão em dados de campanha, reverter o PR; revisar a apresentação de campanhas históricas com mais de uma moeda. Não alterar dados de clientes, RLS, OAuth, credenciais ou migrações.
 - **Pendências externas inalteradas:** SEC-010/011 (homologação A/B real), UX-002 (viewer autenticado) e integrações com provedores. Deadline 18/12/2026 permanece como meta, não como homologação.
 
+
+### Ciclo 03 — ANA-004: cobertura e linhagem de métricas ponderadas (em validação)
+
+- **Avanço funcional:** cards de desempenho e plataforma mostram cobertura completa/parcial/indisponível, contagem de registros válidos, ausência de valor/peso e método da estimativa. Comparações desses indicadores são omitidas quando algum período não tem cobertura completa.
+- **Correção de cálculo:** scores/parcelas deixam de ser somados entre datas. Estatísticas suficientes preservam pesos dos registros de origem e exclusões até o consolidado; dias sem score não emprestam impressões a outros dias. Overflow permanece indisponível, inclusive após reagregação.
+- **Validação local:** 189 testes, 135 verificações SQL, lint, tipos, arquitetura e build aprovados; 17 regressões novas de fórmula, origem → campanha → resumo e renderização. Primeiro build falhou por EPERM no diretório temporário do Windows; segunda execução concluiu. **Aceite remoto:** Quality Gate e Vercel no mesmo SHA antes de integrar. Evidências e limites em [18-weighted-metrics-coverage.md](18-weighted-metrics-coverage.md).
+- **Segurança:** cálculo e leitura da interface, sem banco, OAuth, credenciais ou dados reais como fixtures. Não fecha SEC-010/011, SEC-014 ou UX-002. A estimativa ponderada não substitui o consolidado oficial do provedor; normalização de unidade e reconciliação real continuam no contrato de ingestão.
+- **Rollback:** reverter somente este ciclo e validar testes/build; os controles de agência e isolamento permanecem obrigatórios. Meta de analytics: 06/11/2026; entrega: 18/12/2026.
 
 ## Continuidade 25/10/2026 — auditoria e execução por dependências
 
