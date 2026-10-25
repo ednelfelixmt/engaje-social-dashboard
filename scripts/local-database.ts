@@ -27,5 +27,14 @@ export async function createTestDatabase(): Promise<PGlite> {
   `);
   await db.exec(await readFile(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
   await db.exec(await readFile(new URL('../supabase/services.sql', import.meta.url), 'utf8'));
+  // Replay the deployed authorization upgrades, not obsolete editor write permissions.
+  for(const migration of [
+    '20261023183000_client_dashboard_readonly.sql',
+    '20261023215000_client_profiles_layouts_readonly.sql',
+    '20261023223000_csv_import_storage_admin_only.sql',
+    '20261024040500_storage_update_admin_only.sql',
+  ]){
+    await db.exec(await readFile(new URL('../supabase/migrations/'+migration,import.meta.url),'utf8'));
+  }
   return db;
 }

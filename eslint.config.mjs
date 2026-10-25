@@ -4,9 +4,15 @@
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  {ignores:['node_modules/**','.next/**','supabase/functions/**']},
+  {ignores:['node_modules/**','.next/**']},
   {
     files:[
+      'src/lib/auth/session.ts',
+      'supabase/functions/_shared/agency-authorization.ts',
+      'tests/edge-agency-authorization.test.ts',
+      'tests/tenant-admin-boundary.test.ts',
+      'tests/navigation-permissions.test.ts',
+      'tests/helpers/load-typescript.ts',
       'src/lib/metrics/paid-metrics.ts',
       'src/lib/metrics/calendar.ts',
       'scripts/check-architecture.ts',

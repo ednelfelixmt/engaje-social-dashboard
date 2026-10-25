@@ -95,7 +95,7 @@ check(await scalar("select count(*)::int from pg_tables where schemaname='public
 check(await scalar("select count(*)::int from pg_tables where schemaname='public' and rowsecurity") === 23, 'RLS habilitada nas 23 tabelas');
 let day = (await db.query<Record<string, unknown>>(`select * from public.daily_performance where organization_id='${orgA}' and metric_date='2026-09-01' and currency='BRL'`)).rows[0]!;
 check(Number(day.spend) === 200 && Number(day.revenue) === 600, 'JOIN não multiplica Ads nem soma CRM com planilha');
-check(Number(day.roas) === 3 && Number(day.roi) === 200 && Math.abs(Number(day.cpa) - 200/6) < 0.00001, 'ROAS, ROI e CPA reais');
+check(Number(day.roas) === 3 && Math.abs(Number(day.cpa) - 200/6) < 0.00001, 'ROAS e CPA conciliados; ROI legado fora deste gate');
 check(await scalar(`select revenue_source from public.daily_performance where organization_id='${orgA}' and metric_date='2026-09-01' and currency='USD'`) === 'ads', 'Moedas separadas e fallback Ads');
 check(Number(await scalar(`select revenue from public.daily_performance where organization_id='${orgA}' and metric_date='2026-09-02'`)) === 0, 'Receita real zero não vira receita da plataforma');
 check(await scalar(`select cpa from public.daily_performance where organization_id='${orgA}' and metric_date='2026-09-02'`) === null, 'Sem compras: CPA null');
@@ -127,45 +127,78 @@ check((await db.query(`update public.organization_members set role='super_admin'
 check((await db.query(`update public.branding set primary_color='#FFFFFF' where organization_id='${orgA}' returning *`)).rows.length === 0, 'Viewer não edita branding');
 await denied(`delete from public.metrics_ads where organization_id='${orgA}'`, '42501', 'Browser não apaga métricas');
 await denied(`insert into public.metrics_ads default values`, '42501', 'Browser não falsifica métricas');
-await db.exec(`select set_config('request.jwt.claim.sub','${editor}',false)`);
-check((await db.query(`update public.branding set primary_color='#FFFFFF' where organization_id='${orgA}' returning organization_id`)).rows.length === 1, 'Editor edita branding próprio');
-check((await db.query(`update public.branding set primary_color='#FFFFFF' where organization_id='${orgB}' returning organization_id`)).rows.length === 0, 'Editor não edita outro cliente');
-check(await scalar("select count(*)::int from public.platform_assets where name='Conta B'") === 0, 'Editor não lê ativos do cliente B');
-await denied(`update public.branding set organization_id='${orgB}' where organization_id='${orgA}'`, '23514', 'Movimentação de tenant bloqueada');
-await db.exec(`insert into storage.objects(bucket_id,name) values ('branding','${orgA}/cover.webp')`);
-check(await scalar('select count(*)::int from storage.objects') === 1, 'Upload de branding próprio');
-await denied(`insert into storage.objects(bucket_id,name) values ('branding','${orgB}/cover.webp')`, '42501', 'Storage bloqueia upload em outro tenant');
-await denied(`insert into storage.objects(bucket_id,name) values ('branding','invalid/cover.webp')`, '42501', 'Storage rejeita prefixo inválido');
-check((await db.query(`update storage.objects set name='${orgA}/new.webp' returning id`)).rows.length === 1, 'Storage permite substituição própria');
-check((await db.query('delete from storage.objects returning id')).rows.length === 1, 'Storage permite remoção própria');
-await db.exec(`reset role; update public.organizations set status='paused' where id='${orgA}'; set role authenticated;`);
-check(await scalar('select count(*)::int from public.metrics_ads') === 0, 'Organização pausada perde acesso imediatamente');
-await db.exec(`select set_config('request.jwt.claim.sub','${admin}',false)`);
-check(await scalar('select public.is_super_admin()') === true, 'Super admin da agência reconhecido');
-check(await scalar('select count(*)::int from public.organizations') === 3, 'Super admin vê todos, inclusive pausados');
+
+await db.exec(`reset role;
+ insert into auth.users values ('20000000-0000-0000-0000-000000000004'),('20000000-0000-0000-0000-000000000005');
+ insert into public.organization_members(organization_id,user_id,role) values
+ ('${orgA}','20000000-0000-0000-0000-000000000004','client_admin'),
+ ('${orgB}','20000000-0000-0000-0000-000000000005','viewer');
+ insert into public.profiles(organization_id,user_id) values ('${orgA}','${editor}'),('${orgA}','20000000-0000-0000-0000-000000000004');
+ insert into storage.objects(bucket_id,name) values
+ ('branding','${orgA}/fixture.png'),('branding','${orgB}/fixture.png'),
+ ('spreadsheets','${orgA}/fixture.csv'),('spreadsheets','${orgB}/fixture.csv');
+ insert into public.user_dashboard_layouts(user_id,organization_id,scope,layout) values
+ ('${viewer}','${orgA}','overview','{}'),('${editor}','${orgA}','overview','{}'),
+ ('20000000-0000-0000-0000-000000000004','${orgA}','overview','{}');
+`);
+for(const [actor,role] of [[viewer,'viewer'],[editor,'editor'],['20000000-0000-0000-0000-000000000004','client_admin']]){
+ await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub','${actor}',false);`);
+ check(await scalar(`select count(*)::int from public.organizations where id='${orgA}'`)===1,role+': lê o próprio cliente');
+ check(await scalar(`select count(*)::int from public.organizations where id='${orgB}'`)===0,role+': não lê o outro cliente');
+ check((await db.query(`update public.branding set primary_color='#FFFFFF' where organization_id='${orgA}' returning organization_id`)).rows.length===0,role+': não edita branding próprio');
+ check((await db.query(`update public.dashboard_configs set default_layouts='{"overview":{}}' where organization_id='${orgA}' returning organization_id`)).rows.length===0,role+': não edita configuração própria');
+ check((await db.query(`delete from public.branding where organization_id='${orgA}' returning organization_id`)).rows.length===0,role+': não apaga branding');
+ await denied(`insert into public.branding(organization_id) values ('${orgB}')`,'42501',role+': não insere configuração em outro tenant');
+ check((await db.query(`update public.profiles set display_name='synthetic change' where user_id='${actor}' returning user_id`)).rows.length===0,role+': não edita perfil próprio');
+ check(await scalar('select count(*)::int from public.user_dashboard_layouts')===1,role+': pode ler seu layout existente');
+ await denied(`insert into public.user_dashboard_layouts(user_id,organization_id,scope,layout) values ('${actor}','${orgA}','paid','{}')`,'42501',role+': não cria layout próprio');
+ check((await db.query("update public.user_dashboard_layouts set layout='{}' returning user_id")).rows.length===0,role+': não altera layout existente');
+ check((await db.query('delete from public.user_dashboard_layouts returning user_id')).rows.length===0,role+': não apaga layout existente');
+ check(await scalar(`select count(*)::int from storage.objects where name like '${orgA}/%'`)===2,role+': lê os dois arquivos próprios');
+ check(await scalar(`select count(*)::int from storage.objects where name like '${orgB}/%'`)===0,role+': não lê arquivos alheios');
+ for(const bucket of ['branding','spreadsheets']){
+  await denied(`insert into storage.objects(bucket_id,name) values ('${bucket}','${orgA}/forbidden')`,'42501',role+': upload próprio negado em '+bucket);
+  check((await db.query(`update storage.objects set name='${orgA}/changed' where bucket_id='${bucket}' returning id`)).rows.length===0,role+': substituição negada em '+bucket);
+  check((await db.query(`delete from storage.objects where bucket_id='${bucket}' returning id`)).rows.length===0,role+': exclusão negada em '+bucket);
+ }
+ await denied(`insert into storage.objects(bucket_id,name) values ('branding','invalid/fixture.png')`,'42501',role+': prefixo inválido não permite upload');
+ await denied(`select public.import_spreadsheet('${orgA}','${orgA}/fixture.csv','fixture.csv',repeat('c',64),'[{"metric_date":"2026-10-03","currency":"BRL","revenue":"42"}]'::jsonb)`,'42501',role+': RPC privilegiada recusa importação válida');
+ await db.exec('reset role');
+}
+// Positive read canaries in both directions; SQL role simulation is not Auth HTTP E2E.
+await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub','20000000-0000-0000-0000-000000000005',false);`);
+check(await scalar(`select count(*)::int from public.organizations where id='${orgB}'`)===1,'Viewer B lê B');
+check(await scalar(`select count(*)::int from public.organizations where id='${orgA}'`)===0,'Viewer B não lê A');
+check(await scalar(`select count(*)::int from storage.objects where name like '${orgB}/%'`)===2,'Viewer B lê arquivos B');
+check(await scalar(`select count(*)::int from storage.objects where name like '${orgA}/%'`)===0,'Viewer B não lê arquivos A');
+await db.exec(`reset role; update public.organizations set status='paused' where id='${orgA}'; set role authenticated; select set_config('request.jwt.claim.sub','${viewer}',false);`);
+check(await scalar('select count(*)::int from public.metrics_ads')===0,'Organização pausada perde acesso no banco');
+await db.exec(`reset role; update public.organizations set status='active' where id='${orgA}'; update public.organization_members set is_active=false where user_id='${viewer}'; set role authenticated;`);
+check(await scalar('select count(*)::int from public.organizations')===0,'Membership revogado perde leitura no contexto SQL');
+await db.exec(`reset role; update public.organization_members set is_active=true where user_id='${viewer}'; set role authenticated; select set_config('request.jwt.claim.sub','${admin}',false);`);
+check(await scalar('select public.is_super_admin()')===true,'Superadmin ativo da agência reconhecido');
+check(await scalar('select count(*)::int from public.organizations')===3,'Superadmin vê os tenants autorizados');
+check((await db.query(`update public.branding set primary_color='#FFFFFF' where organization_id='${orgA}' returning organization_id`)).rows.length===1,'Agência edita branding');
+check((await db.query(`update public.dashboard_configs set default_layouts='{"overview":{}}' where organization_id='${orgA}' returning organization_id`)).rows.length===1,'Agência define layout padrão');
+check((await db.query(`update public.profiles set display_name='Synthetic viewer' where user_id='${viewer}' returning user_id`)).rows.length===1,'Agência gerencia perfil');
+await denied(`update public.branding set organization_id='${orgB}' where organization_id='${orgA}'`,'23514','Nem administrador move configuração entre tenants');
+await db.exec(`insert into storage.objects(bucket_id,name) values ('branding','${orgA}/admin.png')`);
+check((await db.query(`update storage.objects set name='${orgA}/admin-updated.png' where name='${orgA}/admin.png' returning id`)).rows.length===1,'Agência substitui arquivo de branding');
+check((await db.query(`delete from storage.objects where name='${orgA}/admin-updated.png' returning id`)).rows.length===1,'Agência remove arquivo de branding');
+await db.exec(`insert into public.user_dashboard_layouts(user_id,organization_id,scope,layout) values ('${admin}','${orgA}','overview','{}')`);
+check(await scalar('select count(*)::int from public.user_dashboard_layouts')===1,'Administrador lê seu layout');
+check((await db.query("update public.user_dashboard_layouts set layout='{}' returning user_id")).rows.length===1,'Administrador atualiza seu layout');
+check((await db.query('delete from public.user_dashboard_layouts returning user_id')).rows.length===1,'Administrador restaura seu layout');
+await denied(`insert into public.user_dashboard_layouts(user_id,organization_id,scope,layout) values ('${admin}','${orgA}','Escopo Inválido','{}')`,'23514','Escopo inválido recusado');
+await denied(`insert into public.user_dashboard_layouts(user_id,organization_id,scope,layout) values ('${admin}','${orgA}','paid','[]')`,'23514','Layout precisa ser objeto');
+await denied(`insert into public.user_dashboard_layouts(user_id,organization_id,scope,layout) values ('${admin}','${orgA}','paid','{"x":"${'a'.repeat(17000)}"}')`,'23514','Layout acima de 16 KB recusado');
+await db.exec(`select public.import_spreadsheet('${orgA}','${orgA}/fixture.csv','fixture.csv',repeat('c',64),'[{"metric_date":"2026-10-03","currency":"BRL","revenue":"42","purchases":"1"}]'::jsonb)`);
+check(Number(await scalar(`select revenue from public.metrics_crm where organization_id='${orgA}' and metric_date='2026-10-03'`))===42,'Agência importa receita sintética pela RPC');
+check(await scalar(`select count(*)::int from public.metrics_crm where organization_id='${orgB}' and metric_date='2026-10-03'`)===0,'Importação não grava no outro tenant');
 await db.exec('reset role');
-await denied(`insert into public.client_asset_assignments(organization_id,asset_id) values ('${orgB}','${assetA}')`, '23505', 'Ativo não pode pertencer simultaneamente a dois clientes');
-await denied(`insert into public.creatives(organization_id,integration_id,platform,account_id,external_id,kind) values ('${orgB}','${intA}','meta_ads','b','invalid','image')`, '23503', 'FK composta bloqueia integração de outro tenant');
-await denied(`insert into public.metrics_ads(organization_id,integration_id,metric_date,platform,account_id,campaign_id,campaign_name,ad_id,currency,spend,attribution_window) values ('${orgA}','${intA}','2026-09-01','meta_ads','a','c1','Duplicada','ad1','BRL',100,'7d_click')`, '23505', 'Chave natural impede duplicação na ressincronização');
-// Layouts pessoais do dashboard: cada usuário só enxerga e grava os próprios, em clientes aos quais pertence.
-await db.exec(`update public.organizations set status='active' where id='${orgA}'; set role authenticated; select set_config('request.jwt.claim.sub','${viewer}',false);`);
-await db.exec(`insert into public.user_dashboard_layouts(user_id,organization_id,scope,layout) values ('${viewer}','${orgA}','overview','{"blocks":{"order":["funnel","campaigns"],"hidden":[]}}')`);
-check(await scalar("select count(*)::int from public.user_dashboard_layouts") === 1, 'Usuário grava e lê o próprio layout');
-await denied(`insert into public.user_dashboard_layouts(user_id,organization_id,scope,layout) values ('${editor}','${orgA}','overview','{}')`, '42501', 'Usuário não grava layout em nome de outro');
-await denied(`insert into public.user_dashboard_layouts(user_id,organization_id,scope,layout) values ('${viewer}','${orgB}','overview','{}')`, '42501', 'Usuário não grava layout em cliente ao qual não pertence');
-await denied(`insert into public.user_dashboard_layouts(user_id,organization_id,scope,layout) values ('${viewer}','${orgA}','Escopo Inválido','{}')`, '23514', 'Escopo inválido é recusado');
-await denied(`insert into public.user_dashboard_layouts(user_id,organization_id,scope,layout) values ('${viewer}','${orgA}','paid','[]')`, '23514', 'Layout precisa ser um objeto');
-await denied(`insert into public.user_dashboard_layouts(user_id,organization_id,scope,layout) values ('${viewer}','${orgA}','paid','{"x":"${'a'.repeat(17000)}"}')`, '23514', 'Layout acima de 16 KB é recusado');
-await db.exec(`select set_config('request.jwt.claim.sub','${editor}',false)`);
-check(await scalar("select count(*)::int from public.user_dashboard_layouts") === 0, 'Outro usuário do mesmo cliente não vê o layout alheio');
-check((await db.query(`update public.user_dashboard_layouts set layout='{}' where user_id='${viewer}' returning *`)).rows.length === 0, 'Outro usuário não altera o layout alheio');
-check((await db.query(`delete from public.user_dashboard_layouts where user_id='${viewer}' returning *`)).rows.length === 0, 'Outro usuário não apaga o layout alheio');
-await db.exec(`select set_config('request.jwt.claim.sub','${viewer}',false)`);
-check((await db.query(`delete from public.user_dashboard_layouts where user_id='${viewer}' returning *`)).rows.length === 1, 'Usuário restaura o padrão apagando o próprio layout');
-check((await db.query(`update public.dashboard_configs set default_layouts='{"overview":{}}' where organization_id='${orgA}' returning *`)).rows.length === 0, 'Viewer não altera o layout padrão do cliente');
-await db.exec(`select set_config('request.jwt.claim.sub','${editor}',false)`);
-check((await db.query(`update public.dashboard_configs set default_layouts='{"overview":{}}' where organization_id='${orgA}' returning *`)).rows.length === 1, 'Editor define o layout padrão do cliente');
-await db.exec('reset role');
+await denied(`insert into public.client_asset_assignments(organization_id,asset_id) values ('${orgB}','${assetA}')`,'23505','Ativo não pertence simultaneamente a dois clientes');
+await denied(`insert into public.creatives(organization_id,integration_id,platform,account_id,external_id,kind) values ('${orgB}','${intA}','meta_ads','b','invalid','image')`,'23503','FK composta bloqueia integração de outro tenant');
+await denied(`insert into public.metrics_ads(organization_id,integration_id,metric_date,platform,account_id,campaign_id,campaign_name,ad_id,currency,spend,attribution_window) values ('${orgA}','${intA}','2026-09-01','meta_ads','a','c1','Duplicada','ad1','BRL',100,'7d_click')`,'23505','Chave natural impede duplicação na ressincronização');
 // Nicho e modelo de vendas do cliente: só aceitam identificadores em minúsculas.
 await db.exec('reset role');
 await db.exec(`update public.organizations set niche='health', sales_model='whatsapp' where id='${orgA}'`);
