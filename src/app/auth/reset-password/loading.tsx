@@ -1,0 +1,1 @@
+export default function Loading(){return <main className="grid min-h-screen place-items-center p-6"><p role="status" aria-live="polite" aria-busy="true" className="text-sm text-zinc-300">Validando link de recuperação…</p></main>;}

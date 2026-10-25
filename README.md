@@ -22,7 +22,7 @@ Crie o primeiro usuário no Supabase Auth, uma organização com `is_agency=true
 
 ## Implementado
 
-- Login por senha, sessão SSR, autorização no servidor e isolamento RLS.
+- Login por senha, sessão SSR, autorização no servidor e isolamento RLS. Recuperação de senha com PKCE, sessão verificada e resposta sem enumeração de contas.
 - Administração de clientes, pausa e vínculos de usuários existentes. Criação/edição com funil e alteração de acesso usam RPCs transacionais exclusivas da agência. Histórico por cliente em `/admin/organizations/<id>/activity`; consulte o plano de rollout em `docs/engineering/19-atomic-client-administration.md`.
 - Branding por organização e uploads privados de logo, favicon e fundos. A imagem de login fica disponível por slug antes da autenticação.
 - Visão geral, tráfego pago, funil, orgânico, galeria e receita externa; filtros de datas, moeda e Não comparar.
@@ -44,7 +44,7 @@ Tokens são guardados no Vault por RPC exclusiva de service_role. Contas autoriz
 
 ## Receita
 
-A view `daily_performance` agrega cada origem separadamente por organização/dia/moeda. Prioriza receita real completa de CRM/planilha, depois receita de anúncios. Zero é conhecido; NULL é indisponível. ROAS=receita/investimento. A interface mantém ROI e lucro indisponíveis sem custos financeiros completos. A migração `20261025230936_withhold_unverified_financial_roi.sql` estende a mesma regra à view SQL sem alterar a política de receita de cada instalação; ver `docs/engineering/20-financial-roi-view-contract.md` para rollout. Divisor zero fica indisponível. Não mistura moedas ou soma duplicadamente CRM com planilha. Ranking usa apenas receita atribuída à mesma campanha.
+A view `daily_performance` agrega cada origem separadamente por organização/dia/moeda. Prioriza receita real completa de CRM/planilha, depois receita de anúncios. Zero é conhecido; NULL é indisponível. ROAS=receita/investimento. A interface mantém ROI e lucro indisponíveis sem custos financeiros completos. A migração `20261025232744_withhold_unverified_financial_roi.sql` estende a mesma regra à view SQL sem alterar a política de receita de cada instalação; ver `docs/engineering/20-financial-roi-view-contract.md` para rollout. Divisor zero fica indisponível. Não mistura moedas ou soma duplicadamente CRM com planilha. Ranking usa apenas receita atribuída à mesma campanha.
 
 Ao importar planilha, o lote substitui atomicamente todos os registros de planilha nos dias/moedas presentes. Só confirme conciliação completa quando cobrir integralmente esses dias.
 
@@ -58,7 +58,7 @@ Ao importar planilha, o lote substitui atomicamente todos os registros de planil
 
 ## Limitações desta versão
 
-Google Business, YouTube, TikTok, Stract e conectores CRM ainda precisam dos respectivos adaptadores e credenciais. Métricas orgânicas diárias não são sincronizadas pelo conector Meta atual; conteúdos e contadores acumulados de curtidas/comentários, e reações/compartilhamentos quando retornados pela API. Os acumulados são exibidos por post e não entram nas séries diárias. As metas são armazenadas, mas ainda não têm alertas de acompanhamento. Favicon enviado ainda não é aplicado aos metadados. Não há convites automáticos de usuários nem recuperação de senha na interface. URLs de imagens da Meta podem expirar e exigem nova sincronização; não são copiadas para Storage. Essas capacidades não devem ser apresentadas como prontas para produção.
+Google Business, YouTube, TikTok, Stract e conectores CRM ainda precisam dos respectivos adaptadores e credenciais. Métricas orgânicas diárias não são sincronizadas pelo conector Meta atual; conteúdos e contadores acumulados de curtidas/comentários, e reações/compartilhamentos quando retornados pela API. Os acumulados são exibidos por post e não entram nas séries diárias. As metas são armazenadas, mas ainda não têm alertas de acompanhamento. Favicon enviado ainda não é aplicado aos metadados. Convites e recuperação de senha possuem fluxos implementados; entrega de e-mail, expiração e jornada autenticada exigem homologação protegida. Configuração de recuperação em `docs/engineering/21-password-recovery.md`. URLs de imagens da Meta podem expirar e exigem nova sincronização; não são copiadas para Storage. Essas capacidades não devem ser apresentadas como prontas para produção.
 
 ## Deploy
 

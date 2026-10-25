@@ -38,7 +38,7 @@ export async function createTestDatabase(): Promise<PGlite> {
     '20261023223000_csv_import_storage_admin_only.sql',
     '20261024040500_storage_update_admin_only.sql',
     '20261025230609_atomic_client_administration.sql',
-    '20261025230936_withhold_unverified_financial_roi.sql',
+    '20261025232744_withhold_unverified_financial_roi.sql',
   ]){
     await db.exec(await readFile(new URL('../supabase/migrations/'+migration,import.meta.url),'utf8'));
   }
