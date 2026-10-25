@@ -4,6 +4,7 @@ import {Bar,BarChart,CartesianGrid,ComposedChart,Legend,Line,ResponsiveContainer
 import {Download,Printer,TrendingDown,TrendingUp} from 'lucide-react';
 import {Card} from '@/components/ui/card';
 import {money,number} from '@/lib/utils';
+import {serializeCsv} from '@/lib/export/csv';
 
 export type InsightCampaign={id:string;name:string;platform:string;spend:number;impressions:number|null;clicks:number|null;leads:number|null;revenue:number|null;purchases:number|null};
 export type InsightDay={date:string;spend:number;impressions:number|null;clicks:number|null;leads:number|null};
@@ -32,7 +33,7 @@ function comparison(current:number|null,previous:number|null,lowerBetter=false){
 function exportCsv(rows:InsightCampaign[],currency:string){
  const header=['Plataforma','Campanha','Investimento ('+currency+')','Impressoes','Cliques','Leads','CPL ('+currency+')','Receita atribuida','Compras atribuidas'];
  const cells=rows.map(r=>[names[r.platform]??r.platform,r.name,r.spend,r.impressions,r.clicks,r.leads,r.leads&&r.leads>0?r.spend/r.leads:null,r.revenue,r.purchases]);
- const csv='\ufeff'+[header,...cells].map(row=>row.map(value=>'"'+String(value??'').replaceAll('"','""')+'"').join(';')).join('\r\n');
+ const csv=serializeCsv([header,...cells]);
  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob);
  const link=document.createElement('a');link.href=url;link.download='engaje-campanhas.csv';link.click();URL.revokeObjectURL(url);
 }
