@@ -11,7 +11,8 @@ export type PaidFact = {
   leads: number | null;
 };
 export type PaidMetricKey = 'spend' | 'impressions' | 'clicks' | 'leads' | 'ctr' | 'cpc' | 'cpm' | 'cpl';
-export type PaidTotals = PaidFact & {ctr: number | null; cpc: number | null; cpm: number | null; cpl: number | null};
+export type PaidMetricInput = Omit<PaidFact, 'spend'> & {spend: number | null};
+export type PaidTotals = PaidMetricInput & {ctr: number | null; cpc: number | null; cpm: number | null; cpl: number | null};
 
 /** Missing component values make a sum unknown, not zero. */
 export function sumKnown<T>(rows: readonly T[], selector: (row: T) => number | null | undefined): number | null {
@@ -33,23 +34,23 @@ function finiteRatio(numerator: number, denominator: number, multiplier = 1): nu
 }
 
 /** A weighted ratio of aggregate numerators/denominators, never an average of ratios. */
-export function paidMetric(row: PaidFact, metric: PaidMetricKey): number | null {
+export function paidMetric(row: PaidMetricInput, metric: PaidMetricKey): number | null {
   switch (metric) {
-    case 'spend': return Number.isFinite(row.spend) ? row.spend : null;
+    case 'spend': return row.spend != null && Number.isFinite(row.spend) && row.spend >= 0 ? row.spend : null;
     case 'impressions':
     case 'clicks':
     case 'leads': return row[metric] != null && Number.isFinite(row[metric]) ? row[metric] : null;
     case 'ctr': return row.impressions != null && row.clicks != null
       ? finiteRatio(row.clicks, row.impressions, 100) : null;
-    case 'cpc': return row.clicks != null ? finiteRatio(row.spend, row.clicks) : null;
-    case 'cpm': return row.impressions != null ? finiteRatio(row.spend, row.impressions, 1000) : null;
-    case 'cpl': return row.leads != null ? finiteRatio(row.spend, row.leads) : null;
+    case 'cpc': return row.spend != null && row.spend >= 0 && row.clicks != null ? finiteRatio(row.spend, row.clicks) : null;
+    case 'cpm': return row.spend != null && row.spend >= 0 && row.impressions != null ? finiteRatio(row.spend, row.impressions, 1000) : null;
+    case 'cpl': return row.spend != null && row.spend >= 0 && row.leads != null ? finiteRatio(row.spend, row.leads) : null;
   }
 }
 
 export function paidTotals<T extends PaidFact>(rows: readonly T[]): PaidTotals {
-  // Spend is only meaningful when there are actual fact rows.
-  const spend = sumKnown(rows, row => row.spend) ?? 0;
+  // Empty, invalid or overflowing spend must remain unknown, never fabricated as zero.
+  const spend = sumKnown(rows, row => row.spend >= 0 ? row.spend : null);
   const impressions = sumKnown(rows, row => row.impressions);
   const clicks = sumKnown(rows, row => row.clicks);
   const leads = sumKnown(rows, row => row.leads);
