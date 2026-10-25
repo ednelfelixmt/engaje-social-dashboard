@@ -287,6 +287,19 @@ Auditoria atual: [15-continuity-audit-2026-10-25.md](15-continuity-audit-2026-10
 
 Durante esta execução foram integrados #128 (cronograma), #89 (datas impossíveis) e #129 (variações finitas, ANA-009). Esta branch foi atualizada com esses merges. PR #13 sobre PostCSS foi superado tecnicamente pela versão 8.5.31 deste lote, mas seu fechamento não é presumido. ANA-007 e proteção ROI de ANA-008 em paidSummary já foram integradas por #126/#127; UX autenticada e contrato financeiro completo continuam pendentes.
 
+### Ciclo 02 — administração exclusiva da agência (em validação)
+
+Evidência: [16-agency-admin-boundaries.md](16-agency-admin-boundaries.md).
+
+- **SEC-015:** cinco rotas administrativas de tenant exigem agencyTenant antes de carregar configuração; navegação não exibe controles administrativos ao cliente. Sessão só aceita confirmação booleana explícita de superadmin. Gates/testes de fonte e renderização real preservam leitura e navegação dos dashboards.
+- **SEC-014:** POST e callback do Edge usam guards comportamentais testados, exigindo administrador ativo da agência, sem fallback de editor/client_admin. **Runtime ainda pendente**: inspeção v41 confirmou a regra antiga e drift da correção de escopos #59. Publicar/reverter Edge exige revisão do bundle e testes próprios; Vercel não atualiza funções Supabase.
+- **SEC-016:** createTestDatabase reproduz as quatro migrações de autorização existentes; verify:schema passou de 74 checks legados para 135 verificações, negando escrita/RPC/Storage a viewer/editor/client_admin e confirmando operações da agência. README corrige o caminho de instalação nova; não executar bootstrap sobre produção.
+- **Resultado local:** 159 testes, 135 verificações SQL, lint ampliado, tipos, arquitetura e build aprovados; tipagem específica do helper Edge integrada ao gate. CI remoto e Vercel do PR ainda são obrigatórios antes de integrar.
+- **Contenção live:** catálogo mostra 1 superadmin e 2 viewers ativos; zero papéis editor/client_admin. Não há mutação produtiva neste lote. SEC-010/011 e UX-002 seguem abertos; doubles e contexto RLS SQL não equivalem a Auth/Storage HTTP.
+- **Ciclo 01 integrado:** PR #131, SHA c5a547c, após Quality Gate #181 e Vercel aprovados no head 2c14e9b. DEP-001/002 e DEV-001 corrigidos no escopo do lote; três alertas moderados seguem na #130.
+
+**Atualização de base:** #133 já integrou agencyTenant e páginas/navegação; o ciclo 02 reaproveita esse gate e acrescenta testes comportamentais, confirmação booleana estrita, Edge e replay SQL. #134 (exportação CSV) foi preservado.
+
 ### Ciclo 01 — dependências e Quality Gate reproduzível (em validação)
 
 - DEP-001: Next 16.3.7 → 16.4.3, após verificar avisos oficiais e compatibilidade React 18/Node 22.

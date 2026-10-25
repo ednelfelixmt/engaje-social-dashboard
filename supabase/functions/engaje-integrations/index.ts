@@ -1,5 +1,6 @@
 import {createClient} from 'npm:@supabase/supabase-js@2.76.1';
 import {verifiedOAuthScopes} from '../_shared/oauth-permissions.ts';
+import {AgencyAuthorizationError,requireAgencyAdministrator,isActiveAgencyAdministrator} from '../_shared/agency-authorization.ts';
 const base=Deno.env.get('SUPABASE_URL')!;
 const service=createClient(base,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,{auth:{persistSession:false}});
 const origin='https://mediahub.engajeperformance.com.br';
@@ -148,8 +149,14 @@ async function syncOrganicAccountMetrics(i:Integration,token:string,instagram:bo
  if(rows.length)for(let offset=0;offset<rows.length;offset+=200)await check(await service.from('metrics_organic_accounts').upsert(rows.slice(offset,offset+200),{onConflict:'organization_id,platform,account_id,metric_date'}));
  return {rows:rows.length,available:[...new Set(rows.flatMap(item=>Object.keys(item).filter(key=>definitions.some(definition=>definition.field===key)||key==='followers')))]};
 }
-async function allowed(req:Request,org:string){const auth=req.headers.get('Authorization');if(!auth)throw new Error('Sessão necessária.');const client=createClient(base,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:auth}},auth:{persistSession:false}});const {data:{user}}=await client.auth.getUser();if(!user)throw new Error('Sessão expirada.');const {data:superAdmin}=await client.rpc('is_super_admin');if(!superAdmin){const {data:member}=await service.from('organization_members').select('role,is_active,organizations!inner(status)').eq('organization_id',org).eq('user_id',user.id).single();if(!member?.is_active||!['client_admin','editor'].includes(member.role)||(member.organizations as any)?.status!=='active')throw new Error('Sem permissão para gerenciar integrações.');}return user;}
-async function superAdminClient(req:Request){const auth=req.headers.get('Authorization');if(!auth)throw new Error('Sessão necessária.');const client=createClient(base,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:auth}},auth:{persistSession:false}});const {data:{user}}=await client.auth.getUser();if(!user)throw new Error('Sessão expirada.');const {data:isSuperAdmin,error}=await client.rpc('is_super_admin');if(error||!isSuperAdmin)throw new Error('Somente um super administrador pode executar esta ação.');return {client,user};}
+async function allowed(req:Request,_org:string){
+ const {user}=await superAdminClient(req);
+ return user;
+}
+async function superAdminClient(req:Request){
+ return requireAgencyAdministrator(req.headers.get('Authorization'),authorization=>
+  createClient(base,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:authorization}},auth:{persistSession:false}}));
+}
 async function setToken(id:string,token:string){await check(await service.rpc('store_integration_token',{p_id:id,p_token:token}));}
 async function setConnectionToken(id:string,token:string){await check(await service.rpc('store_platform_connection_token',{p_id:id,p_token:token}));}
 async function safePages(path:string,token:string,params:Record<string,string>={}){try{return await pages(path,token,params);}catch(error){console.warn('[meta-discovery-skipped]',{endpoint:path,message:error instanceof Error?error.message:'Falha desconhecida'});return [];}}
@@ -376,7 +383,7 @@ Deno.serve(async(req:Request)=>{
   if(req.method==='GET'&&url.pathname.endsWith('/callback')){
    const state=url.searchParams.get('state')||'';const [id,expiry,nonce,signature]=state.split('.');const signed=[id,expiry,nonce].join('.');if(!signature||!safeEqual(signature,await stateHmac(signed))||!(Number(expiry)>=Date.now()))throw new Error('Autorização expirada.');if(url.searchParams.get('error'))throw new Error('Autorização recusada.');
    const {data:pending,error}=await service.from('integrations').update({status:'syncing'}).eq('id',id).eq('status','pending').select('*').single();if(error||!pending||pending.config.nonce!==nonce)throw new Error('Autorização já utilizada.');
-   activeId=id;const actorId=pending.config.user_id;if(!actorId)throw new Error('Reconecte para renovar a autorização.');const {data:members}=await service.from('organization_members').select('organization_id,role,is_active,organizations!inner(status,is_agency)').eq('user_id',actorId).eq('is_active',true);const authorized=members?.some((m:any)=>m.organizations.status==='active'&&((m.organizations.is_agency&&m.role==='super_admin')||(m.organization_id===pending.organization_id&&['client_admin','editor'].includes(m.role))));if(!authorized)throw new Error('Permissão revogada durante a autorização.');const {data:org}=await service.from('organizations').select('slug,status').eq('id',pending.organization_id).single();if(!org||org.status!=='active')throw new Error('Cliente indisponível.');
+   activeId=id;const actorId=pending.config.user_id;if(!actorId)throw new Error('Reconecte para renovar a autorização.');const {data:members,error:membershipError}=await service.from('organization_members').select('organization_id,role,is_active,organizations!inner(status,is_agency)').eq('user_id',actorId).eq('is_active',true);const authorized=!membershipError&&Array.isArray(members)&&members.some(isActiveAgencyAdministrator);if(!authorized)throw new Error('Permissão revogada durante a autorização.');const {data:org}=await service.from('organizations').select('slug,status').eq('id',pending.organization_id).single();if(!org||org.status!=='active')throw new Error('Cliente indisponível.');
    const code=url.searchParams.get('code');if(!code)throw new Error('Código ausente.');
    const loginConfigId=await loginConfig();
    const result=await graph('oauth/access_token',null,{client_id:metaId!,client_secret:metaSecret!,redirect_uri:callback,code},'a troca do código OAuth');let token=result.access_token;if(!token)throw new Error('Token não recebido.');
@@ -602,5 +609,5 @@ Deno.serve(async(req:Request)=>{
    const {data:locked}=await service.from('integrations').update({status:'syncing',last_sync_started_at:new Date().toISOString(),last_error:null}).eq('id',i.id).neq('status','syncing').select('id').maybeSingle();if(!locked)return json({message:'Esta conta já está sincronizando. Aguarde a conclusão.'});return json(await sync(i));
   }
   return json({message:'Ação inválida.'},400);
- }catch(e){const message=e instanceof Error?e.message:'Erro de sincronização';if(activeId){const {data:current}=await service.from('integrations').select('config').eq('id',activeId).maybeSingle();const details=e instanceof MetaGraphError?e.details:null;const config=diagnosticConfig((current?.config&&typeof current.config==='object'&&!Array.isArray(current.config)?current.config:{}) as Record<string,unknown>,{syncStatus:details?.code==='10'||details?.code==='200'?'blocked':'error',tokenValid:details?.code!=='190',permissionsValid:details?.code==='10'||details?.code==='200'?false:undefined,lastError:details});await service.from('integrations').update({status:details?.code==='190'?'expired':'error',is_enabled:false,config,last_error:message.slice(0,300)}).eq('id',activeId);}return json({message},400);}
+ }catch(e){const message=e instanceof Error?e.message:'Erro de sincronização';if(activeId){const {data:current}=await service.from('integrations').select('config').eq('id',activeId).maybeSingle();const details=e instanceof MetaGraphError?e.details:null;const config=diagnosticConfig((current?.config&&typeof current.config==='object'&&!Array.isArray(current.config)?current.config:{}) as Record<string,unknown>,{syncStatus:details?.code==='10'||details?.code==='200'?'blocked':'error',tokenValid:details?.code!=='190',permissionsValid:details?.code==='10'||details?.code==='200'?false:undefined,lastError:details});await service.from('integrations').update({status:details?.code==='190'?'expired':'error',is_enabled:false,config,last_error:message.slice(0,300)}).eq('id',activeId);}return json({message},e instanceof AgencyAuthorizationError?e.status:400);}
 });

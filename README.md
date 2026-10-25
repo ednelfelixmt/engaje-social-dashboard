@@ -16,7 +16,7 @@ Node 22 ou superior. Configure `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABAS
 
 ## Banco novo
 
-Execute em ordem `supabase/schema.sql`, `supabase/services.sql` e `supabase/token-vault.sql` no Supabase. O bootstrap não é idempotente e não deve ser executado sobre tabelas existentes. São 11 tabelas com RLS, vínculos compostos por organização, Storage privado e Vault para tokens.
+Em um banco novo, execute em ordem `supabase/schema.sql`, `supabase/services.sql` e `supabase/token-vault.sql`. Antes de conceder acesso a clientes, aplique também as quatro migrações de autorização de 23–24/10: `20261023183000_client_dashboard_readonly.sql`, `20261023215000_client_profiles_layouts_readonly.sql`, `20261023223000_csv_import_storage_admin_only.sql` e `20261024040500_storage_update_admin_only.sql`, nesta ordem. O bootstrap histórico sozinho ainda contém permissões legadas de escrita; não o considere configuração final segura. O bootstrap não é idempotente e não deve ser executado sobre tabelas existentes. O banco descartável de teste carrega 23 tabelas do bootstrap e reproduz essas quatro migrações; produção possui outras migrações e 25 tabelas. Isso não substitui testes JWT/Storage HTTP. Há RLS, vínculos compostos por organização, Storage privado e Vault para tokens.
 
 Crie o primeiro usuário no Supabase Auth, uma organização com `is_agency=true` e membership `super_admin` usando o UUID real desse usuário. Não use user_metadata para atribuir permissões. Depois o painel `/admin` cria e gerencia clientes. Usuários precisam existir no Auth antes de associar o UUID em Usuários.
 
