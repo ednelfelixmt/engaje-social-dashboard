@@ -74,3 +74,5 @@ Avisos oficiais: https://github.com/vercel/next.js/security/advisories/GHSA-2464
 Next 16.4.3, Zod 4.6.7, PostCSS 8.5.31, source-map-js 1.2.2 e lint fixado no lockfile. npm ci + lint + 128 testes + 74 verificações SQL + tipos + arquitetura + build aprovados localmente. npm audit: 0 críticos/altos, 3 moderados, diferidos na issue #130 com critério de aceite e meta 11/12. Os testes existentes de validação passaram após a migração Zod; isso não substitui o E2E autenticado. A verificação SQL antiga não foi usada para afirmar que a autorização atual está homologada.
 
 Atualização durante a execução: main avançou para 02f8e1c com #128, #89 e #129. A branch foi rebaseada e preserva esses trabalhos. ANA-009 foi usado por #129; o achado de ROI fica em ANA-011. ANA-010 (datas impossíveis) foi resolvido pelo merge #89 e será revalidado na suíte atual.
+
+Atualização posterior: #132 (08a26a3) integrou agregação finita e isolamento tenant/moeda em campaigns/query, tratando parte de ANA-011. O registro da auditoria inicial foi preservado como histórico; SQL/financeiro e E2E continuam exigindo evidência própria.

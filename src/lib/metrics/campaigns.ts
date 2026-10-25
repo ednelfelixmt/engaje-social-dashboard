@@ -1,6 +1,6 @@
 import type {Row} from '@/types/database.types';
 import type {CampaignPerformance} from '@/types/domain';
-import {sum} from './query';
+import {finiteRatio,sum} from './aggregation';
 
 function normalizedAccountId(value: string) {
   return value.replace(/^act_/, '');
@@ -22,21 +22,22 @@ export function campaigns(
 ): CampaignPerformance[] {
   const groups = new Map<string, Row<'metrics_ads'>[]>();
   for (const ad of ads) {
-    const key = [ad.platform, normalizedAccountId(ad.account_id), ad.campaign_id].join(':');
+    const key = JSON.stringify([ad.organization_id,ad.platform,normalizedAccountId(ad.account_id),ad.campaign_id,ad.currency]);
     const group=groups.get(key);
     if(group)group.push(ad);else groups.set(key,[ad]);
   }
 
   const crmByCampaignDay=new Map<string,Row<'metrics_crm'>[]>();
   for(const row of crm){
-    const key=[row.metric_date,row.channel,row.account_id,row.campaign_id].join(':');
+    const key=JSON.stringify([row.organization_id,row.metric_date,row.channel,row.account_id,row.campaign_id,row.currency]);
     const group=crmByCampaignDay.get(key);
     if(group)group.push(row);else crmByCampaignDay.set(key,[row]);
   }
 
   const performance = [...groups.values()].map((rows) => {
     const first = rows[0];
-    const spend = sum(rows, 'spend') || 0;
+    const spend = sum(rows, 'spend');
+    if(spend===null)throw new Error('Invalid campaign spend aggregation');
     const byDay = new Map<string, Row<'metrics_ads'>[]>();
     for(const row of rows){const group=byDay.get(row.metric_date);if(group)group.push(row);else byDay.set(row.metric_date,[row]);}
 
@@ -45,13 +46,15 @@ export function campaigns(
     const sources = new Set<string>();
 
     for (const [day, daily] of byDay) {
-      const actual = (crmByCampaignDay.get([day,first.platform,first.account_id,first.campaign_id].join(':'))||[])
+      const actual = (crmByCampaignDay.get(JSON.stringify([first.organization_id,day,first.platform,first.account_id,first.campaign_id,first.currency]))||[])
         .filter((row)=>row.is_complete&&row.revenue!=null);
       const chosen = actual.find((row) => row.source === preferred) || actual[0];
       const amount = chosen ? chosen.revenue : sum(daily, 'revenue');
       const count = chosen ? chosen.purchases : sum(daily, 'purchases');
-      revenue = amount == null || revenue == null ? null : revenue + amount;
-      purchases = count == null || purchases == null ? null : purchases + count;
+      const nextRevenue:number|null=amount == null || revenue == null ? null : revenue + amount;
+      const nextPurchases:number|null=count == null || purchases == null ? null : purchases + count;
+      revenue=nextRevenue!=null&&Number.isFinite(nextRevenue)?nextRevenue:null;
+      purchases=nextPurchases!=null&&Number.isFinite(nextPurchases)?nextPurchases:null;
       sources.add(chosen?.source || 'ads');
     }
 
@@ -94,23 +97,24 @@ export function campaigns(
           ? [...sources][0] as CampaignPerformance['revenueSource']
           : 'mixed',
       purchases,
-      roas: spend && revenue != null ? revenue / spend : null,
-      roi: spend && revenue != null ? (revenue - spend) / spend * 100 : null,
-      cpm: impressions ? spend / impressions * 1000 : null,
-      cpc: clicks ? spend / clicks : null,
-      cpl: leads ? spend / leads : null,
-      costPerRegistration: registrationLeads ? spend / registrationLeads : null,
-      costPerMessage: messageLeads ? spend / messageLeads : null,
-      cpa: purchases ? spend / purchases : null,
-      ctr: impressions && clicks != null ? clicks / impressions * 100 : null,
-      conversionRate: clicks && purchases != null ? purchases / clicks * 100 : null,
+      roas: finiteRatio(revenue,spend),
+      // Ad spend alone omits operating costs, so business ROI is unknown.
+      roi: null,
+      cpm: finiteRatio(spend,impressions,1000),
+      cpc: finiteRatio(spend,clicks),
+      cpl: finiteRatio(spend,leads),
+      costPerRegistration: finiteRatio(spend,registrationLeads),
+      costPerMessage: finiteRatio(spend,messageLeads),
+      cpa: finiteRatio(spend,purchases),
+      ctr: finiteRatio(clicks,impressions,100),
+      conversionRate: finiteRatio(purchases,clicks,100),
       metricValues,
     };
   });
 
-  const known = new Set(performance.map((row) => [row.platform, normalizedAccountId(row.accountId), row.campaignId].join(':')));
+  const known = new Set(performance.map((row) => JSON.stringify([row.organizationId,row.platform,normalizedAccountId(row.accountId),row.campaignId])));
   for (const campaign of catalog) {
-    const key = [campaign.platform, normalizedAccountId(campaign.account_id), campaign.external_id].join(':');
+    const key = JSON.stringify([campaign.organization_id,campaign.platform,normalizedAccountId(campaign.account_id),campaign.external_id]);
     if (known.has(key)) continue;
     performance.push({
       organizationId: campaign.organization_id,
