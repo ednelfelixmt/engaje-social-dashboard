@@ -234,3 +234,19 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 - **ANA-007 — em validação:** exibir cobertura por indicador nos dashboards, distinguindo valor zero registrado de ausência de dado. Testes sintéticos, sem dependência de login real para build; revisão visual autenticada segue em UX-002.
 
 - **ANA-008 — em validação:** ROI e lucro não podem ser derivados apenas de receita e gasto com anúncios: faltam custos de produto, operação e tributos. Proteção para retornar indisponível até integração de dados financeiros autorizados; ROAS permanece calculável sem deduplicação interplataformas. Teste adicionado.
+
+## Cronograma de entrega — definido em 25/10/2026
+
+**Deadline de entrega do escopo previsto: sexta-feira, 18/12/2026 (America/Cuiaba).** Meta de planejamento, sujeita a validação de capacidade, acessos externos, testes de segurança e homologação; nunca interpretar como autorização para ignorar gates.
+
+| Marco | Prazo máximo | Critério de aceite |
+|---|---|---|
+| M1 — Fase 03 analytics e dashboards | 06/11/2026 | Indicadores consistentes, painéis por cliente/plataforma, filtros e testes automatizados verdes |
+| M2 — Integrações pagas e orgânicas | 20/11/2026 | Fluxos de conexão/seleção de ativos, coleta e contratos de dados, testes de autorização; dependências OAuth registradas |
+| M3 — Relatórios, compartilhamento seguro e TV | 04/12/2026 | Relatórios e navegação completos, modo TV e compartilhamento autorizados somente após gate de segurança |
+| M4 — Estabilização e testes de ponta a ponta | 11/12/2026 | Build, CI, Vercel, isolamento multi-tenant, acessibilidade básica, regressão e falhas P0/P1 eliminadas ou funcionalidade afetada não publicada |
+| M5 — Homologação e entrega | **18/12/2026** | Aceite funcional e de segurança, evidências E2E reais, documentação operacional e rollback, release aprovado |
+
+**Política de atraso e escalonamento:** registrar risco com responsável funcional, impacto, dependência e plano de recuperação no mesmo roadmap assim que identificado. Itens P0/P1 e credenciais externas não fornecidas não são considerados concluídos; entregar apenas o subconjunto efetivamente homologado se a condição não for atendida. Revisar avanço contra os marcos semanalmente e priorizar módulos fechados em vez de PRs isolados.
+
+**Bloqueio conhecido:** SEC-010/011 — homologação A/B com segredos protegidos e ações autorizadas no GitHub; não presumir que a automação horária resolve acesso indisponível.
