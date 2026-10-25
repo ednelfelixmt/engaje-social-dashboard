@@ -68,3 +68,11 @@ test('ratios fail closed for malformed nonfinite inputs and overflow',()=>{
  assert.equal(paidMetric({spend:10,impressions:100,clicks:-5,leads:2},'cpc'),null);
  assert.equal(paidMetric({spend:10,impressions:100,clicks:5,leads:0},'cpl'),null);
 });
+
+
+test('percentChange never emits non-finite values for extreme periods',()=>{
+ assert.equal(percentChange(1e308,1e-308),null);
+ assert.equal(percentChange(-1e308,1e-308),null);
+ assert.equal(percentChange(1e308,1e308),0);
+ assert.equal(percentChange(0,1e308),-100);
+});
