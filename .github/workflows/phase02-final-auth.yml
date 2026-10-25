@@ -25,6 +25,15 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - name: Validate A/B credentials before provisioning Storage
+        run: node --import tsx scripts/verify-phase02-auth-preflight.ts
+        env:
+          MEDIAHUB_SUPABASE_URL: https://ityidnsfhgotucgvcifq.supabase.co
+          MEDIAHUB_PUBLISHABLE_KEY: ${{ secrets.PHASE02_PUBLISHABLE_KEY }}
+          MEDIAHUB_A_EMAIL: ${{ secrets.PHASE02_A_EMAIL }}
+          MEDIAHUB_A_PASSWORD: ${{ secrets.PHASE02_A_PASSWORD }}
+          MEDIAHUB_B_EMAIL: ${{ secrets.PHASE02_B_EMAIL }}
+          MEDIAHUB_B_PASSWORD: ${{ secrets.PHASE02_B_PASSWORD }}
       - name: Provision private synthetic fixtures through Storage API
         if: ${{ inputs.provision_private_fixtures }}
         run: node --import tsx scripts/upload-phase02-branding-fixtures.ts
