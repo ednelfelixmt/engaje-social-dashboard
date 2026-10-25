@@ -19,7 +19,7 @@ function total(rows:PlatformRow[]){
  const messages=sumKnown(rows,r=>r.messages);
  return {...result,reach,messages};
 }
-function metric(row:{spend:number;impressions:number|null;clicks:number|null;leads:number|null},key:Metric){return paidMetric(row,key);}
+function metric(row:{spend:number|null;impressions:number|null;clicks:number|null;leads:number|null},key:Metric){return paidMetric(row,key);}
 function fmt(value:number|null|undefined,key:Metric,currency:string){return value==null?'—':(['spend','cpc','cpm','cpl'].includes(key)?money(value,currency):key==='ctr'?number(value,2)+'%':number(value));}
 function csv(rows:PlatformRow[],currency:string){
  const matrix=[['Campanha','Investimento '+currency,'Impressões','Cliques','Leads','CTR','CPC','CPL'],...rows.map(r=>[r.name,r.spend,r.impressions,r.clicks,r.leads,metric(r,'ctr'),metric(r,'cpc'),metric(r,'cpl')])];
