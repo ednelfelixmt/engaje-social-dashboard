@@ -1,3 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {paidDataFreshness} from '../src/lib/metrics/data-freshness';
 test('staleness reflects tenant business date',()=>{assert.deepEqual(paidDataFreshness(['2026-10-20','2026-10-23'],'2026-10-25'),{status:'recent',latest:'2026-10-23',daysOld:2});assert.deepEqual(paidDataFreshness(['2026-10-21'],'2026-10-25'),{status:'delayed',latest:'2026-10-21',daysOld:4});});
 test('future, empty and malformed records never appear as fresh',()=>{assert.deepEqual(paidDataFreshness(['2026-10-26'],'2026-10-25'),{status:'empty',latest:null,daysOld:null});assert.equal(paidDataFreshness([],'2026-10-25').status,'empty');});
+
+test('invalid calendar dates do not count as fresh',()=>{assert.deepEqual(paidDataFreshness(['2026-02-30'],'2026-03-01'),{status:'empty',latest:null,daysOld:null});assert.equal(paidDataFreshness(['2026-02-28'],'2026-02-30').status,'empty');});
