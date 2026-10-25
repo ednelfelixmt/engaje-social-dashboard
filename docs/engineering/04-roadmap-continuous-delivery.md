@@ -212,3 +212,13 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 
 - **FIXTURE-MIME-001 (identificado):** bucket Storage privado `branding` aceita apenas `image/png`, `image/jpeg`, `image/webp` e tipos de ícones, mas o script final tentava enviar `image/svg+xml`. O upload teria falhado. Corrigidos script e workflow para fixture PNG de 1×1 px em paths fixos `phase02-isolation-fixture.png`. Não executar artefatos anteriores com `.svg`.
 - **Fase 02 permanece pendente** da execução real do workflow com segredos protegidos; nenhum objeto foi inserido por esta alteração.
+
+## Atualização 25/10/2026 — Fase 03 e pendências sem bloquear construção
+
+- **SEC-010/011 — P0, aberto:** teste E2E autenticado A/B, arquivos privados e testes de escrita/sessão/OAuth ainda requerem segredos no ambiente protegido `phase02-homologation` e execução manual do workflow. Não declarar homologação; não bloquear desenvolvimento reversível independente.
+- **ANA-001 — corrigido e integrado:** PR #119, aviso de desatualização de métricas por fuso horário; CI e Vercel aprovados.
+- **ANA-002 — corrigido e integrado:** PR #120, somatórios incompletos não são apresentados como completos, razão inválida não produz NaN/Infinity; testes e deploy aprovados.
+- **ANA-003 — corrigido e integrado:** PR #121, impede soma monetária entre moedas distintas e ratios de custo/retorno incoerentes; testes e deploy aprovados.
+- **ANA-004 — aberto:** melhorar transparência quando métricas de mídia paga forem parciais e quando score ponderado não tiver peso válido; teste funcional de relatórios por plataforma e revisão de UX ainda necessários.
+- **UX-002 — aberto:** jornada visual autenticada de `viewer` com filtros, ausência de dados, teclado e navegação por seções; depende de contas sintéticas e prova de segregação real.
+- **Regra de execução:** mudanças independentes podem ser implementadas e submetidas continuamente; somente merge com Quality Gate e Vercel aprovados. Erros registrados aqui antes de eventual adiamento.
