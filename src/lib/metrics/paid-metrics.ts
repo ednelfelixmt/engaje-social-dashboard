@@ -65,5 +65,6 @@ export function paidTotals<T extends PaidFact>(rows: readonly T[]): PaidTotals {
 
 export function percentChange(current: number | null, previous: number | null): number | null {
   if (current == null || previous == null || !Number.isFinite(current) || !Number.isFinite(previous) || previous === 0) return null;
-  return (current / previous - 1) * 100;
+  const change = (current / previous - 1) * 100;
+  return Number.isFinite(change) ? change : null;
 }
