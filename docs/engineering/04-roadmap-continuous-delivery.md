@@ -232,3 +232,5 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 
 - **ANA-006 — concluído (PR #125):** proteção de overflow e transparência de valores incompletos; testes e publicação validados por CI/Vercel.
 - **ANA-007 — em validação:** exibir cobertura por indicador nos dashboards, distinguindo valor zero registrado de ausência de dado. Testes sintéticos, sem dependência de login real para build; revisão visual autenticada segue em UX-002.
+
+- **ANA-008 — em validação:** ROI e lucro não podem ser derivados apenas de receita e gasto com anúncios: faltam custos de produto, operação e tributos. Proteção para retornar indisponível até integração de dados financeiros autorizados; ROAS permanece calculável sem deduplicação interplataformas. Teste adicionado.
