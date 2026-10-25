@@ -224,3 +224,8 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 - **Regra de execução:** mudanças independentes podem ser implementadas e submetidas continuamente; somente merge com Quality Gate e Vercel aprovados. Erros registrados aqui antes de eventual adiamento.
 
 - **ANA-005 — correção em validação (PR #123, 25/10/2026):** moeda de origem ausente deve invalidar totais monetários e custos derivados. Primeira execução do Quality Gate falhou porque fixture antiga de `paid-summary-completeness.test.ts` não declarava moeda; fixture sintética ajustada para `BRL` (sem relaxar a proteção de produção). Nova execução do CI/Vercel obrigatória antes do merge.
+
+- **ANA-005 — corrigido (PRs #123 e #124, 25/10/2026):** moeda desconhecida bloqueia indicadores monetários; UI informa o cliente; Quality Gate e Vercel aprovados, merges realizados.
+- **ANA-006 — em validação:** média ponderada das métricas do provedor pode exceder o limite numérico em pesos extremos; proteção contra overflow e regressões sintéticas adicionadas. Não há alteração dos dados reais.
+
+- **ANA-004 — implementação em validação (PR #125):** dashboard passa a discriminar valores ausentes por indicador (leads, cliques e impressões), preservando a diferença entre NULL e zero; exige revisão visual autenticada posterior.
