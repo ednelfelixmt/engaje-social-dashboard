@@ -1,20 +1,11 @@
 import type {CampaignPerformance} from '@/types/domain';
+import {paidWeightedMetrics, weightedMetricKeys} from './weighted-metrics';
 
 function availableTotal(rows:CampaignPerformance[],key:string){
   const values=rows.map(row=>row.metricValues[key]);
   if(!values.length||values.some(value=>value==null||!Number.isFinite(value)))return null;
   const total=values.reduce<number>((sum,value)=>sum+Number(value),0);
   return Number.isFinite(total)?total:null;
-}
-
-function weightedAverage(rows:CampaignPerformance[],key:string){
-  const available=rows.filter(row=>row.metricValues[key]!=null&&Number.isFinite(row.metricValues[key])&&row.impressions!=null&&Number.isFinite(row.impressions)&&row.impressions>0);
-  if(!available.length)return null;
-  const weighted=available.reduce((total,row)=>total+Number(row.metricValues[key])*row.impressions!,0);
-  const weight=available.reduce((total,row)=>total+row.impressions!,0);
-  if(weight<=0||!Number.isFinite(weight)||!Number.isFinite(weighted))return null;
-  const result=weighted/weight;
-  return Number.isFinite(result)?result:null;
 }
 
 function ratio(numerator:number|null,denominator:number|null,multiplier=1){
@@ -51,7 +42,8 @@ export function paidSummary(rows:CampaignPerformance[]):Record<string,number|nul
   result.cost_per_message=ratio(spend,result.message_leads);result.cost_per_call=ratio(spend,result.phone_calls);
   result.cost_per_thruplay=ratio(spend,result.thruplays);result.cost_per_add_to_cart=ratio(spend,result.add_to_cart);
   result.cost_per_checkout=ratio(spend,result.checkouts);result.cost_per_subscription=ratio(spend,result.subscriptions);
-  for(const key of ['search_impression_share','search_top_impression_share','search_absolute_top_impression_share','quality_score'])result[key]=weightedAverage(rows,key);
+  const weighted = paidWeightedMetrics(rows);
+  for(const key of weightedMetricKeys)result[key]=weighted[key].value;
   // Compatibility aliases used by the funnel and lead-breakdown components.
   result.pageViews=result.page_views;result.registrationLeads=result.registration_leads;result.messageLeads=result.message_leads;
   result.costPerRegistration=result.cost_per_registration;result.costPerMessage=result.cost_per_message;

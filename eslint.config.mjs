@@ -7,6 +7,11 @@ export default tseslint.config(
   {ignores:['node_modules/**','.next/**']},
   {
     files:[
+      'src/lib/metrics/weighted-metrics.ts',
+      'src/lib/metrics/paid-summary.ts',
+      'src/components/dashboard/weighted-metric-note.tsx',
+      'tests/weighted-metrics.test.ts',
+      'tests/weighted-metric-ui.test.ts',
       'src/lib/auth/session.ts',
       'supabase/functions/_shared/agency-authorization.ts',
       'tests/edge-agency-authorization.test.ts',
