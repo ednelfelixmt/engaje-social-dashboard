@@ -6,6 +6,7 @@
   "scripts": {
     "verify:schema": "node --import tsx scripts/verify-schema.ts",
     "types:generate": "node --import tsx scripts/generate-types.ts",
+    "types:generate:functions": "node --import tsx scripts/generate-types.ts --functions-only",
     "typecheck": "tsc --noEmit && npm run typecheck:edge-auth",
     "dev": "next dev",
     "build": "next build",
@@ -13,7 +14,7 @@
     "test": "node --import tsx --test tests/*.test.ts",
     "prebuild": "npm run test && npm run typecheck",
     "check:architecture": "node --import tsx scripts/check-architecture.ts",
-    "lint": "eslint src/lib/metrics/paid-metrics.ts src/lib/metrics/calendar.ts scripts/check-architecture.ts tests/paid-metrics.test.ts tests/calendar.test.ts tests/architecture.test.ts src/lib/auth/session.ts supabase/functions/_shared/agency-authorization.ts tests/edge-agency-authorization.test.ts tests/tenant-admin-boundary.test.ts tests/navigation-permissions.test.ts tests/helpers/load-typescript.ts src/lib/metrics/weighted-metrics.ts src/lib/metrics/paid-summary.ts src/components/dashboard/weighted-metric-note.tsx tests/weighted-metrics.test.ts tests/weighted-metric-ui.test.ts",
+    "lint": "eslint src/lib/metrics/paid-metrics.ts src/lib/metrics/calendar.ts scripts/check-architecture.ts tests/paid-metrics.test.ts tests/calendar.test.ts tests/architecture.test.ts src/lib/auth/session.ts supabase/functions/_shared/agency-authorization.ts tests/edge-agency-authorization.test.ts tests/tenant-admin-boundary.test.ts tests/navigation-permissions.test.ts tests/helpers/load-typescript.ts src/lib/metrics/weighted-metrics.ts src/lib/metrics/paid-summary.ts src/components/dashboard/weighted-metric-note.tsx tests/weighted-metrics.test.ts tests/weighted-metric-ui.test.ts \"src/app/(agency)/admin/actions.ts\" src/lib/auth/admin-mutation-feedback.ts scripts/local-database.ts scripts/generate-types.ts tests/admin-atomic-actions.test.ts tests/atomic-client-administration.test.ts src/lib/auth/admin-audit.ts \"src/app/(agency)/admin/organizations/[organizationId]/activity/page.tsx\" \"src/app/(agency)/admin/organizations/page.tsx\" tests/admin-audit-ui.test.ts \"src/app/(agency)/admin/organizations/[organizationId]/activity/loading.tsx\"",
     "verify:staging": "node --import tsx scripts/verify-staging-isolation.ts",
     "verify:production-isolation": "node --import tsx scripts/verify-production-isolation.ts",
     "typecheck:edge-auth": "tsc --noEmit --skipLibCheck --target ES2022 --module esnext --moduleResolution bundler supabase/functions/_shared/agency-authorization.ts"

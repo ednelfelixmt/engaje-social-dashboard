@@ -16,20 +16,20 @@ Node 22 ou superior. Configure `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABAS
 
 ## Banco novo
 
-Em um banco novo, execute em ordem `supabase/schema.sql`, `supabase/services.sql` e `supabase/token-vault.sql`. Antes de conceder acesso a clientes, aplique também as quatro migrações de autorização de 23–24/10: `20261023183000_client_dashboard_readonly.sql`, `20261023215000_client_profiles_layouts_readonly.sql`, `20261023223000_csv_import_storage_admin_only.sql` e `20261024040500_storage_update_admin_only.sql`, nesta ordem. O bootstrap histórico sozinho ainda contém permissões legadas de escrita; não o considere configuração final segura. O bootstrap não é idempotente e não deve ser executado sobre tabelas existentes. O banco descartável de teste carrega 23 tabelas do bootstrap e reproduz essas quatro migrações; produção possui outras migrações e 25 tabelas. Isso não substitui testes JWT/Storage HTTP. Há RLS, vínculos compostos por organização, Storage privado e Vault para tokens.
+Em um banco novo, execute em ordem `supabase/schema.sql`, `supabase/services.sql` e `supabase/token-vault.sql`. Antes de conceder acesso a clientes, aplique também as quatro migrações de autorização de 23–24/10: `20261023183000_client_dashboard_readonly.sql`, `20261023215000_client_profiles_layouts_readonly.sql`, `20261023223000_csv_import_storage_admin_only.sql` e `20261024040500_storage_update_admin_only.sql`, nesta ordem. O bootstrap histórico sozinho ainda contém permissões legadas de escrita; não o considere configuração final segura. O bootstrap não é idempotente e não deve ser executado sobre tabelas existentes. O banco descartável de teste reproduz também as migrações de métricas primitivas, metas, convites e administração atômica, com 25 tabelas públicas e auditoria privada. Para a administração atômica em banco novo, aplique antes `20261021150000_client_user_invitations.sql` e `20261021170000_agency_user_invitations.sql`, depois `20261025203411_atomic_client_administration.sql`. Isso não substitui testes JWT/Storage HTTP. Há RLS, vínculos compostos por organização, Storage privado e Vault para tokens.
 
 Crie o primeiro usuário no Supabase Auth, uma organização com `is_agency=true` e membership `super_admin` usando o UUID real desse usuário. Não use user_metadata para atribuir permissões. Depois o painel `/admin` cria e gerencia clientes. Usuários precisam existir no Auth antes de associar o UUID em Usuários.
 
 ## Implementado
 
 - Login por senha, sessão SSR, autorização no servidor e isolamento RLS.
-- Administração de clientes, pausa e vínculos de usuários existentes.
+- Administração de clientes, pausa e vínculos de usuários existentes. Criação/edição com funil e alteração de acesso usam RPCs transacionais exclusivas da agência. Histórico por cliente em `/admin/organizations/<id>/activity`; consulte o plano de rollout em `docs/engineering/19-atomic-client-administration.md`.
 - Branding por organização e uploads privados de logo, favicon e fundos. A imagem de login fica disponível por slug antes da autenticação.
 - Visão geral, tráfego pago, funil, orgânico, galeria e receita externa; filtros de datas, moeda e Não comparar.
 - Páginas dedicadas por plataforma, habilitadas automaticamente somente quando há dados: Meta Ads, Google Ads, TikTok Ads, Facebook orgânico, Instagram orgânico, TikTok orgânico, YouTube e Google Business.
 - Comparação por período também nas páginas específicas, com KPIs próprios, ranking de campanhas, linha do tempo e galeria filtrada.
 - Configuração de páginas, métricas e ordem dos quatro blocos principais.
-- Dashboard personalizável por usuário: botão "Personalizar" em cada tela (arrastar e ocultar cards, reordenar e ocultar blocos), salvo na conta em `user_dashboard_layouts` (RLS: cada pessoa só acessa o próprio layout). Editores e admins podem promover a própria visão a padrão do cliente (`dashboard_configs.default_layouts`). A ordem antiga salva no navegador é importada uma única vez.
+- Dashboard personalizável por usuário: botão "Personalizar" em cada tela (arrastar e ocultar cards, reordenar e ocultar blocos), salvo na conta em `user_dashboard_layouts` (RLS: cada pessoa só acessa o próprio layout). Somente superadministradores autorizados da agência podem personalizar ou promover a própria visão a padrão do cliente (`dashboard_configs.default_layouts`). A ordem antiga salva no navegador é importada uma única vez.
 - CSV transacional para receita real, validação e detecção de arquivo duplicado. Modelo em `public/modelo-receita.csv`.
 - Meta OAuth, seleção de conta pela sincronização individual, Ads por anúncio/dia e criativos. Facebook/Instagram importam conteúdos e imagens.
 - Catálogo de integrações por cliente com estágio explícito. Meta e Windsor/Google Ads aparecem como operacionais; TikTok Ads, TikTok orgânico, HubSpot, RD Station, CRM genérico e Stract podem ter sua base registrada sem expor segredos no navegador.
@@ -44,7 +44,7 @@ Tokens são guardados no Vault por RPC exclusiva de service_role. Contas autoriz
 
 ## Receita
 
-A view `daily_performance` agrega cada origem separadamente por organização/dia/moeda. Prioriza receita real completa de CRM/planilha, depois receita de anúncios. Zero é conhecido; NULL é indisponível. ROAS=receita/investimento; ROI=(receita-investimento)/investimento*100. Divisor zero fica indisponível. Não mistura moedas ou soma duplicadamente CRM com planilha. Ranking usa apenas receita atribuída à mesma campanha.
+A view `daily_performance` agrega cada origem separadamente por organização/dia/moeda. Prioriza receita real completa de CRM/planilha, depois receita de anúncios. Zero é conhecido; NULL é indisponível. ROAS=receita/investimento. A interface mantém ROI e lucro indisponíveis sem custos financeiros completos; a view SQL histórica ainda requer correção de semântica e permanece pendente no roadmap. Divisor zero fica indisponível. Não mistura moedas ou soma duplicadamente CRM com planilha. Ranking usa apenas receita atribuída à mesma campanha.
 
 Ao importar planilha, o lote substitui atomicamente todos os registros de planilha nos dias/moedas presentes. Só confirme conciliação completa quando cobrir integralmente esses dias.
 
@@ -81,3 +81,7 @@ O ID fica no Vault do banco (segredo `meta_login_config_id`, lido por `public.me
 ## Engenharia e implantação por fases
 
 Consulte [docs/engineering/02-architecture-and-gates.md](docs/engineering/02-architecture-and-gates.md) para a arquitetura, regras de segurança e gate de qualidade; [docs/engineering/04-roadmap-continuous-delivery.md](docs/engineering/04-roadmap-continuous-delivery.md) para o roadmap vivo e as pendências rastreáveis. O CI GitHub Actions em `.github/workflows/quality.yml` executa testes, tipos e build. CI aprovado **não** substitui teste de autorização entre empresas nem homologação visual autenticada.
+
+## Tipos de RPCs
+
+Use `npm run types:generate:functions` para atualizar RPCs por introspecção do banco descartável sem apagar contratos existentes de tabelas e views. O gerador integral ainda depende de reconciliar todas as migrações históricas e refinamentos de tipos; não substituir os tipos atuais por uma geração incompleta.

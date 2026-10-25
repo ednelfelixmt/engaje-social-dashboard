@@ -7,6 +7,16 @@ export default tseslint.config(
   {ignores:['node_modules/**','.next/**']},
   {
     files:[
+      'src/lib/auth/admin-audit.ts',
+      'src/app/(agency)/admin/organizations/**/activity/*.tsx',
+      'src/app/(agency)/admin/organizations/page.tsx',
+      'tests/admin-audit-ui.test.ts',
+      'src/app/(agency)/admin/actions.ts',
+      'src/lib/auth/admin-mutation-feedback.ts',
+      'scripts/local-database.ts',
+      'scripts/generate-types.ts',
+      'tests/admin-atomic-actions.test.ts',
+      'tests/atomic-client-administration.test.ts',
       'src/lib/metrics/weighted-metrics.ts',
       'src/lib/metrics/paid-summary.ts',
       'src/components/dashboard/weighted-metric-note.tsx',

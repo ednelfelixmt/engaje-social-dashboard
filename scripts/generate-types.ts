@@ -1,4 +1,4 @@
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { createTestDatabase } from './local-database';
 
 // Geração por introspecção real do catálogo PostgreSQL, após executar schema.sql.
@@ -54,6 +54,24 @@ const { rows: functions } = await db.query<{ name: string; names: string[] | nul
   where n.nspname='public' order by p.proname
 `);
 const functionsText = functions.map(f => `      ${f.name}: { Args: ${f.types.length ? '{ ' + f.types.map((t,i) => `${f.names?.[i]}: ${tsType(t)}`).join('; ') + ' }' : 'Record<PropertyKey, never>'}; Returns: ${tsType(f.result)} };`).join('\n');
+// Incremental mode preserves existing table/view contracts not yet replayed by the local bootstrap.
+if (process.argv.includes('--functions-only')) {
+  const path = new URL('../src/types/database.types.ts', import.meta.url);
+  const existing = await readFile(path, 'utf8');
+  const normalized = existing.replace(/\r\n/g, '\n');
+  const start = normalized.indexOf('    Functions: {\n');
+  const end = normalized.indexOf('    Enums: {', start);
+  if (start < 0 || end < 0) throw new Error('Existing RPC type section not found');
+  const previous = normalized.slice(start + '    Functions: {\n'.length, end).replace(/    };\n$/, '').trimEnd().split('\n');
+  const entries = new Map<string, string>();
+  for (const line of [...previous, ...functionsText.split('\n')]) {
+    const name = /^      ([a-z_]+):/.exec(line)?.[1];
+    if (!name) throw new Error('Unexpected RPC type format');
+    entries.set(name, line);
+  }
+  const rpcSection = '    Functions: {\n' + [...entries].sort(([a], [b]) => a.localeCompare(b)).map(([, line]) => line).join('\n') + '\n    };\n';
+  await writeFile(path, normalized.slice(0, start) + rpcSection + normalized.slice(end));
+} else {
 await writeFile(new URL('../src/types/database.types.ts', import.meta.url), `// GERADO de supabase/schema.sql pelo catálogo PostgreSQL. Não editar manualmente.
 // Datas e UUIDs: string. numeric/int8: number (contrato Supabase JS).
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
@@ -81,5 +99,6 @@ export type Update<T extends TableName> = Database['public']['Tables'][T]['Updat
 export type DailyPerformance = Database['public']['Views']['daily_performance']['Row'];
 export type MemberRole = Database['public']['Enums']['member_role'];
 `);
+}
 console.log(`Tipos gerados: ${tables.length} tabelas, ${views.length} view, ${enums.length} enums, ${functions.length} funções.`);
 await db.close();

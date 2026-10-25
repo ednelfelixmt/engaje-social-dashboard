@@ -37,6 +37,7 @@ export default async function Page() {
               <p className="muted text-sm mt-1">/{organization.slug}{organization.niche && organization.sales_model ? ` · funil sugerido: ${funnelPresetFor(suggestFunnelModel(organization.niche as BusinessNiche, organization.sales_model as SalesModel)).label}` : ''}</p>
             </div>
             <div className="flex flex-wrap gap-2">
+              <Button asChild variant="outline"><Link href={'/admin/organizations/'+organization.id+'/activity'}>Histórico de alterações</Link></Button>
               <Button asChild variant="outline">
                 <Link href={`/${organization.slug}/settings/integrations`}>
                   <Plug size={16} /> Configurar integrações
