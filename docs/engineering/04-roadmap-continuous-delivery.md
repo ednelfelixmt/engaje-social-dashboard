@@ -265,3 +265,40 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 - **Evidência planejada:** testes sintéticos `tests/aggregation-contract.test.ts` e `tests/campaign-isolation-contract.test.ts`; Quality Gate, Vercel e merge condicionais. **Não foi executado E2E com JWT, nem escrita em produção.**
 - **Risco e rollback:** se houver regressão em dados de campanha, reverter o PR; revisar a apresentação de campanhas históricas com mais de uma moeda. Não alterar dados de clientes, RLS, OAuth, credenciais ou migrações.
 - **Pendências externas inalteradas:** SEC-010/011 (homologação A/B real), UX-002 (viewer autenticado) e integrações com provedores. Deadline 18/12/2026 permanece como meta, não como homologação.
+
+
+## Continuidade 25/10/2026 — auditoria e execução por dependências
+
+Auditoria atual: [15-continuity-audit-2026-10-25.md](15-continuity-audit-2026-10-25.md). Baseline main 010011e: 128 testes, 74 verificações SQL, tipos, arquitetura e build aprovados; lint falha após npm ci sem instalação adicional. Foram consultados últimos commits, PRs/ issues, inventário Edge e Advisor.
+
+**Correção factual:** leitura atual de produção encontrou 3 identidades Auth e 2 organizações sintéticas, além de 5 clientes não sintéticos. Os registros anteriores de somente 1 usuário são históricos. Isso **não fecha** SEC-010/011: falta provar login JWT A/B, negações REST/RPC/Storage, revogação e OAuth.
+
+| Ordem | Item | Dependência / aceite | Meta de planejamento |
+|---|---|---|---|
+| 1 | DEP-001/002: pacotes críticos/altos; DEV-001 / #49: lint no lockfile | Atualização compatível, npm ci, testes, schema, lint, tipos, arquitetura, build, audit e preview do mesmo SHA | Ciclo atual, antes de novas funcionalidades |
+| 2 | SEC-014/015/016: Edge admite papéis legados, settings expõem controles e teste local usa regras antigas | Admin da agência como único escritor; testes negativos de viewer/editor/client_admin e positivos de superadmin; runtime Edge requer rollout próprio | Próximo ciclo de segurança |
+| 3 | SEC-010/011, #37/#38/#57/#59 | Segredos protegidos e staging próprio; evidência autenticada e OAuth real | Antes de ampliar acessos/conectores |
+| 4 | #54/#65 e ANA-011 (ROI ainda em outros agregadores) | Transações atômicas e contrato financeiro único, sem custos inventados | Antes de homologar gestão e analytics |
+| 5 | Analytics #47/#40, ANA-004/007/008 e UX-002 | Reconciliar fontes, calendário e agregabilidade; revisão funcional | 06/11/2026 |
+| 6 | Conectores pagos/orgânicos, GA4/CRM #44 | Gates de OAuth, fontes e credenciais oficiais | 20/11/2026 |
+| 7 | Relatórios, compartilhamento e TV; #42/#43 | Isolamento real, linhagem, mídia e dimensões autorizadas | 04/12/2026 |
+| 8 | Testes e estabilização #39/#50 | Desktop/mobile, teclado, filtros, dados e regressões autenticadas | 11/12/2026 |
+| 9 | Homologação e entrega | Aceite dos gates aplicáveis, rollback/restauração e operação | 18/12/2026 |
+
+Durante esta execução foram integrados #128 (cronograma), #89 (datas impossíveis) e #129 (variações finitas, ANA-009). Esta branch foi atualizada com esses merges. PR #13 sobre PostCSS foi superado tecnicamente pela versão 8.5.31 deste lote, mas seu fechamento não é presumido. ANA-007 e proteção ROI de ANA-008 em paidSummary já foram integradas por #126/#127; UX autenticada e contrato financeiro completo continuam pendentes.
+
+### Ciclo 01 — dependências e Quality Gate reproduzível (em validação)
+
+- DEP-001: Next 16.3.7 → 16.4.3, após verificar avisos oficiais e compatibilidade React 18/Node 22.
+- DEP-002: PostCSS 8.5.31, Zod 4.6.7 e resolução de transitivas compatíveis; sem audit fix --force. Auditoria inicial: 7 pacotes sinalizados (1 crítico/3 altos/3 moderados). Resultado final será registrado após os gates.
+- DEV-001 / #49: ESLint 9.39.1 e typescript-eslint 8.46.0 (mesmas versões do CI anterior) agora no package.json/lockfile; workflow deixa de instalar ferramentas fora do lock. Lint continua incremental.
+- Rollback: reverter o commit deste lote e validar dependências/build; não há migração ou mutação em clientes. Reverter dependências reintroduz vulnerabilidades e exige contenção antes de exposição.
+- Segurança comercial, UX e Edge não foram homologadas por este lote.
+
+### Ciclo 01 — resultado local
+
+- Instalação limpa por npm ci, lint incremental, 128 testes, 74 verificações SQL, TypeScript, arquitetura e build Next 16.4.3 aprovados. A integração SQL ainda testa bootstrap legado; SEC-016 permanece aberto.
+- npm audit: **0 críticos, 0 altos, 3 moderados** (cadeia Tailwind/postcss-nested/postcss-selector-parser). Diferimento rastreado na [issue #130](https://github.com/ednelfelixmt/engaje-social-dashboard/issues/130), meta 11/12/2026, com aceite visual e técnico; não executar compilação de CSS não confiável.
+- Nenhuma alteração de esquema, Edge runtime, credencial ou dado de cliente. CI remoto e Vercel ainda devem aprovar o SHA do PR antes de integrar. Deprecações de React 18, Recharts 2 e ESLint 9 ficam registradas para migração planejada; não foram removidas funcionalidades.
+
+Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamento de tenant/moeda, incluindo parte do achado ROI em campaigns/query (ANA-010 da trilha existente). Revalidar esses pontos no novo baseline; a view SQL e a homologação seguem independentes. Não duplicar ANA-010 com novos incidentes.
