@@ -345,7 +345,7 @@ Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamen
 - **Regressão:** `tests/business-workbench-summary.test.ts` cobre cobertura integral/parcial, zero conhecido, recorte vazio, overflow e variações finitas. Aceite condicionado ao Quality Gate e Vercel do mesmo SHA antes do merge; revisão visual autenticada segue UX-002.
 - **Rollback e risco:** reverter apenas este PR se houver incompatibilidade de renderização; preservar a distinção entre métrica ausente e zero. **SEC-010/011, SEC-014 runtime e UX-002 seguem abertos.** Nenhuma homologação autenticada executada por este pacote.
 
-### 25/10/2026 — ANA-014: rankings com escopo único e somatórios completos (PR em validação)
+### 25/10/2026 — ANA-014: rankings com escopo único e somatórios completos (integrado, PR #140)
 
 - **Achado P1 (código):** o agregador de rankings somava valores conhecidos de um detalhamento com valores ausentes de outro, convertendo `null` em zero; não verificava se campanhas, anúncios, detalhamentos e metadados de criativos pertenciam ao mesmo tenant ou moeda. Valores de gasto extremos também podiam produzir `Infinity`.
 - **Correção proposta:** exigir escopo único de organização e moeda conhecida em toda a entrada; preservar `null` quando qualquer componente do indicador estiver ausente; impedir gasto negativo, não finito ou overflow; usar chaves estáveis com tenant/moeda e conta quando necessário. O agrupamento demográfico entre contas da mesma organização/moeda permanece permitido. Campanhas apenas de catálogo podem manter moeda vazia porque não possuem fatos monetários.
@@ -353,3 +353,4 @@ Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamen
 - **Testes sintéticos:** `tests/rankings-scope.test.ts` cobre escopo misto (incluindo criativos), moeda ausente/mista, completude, zero conhecido, criativos por conta, overflow e chave de campanha.
 - **Aceite:** testes, lint, tipos, build, Quality Gate e Vercel no mesmo head SHA, seguidos de merge seguro; revisão visual autenticada de ranking permanece em UX-002. **Não equivale a teste de isolamento com JWT nem a homologação SEC-010/011.**
 - **Rollback:** reverter somente o PR em caso de regressão; manter escopo único e completude como requisitos para alternativa. Sem migrações, alterações de permissões, credenciais, OAuth ou escrita em dados reais.
+- **Evidência de integração:** PR #140, head `48e9f72630e41844c1bc8392edcf82614c784f49`, Quality Gate #40229193164 aprovado (testes, SQL, lint, tipos, arquitetura e build); Vercel `success` no mesmo SHA; squash merge na `main` em `945871496863e8ba59d73fdaf2cda3a2ea1bad24`. Homologação autenticada/visual não realizada.
