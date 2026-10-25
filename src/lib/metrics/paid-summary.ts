@@ -38,8 +38,10 @@ export function paidSummary(rows:CampaignPerformance[]):Record<string,number|nul
     for(const key of ['spend','revenue','conversion_value'])result[key]=null;
   }
   const spend=result.spend,revenue=result.revenue;
-  result.profit=revenue!=null&&spend!=null?revenue-spend:null;
-  result.roas=ratio(revenue,spend);result.roi=ratio(result.profit,spend,100);
+  // Revenue minus ad spend is not accounting profit: product, operational and tax costs are unavailable.
+  // Never infer ROI from ROAS or paid-media spend alone.
+  result.profit=null;
+  result.roas=ratio(revenue,spend);result.roi=null;
   result.frequency=ratio(result.impressions,result.reach);
   result.cpm=ratio(spend,result.impressions,1000);result.cpc=ratio(spend,result.clicks);
   result.ctr=ratio(result.clicks,result.impressions,100);result.unique_ctr=ratio(result.unique_clicks,result.reach,100);
