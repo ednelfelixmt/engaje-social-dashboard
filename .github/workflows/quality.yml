@@ -21,8 +21,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      # Phase 01 incremental ESLint: pin top-level versions; lockfile integration is tracked as technical debt.
-      - run: npm install --no-save --package-lock=false --ignore-scripts eslint@9.39.1 typescript-eslint@8.46.0
+      # Lint tooling is pinned in package-lock.json and installed by npm ci.
       - run: npm run lint
       - run: npm run test
       - run: npm run verify:schema
