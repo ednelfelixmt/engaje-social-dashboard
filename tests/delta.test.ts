@@ -25,3 +25,15 @@ test('lowerIsBetter reconhece custos', () => {
   for (const metric of ['cpa', 'cpm', 'cpc', 'cpl', 'cost_per_registration']) assert.ok(lowerIsBetter(metric), metric);
   for (const metric of ['spend', 'roas', 'ctr', 'leads']) assert.ok(!lowerIsBetter(metric), metric);
 });
+
+
+test('computeDelta fails closed on unrepresentable percent changes', () => {
+  assert.equal(computeDelta(1e308, 1e-308, 'spend'), null);
+  assert.equal(computeDelta(-1e308, 1e-308, 'cpl'), null);
+});
+
+test('computeDelta preserves finite changes when subtraction overflows', () => {
+  assert.deepEqual(computeDelta(1e308, -1e308, 'spend'), {change: 200, good: true});
+  assert.deepEqual(computeDelta(-1e308, 1e308, 'cpl'), {change: -200, good: true});
+  assert.deepEqual(computeDelta(1e308, 1e308, 'spend'), {change: 0, good: null});
+});

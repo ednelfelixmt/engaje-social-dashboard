@@ -250,3 +250,9 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 **Política de atraso e escalonamento:** registrar risco com responsável funcional, impacto, dependência e plano de recuperação no mesmo roadmap assim que identificado. Itens P0/P1 e credenciais externas não fornecidas não são considerados concluídos; entregar apenas o subconjunto efetivamente homologado se a condição não for atendida. Revisar avanço contra os marcos semanalmente e priorizar módulos fechados em vez de PRs isolados.
 
 **Bloqueio conhecido:** SEC-010/011 — homologação A/B com segredos protegidos e ações autorizadas no GitHub; não presumir que a automação horária resolve acesso indisponível.
+
+
+### 25/10/2026 — ANA-009: comparação percentual numericamente segura (em validação)
+
+- **ANA-009 (P2, engenharia interna reversível):** duas funções de variação de períodos (computeDelta e percentChange) podiam produzir Infinity/-Infinity para entradas finitas extremas. A primeira também podia estourar na subtração antes da divisão, embora a variação matemática fosse representável. Ajustadas para retornar null quando a variação não cabe em number e preservar a variação representável via fallback numérico; adicionados testes sintéticos de overflow, sinais opostos e igualdade.
+- **Critério de aceite:** CI Quality Gate e Vercel aprovados, merge seguro e revisão visual autenticada posterior; esta alteração não executa OAuth, migrações, writes em clientes ou homologação A/B. **SEC-010/011 e UX-002 permanecem abertos.**
