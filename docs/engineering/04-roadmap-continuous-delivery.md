@@ -256,3 +256,12 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 
 - **ANA-009 (P2, engenharia interna reversível):** duas funções de variação de períodos (computeDelta e percentChange) podiam produzir Infinity/-Infinity para entradas finitas extremas. A primeira também podia estourar na subtração antes da divisão, embora a variação matemática fosse representável. Ajustadas para retornar null quando a variação não cabe em number e preservar a variação representável via fallback numérico; adicionados testes sintéticos de overflow, sinais opostos e igualdade.
 - **Critério de aceite:** CI Quality Gate e Vercel aprovados, merge seguro e revisão visual autenticada posterior; esta alteração não executa OAuth, migrações, writes em clientes ou homologação A/B. **SEC-010/011 e UX-002 permanecem abertos.**
+
+
+### 25/10/2026 — ANA-010: integridade de agregação por tenant/moeda (em validação)
+
+- **Falha identificada (P1, código):** `campaigns()` agrupava fatos pelo identificador da plataforma/conta/campanha, sem incluir `organization_id` ou `currency`; a busca de receita CRM também não validava organização e moeda. A origem das consultas atuais aplica filtros, mas o contrato de agregação não era defensivo contra conjuntos mistos. Além disso, `campaigns()` e `query.totals()` inferiam ROI de receita menos mídia, sem custos operacionais.
+- **Correção proposta:** chave de campanha com tenant e moeda, vínculo CRM com tenant e moeda, soma numérica finita sem coerção de strings, rejeição de spend agregado inválido, razão finita e ROI `null` na ausência de custos totais. Extrair agregação pura para testes, mantendo reexportação de `query`.
+- **Evidência planejada:** testes sintéticos `tests/aggregation-contract.test.ts` e `tests/campaign-isolation-contract.test.ts`; Quality Gate, Vercel e merge condicionais. **Não foi executado E2E com JWT, nem escrita em produção.**
+- **Risco e rollback:** se houver regressão em dados de campanha, reverter o PR; revisar a apresentação de campanhas históricas com mais de uma moeda. Não alterar dados de clientes, RLS, OAuth, credenciais ou migrações.
+- **Pendências externas inalteradas:** SEC-010/011 (homologação A/B real), UX-002 (viewer autenticado) e integrações com provedores. Deadline 18/12/2026 permanece como meta, não como homologação.
