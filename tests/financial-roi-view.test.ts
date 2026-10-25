@@ -15,7 +15,7 @@ async function root(){await db.exec('reset role');await db.query("select set_con
 async function asUser(id:string){await root();await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec('set role authenticated');}
 before(async()=>{
  db=await createTestDatabase();baseline=await definition();
- migration=await readFile(new URL('../supabase/migrations/20261025230936_withhold_unverified_financial_roi.sql',import.meta.url),'utf8');
+ migration=await readFile(new URL('../supabase/migrations/20261025232744_withhold_unverified_financial_roi.sql',import.meta.url),'utf8');
  conservative=await readFile(new URL('./fixtures/daily-performance-production-view.sql',import.meta.url),'utf8');
  await db.query('insert into auth.users(id) values($1),($2)',[userA,userB]);
  await db.query("insert into public.organizations(id,name,slug) values($1,'Synthetic A','synthetic-roi-a'),($2,'Synthetic B','synthetic-roi-b')",[a,b]);

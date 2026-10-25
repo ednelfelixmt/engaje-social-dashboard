@@ -7,6 +7,16 @@ export default tseslint.config(
   {ignores:['node_modules/**','.next/**']},
   {
     files:[
+      'src/lib/auth/password-recovery.ts',
+      'src/app/auth/recovery/actions.ts',
+      'src/app/auth/recovery/callback/route.ts',
+      'src/components/auth/password-recovery-form.tsx',
+      'src/components/auth/login-form.tsx',
+      'src/app/auth/forgot-password/page.tsx',
+      'src/app/auth/reset-password/page.tsx',
+      'src/app/auth/reset-password/loading.tsx',
+      'tests/password-recovery.test.ts',
+      'tests/password-recovery-ui.test.ts',
       'tests/financial-roi-view.test.ts',
       'src/lib/auth/admin-audit.ts',
       'src/app/(agency)/admin/organizations/**/activity/*.tsx',

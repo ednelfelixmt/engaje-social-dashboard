@@ -270,7 +270,15 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 - **Pendências externas inalteradas:** SEC-010/011 (homologação A/B real), UX-002 (viewer autenticado) e integrações com provedores. Deadline 18/12/2026 permanece como meta, não como homologação.
 
 
-### Ciclo 05 — ANA-011: contrato financeiro da view SQL (em validação)
+### Ciclo 06 — recuperação de senha e jornada de acesso (em validação)
+
+- **Produto:** Esqueci minha senha no login, solicitação por e-mail, callback PKCE e redefinição da senha da identidade validada. Estados de pendência, erro, link inválido e sucesso acessíveis.
+- **Segurança:** resposta sem enumeração de contas, origem de redirecionamento controlada no servidor, cookies/cache tratados, validação getUser antes da alteração e nenhum UUID, perfil ou membership vindo do formulário. Logout global solicitado sem prometer invalidação imediata de JWTs já emitidos.
+- **Validação local:** 265 testes, 140 checks SQL, lint, tipos, arquitetura e build aprovados; 19 novas regressões de ações, validação, identidade, callback, cookies e interface. Sem e-mails ou senhas reais como fixtures. Quality Gate/Vercel obrigatórios. [21-password-recovery.md](21-password-recovery.md).
+- **Dependência de homologação:** configuração de URL exata, SMTP, identidade sintética e jornada real de uso/expiração/revogação; SEC-010/011 e UX-002 permanecem abertos. Não declarar o app completo com base nesta suíte.
+- **Ciclo 05 concluído no escopo de código/DDL:** PR #150, 05d435f, Quality Gate #219 + Vercel no head a3d2504. Migração real 20261025232744: comparação live confirmou somente ROI NULL, grants e SECURITY INVOKER preservados; nenhum fato de marketing alterado.
+
+### Ciclo 05 — ANA-011: contrato financeiro da view SQL (integrado e aplicado)
 
 - **Correção:** a interface já bloqueava ROI sem custos completos; daily_performance ainda derivava ROI de receita menos mídia. Migração torna somente roi indisponível, mantendo receita/ROAS/CPA/CTR, permissões e escopo por tenant.
 - **Risco de drift identificado:** produção exige revenue_enabled e usa receita real conciliada, diferentemente do fallback do bootstrap. A migração altera somente a expressão legada no catálogo e falha se encontrar uma fórmula inesperada; não recria a view pelo bootstrap. Reconciliação integral de esquemas permanece dependência de engenharia antes da estabilização.
