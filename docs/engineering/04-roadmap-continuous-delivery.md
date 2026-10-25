@@ -287,20 +287,20 @@ Auditoria atual: [15-continuity-audit-2026-10-25.md](15-continuity-audit-2026-10
 
 Durante esta execução foram integrados #128 (cronograma), #89 (datas impossíveis) e #129 (variações finitas, ANA-009). Esta branch foi atualizada com esses merges. PR #13 sobre PostCSS foi superado tecnicamente pela versão 8.5.31 deste lote, mas seu fechamento não é presumido. ANA-007 e proteção ROI de ANA-008 em paidSummary já foram integradas por #126/#127; UX autenticada e contrato financeiro completo continuam pendentes.
 
-### Ciclo 02 — administração exclusiva da agência (em validação)
+### Ciclo 02 — administração exclusiva da agência (código integrado; runtime pendente)
 
 Evidência: [16-agency-admin-boundaries.md](16-agency-admin-boundaries.md).
 
 - **SEC-015:** cinco rotas administrativas de tenant exigem agencyTenant antes de carregar configuração; navegação não exibe controles administrativos ao cliente. Sessão só aceita confirmação booleana explícita de superadmin. Gates/testes de fonte e renderização real preservam leitura e navegação dos dashboards.
 - **SEC-014:** POST e callback do Edge usam guards comportamentais testados, exigindo administrador ativo da agência, sem fallback de editor/client_admin. **Runtime ainda pendente**: inspeção v41 confirmou a regra antiga e drift da correção de escopos #59. Publicar/reverter Edge exige revisão do bundle e testes próprios; Vercel não atualiza funções Supabase.
 - **SEC-016:** createTestDatabase reproduz as quatro migrações de autorização existentes; verify:schema passou de 74 checks legados para 135 verificações, negando escrita/RPC/Storage a viewer/editor/client_admin e confirmando operações da agência. README corrige o caminho de instalação nova; não executar bootstrap sobre produção.
-- **Resultado local:** 159 testes, 135 verificações SQL, lint ampliado, tipos, arquitetura e build aprovados; tipagem específica do helper Edge integrada ao gate. CI remoto e Vercel do PR ainda são obrigatórios antes de integrar.
+- **Resultado local:** 159 testes, 135 verificações SQL, lint ampliado, tipos, arquitetura e build aprovados; tipagem específica do helper Edge integrada ao gate. **CI remoto:** 161 testes e 135 verificações SQL, Quality Gate #191 aprovado; Vercel aprovado no head 9a9fcc0. PR #137 integrado como 99008d6.
 - **Contenção live:** catálogo mostra 1 superadmin e 2 viewers ativos; zero papéis editor/client_admin. Não há mutação produtiva neste lote. SEC-010/011 e UX-002 seguem abertos; doubles e contexto RLS SQL não equivalem a Auth/Storage HTTP.
 - **Ciclo 01 integrado:** PR #131, SHA c5a547c, após Quality Gate #181 e Vercel aprovados no head 2c14e9b. DEP-001/002 e DEV-001 corrigidos no escopo do lote; três alertas moderados seguem na #130.
 
 **Atualização de base:** #133 já integrou agencyTenant e páginas/navegação; o ciclo 02 reaproveita esse gate e acrescenta testes comportamentais, confirmação booleana estrita, Edge e replay SQL. #134 (exportação CSV) foi preservado.
 
-### Ciclo 01 — dependências e Quality Gate reproduzível (em validação)
+### Ciclo 01 — dependências e Quality Gate reproduzível (integrado, PR #131)
 
 - DEP-001: Next 16.3.7 → 16.4.3, após verificar avisos oficiais e compatibilidade React 18/Node 22.
 - DEP-002: PostCSS 8.5.31, Zod 4.6.7 e resolução de transitivas compatíveis; sem audit fix --force. Auditoria inicial: 7 pacotes sinalizados (1 crítico/3 altos/3 moderados). Resultado final será registrado após os gates.
@@ -312,7 +312,7 @@ Evidência: [16-agency-admin-boundaries.md](16-agency-admin-boundaries.md).
 
 - Instalação limpa por npm ci, lint incremental, 128 testes, 74 verificações SQL, TypeScript, arquitetura e build Next 16.4.3 aprovados. A integração SQL ainda testa bootstrap legado; SEC-016 permanece aberto.
 - npm audit: **0 críticos, 0 altos, 3 moderados** (cadeia Tailwind/postcss-nested/postcss-selector-parser). Diferimento rastreado na [issue #130](https://github.com/ednelfelixmt/engaje-social-dashboard/issues/130), meta 11/12/2026, com aceite visual e técnico; não executar compilação de CSS não confiável.
-- Nenhuma alteração de esquema, Edge runtime, credencial ou dado de cliente. CI remoto e Vercel ainda devem aprovar o SHA do PR antes de integrar. Deprecações de React 18, Recharts 2 e ESLint 9 ficam registradas para migração planejada; não foram removidas funcionalidades.
+- Nenhuma alteração de esquema, Edge runtime, credencial ou dado de cliente. Quality Gate #181 e Vercel aprovaram o head 2c14e9b; PR #131 foi integrado como c5a547c. Deprecações de React 18, Recharts 2 e ESLint 9 ficam registradas para migração planejada; não foram removidas funcionalidades.
 
 Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamento de tenant/moeda, incluindo parte do achado ROI em campaigns/query (ANA-010 da trilha existente). Revalidar esses pontos no novo baseline; a view SQL e a homologação seguem independentes. Não duplicar ANA-010 com novos incidentes.
 
