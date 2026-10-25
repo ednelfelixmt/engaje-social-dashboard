@@ -11,7 +11,7 @@ export async function createTestDatabase(): Promise<PGlite> {
     create role authenticated nologin;
     create role service_role nologin bypassrls;
     create schema auth;
-    create table auth.users(id uuid primary key);
+    create table auth.users(id uuid primary key,email_confirmed_at timestamptz);
     create function auth.uid() returns uuid language sql stable as $$
       select nullif(current_setting('request.jwt.claim.sub', true),'')::uuid;
     $$;
@@ -29,10 +29,15 @@ export async function createTestDatabase(): Promise<PGlite> {
   await db.exec(await readFile(new URL('../supabase/services.sql', import.meta.url), 'utf8'));
   // Replay the deployed authorization upgrades, not obsolete editor write permissions.
   for(const migration of [
+    '20260928032000_expand_platform_metric_storage.sql',
+    '20261018230000_executive_dashboard_targets.sql',
+    '20261021150000_client_user_invitations.sql',
+    '20261021170000_agency_user_invitations.sql',
     '20261023183000_client_dashboard_readonly.sql',
     '20261023215000_client_profiles_layouts_readonly.sql',
     '20261023223000_csv_import_storage_admin_only.sql',
     '20261024040500_storage_update_admin_only.sql',
+    '20261025203411_atomic_client_administration.sql',
   ]){
     await db.exec(await readFile(new URL('../supabase/migrations/'+migration,import.meta.url),'utf8'));
   }

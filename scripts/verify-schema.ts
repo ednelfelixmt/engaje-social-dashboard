@@ -91,8 +91,12 @@ await db.exec(`
   insert into public.sync_jobs(organization_id,connection_id,assignment_id,status) values ('${orgA}','${connectionA}','${assignmentA}','completed');
   insert into public.integration_alerts(organization_id,alert_key,code,severity,title) values ('${orgA}','test-alert','stale_sync','warning','Conta sem atualização');
 `);
-check(await scalar("select count(*)::int from pg_tables where schemaname='public'") === 23, 'Exatamente 23 tabelas públicas');
-check(await scalar("select count(*)::int from pg_tables where schemaname='public' and rowsecurity") === 23, 'RLS habilitada nas 23 tabelas');
+check(await scalar("select count(*)::int from pg_tables where schemaname='public'") === 25, 'Exatamente 25 tabelas públicas, incluindo convites');
+check(await scalar("select count(*)::int from pg_tables where schemaname='public' and rowsecurity") === 25, 'RLS habilitada nas 25 tabelas');
+check(await scalar("select rowsecurity from pg_tables where schemaname='private' and tablename='agency_admin_audit'") === true, 'Auditoria privada mantém RLS');
+check(await scalar("select has_table_privilege('authenticated','private.agency_admin_audit','SELECT')") === false, 'Auditoria sem leitura direta de authenticated');
+check(await scalar("select has_table_privilege('authenticated','public.agency_user_invitations','SELECT') or has_table_privilege('authenticated','public.client_user_invitations','SELECT')") === false, 'Convites continuam privados');
+check(await scalar("select has_function_privilege('anon','public.save_client_membership(uuid,uuid,boolean)','EXECUTE') or has_function_privilege('anon','public.client_admin_audit(uuid,integer)','EXECUTE')") === false, 'Anon sem RPC administrativa ou de auditoria');
 let day = (await db.query<Record<string, unknown>>(`select * from public.daily_performance where organization_id='${orgA}' and metric_date='2026-09-01' and currency='BRL'`)).rows[0]!;
 check(Number(day.spend) === 200 && Number(day.revenue) === 600, 'JOIN não multiplica Ads nem soma CRM com planilha');
 check(Number(day.roas) === 3 && Math.abs(Number(day.cpa) - 200/6) < 0.00001, 'ROAS e CPA conciliados; ROI legado fora deste gate');

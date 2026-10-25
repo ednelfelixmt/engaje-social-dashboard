@@ -1362,9 +1362,13 @@ export type Database = {
       };
     };
     Functions: {
+      client_admin_audit: { Args: { p_organization_id: string; p_limit: number }; Returns: Json };
+      create_client_organization: { Args: { p_name: string; p_slug: string; p_niche: string; p_sales_model: string; p_funnel_model: string; p_funnel_steps: Json }; Returns: Json };
       import_spreadsheet: { Args: { p_organization_id: string; p_file_path: string; p_file_name: string; p_sha256: string; p_rows: Json }; Returns: Json };
       is_super_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       login_branding: { Args: { p_slug: string }; Returns: Json };
+      save_client_membership: { Args: { p_organization_id: string; p_user_id: string; p_is_active: boolean }; Returns: Json };
+      update_client_organization: { Args: { p_id: string; p_name: string; p_status: Database['public']['Enums']['organization_status']; p_niche: string; p_sales_model: string; p_timezone: string; p_currency: string; p_apply_funnel: boolean; p_funnel_model: string; p_funnel_steps: Json }; Returns: Json };
       user_belongs_to_org: { Args: { p_organization_id: string }; Returns: boolean };
     };
     Enums: {

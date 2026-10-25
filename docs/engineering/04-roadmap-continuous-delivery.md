@@ -270,6 +270,14 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 - **Pendências externas inalteradas:** SEC-010/011 (homologação A/B real), UX-002 (viewer autenticado) e integrações com provedores. Deadline 18/12/2026 permanece como meta, não como homologação.
 
 
+### Ciclo 04 — gestão administrativa completa por transação (em validação)
+
+- **Produto:** criação/edição do cliente com funil e atualização de acesso com revogação de convite tornam-se atômicas; nova tela de histórico por cliente, exclusiva da agência. Implementa o núcleo de #54/#65 com audit trail, sem declarar homologação E2E.
+- **Segurança:** RPCs com auth.uid e confirmação de superadmin ativo, clientes só viewer, proteção da agência, cadastro Auth confirmado para ativação, auditoria privada sem valores sensíveis e sem grants diretos. Testes de falha intermediária revertem dados e histórico.
+- **Rollout:** migração aditiva após gates do PR e antes de integrar a aplicação; pré-flight live revisado, risco e rollback em [19-atomic-client-administration.md](19-atomic-client-administration.md). Não há publicação Edge ou ampliação de acesso a clientes.
+- **DEV-002:** gerador integral tentou remover contratos existentes; preservados. Modo functions-only permite avançar sem descartar campos de métricas/metas. Reconciliação integral: engenharia, meta 11/12/2026. O teste local agora inclui 25 tabelas públicas e as regras privadas de auditoria.
+- **Pendências mantidas:** SEC-010/011, SEC-014, UX-002 e staging #57. Código testado não equivale a jornada JWT/Storage/OAuth real. Marco analytics 06/11 e entrega 18/12 continuam metas de planejamento.
+
 ### Ciclo 03 — ANA-004: cobertura e linhagem de métricas ponderadas (código integrado; homologação pendente)
 
 - **Avanço funcional:** cards de desempenho e plataforma mostram cobertura completa/parcial/indisponível, contagem de registros válidos, ausência de valor/peso e método da estimativa. Comparações desses indicadores são omitidas quando algum período não tem cobertura completa.
