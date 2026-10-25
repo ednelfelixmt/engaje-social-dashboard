@@ -1,20 +1,24 @@
 import type {CampaignPerformance} from '@/types/domain';
 
 function availableTotal(rows:CampaignPerformance[],key:string){
-  const values=rows.map((row)=>row.metricValues[key]).filter((value):value is number=>value!=null);
-  return values.length?values.reduce((total,value)=>total+value,0):null;
+  const values=rows.map(row=>row.metricValues[key]);
+  if(!values.length||values.some(value=>value==null||!Number.isFinite(value)))return null;
+  const total=values.reduce<number>((sum,value)=>sum+Number(value),0);
+  return Number.isFinite(total)?total:null;
 }
 
 function weightedAverage(rows:CampaignPerformance[],key:string){
-  const available=rows.filter((row)=>row.metricValues[key]!=null);
+  const available=rows.filter(row=>row.metricValues[key]!=null&&Number.isFinite(row.metricValues[key])&&row.impressions!=null&&Number.isFinite(row.impressions)&&row.impressions>0);
   if(!available.length)return null;
-  const weighted=available.reduce((total,row)=>total+Number(row.metricValues[key])*(row.impressions||1),0);
-  const weight=available.reduce((total,row)=>total+(row.impressions||1),0);
+  const weighted=available.reduce((total,row)=>total+Number(row.metricValues[key])*row.impressions!,0);
+  const weight=available.reduce((total,row)=>total+row.impressions!,0);
   return weight?weighted/weight:null;
 }
 
 function ratio(numerator:number|null,denominator:number|null,multiplier=1){
-  return numerator!=null&&denominator?numerator/denominator*multiplier:null;
+  if(numerator==null||denominator==null||!Number.isFinite(numerator)||!Number.isFinite(denominator)||denominator<=0)return null;
+  const result=numerator/denominator*multiplier;
+  return Number.isFinite(result)?result:null;
 }
 
 export function paidSummary(rows:CampaignPerformance[]):Record<string,number|null>{
