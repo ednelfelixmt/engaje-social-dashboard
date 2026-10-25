@@ -51,7 +51,7 @@ const storagePrefix='engaje:nav:v1:';
 export function Navigation({slug,admin=false,enabled=[],canShare=false}:{slug?:string;admin?:boolean;enabled?:string[];canShare?:boolean}){
   const path=usePathname();
   const scope=admin?'admin':slug??'workspace';
-  const groups=(admin?agencyGroups:workspaceGroups).map((group)=>({...group,items:group.items.filter((item)=>(!['sharing','settings/data-quality'].includes(item.key)||canShare)&&(!item.requires||enabled.includes(item.requires)))})).filter((group)=>group.items.length);
+  const groups=(admin?agencyGroups:workspaceGroups).filter((group)=>admin||canShare||group.id!=='settings').map((group)=>({...group,items:group.items.filter((item)=>(!['sharing','settings/data-quality'].includes(item.key)||canShare)&&(!item.requires||enabled.includes(item.requires)))})).filter((group)=>group.items.length);
   const hrefOf=(key:string)=>admin?`/${key}`:`/${slug}/${key}`;
   const isActive=(key:string)=>path===hrefOf(key);
 

@@ -6,4 +6,6 @@ export const session=cache(async()=>{const db=await serverClient();const {data,e
 export async function requireAdmin(){const s=await session();if(!s.superAdmin)redirect('/');return s;}
 export const tenant=cache(async(slug:string)=>{const s=await session();const {data:org}=await s.db.from('organizations').select('*').eq('slug',slug).single();if(!org)notFound();return {...s,org};});
 export const dashboardConfig=cache(async(slug:string)=>{const {db,org}=await tenant(slug);const {data,error}=await db.from('dashboard_configs').select('*').eq('organization_id',org.id).single();if(error||!data)throw error??new Error('Configuração do dashboard não encontrada.');return data;});
+/** Administrative workspace routes fail closed before loading settings or integration data. */
+export async function agencyTenant(slug:string){const t=await tenant(slug);if(!t.superAdmin)notFound();return t;}
 export const editorAccess=cache(async(slug:string)=>{const t=await tenant(slug);if(t.superAdmin)return {...t,canEdit:true};return {...t,canEdit:false};});

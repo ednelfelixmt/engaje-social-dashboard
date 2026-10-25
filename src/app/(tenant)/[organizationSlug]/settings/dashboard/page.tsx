@@ -1,6 +1,6 @@
 import type {ReactNode} from 'react';
 import {BarChart3, ChevronDown, Filter, LayoutDashboard, SlidersHorizontal, Target} from 'lucide-react';
-import {tenant} from '@/lib/auth/session';
+import {agencyTenant} from '@/lib/auth/session';
 import {Card} from '@/components/ui/card';
 import {ActionForm} from '@/components/action-form';
 import {WidgetOrder} from '@/components/widget-order';
@@ -36,7 +36,7 @@ function SettingsSection({number,title,description,icon:Icon,children,open=false
 
 export default async function Page({params: params_}:{params:Promise<{organizationSlug:string}>}){
   const params=await params_;
-  const {db,org}=await tenant(params.organizationSlug);
+  const {db,org}=await agencyTenant(params.organizationSlug);
   const {data:config,error}=await db.from('dashboard_configs').select('*').eq('organization_id',org.id).single();
   if(error)throw error;
   return <div className="mx-auto max-w-6xl space-y-6">

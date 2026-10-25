@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type {ReactNode} from 'react';
 import {Activity, Blocks, Cable, CheckCircle2, Database, LineChart, MessageSquareText, TriangleAlert, Webhook} from 'lucide-react';
-import {tenant} from '@/lib/auth/session';
+import {agencyTenant} from '@/lib/auth/session';
 import {connectorCatalog, connectorByProvider, type ConnectorDefinition} from '@/lib/integrations/catalog';
 import {Card} from '@/components/ui/card';
 import {IntegrationControls} from '@/components/integration-controls';
@@ -45,7 +45,7 @@ function ConnectorCard({connector, organizationId, prepared}: {connector: Connec
 export default async function Page({params: params_, searchParams: searchParams_}: {params: Promise<{organizationSlug: string}>; searchParams: Promise<Record<string, string | undefined>>}) {
   const params = await params_;
   const searchParams = await searchParams_;
-  const {db, org} = await tenant(params.organizationSlug);
+  const {db, org} = await agencyTenant(params.organizationSlug);
   const [{data, error}, {data: assignmentRows, error: assignmentError}] = await Promise.all([
     db.from('integrations').select('id,provider,external_account_id,account_name,status,is_enabled,last_synced_at,last_error,config,updated_at').eq('organization_id', org.id).order('created_at', {ascending: false}),
     db.from('client_asset_assignments').select('id,asset_id,integration_id,sync_enabled').eq('organization_id', org.id).eq('assignment_status', 'assigned').order('assigned_at', {ascending: false}),

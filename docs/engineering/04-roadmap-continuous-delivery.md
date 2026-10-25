@@ -302,3 +302,10 @@ Durante esta execução foram integrados #128 (cronograma), #89 (datas impossív
 - Nenhuma alteração de esquema, Edge runtime, credencial ou dado de cliente. CI remoto e Vercel ainda devem aprovar o SHA do PR antes de integrar. Deprecações de React 18, Recharts 2 e ESLint 9 ficam registradas para migração planejada; não foram removidas funcionalidades.
 
 Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamento de tenant/moeda, incluindo parte do achado ROI em campaigns/query (ANA-010 da trilha existente). Revalidar esses pontos no novo baseline; a view SQL e a homologação seguem independentes. Não duplicar ANA-010 com novos incidentes.
+
+### 25/10/2026 — SEC-015: configurações exclusivas da agência (em validação)
+
+- **Achado:** URLs diretas de branding, dashboard e integrações renderizavam formulários administrativos para perfis clientes, apesar das Server Actions negarem a gravação. A navegação ainda oferecia links de configurações a viewers. Compartilhamento também aceitava papéis legados client_admin/editor.
+- **Correção proposta:** agencyTenant() aplica bloqueio server-side para não-superadmin antes de carregar dados administrativos; branding, dashboard, integrações, diagnóstico de dados e compartilhamento usam esse guard. Navegação omite o grupo inteiro de Configurações para clientes; links e ações de relatórios continuam disponíveis. Testes estáticos verificam todas as rotas e a política de navegação.
+- **Segurança e rollback:** não há migração, credencial, OAuth, alteração de permissões no banco ou escrita em registros reais. Reverter somente este PR se a interface administrativa regredir; não afrouxar a guarda de Server Actions. Os testes de negação JWT e jornada visual de viewer permanecem pendentes em SEC-010/011 e UX-002.
+- **Gate:** CI Quality Gate + Vercel aprovados no SHA e merge seguro antes de considerar concluída a correção de código. **Não constitui homologação A/B.**
