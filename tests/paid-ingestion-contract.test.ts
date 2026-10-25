@@ -6,7 +6,7 @@ const payload={organizationId,platform:'meta_ads',accountId:'act_1',campaignId:'
 test('accepts strictly sourced factual input for confirmed tenant',()=>{assert.equal(parseAuthorizedPaidFact(payload,organizationId).spend,120)});
 test('rejects client asserted access to foreign tenant',()=>{assert.throws(()=>parseAuthorizedPaidFact(payload,'22222222-2222-4222-8222-222222222222'),/Tenant scope mismatch/)});
 test('rejects incomplete, invented or invalid provider facts',()=>{
- for(const change of [{spend:-1},{spend:NaN},{currency:'BRLx'},{clicks:-2},{date:'not-a-date'},{source:'unknown'},{extra:true},{leads:1.4}]){
+ for(const change of [{spend:-1},{spend:NaN},{currency:'BRLx'},{clicks:-2},{date:'not-a-date'},{date:'2026-02-30'},{date:'2026-13-01'},{source:'unknown'},{extra:true},{leads:1.4}]){
   assert.equal(PaidIngestionFactSchema.safeParse({...payload,...change}).success,false,JSON.stringify(change));
  }
 });
