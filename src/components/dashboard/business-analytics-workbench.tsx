@@ -5,6 +5,7 @@ import {Download,Printer,TrendingDown,TrendingUp} from 'lucide-react';
 import {Card} from '@/components/ui/card';
 import {money,number} from '@/lib/utils';
 import {serializeCsv} from '@/lib/export/csv';
+import {getWorkbenchSummary, compareWorkbenchPeriods} from '@/lib/metrics/business-workbench-summary';
 
 export type InsightCampaign={id:string;name:string;platform:string;spend:number;impressions:number|null;clicks:number|null;leads:number|null;revenue:number|null;purchases:number|null};
 export type InsightDay={date:string;spend:number;impressions:number|null;clicks:number|null;leads:number|null};
@@ -19,17 +20,6 @@ function metricDay(row:InsightDay|undefined,key:Metric):number|null{
  return row[key];
 }
 function amount(v:number|null|undefined,key:Metric,currency:string){return v==null?'—':['spend','cpl'].includes(key)?money(v,currency):key==='ctr'?number(v,2)+'%':number(v);}
-function getSummary(rows:InsightCampaign[]){
- const spend=rows.reduce((v,r)=>v+r.spend,0),leads=rows.some(r=>r.leads!=null)?rows.reduce((v,r)=>v+(r.leads??0),0):null;
- const impressions=rows.some(r=>r.impressions!=null)?rows.reduce((v,r)=>v+(r.impressions??0),0):null;
- const clicks=rows.some(r=>r.clicks!=null)?rows.reduce((v,r)=>v+(r.clicks??0),0):null;
- return {spend,leads,impressions,clicks,cpl:leads&&leads>0?spend/leads:null,ctr:impressions&&clicks!=null?clicks/impressions*100:null};
-}
-function comparison(current:number|null,previous:number|null,lowerBetter=false){
- if(current==null||previous==null||previous<=0)return null;
- const delta=(current/previous-1)*100;
- return {delta,positive:lowerBetter?delta<=0:delta>=0};
-}
 function exportCsv(rows:InsightCampaign[],currency:string){
  const header=['Plataforma','Campanha','Investimento ('+currency+')','Impressoes','Cliques','Leads','CPL ('+currency+')','Receita atribuida','Compras atribuidas'];
  const cells=rows.map(r=>[names[r.platform]??r.platform,r.name,r.spend,r.impressions,r.clicks,r.leads,r.leads&&r.leads>0?r.spend/r.leads:null,r.revenue,r.purchases]);
@@ -42,7 +32,7 @@ export function BusinessAnalyticsWorkbench({company,period,current,previous,time
  const [channel,setChannel]=useState('all');
  const filtered=useMemo(()=>channel==='all'?current:current.filter(r=>r.platform===channel),[channel,current]);
  const prevFiltered=useMemo(()=>channel==='all'?previous:previous.filter(r=>r.platform===channel),[channel,previous]);
- const now=getSummary(filtered),before=getSummary(prevFiltered);
+ const now=getWorkbenchSummary(filtered),before=getWorkbenchSummary(prevFiltered);
  const metrics:(Metric|'spend')[]=['spend','impressions','clicks','leads','cpl','ctr'];
  const line=useMemo(()=>{
   const days=Array.from(new Set([...timeline.map(r=>r.date),...priorTimeline.map(r=>r.date)])).sort();
@@ -51,18 +41,18 @@ export function BusinessAnalyticsWorkbench({company,period,current,previous,time
    day:i+1,date:timeline[i]?.date??priorTimeline[i]?.date??days[i]??'',current:metricDay(timeline[i],metric),previous:metricDay(priorTimeline[i],metric)
   }));
  },[timeline,priorTimeline,metric]);
- const byChannel=useMemo(()=>['meta_ads','google_ads','tiktok_ads'].map(p=>({name:names[p],platform:p,...getSummary(current.filter(r=>r.platform===p))})),[current]);
+ const byChannel=useMemo(()=>['meta_ads','google_ads','tiktok_ads'].map(p=>({name:names[p],platform:p,...getWorkbenchSummary(current.filter(r=>r.platform===p))})),[current]);
  const scatter=filtered.filter(r=>r.spend>0&&r.leads!=null&&r.leads>0).map(r=>({x:r.spend,y:r.spend/(r.leads||1),z:r.leads,name:r.name,platform:r.platform}));
  const cplPrior=before.cpl;
  const recommendations:{heading:string,detail:string,type:'risk'|'opportunity'|'neutral'}[]=[];
  if(filtered.length===0)recommendations.push({heading:'Sem campanhas com dados',detail:'Altere o período ou selecione um canal com informações registradas. Nenhuma estimativa foi criada.',type:'neutral'});
  else{
-  const cplChange=comparison(now.cpl,cplPrior,true);
+  const cplChange=compareWorkbenchPeriods(now.cpl,cplPrior,true);
   if(cplChange&&cplChange.delta>15)recommendations.push({heading:'CPL acima do período comparado',detail:'O custo por lead aumentou '+number(cplChange.delta,1)+'%. Investigue CPC, conversão e composição das campanhas antes de ajustar orçamento.',type:'risk'});
   if(cplChange&&cplChange.delta< -10)recommendations.push({heading:'Melhora no custo por lead',detail:'A redução de '+number(Math.abs(cplChange.delta),1)+'% deve ser validada com qualidade dos leads e vendas antes de considerar escala.',type:'opportunity'});
   const leading=[...filtered].sort((a,b)=>b.spend-a.spend)[0];
-  if(leading&&now.spend>0&&leading.spend/now.spend>.6)recommendations.push({heading:'Concentração de investimento',detail:'A campanha '+leading.name+' representa '+number(leading.spend/now.spend*100,1)+'% da verba do recorte. Avalie dependência e retorno marginal.',type:'risk'});
-  if(now.spend>0&&now.leads===0)recommendations.push({heading:'Investimento sem leads atribuídos',detail:'Confirme o objetivo de cada campanha e a mensuração. Campanhas de alcance não precisam gerar leads.',type:'neutral'});
+  if(leading&&now.spend!=null&&now.spend>0&&leading.spend/now.spend>.6)recommendations.push({heading:'Concentração de investimento',detail:'A campanha '+leading.name+' representa '+number(leading.spend/now.spend*100,1)+'% da verba do recorte. Avalie dependência e retorno marginal.',type:'risk'});
+  if(now.spend!=null&&now.spend>0&&now.leads===0)recommendations.push({heading:'Investimento sem leads atribuídos',detail:'Confirme o objetivo de cada campanha e a mensuração. Campanhas de alcance não precisam gerar leads.',type:'neutral'});
   if(!recommendations.length)recommendations.push({heading:'Análise de eficiência',detail:'Não houve desvio identificado pelas regras básicas. Analise metas e conversões comerciais antes de alterar o orçamento.',type:'neutral'});
  }
  return <div className="space-y-4">
@@ -70,7 +60,7 @@ export function BusinessAnalyticsWorkbench({company,period,current,previous,time
    <label className="text-xs text-zinc-400">Canal <select className="ml-2 min-w-36" value={channel} onChange={e=>setChannel(e.target.value)}><option value="all">Todas as plataformas</option>{Object.entries(names).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>
    <div className="flex gap-2"><button onClick={()=>exportCsv(filtered,currency)} className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-xs text-zinc-200"><Download size={14}/>CSV</button><button onClick={()=>window.print()} className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-black"><Printer size={14}/>Imprimir / PDF</button></div>
   </div>
-  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{metrics.map(k=>{const currentValue=now[k],previousValue=before[k],delta=previous.length?comparison(currentValue,previousValue,k==='cpl'):null;return <Card key={k} className="!p-4"><p className="text-xs uppercase tracking-wider text-zinc-400">{labels[k]}</p><p className="mt-2 text-2xl font-semibold text-white">{amount(currentValue,k,currency)}</p><p className="mt-2 text-xs">{delta?<span className={delta.positive?'text-emerald-300':'text-rose-300'}>{delta.delta>=0?'+':''}{number(delta.delta,1)}% vs. comparação</span>:<span className="text-zinc-500">Comparação indisponível</span>}</p></Card>;})}</div>
+  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{metrics.map(k=>{const currentValue=now[k],previousValue=before[k],delta=previous.length?compareWorkbenchPeriods(currentValue,previousValue,k==='cpl'):null;return <Card key={k} className="!p-4"><p className="text-xs uppercase tracking-wider text-zinc-400">{labels[k]}</p><p className="mt-2 text-2xl font-semibold text-white">{amount(currentValue,k,currency)}</p><p className="mt-2 text-xs">{delta?<span className={delta.positive?'text-emerald-300':'text-rose-300'}>{delta.delta>=0?'+':''}{number(delta.delta,1)}% vs. comparação</span>:<span className="text-zinc-500">Comparação indisponível</span>}</p></Card>;})}</div>
   <div className="grid gap-4 2xl:grid-cols-2">
    <Card className="min-w-0 !p-4"><div className="flex items-center justify-between gap-3"><h2 className="font-semibold">Tendência e comparação</h2><select aria-label="Métrica da evolução" value={metric} onChange={e=>setMetric(e.target.value as Metric)} className="min-w-36 text-xs">{metrics.map(k=><option key={k} value={k}>{labels[k]}</option>)}</select></div><p className="mt-1 text-xs text-zinc-500">Evolução diária do indicador; comparação alinhada pela posição do dia.</p><div className="mt-4 h-64">{line.length?<ResponsiveContainer width="100%" height="100%"><ComposedChart data={line}><CartesianGrid stroke="#30343d" vertical={false}/><XAxis dataKey="day" tick={{fill:'#9ca3af',fontSize:10}}/><YAxis tick={{fill:'#9ca3af',fontSize:10}}/><Tooltip contentStyle={{background:'#111827',border:'1px solid #334155'}} formatter={(v,name)=>[amount(typeof v==='number'?v:null,metric,currency),name==='current'?'Atual':'Anterior']}/><Legend/><Line name="Atual" type="monotone" dataKey="current" stroke="#ffd524" strokeWidth={2} dot={false} connectNulls={false}/><Line name="Anterior" type="monotone" dataKey="previous" stroke="#57b6ff" strokeDasharray="5 5" dot={false} connectNulls={false}/></ComposedChart></ResponsiveContainer>:<p className="text-sm text-zinc-500">Sem dados no período.</p>}</div></Card>
    <Card className="min-w-0 !p-4"><h2 className="font-semibold">Investimento por canal</h2><p className="mt-1 text-xs text-zinc-500">Comparação de verba entre plataformas com dados disponíveis.</p><div className="mt-4 h-64"><ResponsiveContainer width="100%" height="100%"><BarChart data={byChannel}><CartesianGrid stroke="#30343d" vertical={false}/><XAxis dataKey="name" tick={{fill:'#9ca3af',fontSize:10}}/><YAxis tick={{fill:'#9ca3af',fontSize:10}}/><Tooltip formatter={v=>money(Number(v),currency)} contentStyle={{background:'#111827',border:'1px solid #334155'}}/><Bar dataKey="spend" fill="#ffd524" radius={[5,5,0,0]} name="Investimento"/></BarChart></ResponsiveContainer></div></Card>
