@@ -30,6 +30,11 @@ export function paidSummary(rows:CampaignPerformance[]):Record<string,number|nul
   ];
   const result:Record<string,number|null>={};
   for(const key of additive)result[key]=availableTotal(rows,key);
+  // Monetary aggregation across currencies is not meaningful without an explicit FX conversion.
+  const currencies=new Set(rows.map(row=>row.currency));
+  if(currencies.size>1){
+    for(const key of ['spend','revenue','conversion_value'])result[key]=null;
+  }
   const spend=result.spend,revenue=result.revenue;
   result.profit=revenue!=null&&spend!=null?revenue-spend:null;
   result.roas=ratio(revenue,spend);result.roi=ratio(result.profit,spend,100);
