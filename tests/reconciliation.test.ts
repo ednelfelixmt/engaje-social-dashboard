@@ -27,6 +27,17 @@ test('rejects aggregate numeric overflow without misreporting zero or missing va
  if(partial.status==='ready')assert.equal(partial.totals.impressions,null);
 });
 
+test('rejects impossible campaign-day dates and malformed currencies at reconciliation',()=>{
+ for(const date of ['2026-02-29','2026-04-31','2026-00-10','2026-13-01','2026-10-32','2026-2-03']){
+  assert.equal(reconcilePaidFacts([{...a,date}]).status,'invalid',date);
+ }
+ for(const currency of ['usd','B1L','B_L',' BRL','BRL ']){
+  assert.equal(reconcilePaidFacts([{...a,currency}]).status,'invalid',currency);
+ }
+ assert.equal(reconcilePaidFacts([{...a,date:'2024-02-29'},{...b,date:'2024-02-29'}]).status,'ready');
+ assert.equal(reconcilePaidFacts([{...a,date:'2026-02-28'}]).status,'ready');
+});
+
 test('rejects mixed currencies, instead of combining raw values',()=>{
  assert.equal(reconcilePaidFacts([a,{...b,currency:'USD'}]).status,'mixed_currency');
 });
