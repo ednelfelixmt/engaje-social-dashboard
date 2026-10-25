@@ -227,3 +227,5 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 
 - **ANA-005 — corrigido (PRs #123 e #124, 25/10/2026):** moeda desconhecida bloqueia indicadores monetários; UI informa o cliente; Quality Gate e Vercel aprovados, merges realizados.
 - **ANA-006 — em validação:** média ponderada das métricas do provedor pode exceder o limite numérico em pesos extremos; proteção contra overflow e regressões sintéticas adicionadas. Não há alteração dos dados reais.
+
+- **ANA-004 — implementação em validação (PR #125):** dashboard passa a discriminar valores ausentes por indicador (leads, cliques e impressões), preservando a diferença entre NULL e zero; exige revisão visual autenticada posterior.
