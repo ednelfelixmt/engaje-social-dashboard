@@ -29,7 +29,7 @@ export function campaigns(
 
   const crmByCampaignDay=new Map<string,Row<'metrics_crm'>[]>();
   for(const row of crm){
-    const key=JSON.stringify([row.organization_id,row.metric_date,row.channel,row.account_id,row.campaign_id,row.currency]);
+    const key=JSON.stringify([row.organization_id,row.metric_date,row.channel,normalizedAccountId(row.account_id),row.campaign_id,row.currency]);
     const group=crmByCampaignDay.get(key);
     if(group)group.push(row);else crmByCampaignDay.set(key,[row]);
   }
@@ -46,7 +46,7 @@ export function campaigns(
     const sources = new Set<string>();
 
     for (const [day, daily] of byDay) {
-      const actual = (crmByCampaignDay.get(JSON.stringify([first.organization_id,day,first.platform,first.account_id,first.campaign_id,first.currency]))||[])
+      const actual = (crmByCampaignDay.get(JSON.stringify([first.organization_id,day,first.platform,normalizedAccountId(first.account_id),first.campaign_id,first.currency]))||[])
         .filter((row)=>row.is_complete&&row.revenue!=null);
       const chosen = actual.find((row) => row.source === preferred) || actual[0];
       const amount = chosen ? chosen.revenue : sum(daily, 'revenue');
