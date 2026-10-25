@@ -276,6 +276,7 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 - **Segurança:** RPCs com auth.uid e confirmação de superadmin ativo, clientes só viewer, proteção da agência, cadastro Auth confirmado para ativação, auditoria privada sem valores sensíveis e sem grants diretos. Testes de falha intermediária revertem dados e histórico.
 - **Rollout:** migração aditiva após gates do PR e antes de integrar a aplicação; pré-flight live revisado, risco e rollback em [19-atomic-client-administration.md](19-atomic-client-administration.md). Não há publicação Edge ou ampliação de acesso a clientes.
 - **DEV-002:** gerador integral tentou remover contratos existentes; preservados. Modo functions-only permite avançar sem descartar campos de métricas/metas. Reconciliação integral: engenharia, meta 11/12/2026. O teste local agora inclui 25 tabelas públicas e as regras privadas de auditoria.
+- **Validação:** 235 testes, 139 checks SQL, lint, tipos, arquitetura e build locais aprovados. CI #209 do PR #145 detectou caminhos sem aspas no shell Linux do lint; correção submetida no mesmo lote, nova aprovação obrigatória.
 - **Pendências mantidas:** SEC-010/011, SEC-014, UX-002 e staging #57. Código testado não equivale a jornada JWT/Storage/OAuth real. Marco analytics 06/11 e entrega 18/12 continuam metas de planejamento.
 
 ### Ciclo 03 — ANA-004: cobertura e linhagem de métricas ponderadas (código integrado; homologação pendente)

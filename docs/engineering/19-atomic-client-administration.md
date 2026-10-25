@@ -36,3 +36,5 @@ DEV-002: geração integral antiga tentou remover campos de métricas/metas e re
 Fontes verificadas: [Database Functions](https://supabase.com/docs/guides/database/functions), [Postgres locks](https://www.postgresql.org/docs/current/explicit-locking.html). Changelog consultado em 25/10: alterações de TLS e extensões não exigem mudança desta migração. Resultado final, implantação e gates serão registrados após execução. Nenhum dado real de cliente foi usado como fixture.
 
 Registro de validação: uma execução local de tipos coincidiu com o rebase da branch e reportou arquivo temporariamente ausente (TS6053). Repetir o gate com a árvore estável; essa execução não conta como aprovação. A correção ANA-015 (#144) da main foi preservada.
+
+Validação local final após ANA-015: 235 testes, 139 checks SQL, lint, tipos, arquitetura e build aprovados. Quality Gate #209 do PR #145 falhou no comando lint por caminhos com parênteses sem aspas no shell Linux; corrigido para citar esses caminhos em Windows/Linux. Exigir nova aprovação remota no head corrigido.
