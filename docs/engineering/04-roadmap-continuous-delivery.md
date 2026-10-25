@@ -318,9 +318,9 @@ Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamen
 - **Escopo/rollback:** sem banco, OAuth, Storage, RLS, permissões, segredos ou dados de clientes. Reverter apenas o PR se houver incompatibilidade de importação; nunca remover a proteção de fórmulas sem substituto. SEC-010/011, SEC-014/016 e UX-002 continuam abertos.
 
 
-### 25/10/2026 — ANA-011: reconciliação CRM por identificador de conta normalizado (em validação)
+### 25/10/2026 — ANA-012: reconciliação CRM por identificador de conta normalizado (integrado)
 
 - **Achado P2:** o agrupamento de campanhas publicitárias já normalizava o prefixo `act_` em IDs de conta, mas a busca de receita CRM comparava identificadores brutos. Para a mesma conta Meta representada como `act_123` na mídia e `123` no CRM (ou vice-versa), a receita real do CRM era ignorada e substituída pela receita da plataforma.
-- **Correção proposta:** usar a mesma normalização de identificador na chave CRM e na busca diária, mantendo `organization_id`, plataforma/canal, campanha, data e moeda como dimensões obrigatórias de segregação. Não altera IDs armazenados nem os dados de origem.
+- **Correção integrada:** usar a mesma normalização de identificador na chave CRM e na busca diária, mantendo `organization_id`, plataforma/canal, campanha, data e moeda como dimensões obrigatórias de segregação. Não altera IDs armazenados nem os dados de origem.
 - **Regressões:** `tests/campaign-isolation-contract.test.ts` verifica reconciliação em ambos os sentidos e negação para conta, tenant, canal ou moeda diferentes.
-- **Aceite:** Quality Gate e Vercel aprovados no SHA do PR, depois merge; homologação com fontes reais e JWT continua pendente em SEC-010/011 e UX-002. Sem acesso a segredos, banco, migrações, OAuth ou dados de clientes.
+- **Aceite de código:** PR #135 aprovado no Quality Gate e Vercel, integrado à main em `792cd0f6cb1403d860fcbd4f71bff5e952b4ab7e`. Homologação com fontes reais e JWT continua pendente em SEC-010/011 e UX-002. Sem acesso a segredos, banco, migrações, OAuth ou dados de clientes.
