@@ -38,7 +38,7 @@ export async function verifyProductionIsolation(env:NodeJS.ProcessEnv){
    assert(!orgError&&org?.length===1&&!org[0].is_agency,'visible non-agency organization');
    ids.push(org[0].id);
    const {data:member,error:memberError}=await client.from('organization_members').select('is_active,role').eq('user_id',auth.user.id).eq('organization_id',org[0].id);
-   assert(!memberError&&member?.length===1&&member[0].is_active===true&&member[0].role!=='super_admin','limited own membership');
+   assert(!memberError&&member?.length===1&&member[0].is_active===true&&member[0].role==='viewer','limited own membership');
    const {data:admin,error:adminError}=await client.rpc('is_super_admin');
    assert(!adminError&&admin===false,'not superadmin');
   }
