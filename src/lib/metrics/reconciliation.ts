@@ -4,13 +4,20 @@ export type PaidGrain = Readonly<{platform:string;accountId:string;campaignId:st
 export type ReconciliationRow = PaidGrain & PaidFact;
 export type ReconciliationResult = Readonly<{status:'ready';currency:string;totals:PaidTotals;rowCount:number} | {status:'empty'|'invalid'|'mixed_currency'|'duplicate_grain';reason:string}>;
 
+/** Reject impossible calendar dates at the reconciliation boundary, not only on ingestion. */
+function validCalendarDate(value:string):boolean {
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;
+ const parsed=new Date(value+'T00:00:00Z');
+ return Number.isFinite(parsed.getTime())&&parsed.toISOString().slice(0,10)===value;
+}
+
 /** Fail closed: do not silently de-duplicate conflicting campaign-day facts or convert currencies. */
 export function reconcilePaidFacts(rows:readonly ReconciliationRow[]):ReconciliationResult {
  if(!rows.length)return {status:'empty',reason:'No source facts available'};
  const seen=new Set<string>();
  const currency=rows[0].currency;
  for(const row of rows){
-  if(!row.platform||!row.accountId||!row.campaignId||!/^\d{4}-\d{2}-\d{2}$/.test(row.date)||!/^\w{3}$/.test(row.currency))
+  if(!row.platform||!row.accountId||!row.campaignId||!validCalendarDate(row.date)||!/^[A-Z]{3}$/.test(row.currency))
    return {status:'invalid',reason:'Malformed fact grain'};
   if(row.currency!==currency)return {status:'mixed_currency',reason:'Currency conversion is required upstream'};
   if(!Number.isFinite(row.spend)||row.spend<0||[row.impressions,row.clicks,row.leads].some(v=>v!==null&&(!Number.isFinite(v)||v<0)))
