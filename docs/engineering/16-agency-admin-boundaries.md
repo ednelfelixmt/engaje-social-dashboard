@@ -34,3 +34,5 @@ SEC-010/011, UX-002 e #57 continuam abertos. Nenhum usuário Auth, arquivo Stora
 Aplicação: reverter este lote e acompanhar CI/Vercel; isso reabre controles administrativos na UI, embora as políticas do banco permaneçam restritivas. Não reverter as quatro migrações de autorização para acompanhar o código legado. Edge: não houve publicação neste ciclo; um rollout futuro exige o bundle anterior e plano de reversão próprios.
 
 Atualização de base: PR #133 integrou o gate agencyTenant e as cinco páginas durante este ciclo. Este lote reaproveita essa implementação e acrescenta confirmação booleana estrita, testes comportamentais SSR/React, autorização Edge e replay das migrações. PR #134 de exportação CSV também foi preservado. Não atribuir a este lote a implementação independente de #133/#134.
+
+Encerramento do lote de código: PR #137 integrado em 99008d6 após Quality Gate #191 e Vercel aprovados no head 9a9fcc0. O CI da base combinada executou 161 testes e 135 verificações SQL. O runtime Edge e o E2E A/B continuam pendentes; evidência HTTP negativa complementar em 17-continuity-cycle-evidence.md.
