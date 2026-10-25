@@ -20,7 +20,7 @@ export async function verifyAuthPreflight(env:NodeJS.ProcessEnv){
    const {data:admin,error:rpcError}=await client.rpc('is_super_admin');
    if(rpcError||admin!==false)throw new Error('Fixture has unexpected admin access');
   }
-  process.stdout.write('PASS: both exact viewer Auth identities verified before Storage changes\\n');
+  process.stdout.write('PASS: both exact viewer Auth identities verified before Storage changes\n');
  }finally{await Promise.allSettled(clients.map(client=>client.auth.signOut()));}
 }
-if(process.argv[1]&&/verify-phase02-auth-preflight\\.(ts|js)$/.test(process.argv[1]))verifyAuthPreflight(process.env).catch(err=>{process.stderr.write('FAIL: '+(err instanceof Error?err.message:'unknown')+'\\n');process.exitCode=1;});
+if(process.argv[1]&&/verify-phase02-auth-preflight\.(ts|js)$/.test(process.argv[1]))verifyAuthPreflight(process.env).catch(err=>{process.stderr.write('FAIL: '+(err instanceof Error?err.message:'unknown')+'\n');process.exitCode=1;});
