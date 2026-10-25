@@ -27,3 +27,7 @@ Primeira execução: 186/186 testes aprovados. Tipagem detectou inferência obri
 O primeiro build local compilou e validou tipos, mas o Windows recusou mkdir em .next/server/app/_not-found.segments/_not-found (EPERM) durante prerender. A criação direta do diretório funcionou e a segunda execução completou o build com sucesso, incluindo prerender das 9 páginas estáticas. A primeira falha permanece registrada como incidente local de ambiente.
 
 Validação local final: 189/189 testes, 135 verificações SQL, lint ampliado, tipos (incluindo helper Edge), arquitetura e build aprovados. Quality Gate e Vercel devem aprovar o mesmo SHA antes do merge; status e SHA ficam no PR deste ciclo. Rollback: reverter o ciclo e repetir os gates. SEC-010/011 (JWT A/B), SEC-014 (publicação Edge) e UX-002 continuam abertos; não bloqueiam este cálculo puro e sua apresentação.
+
+## Integração do ciclo
+
+[PR #142](https://github.com/ednelfelixmt/engaje-social-dashboard/pull/142) integrado em 25/10/2026 como `c0a6455cb815f92355cbd85b61f36b9a80596916`. Quality Gate #203 aprovado e Vercel success no head `b322fa87c0ab2fdcf864b6571a2df82a75bc3cf7`. Preview `dpl_7S1GKrFWA7pcicPJoBPtDJr8fDcp` confirmado READY nesse mesmo SHA. Estes gates certificam o ciclo de código, sem declarar homologação A/B, visual ou de dados reais.

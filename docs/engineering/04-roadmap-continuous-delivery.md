@@ -270,11 +270,12 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 - **Pendências externas inalteradas:** SEC-010/011 (homologação A/B real), UX-002 (viewer autenticado) e integrações com provedores. Deadline 18/12/2026 permanece como meta, não como homologação.
 
 
-### Ciclo 03 — ANA-004: cobertura e linhagem de métricas ponderadas (em validação)
+### Ciclo 03 — ANA-004: cobertura e linhagem de métricas ponderadas (código integrado; homologação pendente)
 
 - **Avanço funcional:** cards de desempenho e plataforma mostram cobertura completa/parcial/indisponível, contagem de registros válidos, ausência de valor/peso e método da estimativa. Comparações desses indicadores são omitidas quando algum período não tem cobertura completa.
 - **Correção de cálculo:** scores/parcelas deixam de ser somados entre datas. Estatísticas suficientes preservam pesos dos registros de origem e exclusões até o consolidado; dias sem score não emprestam impressões a outros dias. Overflow permanece indisponível, inclusive após reagregação.
 - **Validação local:** 189 testes, 135 verificações SQL, lint, tipos, arquitetura e build aprovados; 17 regressões novas de fórmula, origem → campanha → resumo e renderização. Primeiro build falhou por EPERM no diretório temporário do Windows; segunda execução concluiu. **Aceite remoto:** Quality Gate e Vercel no mesmo SHA antes de integrar. Evidências e limites em [18-weighted-metrics-coverage.md](18-weighted-metrics-coverage.md).
+- **Integração comprovada:** [PR #142](https://github.com/ednelfelixmt/engaje-social-dashboard/pull/142), head `b322fa8`, Quality Gate #203 e Vercel aprovados; merge na main em `c0a6455`. Preview `dpl_7S1GKrFWA7pcicPJoBPtDJr8fDcp` READY no mesmo head. A homologação visual e de fonte real permanece aberta.
 - **Segurança:** cálculo e leitura da interface, sem banco, OAuth, credenciais ou dados reais como fixtures. Não fecha SEC-010/011, SEC-014 ou UX-002. A estimativa ponderada não substitui o consolidado oficial do provedor; normalização de unidade e reconciliação real continuam no contrato de ingestão.
 - **Rollback:** reverter somente este ciclo e validar testes/build; os controles de agência e isolamento permanecem obrigatórios. Meta de analytics: 06/11/2026; entrega: 18/12/2026.
 
