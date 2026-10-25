@@ -12,7 +12,9 @@ function weightedAverage(rows:CampaignPerformance[],key:string){
   if(!available.length)return null;
   const weighted=available.reduce((total,row)=>total+Number(row.metricValues[key])*row.impressions!,0);
   const weight=available.reduce((total,row)=>total+row.impressions!,0);
-  return weight?weighted/weight:null;
+  if(weight<=0||!Number.isFinite(weight)||!Number.isFinite(weighted))return null;
+  const result=weighted/weight;
+  return Number.isFinite(result)?result:null;
 }
 
 function ratio(numerator:number|null,denominator:number|null,multiplier=1){
