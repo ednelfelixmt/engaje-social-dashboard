@@ -20,6 +20,11 @@ export function reconcilePaidFacts(rows:readonly ReconciliationRow[]):Reconcilia
   seen.add(key);
  }
  const totals=paidTotals(rows);
- if(!Number.isFinite(totals.spend))return {status:'invalid',reason:'Numeric aggregation overflow'};
+ if(totals.spend===null)return {status:'invalid',reason:'Numeric spend aggregation overflow'};
+ // Complete source columns that overflow cannot be represented as missing data.
+ for(const key of ['impressions','clicks','leads'] as const){
+  if(rows.every(row=>row[key]!==null)&&totals[key]===null)
+   return {status:'invalid',reason:'Numeric '+key+' aggregation overflow'};
+ }
  return {status:'ready',currency,totals,rowCount:rows.length};
 }
