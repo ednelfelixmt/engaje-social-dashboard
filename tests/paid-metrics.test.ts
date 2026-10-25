@@ -40,11 +40,25 @@ test('any partially reported additive metric remains unknown',()=>{
 });
 test('no facts are not fabricated as known impression or lead counts',()=>{
  const t=paidTotals([]);
+ assert.equal(t.spend,null);
  assert.equal(t.impressions,null);
  assert.equal(t.clicks,null);
  assert.equal(t.leads,null);
  assert.equal(t.cpl,null);
 });
+test('invalid, negative or overflowing spend is unavailable rather than zero',()=>{
+ const overflow=paidTotals([{spend:1e308,impressions:10,clicks:5,leads:1},{spend:1e308,impressions:10,clicks:5,leads:1}]);
+ assert.equal(overflow.spend,null);
+ assert.equal(overflow.cpc,null);
+ assert.equal(overflow.cpl,null);
+ assert.equal(overflow.ctr,50);
+ const negative=paidTotals([{spend:-5,impressions:10,clicks:2,leads:1}]);
+ assert.equal(negative.spend,null);
+ assert.equal(negative.cpc,null);
+ assert.equal(paidMetric({spend:-5,impressions:10,clicks:2,leads:1},'spend'),null);
+ assert.equal(paidTotals([{spend:0,impressions:0,clicks:0,leads:0}]).spend,0);
+});
+
 test('comparison requires nonzero previous period; zero in current is valid',()=>{
  assert.equal(percentChange(0,100),-100);
  assert.equal(percentChange(150,100),50);

@@ -17,6 +17,16 @@ test('reconciles distinct campaign-day grain and weighted ratios',()=>{
 test('fails closed on repeated campaign-day facts, not double counting',()=>{
  assert.equal(reconcilePaidFacts([a,{...a,spend:300}]).status,'duplicate_grain');
 });
+test('rejects aggregate numeric overflow without misreporting zero or missing values',()=>{
+ const spendOverflow=reconcilePaidFacts([{...a,spend:1e308},{...b,spend:1e308}]);
+ assert.equal(spendOverflow.status,'invalid');
+ const impressionOverflow=reconcilePaidFacts([{...a,impressions:1e308},{...b,impressions:1e308}]);
+ assert.equal(impressionOverflow.status,'invalid');
+ const partial=reconcilePaidFacts([{...a,impressions:null},{...b,impressions:1e308}]);
+ assert.equal(partial.status,'ready');
+ if(partial.status==='ready')assert.equal(partial.totals.impressions,null);
+});
+
 test('rejects mixed currencies, instead of combining raw values',()=>{
  assert.equal(reconcilePaidFacts([a,{...b,currency:'USD'}]).status,'mixed_currency');
 });
