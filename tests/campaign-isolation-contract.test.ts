@@ -59,3 +59,25 @@ test('catalog campaigns from another tenant remain separate',()=>{
  assert.equal(result.length,2);
  assert.equal(result.find(r=>r.organizationId===orgB)?.revenue,null);
 });
+
+
+test('CRM account identifiers with and without act_ prefix reconcile within the same tenant and currency',()=>{
+ const withPrefix=campaigns([ad({account_id:'act_123'})],[crm({account_id:'123',revenue:450})],'crm');
+ assert.equal(withPrefix[0].revenue,450);
+ assert.equal(withPrefix[0].revenueSource,'crm');
+ assert.equal(withPrefix[0].roas,4.5);
+ const withoutPrefix=campaigns([ad({account_id:'123'})],[crm({account_id:'act_123',revenue:600})],'crm');
+ assert.equal(withoutPrefix[0].revenue,600);
+ assert.equal(withoutPrefix[0].revenueSource,'crm');
+});
+
+test('normalized CRM account identifiers never match another account, tenant, platform or currency',()=>{
+ const result=campaigns([ad({account_id:'act_123'})],[
+  crm({account_id:'124',revenue:999}),
+  crm({account_id:'123',organization_id:orgB,revenue:888}),
+  crm({account_id:'123',channel:'google_ads',revenue:777}),
+  crm({account_id:'123',currency:'USD',revenue:666}),
+ ],'crm');
+ assert.equal(result[0].revenue,200);
+ assert.equal(result[0].revenueSource,'ads');
+});
