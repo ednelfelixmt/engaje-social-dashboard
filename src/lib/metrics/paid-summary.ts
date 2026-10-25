@@ -32,7 +32,7 @@ export function paidSummary(rows:CampaignPerformance[]):Record<string,number|nul
   for(const key of additive)result[key]=availableTotal(rows,key);
   // Monetary aggregation across currencies is not meaningful without an explicit FX conversion.
   const currencies=new Set(rows.map(row=>row.currency));
-  if(currencies.size>1){
+  if(currencies.size>1||[...currencies].some(currency=>!/^[A-Z]{3}$/.test(currency))){
     for(const key of ['spend','revenue','conversion_value'])result[key]=null;
   }
   const spend=result.spend,revenue=result.revenue;

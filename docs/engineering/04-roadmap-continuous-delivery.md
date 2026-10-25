@@ -222,3 +222,5 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 - **ANA-004 — aberto:** melhorar transparência quando métricas de mídia paga forem parciais e quando score ponderado não tiver peso válido; teste funcional de relatórios por plataforma e revisão de UX ainda necessários.
 - **UX-002 — aberto:** jornada visual autenticada de `viewer` com filtros, ausência de dados, teclado e navegação por seções; depende de contas sintéticas e prova de segregação real.
 - **Regra de execução:** mudanças independentes podem ser implementadas e submetidas continuamente; somente merge com Quality Gate e Vercel aprovados. Erros registrados aqui antes de eventual adiamento.
+
+- **ANA-005 — correção em validação (PR #123, 25/10/2026):** moeda de origem ausente deve invalidar totais monetários e custos derivados. Primeira execução do Quality Gate falhou porque fixture antiga de `paid-summary-completeness.test.ts` não declarava moeda; fixture sintética ajustada para `BRL` (sem relaxar a proteção de produção). Nova execução do CI/Vercel obrigatória antes do merge.
