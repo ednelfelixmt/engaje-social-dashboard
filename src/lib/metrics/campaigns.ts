@@ -51,8 +51,8 @@ export function campaigns(
       const chosen = actual.find((row) => row.source === preferred) || actual[0];
       const amount = chosen ? chosen.revenue : sum(daily, 'revenue');
       const count = chosen ? chosen.purchases : sum(daily, 'purchases');
-      const nextRevenue=amount == null || revenue == null ? null : revenue + amount;
-      const nextPurchases=count == null || purchases == null ? null : purchases + count;
+      const nextRevenue:number|null=amount == null || revenue == null ? null : revenue + amount;
+      const nextPurchases:number|null=count == null || purchases == null ? null : purchases + count;
       revenue=nextRevenue!=null&&Number.isFinite(nextRevenue)?nextRevenue:null;
       purchases=nextPurchases!=null&&Number.isFinite(nextPurchases)?nextPurchases:null;
       sources.add(chosen?.source || 'ads');
