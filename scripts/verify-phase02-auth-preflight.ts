@@ -17,6 +17,9 @@ export async function verifyAuthPreflight(env:NodeJS.ProcessEnv){
    clients.push(client);
    const {data,error}=await client.auth.signInWithPassword({email,password});
    if(error||data.user?.id!==item.id)throw new Error('Synthetic user credentials or identity mismatch');
+   const expectedOrg=item.id==='079b2713-a99a-41a6-acc3-b129863ef7a6'?'c4c77b35-03a4-417a-94c2-e845d48679c1':'10289f2d-23b9-4c86-a10e-0503bcc2de79';
+   const {data:member,error:memberError}=await client.from('organization_members').select('role,is_active').eq('organization_id',expectedOrg).eq('user_id',item.id).single();
+   if(memberError||member?.role!=='viewer'||member.is_active!==true)throw new Error('Synthetic fixture must be an active viewer');
    const {data:admin,error:rpcError}=await client.rpc('is_super_admin');
    if(rpcError||admin!==false)throw new Error('Fixture has unexpected admin access');
   }
