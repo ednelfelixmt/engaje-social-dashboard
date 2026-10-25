@@ -1,7 +1,6 @@
 import Link from 'next/link';
-import {notFound} from 'next/navigation';
 import {AlertTriangle,CheckCircle2,Clock3,Database,ExternalLink,ShieldCheck} from 'lucide-react';
-import {tenant,editorAccess} from '@/lib/auth/session';
+import {agencyTenant} from '@/lib/auth/session';
 import {Card} from '@/components/ui/card';
 import {all} from '@/lib/metrics/query';
 import type {Row} from '@/types/database.types';
@@ -13,11 +12,7 @@ type Health={platform:PlatformName;campaigns:number;rows:number;days:number;firs
 function labelDate(v:string|null){return v?v.slice(0,10).split('-').reverse().join('/'):'—';}
 function dateDiff(today:string,source:string){return Math.max(0,Math.round((Date.parse(today+'T12:00:00Z')-Date.parse(source+'T12:00:00Z'))/86400000));}
 export default async function Page({params:pending}:{params:Promise<{organizationSlug:string}>}){
- const {organizationSlug}=await pending,{db,org,superAdmin,user}=await tenant(organizationSlug);
- if(!superAdmin){
-  const check=await editorAccess(organizationSlug);
-  if(!check.canEdit)notFound();
- }
+ const {organizationSlug}=await pending,{db,org}=await agencyTenant(organizationSlug);
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:org.timezone}).format(new Date());
  // Administrative diagnostics only. All queries remain scoped to the authenticated tenant.
  const [integrations,rawMetrics,dimensions,recentJobs]=await Promise.all([
@@ -39,7 +34,7 @@ export default async function Page({params:pending}:{params:Promise<{organizatio
  });
  const latestJobs=recentJobs.data??[];
  return <main className="mx-auto max-w-[1600px] space-y-5">
- <header className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs uppercase tracking-wider text-zinc-500">Configurações / Integrações</p><h1 className="mt-2 text-2xl font-semibold text-white">Qualidade e cobertura dos dados</h1><p className="mt-2 text-sm text-zinc-400">Diagnóstico técnico de {org.name}, restrito aos administradores e editores autorizados.</p></div><Link href={`/${org.slug}/settings/integrations`} className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-xs text-zinc-200"><ExternalLink size={14}/>Gerenciar conexões</Link></header>
+ <header className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs uppercase tracking-wider text-zinc-500">Configurações / Integrações</p><h1 className="mt-2 text-2xl font-semibold text-white">Qualidade e cobertura dos dados</h1><p className="mt-2 text-sm text-zinc-400">Diagnóstico técnico de {org.name}, restrito aos administradores da agência.</p></div><Link href={`/${org.slug}/settings/integrations`} className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-xs text-zinc-200"><ExternalLink size={14}/>Gerenciar conexões</Link></header>
  <div className="grid gap-3 sm:grid-cols-3">
   <Card className="!p-4"><p className="text-xs text-zinc-400">Registros de campanhas</p><p className="mt-2 text-2xl font-semibold">{rawMetrics.length.toLocaleString('pt-BR')}</p><p className="mt-2 text-xs text-zinc-500">Linhas armazenadas — não indica campanhas únicas</p></Card>
   <Card className="!p-4"><p className="text-xs text-zinc-400">Detalhamentos demográficos</p><p className="mt-2 text-2xl font-semibold">{dimensions.length.toLocaleString('pt-BR')}</p><p className="mt-2 text-xs text-zinc-500">Inclui diferentes dimensões e períodos</p></Card>
