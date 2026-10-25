@@ -5,6 +5,7 @@ import {Bar,BarChart,CartesianGrid,Cell,ComposedChart,Line,Pie,PieChart,Responsi
 import {ArrowUpRight,Download,Filter,Layers3,ChartNoAxesCombined,Target} from 'lucide-react';
 import {money,number} from '@/lib/utils';
 import {paidMetric,paidTotals,sumKnown,percentChange} from '@/lib/metrics/paid-metrics';
+import {serializeCsv} from '@/lib/export/csv';
 import {Card} from '@/components/ui/card';
 
 export type PlatformRow={id:string;name:string;spend:number;impressions:number|null;clicks:number|null;leads:number|null;reach:number|null;messages:number|null;revenue:number|null;status:string|null};
@@ -22,7 +23,7 @@ function metric(row:{spend:number;impressions:number|null;clicks:number|null;lea
 function fmt(value:number|null|undefined,key:Metric,currency:string){return value==null?'—':(['spend','cpc','cpm','cpl'].includes(key)?money(value,currency):key==='ctr'?number(value,2)+'%':number(value));}
 function csv(rows:PlatformRow[],currency:string){
  const matrix=[['Campanha','Investimento '+currency,'Impressões','Cliques','Leads','CTR','CPC','CPL'],...rows.map(r=>[r.name,r.spend,r.impressions,r.clicks,r.leads,metric(r,'ctr'),metric(r,'cpc'),metric(r,'cpl')])];
- const data='\ufeff'+matrix.map(row=>row.map(x=>'"'+String(x??'').replaceAll('"','""')+'"').join(';')).join('\r\n');
+ const data=serializeCsv(matrix);
  const href=URL.createObjectURL(new Blob([data],{type:'text/csv;charset=utf-8'}));
  const anchor=document.createElement('a');anchor.href=href;anchor.download='engaje-performance-campanhas.csv';anchor.click();URL.revokeObjectURL(href);
 }
