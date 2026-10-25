@@ -337,3 +337,10 @@ Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamen
 - **Correção integrada:** usar a mesma normalização de identificador na chave CRM e na busca diária, mantendo `organization_id`, plataforma/canal, campanha, data e moeda como dimensões obrigatórias de segregação. Não altera IDs armazenados nem os dados de origem.
 - **Regressões:** `tests/campaign-isolation-contract.test.ts` verifica reconciliação em ambos os sentidos e negação para conta, tenant, canal ou moeda diferentes.
 - **Aceite de código:** PR #135 aprovado no Quality Gate e Vercel, integrado à main em `792cd0f6cb1403d860fcbd4f71bff5e952b4ab7e`. Homologação com fontes reais e JWT continua pendente em SEC-010/011 e UX-002. Sem acesso a segredos, banco, migrações, OAuth ou dados de clientes.
+
+### 25/10/2026 — ANA-013: cobertura estrita no Engaje Intelligence (PR em validação)
+
+- **Achado P1:** o resumo `business-analytics-workbench` considerava total de leads, cliques ou impressões conhecido se *alguma* campanha tivesse o indicador, substituindo `null` das demais por zero. Isso apresentava somas parciais como completas, além de CPL/CTR potencialmente enganosos. Comparações também podiam produzir `Infinity` em bases extremas.
+- **Correção proposta:** extrair agregador puro que exige cobertura completa por indicador; preservar zero explícito, sinalizar ausência de dados como `null`, rejeitar totais não finitos e bloquear razões dependentes. Comparação usa `computeDelta` finito com base positiva. A UI do relatório consome o contrato estrito; não altera fonte, tenant, moeda, RLS, JWT ou permissões.
+- **Regressão:** `tests/business-workbench-summary.test.ts` cobre cobertura integral/parcial, zero conhecido, recorte vazio, overflow e variações finitas. Aceite condicionado ao Quality Gate e Vercel do mesmo SHA antes do merge; revisão visual autenticada segue UX-002.
+- **Rollback e risco:** reverter apenas este PR se houver incompatibilidade de renderização; preservar a distinção entre métrica ausente e zero. **SEC-010/011, SEC-014 runtime e UX-002 seguem abertos.** Nenhuma homologação autenticada executada por este pacote.
