@@ -99,7 +99,8 @@ check(await scalar("select has_table_privilege('authenticated','public.agency_us
 check(await scalar("select has_function_privilege('anon','public.save_client_membership(uuid,uuid,boolean)','EXECUTE') or has_function_privilege('anon','public.client_admin_audit(uuid,integer)','EXECUTE')") === false, 'Anon sem RPC administrativa ou de auditoria');
 let day = (await db.query<Record<string, unknown>>(`select * from public.daily_performance where organization_id='${orgA}' and metric_date='2026-09-01' and currency='BRL'`)).rows[0]!;
 check(Number(day.spend) === 200 && Number(day.revenue) === 600, 'JOIN não multiplica Ads nem soma CRM com planilha');
-check(Number(day.roas) === 3 && Math.abs(Number(day.cpa) - 200/6) < 0.00001, 'ROAS e CPA conciliados; ROI legado fora deste gate');
+check(Number(day.roas) === 3 && Math.abs(Number(day.cpa) - 200/6) < 0.00001, 'ROAS e CPA conciliados');
+check(day.roi === null, 'ROI financeiro indisponível sem custos completos');
 check(await scalar(`select revenue_source from public.daily_performance where organization_id='${orgA}' and metric_date='2026-09-01' and currency='USD'`) === 'ads', 'Moedas separadas e fallback Ads');
 check(Number(await scalar(`select revenue from public.daily_performance where organization_id='${orgA}' and metric_date='2026-09-02'`)) === 0, 'Receita real zero não vira receita da plataforma');
 check(await scalar(`select cpa from public.daily_performance where organization_id='${orgA}' and metric_date='2026-09-02'`) === null, 'Sem compras: CPA null');

@@ -270,7 +270,14 @@ O gate completo de segurança, autorização e UX permanece em andamento.
 - **Pendências externas inalteradas:** SEC-010/011 (homologação A/B real), UX-002 (viewer autenticado) e integrações com provedores. Deadline 18/12/2026 permanece como meta, não como homologação.
 
 
-### Ciclo 04 — gestão administrativa completa por transação (em validação)
+### Ciclo 05 — ANA-011: contrato financeiro da view SQL (em validação)
+
+- **Correção:** a interface já bloqueava ROI sem custos completos; daily_performance ainda derivava ROI de receita menos mídia. Migração torna somente roi indisponível, mantendo receita/ROAS/CPA/CTR, permissões e escopo por tenant.
+- **Risco de drift identificado:** produção exige revenue_enabled e usa receita real conciliada, diferentemente do fallback do bootstrap. A migração altera somente a expressão legada no catálogo e falha se encontrar uma fórmula inesperada; não recria a view pelo bootstrap. Reconciliação integral de esquemas permanece dependência de engenharia antes da estabilização.
+- **Validação local:** 246 testes, 140 checks SQL, lint, tipos, arquitetura e build aprovados. Sete novas regressões SQL cobrem política conservadora de produção, dados/grants preservados, reaplicação e RLS A/B; verify:schema exige ROI NULL. Quatro sondas anônimas nas novas RPCs administrativas retornaram 401/42501 sem alvo gravável. Quality Gate/Vercel e verificação de catálogo após implantação são obrigatórios. Detalhes em [20-financial-roi-view-contract.md](20-financial-roi-view-contract.md).
+- **Continuidade:** o ciclo 04 já está na main (PR #145, f6612cd) e no Supabase (migração real 20261025230609), após Quality Gate #210 e Vercel no head f46786c. Quatro RPCs públicas invoker, quatro triggers e RLS/ausência de grants da auditoria verificados. O INFO de auditoria sem policies é deny-by-default intencional; WARNs anteriores do Advisor permanecem. E2E/JWT e UX seguem pendentes.
+
+### Ciclo 04 — gestão administrativa por transação (integrado; E2E pendente)
 
 - **Produto:** criação/edição do cliente com funil e atualização de acesso com revogação de convite tornam-se atômicas; nova tela de histórico por cliente, exclusiva da agência. Implementa o núcleo de #54/#65 com audit trail, sem declarar homologação E2E.
 - **Segurança:** RPCs com auth.uid e confirmação de superadmin ativo, clientes só viewer, proteção da agência, cadastro Auth confirmado para ativação, auditoria privada sem valores sensíveis e sem grants diretos. Testes de falha intermediária revertem dados e histórico.
