@@ -8,6 +8,9 @@ export default tseslint.config(
   {
     files:[
       'src/lib/reports/performance-report.ts',
+      'src/lib/export/performance-report.ts',
+      'src/components/dashboard/performance-report-export.tsx',
+      'tests/performance-report-export.test.ts',
       'src/components/dashboard/performance-report-print.tsx',
       'src/components/dashboard/performance-report-view.tsx',
       'src/components/navigation.tsx',
