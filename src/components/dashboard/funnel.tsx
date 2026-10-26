@@ -1,6 +1,8 @@
 import {useId, type ReactNode} from 'react';
 import {ArrowDownRight, ArrowUpRight, CalendarCheck, CreditCard, Download, Eye, FileText, Globe, GraduationCap, Handshake, Heart, House, MapPin, MessageCircle, MousePointerClick, Navigation, Phone, Play, Receipt, Repeat, ShoppingBag, ShoppingCart, Stethoscope, Star, Target, UserPlus, Users, Utensils, TrendingDown, Route, CheckCircle2} from 'lucide-react';
 import {money, number} from '@/lib/utils';
+import {finiteRatio} from '@/lib/metrics/aggregation';
+import {computeDelta} from '@/lib/metrics/delta';
 import {funnelAutoColor, type FunnelIconKey} from '@/lib/metrics/funnel-config';
 
 export type FunnelStep = {
@@ -31,7 +33,7 @@ export function StepIcon({name, size = 14, className}: {name?: FunnelIconKey; si
 
 function conversion(current: number | null, previous: number | null) {
   if (current == null || previous == null || previous <= 0) return null;
-  return current / previous * 100;
+  return finiteRatio(current, previous, 100);
 }
 
 function mix(hex: string, target: number, amount: number) {
@@ -71,8 +73,8 @@ type FunnelRow = {step: FunnelStep; index: number; color: string; missing: boole
 
 function StepDetails({row, compact, currency, comparing}: {row: FunnelRow; compact: boolean; currency: string; comparing: boolean}) {
   const {step, index, color, rate, isLeak} = row;
-  const change = comparing && step.value != null && step.previousValue != null && step.previousValue > 0 ? (step.value - step.previousValue) / step.previousValue * 100 : null;
-  const progress = step.target && step.target > 0 && step.value != null ? step.value / step.target * 100 : null;
+  const change = comparing && step.previousValue != null && step.previousValue > 0 ? computeDelta(step.value, step.previousValue)?.change ?? null : null;
+  const progress = finiteRatio(step.value, step.target ?? null, 100);
   return <>
     <div className="flex items-center gap-2">
       <span className="grid size-6 shrink-0 place-items-center rounded-lg" style={{backgroundColor: `${color}33`, color}}><StepIcon name={step.icon} size={compact ? 12 : 14} /></span>
@@ -105,7 +107,7 @@ export function Funnel({steps: suppliedSteps, values, currency = 'BRL', comparin
   const profile = coneProfile(steps.length);
   const rates = steps.map((step, index) => index ? conversion(step.value, steps[index - 1].value) : null);
   let leak = -1;
-  rates.forEach((rate, index) => { if (rate != null && (leak < 0 || rate < (rates[leak] as number))) leak = index; });
+  rates.forEach((rate, index) => { if (rate != null && rate < 100 && (leak < 0 || rate < (rates[leak] as number))) leak = index; });
   const firstValue = steps[0].value;
   const lastValue = steps.at(-1)?.value ?? null;
   const totalConversion = conversion(lastValue, firstValue);
@@ -179,6 +181,7 @@ export function Funnel({steps: suppliedSteps, values, currency = 'BRL', comparin
         <StepDetails row={row} compact={false} currency={currency} comparing={comparing} />
       </li>)}
     </ul>
-    <p className="border-t border-white/[.06] px-5 py-3 text-[10px] leading-4 text-zinc-500">{preview ? 'Pré-visualização com valores de exemplo, apenas para mostrar o formato. ' : ''}O formato do funil é ilustrativo: a largura das camadas não representa o volume. Volumes, taxas de avanço e custos estão em cada camada e ao lado dela. As taxas relacionam eventos agregados do período, não uma coorte individual.</p>
+    {steps.some(step => step.detail) ? <section aria-label="Cobertura das etapas" className="border-t border-white/[.06] px-5 py-3"><h3 className="text-xs font-semibold text-zinc-300">Cobertura por etapa</h3><ul className="mt-2 grid list-none gap-2 text-[10px] leading-4 text-zinc-400 sm:grid-cols-2">{steps.map((step, index) => step.detail ? <li key={index}><strong className="font-semibold text-zinc-300">{step.label}: </strong>{step.detail}</li> : null)}</ul></section> : null}
+    <p className="border-t border-white/[.06] px-5 py-3 text-[10px] leading-4 text-zinc-500">{preview ? 'Pré-visualização com valores de exemplo, apenas para mostrar o formato. ' : ''}O formato do funil é ilustrativo: a largura das camadas não representa o volume. Volumes, taxas de avanço e custos estão em cada camada e ao lado dela. A cobertura considera campanhas com medições no recorte e não comprova completude da ingestão. As taxas relacionam eventos agregados do período, não uma coorte individual.</p>
   </div>;
 }

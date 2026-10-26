@@ -7,6 +7,14 @@ export default tseslint.config(
   {ignores:['node_modules/**','.next/**']},
   {
     files:[
+      'src/lib/metrics/query.ts',
+      'src/components/dashboard/filters.tsx',
+      'tests/comparison-query.test.ts',
+      'tests/comparison-filter-ui.test.ts',
+      'src/lib/metrics/funnel-performance.ts',
+      'src/components/dashboard/funnel.tsx',
+      'tests/funnel-performance.test.ts',
+      'tests/funnel-performance-ui.test.ts',
       'src/lib/auth/password-recovery.ts',
       'src/app/auth/recovery/actions.ts',
       'src/app/auth/recovery/callback/route.ts',
