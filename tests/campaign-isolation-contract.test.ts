@@ -118,3 +118,33 @@ test('CRM purchases reject negative/nonfinite counts without discarding valid re
  assert.equal(invalidRevenue.roas,null);
  assert.equal(invalidRevenue.purchases,2);
 });
+
+
+test('account identifiers with act_ remain distinct for non-Meta providers in ads and CRM',()=>{
+ for (const platform of ['google_ads','tiktok_ads','microsoft_ads'] as const){
+  const result=campaigns([
+   ad({platform,account_id:'act_123',spend:40}),
+   ad({platform,account_id:'123',spend:70}),
+  ],[crm({channel:platform,account_id:'123',revenue:900})],'crm');
+  assert.equal(result.length,2,platform);
+  const prefixed=result.find(row=>row.accountId==='act_123');
+  const plain=result.find(row=>row.accountId==='123');
+  assert.equal(prefixed?.spend,40,platform);
+  assert.equal(prefixed?.revenue,200,platform); // No CRM attribution from account 123.
+  assert.equal(prefixed?.revenueSource,'ads',platform);
+  assert.equal(plain?.spend,70,platform);
+  assert.equal(plain?.revenue,900,platform);
+  assert.equal(plain?.revenueSource,'crm',platform);
+ }
+});
+
+test('a non-Meta catalog account cannot be hidden by another account with an act_ prefix',()=>{
+ const catalog=[{
+  organization_id:orgA,platform:'google_ads',account_id:'123',external_id:'campaign-1',
+  name:'Synthetic independent catalog account',status:'active',
+ } as Row<'ad_campaigns'>];
+ const result=campaigns([ad({platform:'google_ads',account_id:'act_123'})],[],'crm',catalog);
+ assert.equal(result.length,2);
+ assert.equal(result.find(row=>row.accountId==='act_123')?.spend,100);
+ assert.equal(result.find(row=>row.accountId==='123')?.revenue,null);
+});

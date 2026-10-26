@@ -6,7 +6,8 @@ import type {CampaignPerformance} from '@/types/domain';
  */
 function comparisonKey(row: CampaignPerformance): string | null {
   const {organizationId, platform, accountId, campaignId, currency} = row;
-  const normalizedAccount = accountId?.replace(/^act_/, '');
+  // The act_ alias belongs to Meta. Other providers may use that prefix literally.
+  const normalizedAccount = platform === 'meta_ads' ? accountId?.replace(/^act_/, '') : accountId;
   if (!organizationId || !platform || !normalizedAccount || !campaignId || !/^[A-Z]{3}$/.test(currency)) return null;
   return JSON.stringify([organizationId, platform, normalizedAccount, campaignId, currency]);
 }
