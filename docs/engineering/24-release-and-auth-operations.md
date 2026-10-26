@@ -6,7 +6,7 @@ Data: 25/10/2026, America/Cuiaba. Não representa homologação comercial.
 
 PR #152 integrado à main como dfea7ccfc9c489ba8af9c56ff28924192d5819fd. Head aprovado: a0d5869fa8035cbb735d951c66ab03d10936d40a. Quality Gate #226, run 40248078435, success (292 testes, SQL, lint, tipos, arquitetura e build Linux). Preview Vercel dpl_2NAqZNv9ezCRB9rXYgQxg1YRDYZf READY e status success no mesmo head após nova tentativa. As árvores Git do head e do merge são idênticas: c4c9842267cbbd39ddb9c0e4492f091427c334c4.
 
-ANA-018/019 corrigidos no código. A revisão autenticada com fontes reais e a deduplicação de alcance/frequência continuam pendentes.
+FUN-001 e ANA-019 corrigidos no código. A revisão autenticada com fontes reais e a deduplicação de alcance/frequência continuam pendentes.
 
 ## Produção e limite da Vercel
 
@@ -52,3 +52,5 @@ Com identidade e caixa postal sintéticas protegidas: entrega, PKCE no mesmo nav
 Este lote altera somente documentação no repositório. O código mantém a validação do PR #152; o PR de evidência recebe seus próprios gates e não será integrado sem as aprovações exigidas. Nenhuma migração, dado real de cliente ou segredo integra o diff.
 
 Revisão Security Advisor após ajuste de Auth: permanecem os avisos conhecidos de [pg_net em public](https://supabase.com/docs/guides/database/database-linter?lint=0014_extension_in_public) e [proteção de senha vazada desligada](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection), além de quatro avisos informativos de RLS sem políticas nas tabelas internas que usam negação por padrão. SEC-012/013 seguem registrados; nenhuma política permissiva foi criada para suprimir avisos.
+
+Registro de identificadores: o funil de #152 passa a FUN-001 (referido como ANA-018 no registro anterior), evitando colisão com ANA-018 de contagens negativas no PR #153, trabalho independente ainda aberto. Calendário mantém ANA-019. Nenhum código do PR #153 foi sobrescrito, integrado ou homologado por este lote.
