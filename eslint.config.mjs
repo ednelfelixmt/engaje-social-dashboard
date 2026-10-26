@@ -52,6 +52,8 @@ export default tseslint.config(
       'tests/navigation-permissions.test.ts',
       'tests/helpers/load-typescript.ts',
       'src/lib/metrics/paid-metrics.ts',
+      'src/lib/metrics/agency-overview.ts',
+      'tests/agency-overview-metrics.test.ts',
       'src/lib/metrics/calendar.ts',
       'scripts/check-architecture.ts',
       'tests/paid-metrics.test.ts',
