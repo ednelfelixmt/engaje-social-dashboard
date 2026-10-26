@@ -90,3 +90,37 @@ test('percentChange never emits non-finite values for extreme periods',()=>{
  assert.equal(percentChange(1e308,1e308),0);
  assert.equal(percentChange(0,1e308),-100);
 });
+
+test('negative campaign counts invalidate only affected totals and dependent ratios', () => {
+ const total=paidTotals([
+  {spend:50,impressions:100,clicks:10,leads:2},
+  {spend:25,impressions:-1,clicks:4,leads:-1},
+ ]);
+ assert.equal(total.spend,75);
+ assert.equal(total.impressions,null);
+ assert.equal(total.clicks,14);
+ assert.equal(total.leads,null);
+ assert.equal(total.ctr,null);
+ assert.equal(total.cpm,null);
+ assert.equal(total.cpl,null);
+ assert.equal(total.cpc,75/14);
+});
+
+test('raw additive counts reject negative values but preserve explicit zero and attributed fractions', () => {
+ const negative={spend:10,impressions:100,clicks:-3,leads:-2};
+ assert.equal(paidMetric(negative,'clicks'),null);
+ assert.equal(paidMetric(negative,'leads'),null);
+ assert.equal(paidMetric(negative,'ctr'),null);
+ assert.equal(paidMetric({...negative,impressions:-100,clicks:3},'impressions'),null);
+ assert.equal(paidMetric({...negative,impressions:-100,clicks:3},'ctr'),null);
+ const valid={spend:0,impressions:0.5,clicks:0,leads:0.25};
+ assert.equal(paidMetric(valid,'impressions'),0.5);
+ assert.equal(paidMetric(valid,'clicks'),0);
+ assert.equal(paidMetric(valid,'leads'),0.25);
+ assert.equal(paidMetric(valid,'ctr'),0);
+ assert.deepEqual(paidTotals([valid]),{...valid,ctr:0,cpc:null,cpm:0,cpl:0});
+});
+
+test('generic sumKnown retains signed-value support outside the paid count contract', () => {
+ assert.equal(sumKnown([{delta:-2},{delta:3}], row => row.delta),1);
+});
