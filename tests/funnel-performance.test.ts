@@ -114,3 +114,40 @@ test('empty prior observations are explained only when comparison was requested'
   assert.match(configuredFunnel(rows(fact()), steps, scope, [])[0].detail, /Comparação indisponível/);
   assert.doesNotMatch(configuredFunnel(rows(fact()), steps, scope)[0].detail, /Comparação indisponível/);
 });
+
+test('ANA-025: reach is unavailable across campaigns without source deduplication', () => {
+  const data = rows(fact({reach: 500}), fact({campaign_id: 'synthetic-other', reach: 450, spend: 50}));
+  const reach = summary(data, 'reach');
+  assert.equal(reach.value, null);
+  assert.equal(reach.cost, null);
+  assert.equal(reach.observed, 2);
+  assert.equal(reach.known, 2);
+  assert.match(reach.detail, /deduplicação comprovada/);
+  // Additive metrics remain available for the same synthetic campaign set.
+  assert.equal(summary(data, 'impressions').value, 2000);
+  assert.equal(summary(data, 'clicks').value, 40);
+});
+
+test('ANA-025: one source-validated campaign can report reach, including zero', () => {
+  const single = summary(rows(fact({reach: 500})), 'reach');
+  assert.equal(single.value, 500);
+  assert.equal(single.cost, 0.2);
+  const zero = summary(rows(fact({reach: 0})), 'reach');
+  assert.equal(zero.value, 0);
+  assert.equal(zero.cost, null);
+  // Even within one campaign, daily reach from multiple dates cannot be summed.
+  const days = summary(rows(fact(), fact({metric_date: '2026-10-25'})), 'reach');
+  assert.equal(days.value, null);
+  assert.equal(days.cost, null);
+});
+
+test('ANA-025: a comparison never invents deduplicated reach for prior campaigns', () => {
+  const current = rows(fact({reach: 250}));
+  const previous = rows(fact({reach: 200}), fact({campaign_id: 'synthetic-other', reach: 180}));
+  const stepsWithReach = [{metric: 'reach', label: 'Alcance'}, {metric: 'clicks', label: 'Cliques'}];
+  const output = configuredFunnel(current, stepsWithReach, scope, previous);
+  assert.equal(output[0].value, 250);
+  assert.equal(output[0].previousValue, null);
+  assert.match(output[0].detail, /Comparação indisponível/);
+  assert.equal(output[1].previousValue, 40);
+});
