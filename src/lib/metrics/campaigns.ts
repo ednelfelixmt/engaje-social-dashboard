@@ -1,7 +1,7 @@
 import type {Row} from '@/types/database.types';
 import type {CampaignPerformance} from '@/types/domain';
 import {finiteRatio,sum} from './aggregation';
-import {summarizeWeightedMetric, weightedMetricKeys, type WeightedMetricSummaries} from './weighted-metrics';
+import {summarizeWeightedMetric, weightedMetricKeys, providerWeightedMetricBounds, type WeightedMetricSummaries} from './weighted-metrics';
 
 function normalizedAccountId(value: string) {
   return value.replace(/^act_/, '');
@@ -71,7 +71,7 @@ export function campaigns(
     const checkouts = sum(rows, 'checkouts');
     const metricValues:Record<string,number|null>={};
     for(const key of primitiveMetricKeys)metricValues[key]=sum(rows,key);
-    const weightedMetrics = Object.fromEntries(weightedMetricKeys.map(key => [key, summarizeWeightedMetric(rows.map(row => ({value: row[key], weight: row.impressions})))])) as WeightedMetricSummaries;
+    const weightedMetrics = Object.fromEntries(weightedMetricKeys.map(key => [key, summarizeWeightedMetric(rows.map(row => ({value: row[key], weight: row.impressions})), providerWeightedMetricBounds[key])])) as WeightedMetricSummaries;
     for (const key of weightedMetricKeys) metricValues[key] = weightedMetrics[key].value;
     metricValues.spend=spend;metricValues.revenue=revenue;metricValues.registration_leads=registrationLeads;
 
