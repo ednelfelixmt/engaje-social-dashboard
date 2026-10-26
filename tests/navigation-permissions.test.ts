@@ -29,3 +29,10 @@ test('executive report navigation respects the tenant paid-page setting for view
  const disabled=renderToStaticMarkup(createElement(Navigation,{slug:'fixture-a',canShare:false,enabled:['overview']}));
  assert.ok(enabled.includes('/fixture-a/reports/performance'));assert.ok(enabled.includes('data-report-navigation'));assert.ok(!disabled.includes('/fixture-a/reports/performance'));
 });
+
+
+test('revenue analysis is a read-only option gated by the tenant external-page setting',()=>{
+ const shown=renderToStaticMarkup(createElement(Navigation,{slug:'fixture-a',canShare:false,enabled:['external']}));
+ const hidden=renderToStaticMarkup(createElement(Navigation,{slug:'fixture-a',canShare:false,enabled:['paid']}));
+ assert.ok(shown.includes('/fixture-a/reports/revenue'));assert.ok(shown.includes('/fixture-a/external'));assert.ok(!hidden.includes('/fixture-a/reports/revenue'));assert.ok(!shown.includes('/fixture-a/settings/'));
+});
