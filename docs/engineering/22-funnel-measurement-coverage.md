@@ -27,3 +27,5 @@ Sem migração, alterações em Auth, RLS, Edge, OAuth, Storage, credenciais, ca
 Aceite: testes, 140 checks SQL, lint, tipos, arquitetura, build e Quality Gate + Vercel no mesmo head antes do merge. Rollback restrito ao PR; preservar a distinção entre zero e ausência. Não restaurar soma parcial como total sem solução equivalente.
 
 Validação local: 281 testes, 140 checks SQL, lint, tipos e arquitetura passaram. O build compilou e tipou, mas falhou ao criar diretório _not-found em .next (EPERM Windows); repetição confirmou o problema local. Uma tentativa por outro runtime encontrou falha de processo do Turbopack. O aceite do build continua pendente até execução completa, local ou CI; não é tratado como aprovado pela compilação parcial.
+
+CI do head inicial e6e328676e9c4f3c2ed272378e1b2546e9ddbd2f: Quality Gate #223 aprovado, inclusive build Linux. Vercel recusou preview por build-rate-limit; não integrado. Calendário complementar descrito em [23-calendar-comparison.md](23-calendar-comparison.md); o head final deve repetir ambos os gates.

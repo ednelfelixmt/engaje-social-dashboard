@@ -1,12 +1,15 @@
 'use client';
 
 import type {ReactNode} from 'react';
+import {comparisonPeriod} from '@/lib/metrics/calendar';
 import {usePathname,useRouter,useSearchParams} from 'next/navigation';
 import {SlidersHorizontal,ArrowRight} from 'lucide-react';
 import type {Filters as FilterType} from '@/lib/metrics/query';
 
 export function Filters({value,organizations,slug,actions}:{value:FilterType;organizations:{name:string;slug:string}[];slug:string;actions?:ReactNode}){
  const router=useRouter(),path=usePathname(),search=useSearchParams();
+ const comparison=value.compare==='none'?null:comparisonPeriod(value.from,value.to,value.compare);
+ const dateLabel=(day:string)=>day.split('-').reverse().join('/');
  const field='!h-9 !min-h-0 !rounded-lg !border-white/10 !bg-[#111723] !px-2.5 !py-1 !text-xs text-zinc-200';
  const label='flex min-w-0 flex-col gap-1 text-[10px] font-medium leading-4 text-zinc-500';
  function changeClient(next:string){const segments=path.split('/');segments[1]=next;router.push(segments.join('/')+'?'+search.toString());}
@@ -32,5 +35,6 @@ export function Filters({value,organizations,slug,actions}:{value:FilterType;org
    </form>
    {actions?<div className="flex min-h-9 min-w-0 items-center lg:ml-auto [&_[data-personalize-bar]]:gap-1 [&_[data-personalize-bar]_button]:!min-h-9">{actions}</div>:null}
   </div>
+  {comparison?<p className="mt-2 text-[10px] leading-4 text-zinc-400">Comparação aplicada: {dateLabel(comparison.from)} a {dateLabel(comparison.to)}.{value.compare==='previous_year'?' Datas do calendário anterior; 29/02 é ajustado para 28/02 quando necessário e a duração pode diferir.':''}</p>:null}
  </section>;
 }
