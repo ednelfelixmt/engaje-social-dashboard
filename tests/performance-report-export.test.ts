@@ -46,7 +46,7 @@ test('CSV omits comparison when not requested and empty exports contain no inven
  const rows=performanceReportCsv(report).replace(/^\ufeff/,'').split('\r\n');
  assert.equal(rows.length,2); // header plus current (empty) summary
  assert.ok(rows[1].includes('"atual"'));assert.ok(!rows[1].includes('"comparativo"'));
- assert.ok(!rows[1].includes('"0";"0";"0";"0"')); // do not fabricate observed zeros
+ assert.deepEqual(rows[1].split(';').slice(-8),Array(8).fill('""')); // coverage counts may be 0; missing totals must stay blank
  assert.ok(!performanceReportCsv(report).includes('"undefined"'));
 });
 
