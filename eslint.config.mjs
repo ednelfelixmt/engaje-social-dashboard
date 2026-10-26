@@ -46,6 +46,8 @@ export default tseslint.config(
       'tests/comparison-query.test.ts',
       'tests/comparison-filter-ui.test.ts',
       'src/lib/metrics/funnel-performance.ts',
+      'src/lib/metrics/funnel-config.ts',
+      'tests/funnel.test.ts',
       'src/components/dashboard/funnel.tsx',
       'tests/funnel-performance.test.ts',
       'tests/funnel-performance-ui.test.ts',

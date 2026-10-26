@@ -134,6 +134,20 @@ export function funnelPresetFor(model: FunnelModel) {
   return funnelPresets.find((preset) => preset.id === model) ?? funnelPresets[0];
 }
 
+/** Targets are configuration data, never coerce booleans, arrays or blank strings into KPI goals. */
+function parseFunnelTarget(value: unknown): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) && value >= 0 ? value : null;
+  if (typeof value !== 'string') return null;
+  const input = value.trim();
+  // Only explicit, non-negative decimal values; Number() would accept spaces, hex and booleans.
+  if (!/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(input)) return null;
+  const target = Number(input);
+  // A positive value underflowing to zero is not an observed zero target.
+  const mantissa = input.split(/[eE]/)[0];
+  if (target === 0 && /[1-9]/.test(mantissa)) return null;
+  return Number.isFinite(target) && target >= 0 ? target : null;
+}
+
 export function parseFunnelSteps(value:unknown):FunnelStepConfig[]{
   if(!Array.isArray(value))return funnelPresets[0].steps;
   const allowed=new Set(funnelMetricDefinitions.map((item)=>item.key));
@@ -141,14 +155,15 @@ export function parseFunnelSteps(value:unknown):FunnelStepConfig[]{
   const parsed=value.flatMap((item)=>{
     if(!item||typeof item!=='object'||Array.isArray(item))return [];
     const row=item as Record<string,unknown>;
-    const metric=String(row.metric||'') as FunnelMetricKey;
-    const label=String(row.label||'').trim();
+    if (typeof row.metric !== 'string' || typeof row.label !== 'string') return [];
+    const metric=row.metric as FunnelMetricKey;
+    const label=row.label.trim();
     if(!allowed.has(metric)||label.length<1||label.length>40)return [];
     const step:FunnelStepConfig={metric,label};
     if(typeof row.color==='string'&&funnelColorPattern.test(row.color))step.color=row.color.toUpperCase();
     if(typeof row.icon==='string'&&icons.has(row.icon))step.icon=row.icon as FunnelIconKey;
-    const target=row.target==null||row.target===''?null:Number(row.target);
-    if(target!=null&&Number.isFinite(target)&&target>=0)step.target=target;
+    const target=parseFunnelTarget(row.target);
+    if(target!==null)step.target=target;
     return [step];
   });
   return parsed.length>=2&&parsed.length<=12&&new Set(parsed.map((item)=>item.metric)).size===parsed.length?parsed:funnelPresets[0].steps;
