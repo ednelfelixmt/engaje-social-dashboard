@@ -41,11 +41,11 @@ export default async function Page({params:pendingParams,searchParams:pendingSea
   </main>;
  }
  const definition=reports[report];
- const data=await dashboardData(db,org.id,f,{platform:definition.platform,breakdowns:true});
- const rows=data.breakdowns;
  let audienceReport:AudienceReport;
- try {audienceReport=buildAudienceReport(rows,{organizationId:org.id,organizationName:org.name,organizationSlug:org.slug,timezone:org.timezone,platform:definition.platform,currency:f.currency,from:f.from,to:f.to,generatedAt:new Date().toISOString()});}
- catch {return <main className="mx-auto max-w-[1680px] space-y-4"><h1 className="text-2xl font-semibold">{definition.title}</h1><Filters value={f} organizations={organizations??[]} slug={org.slug} allowComparison={false}/><Card><p role="alert">Não foi possível consolidar os detalhamentos neste recorte. Verifique a origem, a moeda e a janela de atribuição com a agência. Nenhum total ou arquivo foi produzido.</p></Card></main>;}
+ try {
+  const {breakdowns}=await dashboardData(db,org.id,f,{platform:definition.platform,breakdowns:true});
+  audienceReport=buildAudienceReport(breakdowns,{organizationId:org.id,organizationName:org.name,organizationSlug:org.slug,timezone:org.timezone,platform:definition.platform,currency:f.currency,from:f.from,to:f.to,generatedAt:new Date().toISOString()});}
+ catch {return <main className="mx-auto max-w-[1680px] space-y-4"><h1 className="text-2xl font-semibold">{definition.title}</h1><Filters value={f} organizations={organizations??[]} slug={org.slug} allowComparison={false}/><Card><p role="alert">Não foi possível carregar ou consolidar os detalhamentos neste recorte. Verifique a origem, a moeda e a janela de atribuição com a agência. Nenhum total ou arquivo foi produzido.</p></Card></main>;}
  const breakdowns=audienceReport.groups;
  return <main className="mx-auto max-w-[1680px] space-y-3"><header><p className="eyebrow">Análise segmentada · {org.name}</p><h1 className="mt-2 text-3xl font-semibold text-white">{definition.title}</h1><p className="mt-2 text-sm text-zinc-400">{definition.description}</p></header>
    <Filters value={f} organizations={organizations??[]} slug={org.slug} allowComparison={false}/>
