@@ -12,6 +12,39 @@ test('parseFunnelSteps mantém cor, ícone e meta válidos', () => {
   assert.deepEqual(steps[1], {metric: 'clicks', label: 'Cliques'});
 });
 
+test('FUN-002: only explicit non-negative numbers and decimal strings become funnel goals', () => {
+  for (const [input, expected] of [[0, 0], [2.5, 2.5], [' 0 ', 0], ['12.5', 12.5], ['.25', 0.25], ['1e2', 100]] as const) {
+    const steps = parseFunnelSteps([
+      {metric: 'clicks', label: 'Cliques', target: input},
+      {metric: 'leads', label: 'Leads', target: 5},
+    ]);
+    assert.equal(steps[0].target, expected);
+    assert.equal(steps[1].target, 5);
+  }
+});
+
+test('FUN-002: coercible garbage and numerical underflow never fabricate a funnel goal', () => {
+  const invalidTargets: unknown[] = [false, true, [], [1], {}, ' ', '\\t', '0x10', 'Infinity', 'NaN',
+    '1,000', '-2', -2, Number.NaN, Number.POSITIVE_INFINITY, '1e309', '1e-999'];
+  for (const target of invalidTargets) {
+    const steps = parseFunnelSteps([
+      {metric: 'clicks', label: 'Cliques', target},
+      {metric: 'leads', label: 'Leads', target: 0},
+    ]);
+    assert.equal(Object.hasOwn(steps[0], 'target'), false, `invalid target: ${JSON.stringify(target)}`);
+    assert.equal(steps[1].target, 0, 'explicit zero remains a recorded target');
+  }
+});
+
+test('FUN-002: malformed non-text funnel labels are not rendered as fabricated descriptions', () => {
+  for (const label of [0, false, true, {}, ['Meta'], null]) {
+    assert.deepEqual(parseFunnelSteps([
+      {metric: 'clicks', label},
+      {metric: 'leads', label: 'Leads'},
+    ]), funnelPresets[0].steps);
+  }
+});
+
 test('parseFunnelSteps rejeita listas inválidas e volta ao modelo padrão', () => {
   const fallback = funnelPresets[0].steps;
   assert.deepEqual(parseFunnelSteps('x'), fallback);
