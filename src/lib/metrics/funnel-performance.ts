@@ -20,7 +20,10 @@ export function summarizeFunnelMetric(rows: readonly CampaignPerformance[], metr
   const observed = rows.filter(hasFunnelMeasurements);
   const scopeValid = rows.every(row => row.organizationId === organizationId);
   const known = observed.filter(row => validCount(measurement(row, metric)));
-  let value: number | null = scopeValid && observed.length > 0 && known.length === observed.length
+  // Unique people are not additive between campaigns without provider-level deduplication.
+  // Campaign-level reach is available only when its own daily source grain was validated.
+  const reachNeedsDeduplication = metric === 'reach' && observed.length > 1;
+  let value: number | null = scopeValid && !reachNeedsDeduplication && observed.length > 0 && known.length === observed.length
     ? known.reduce((total, row) => total + (measurement(row, metric) as number), 0) : null;
   if (value != null && !Number.isFinite(value)) value = null;
   const currencyValid = /^[A-Z]{3}$/.test(currency) && observed.every(row => row.currency === currency);
@@ -30,6 +33,7 @@ export function summarizeFunnelMetric(rows: readonly CampaignPerformance[], metr
   const cost = currencyValid && Number.isFinite(spend) ? finiteRatio(spend, value, multiplier) : null;
   const detail = !scopeValid ? 'Indicador indisponível: escopo de organização incompatível.'
     : !observed.length ? 'Sem campanhas com medições no período.'
+    : reachNeedsDeduplication ? 'Alcance indisponível: pessoas únicas entre campanhas exigem deduplicação comprovada na origem.'
     : value == null ? 'Total indisponível: ' + known.length + ' de ' + observed.length + ' campanhas com valor válido; ' + (known.length < observed.length ? 'cobertura incompleta.' : 'limite numérico excedido.')
     : 'Cobertura: ' + known.length + ' de ' + observed.length + ' campanhas com medições.';
   const costDetail = !currencyValid && observed.length ? ' Custo indisponível: moeda diferente da exibida ou não identificada.'
