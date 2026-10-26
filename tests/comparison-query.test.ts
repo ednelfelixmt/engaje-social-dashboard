@@ -48,3 +48,58 @@ test('actual filter accepts two calendar years with a leap day, but refuses a lo
  assert.equal(query.filters({from: '2023-03-01', to: '2025-03-01'}, 'America/Cuiaba', 'BRL').from, '2023-03-01');
  assert.throws(() => query.filters({from: '2023-03-01', to: '2025-03-02'}, 'America/Cuiaba', 'BRL'), /até dois anos/);
 });
+
+test('multi-page account, campaign and creative reads have a deterministic unique tie-breaker', async () => {
+ // Every record shares the same date or campaign name: sorting on that column
+ // alone leaves the 1,000-row pagination boundary nondeterministic in SQL.
+ const tables = ['metrics_organic_accounts', 'ad_campaigns', 'creatives'] as const;
+ const fixtures: Record<string, {id: string; organization_id: string}[]> = Object.fromEntries(
+  tables.map(table => [table, Array.from({length: 1001}, (_, i) => ({
+   id: table + '-' + String(i).padStart(4, '0'),
+   organization_id: 'synthetic-pagination-tenant',
+  }))]),
+ );
+ const calls: {table: string; orders: string[]; tenantFilters: [string, unknown][]; from: number; to: number}[] = [];
+ const db = {from(table: string) {
+  const orders: string[] = [];
+  const tenantFilters: [string, unknown][] = [];
+  const builder = {
+   select() {return builder;},
+   order(column: string) {orders.push(column); return builder;},
+   eq(column: string, value: unknown) {tenantFilters.push([column, value]); return builder;},
+   gte() {return builder;},
+   lte() {return builder;},
+   range(from: number, to: number) {
+    calls.push({table, orders: [...orders], tenantFilters: [...tenantFilters], from, to});
+    return Promise.resolve({data: (fixtures[table] ?? []).slice(from, to + 1), error: null});
+   },
+  };
+  return builder;
+ }};
+ const result = await query.dashboardData(
+  db as unknown as Parameters<typeof query.dashboardData>[0],
+  'synthetic-pagination-tenant', {...input, compare: 'none'},
+  {organicAccounts: true, adCampaigns: true, creatives: true, creativePeriod: false},
+ );
+ for (const table of tables) {
+  const pages = calls.filter(call => call.table === table);
+  assert.deepEqual(pages.map(page => [page.from, page.to]), [[0, 999], [1000, 1999]]);
+  const expectedOrders = table === 'metrics_organic_accounts' ? ['metric_date', 'id']
+   : table === 'ad_campaigns' ? ['name', 'id'] : ['published_at', 'id'];
+  for (const page of pages) {
+   assert.deepEqual(page.orders, expectedOrders, table + ' must sort ties by the unique id');
+   assert.ok(page.tenantFilters.some(([column, value]) =>
+    column === 'organization_id' && value === 'synthetic-pagination-tenant'), 'tenant filter must remain');
+  }
+ }
+ for (const [table, records] of [
+  ['metrics_organic_accounts', result.organicAccounts],
+  ['ad_campaigns', result.adCampaigns],
+  ['creatives', result.creatives],
+ ] as const) {
+  const ids = records.map(row => row.id);
+  assert.equal(ids.length, 1001, table + ' must retain rows on both pages');
+  assert.equal(new Set(ids).size, 1001, table + ' must not repeat rows');
+  assert.deepEqual(ids, fixtures[table].map(row => row.id));
+ }
+});

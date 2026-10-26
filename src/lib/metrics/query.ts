@@ -46,13 +46,13 @@ export async function dashboardData(db:DashboardDb,organizationId:string,f:Filte
     return query.range(a,b);
   });
   const readOrganicAccounts=(range:Filters)=>all<Row<'metrics_organic_accounts'>>((a,b)=>{
-    let query=db.from('metrics_organic_accounts').select('*').eq('organization_id',organizationId).gte('metric_date',range.from).lte('metric_date',range.to).order('metric_date');
+    let query=db.from('metrics_organic_accounts').select('*').eq('organization_id',organizationId).gte('metric_date',range.from).lte('metric_date',range.to).order('metric_date').order('id');
     if(platform)query=query.eq('platform',platform as Row<'metrics_organic_accounts'>['platform']);
     return query.range(a,b);
   });
   const readCreatives=()=>{
     const createQuery=()=>{
-      let query=db.from('creatives').select('*').eq('organization_id',organizationId).order('published_at',{ascending:false});
+      let query=db.from('creatives').select('*').eq('organization_id',organizationId).order('published_at',{ascending:false}).order('id');
       if(options.creativePeriod!==false)query=query.gte('published_at',f.from+'T00:00:00Z').lt('published_at',new Date(Date.parse(f.to)+86400000).toISOString());
       if(platform)query=query.eq('platform',platform as Row<'creatives'>['platform']);
       return query;
@@ -61,7 +61,7 @@ export async function dashboardData(db:DashboardDb,organizationId:string,f:Filte
     return all<Row<'creatives'>>((a,b)=>createQuery().range(a,b));
   };
   const readCampaigns=()=>all<Row<'ad_campaigns'>>((a,b)=>{
-    let query=db.from('ad_campaigns').select('*').eq('organization_id',organizationId).order('name');
+    let query=db.from('ad_campaigns').select('*').eq('organization_id',organizationId).order('name').order('id');
     if(platform)query=query.eq('platform',platform as Row<'ad_campaigns'>['platform']);
     return query.range(a,b);
   });
