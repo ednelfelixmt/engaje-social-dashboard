@@ -26,9 +26,14 @@ export function sumKnown<T>(rows: readonly T[], selector: (row: T) => number | n
   return Number.isFinite(total) ? total : null;
 }
 
-/** Ratios must never leak NaN or Infinity to charts, even for malformed facts. */
+/** Missing, negative or non-finite observations are unavailable, not zero. */
+function nonnegativeOrNull(value: number | null): number | null {
+  return value != null && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+/** Ratios must never leak negative, NaN or Infinity to charts. */
 function finiteRatio(numerator: number, denominator: number, multiplier = 1): number | null {
-  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0) return null;
+  if (!Number.isFinite(numerator) || numerator < 0 || !Number.isFinite(denominator) || denominator <= 0) return null;
   const result = numerator / denominator * multiplier;
   return Number.isFinite(result) ? result : null;
 }
@@ -36,10 +41,10 @@ function finiteRatio(numerator: number, denominator: number, multiplier = 1): nu
 /** A weighted ratio of aggregate numerators/denominators, never an average of ratios. */
 export function paidMetric(row: PaidMetricInput, metric: PaidMetricKey): number | null {
   switch (metric) {
-    case 'spend': return row.spend != null && Number.isFinite(row.spend) && row.spend >= 0 ? row.spend : null;
+    case 'spend': return nonnegativeOrNull(row.spend);
     case 'impressions':
     case 'clicks':
-    case 'leads': return row[metric] != null && Number.isFinite(row[metric]) ? row[metric] : null;
+    case 'leads': return nonnegativeOrNull(row[metric]);
     case 'ctr': return row.impressions != null && row.clicks != null
       ? finiteRatio(row.clicks, row.impressions, 100) : null;
     case 'cpc': return row.spend != null && row.spend >= 0 && row.clicks != null ? finiteRatio(row.spend, row.clicks) : null;
@@ -50,10 +55,10 @@ export function paidMetric(row: PaidMetricInput, metric: PaidMetricKey): number 
 
 export function paidTotals<T extends PaidFact>(rows: readonly T[]): PaidTotals {
   // Empty, invalid or overflowing spend must remain unknown, never fabricated as zero.
-  const spend = sumKnown(rows, row => row.spend >= 0 ? row.spend : null);
-  const impressions = sumKnown(rows, row => row.impressions);
-  const clicks = sumKnown(rows, row => row.clicks);
-  const leads = sumKnown(rows, row => row.leads);
+  const spend = sumKnown(rows, row => nonnegativeOrNull(row.spend));
+  const impressions = sumKnown(rows, row => nonnegativeOrNull(row.impressions));
+  const clicks = sumKnown(rows, row => nonnegativeOrNull(row.clicks));
+  const leads = sumKnown(rows, row => nonnegativeOrNull(row.leads));
   const aggregate = {spend, impressions, clicks, leads};
   return {
     ...aggregate,
