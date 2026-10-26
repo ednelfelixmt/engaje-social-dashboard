@@ -54,6 +54,8 @@ export default tseslint.config(
       'src/lib/metrics/paid-metrics.ts',
       'src/lib/metrics/agency-overview.ts',
       'tests/agency-overview-metrics.test.ts',
+      'src/lib/metrics/rankings.ts',
+      'tests/rankings-scope.test.ts',
       'src/lib/metrics/calendar.ts',
       'scripts/check-architecture.ts',
       'tests/paid-metrics.test.ts',

@@ -93,3 +93,53 @@ test('campaign keys distinguish accounts while retaining observed zeros',()=>{
   assert.equal(result.campaign[0].leads,0);
   assert.equal(result.campaign[1].leads,null);
 });
+
+test('invalid breakdown counts cannot be offset by other observations',()=>{
+  const result=preparePerformanceRankings([],[],[
+    breakdown({spend:20,impressions:100,clicks:10,leads:3,purchases:1,revenue:30}),
+    breakdown({account_id:'account-2',spend:5,impressions:-25,clicks:-4,leads:-1,purchases:-2,revenue:-10}),
+  ],[]).gender[0];
+  assert.equal(result.spend,25);
+  assert.equal(result.revenue,20); // legitimate refund
+  for(const key of ['impressions','clicks','leads','purchases'] as const){
+    assert.equal(result[key],null,key);
+  }
+});
+
+test('creative and audience fallback treat invalid counts as unknown independently',()=>{
+  const result=preparePerformanceRankings([],[
+    ad({impressions:100,clicks:-1,leads:0,purchases:Number.POSITIVE_INFINITY}),
+  ],[],[]);
+  for(const type of ['creative','audience'] as const){
+    const row=result[type][0];
+    assert.equal(row.spend,10);
+    assert.equal(row.impressions,100);
+    assert.equal(row.clicks,null);
+    assert.equal(row.leads,0);
+    assert.equal(row.purchases,null);
+  }
+});
+
+test('campaign rankings preserve zero, fractional attribution and signed revenue',()=>{
+  const row=preparePerformanceRankings([campaign({
+    spend:0,revenue:-7,impressions:-1,clicks:0,leads:0.25,purchases:Number.NaN,
+  })],[],[],[]).campaign[0];
+  assert.equal(row.spend,0);
+  assert.equal(row.revenue,-7);
+  assert.equal(row.impressions,null);
+  assert.equal(row.clicks,0);
+  assert.equal(row.leads,0.25);
+  assert.equal(row.purchases,null);
+});
+
+test('overflowed counts stay unavailable without affecting other ranking metrics',()=>{
+  const row=preparePerformanceRankings([],[],[
+    breakdown({spend:5,impressions:1e308,clicks:1,leads:1,purchases:0}),
+    breakdown({spend:10,impressions:1e308,clicks:2,leads:1,purchases:0}),
+  ],[]).gender[0];
+  assert.equal(row.impressions,null);
+  assert.equal(row.clicks,3);
+  assert.equal(row.leads,2);
+  assert.equal(row.purchases,0);
+  assert.equal(row.spend,15);
+});
