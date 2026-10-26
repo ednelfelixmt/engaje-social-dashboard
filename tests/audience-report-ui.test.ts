@@ -56,3 +56,47 @@ test('metric card makes partial group coverage visible without treating missing 
  const html=renderToStaticMarkup(React.createElement(MetricBreakdownCard,{title:'Synthetic dimension',rows:[point(20),{...point(null),label:'Unavailable'}],currency:'BRL'}));
  assert.ok(html.includes('1 de 2 grupos recebidos'));assert.ok(!html.includes('Unavailable'));assert.ok(!html.includes('NaN'));assert.ok(!html.includes('Infinity'));
 });
+
+
+const {RegionPerformance}=loadTypescript<{RegionPerformance:React.ComponentType<{states:BreakdownPoint[];cities:BreakdownPoint[];currency:string}>}>(new URL('../src/components/dashboard/geography-cross-analysis.tsx',import.meta.url),(id,native)=>native(id));
+
+test('geographic ranking identifies partial measurement coverage rather than claiming a complete distribution',()=>{
+ const html=renderToStaticMarkup(React.createElement(RegionPerformance,{states:[{...point(100),label:'Observed'}, {...point(null),label:'Missing'}],cities:[],currency:'BRL'}));
+ assert.ok(html.includes('1 de 2 grupos recebidos com valor válido'));
+ assert.ok(html.includes('Recorte parcial'));
+ assert.ok(html.includes('Observed'));
+ assert.ok(!html.includes('>Missing<'));
+ assert.ok(!html.includes('NaN'));
+});
+
+test('geographic ranking distinguishes no rows from received groups lacking the selected metric',()=>{
+ const empty=renderToStaticMarkup(React.createElement(RegionPerformance,{states:[],cities:[],currency:'BRL'}));
+ const unavailable=renderToStaticMarkup(React.createElement(RegionPerformance,{states:[point(null)],cities:[],currency:'BRL'}));
+ assert.ok(empty.includes('Sem registros geográficos recebidos'));
+ assert.ok(!empty.includes('Grupos geográficos recebidos, mas'));
+ assert.ok(unavailable.includes('0 de 1 grupos recebidos'));
+ assert.ok(unavailable.includes('Grupos geográficos recebidos, mas sem valores válidos'));
+ assert.ok(!unavailable.includes('Sem registros geográficos recebidos'));
+});
+
+test('geographic ranking preserves observed zeros, rejects non-finite observations and discloses truncation',()=>{
+ const zero=renderToStaticMarkup(React.createElement(RegionPerformance,{states:[{...point(0),label:'Observed zero'},{...point(Number.POSITIVE_INFINITY),label:'Invalid'}],cities:[],currency:'BRL'}));
+ assert.ok(zero.includes('1 de 2 grupos recebidos'));
+ assert.ok(zero.includes('Observed zero'));
+ assert.ok(!zero.includes('>Invalid<'));
+ assert.ok(!zero.includes('Infinity'));
+ const states=Array.from({length:13},(_,i)=>({...point(i+1),label:'Place '+(i+1)}));
+ const clipped=renderToStaticMarkup(React.createElement(RegionPerformance,{states,cities:[],currency:'BRL'}));
+ assert.ok(clipped.includes('13 de 13 grupos recebidos'));
+ assert.ok(clipped.includes('Exibindo os 12 maiores valores'));
+ assert.ok(!clipped.includes('>Place 1<'));
+ assert.ok(clipped.includes('>Place 13<'));
+});
+
+
+test('geographic coverage follows the selected city and lead metric instead of the default state impressions',()=>{
+ let hook=0;
+ const {RegionPerformance:SelectedRegion}=loadTypescript<{RegionPerformance:React.ComponentType<{states:BreakdownPoint[];cities:BreakdownPoint[];currency:string}>}>(new URL('../src/components/dashboard/geography-cross-analysis.tsx',import.meta.url),(id,native)=>id==='react'?{...React,useState:()=>[['Leads','city'][hook++],()=>{}]}:native(id));
+ const html=renderToStaticMarkup(React.createElement(SelectedRegion,{states:[{...point(999),label:'State only',leads:99}],cities:[{...point(1),label:'City observed',leads:3},{...point(1),label:'City missing',leads:null}],currency:'BRL'}));
+ assert.ok(html.includes('1 de 2 grupos recebidos com valor válido para leads'));assert.ok(html.includes('Recorte parcial'));assert.ok(html.includes('City observed'));assert.ok(!html.includes('>City missing<'));assert.ok(!html.includes('State only'));
+});

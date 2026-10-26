@@ -36,9 +36,10 @@ test('executive presentation includes both periods, provenance, attribution warn
  const report=buildPerformanceReport([fact],[{...fact,id:'prior',metric_date:'2026-10-19',attribution_window:'1d_click'}],scope);
  const html=renderToStaticMarkup(React.createElement(PerformanceReportView,{report}));
  for(const text of ['Atual: 2026-10-20','Comparativo: 2026-10-19','Leads atribuídos','Por plataforma','Por campanha','não representam pessoas únicas','Variação de leads e CPL indisponível','1 registros recebidos','Fuso cadastral: America/Cuiaba'])assert.ok(html.includes(text),text);
+ assert.ok(html.includes('Exportar CSV'));assert.ok(html.includes('Campos vazios indicam métricas indisponíveis'));
  assert.ok(html.includes('&lt;script&gt;'));assert.ok(!html.includes('<script>private'));assert.ok(!html.includes('NaN'));assert.ok(!html.includes('Infinity'));
 });
 test('unselected comparison is omitted and empty reports cannot print',()=>{
  const html=renderToStaticMarkup(React.createElement(PerformanceReportView,{report:buildPerformanceReport([],[],{...scope,compare:'none'})}));
- assert.ok(html.includes('Sem registros de mídia paga'));assert.ok(html.includes('disabled=""'));assert.ok(!html.includes('vs. comparativo'));assert.ok(!html.includes('Por plataforma'));
+ assert.ok(html.includes('Sem registros de mídia paga'));assert.ok(html.includes('Exportar CSV'));assert.equal((html.match(/disabled=\"\"/g)||[]).length,2);assert.ok(html.includes('disabled=""'));assert.ok(!html.includes('vs. comparativo'));assert.ok(!html.includes('Por plataforma'));
 });
