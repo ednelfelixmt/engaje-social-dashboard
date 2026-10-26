@@ -22,3 +22,10 @@ test('authorized agency administrator retains configuration and sharing navigati
  for(const path of ['settings/dashboard','settings/integrations','settings/branding','settings/data-quality','sharing'])
   assert.ok(html.includes('/fixture-a/'+path),path);
 });
+
+
+test('executive report navigation respects the tenant paid-page setting for viewers',()=>{
+ const enabled=renderToStaticMarkup(createElement(Navigation,{slug:'fixture-a',canShare:false,enabled:['paid']}));
+ const disabled=renderToStaticMarkup(createElement(Navigation,{slug:'fixture-a',canShare:false,enabled:['overview']}));
+ assert.ok(enabled.includes('/fixture-a/reports/performance'));assert.ok(enabled.includes('data-report-navigation'));assert.ok(!disabled.includes('/fixture-a/reports/performance'));
+});
