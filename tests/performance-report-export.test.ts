@@ -30,7 +30,7 @@ test('executive CSV is UTF-8, deterministic, period-scoped, and never exports so
  assert.equal(csv.replace(/^\ufeff/, '').split('\r\n').length, 1+2+2+2);
  assert.ok(csv.includes('"comparativo";"2026-10-19";"2026-10-19"'));
  assert.ok(csv.includes('"atual";"2026-10-20";"2026-10-20"'));
- assert.ok(csv.includes('"'=HYPERLINK('));
+ assert.ok(csv.includes(`"'=HYPERLINK(`));
  assert.ok(!csv.includes('"=HYPERLINK('));
  assert.ok(!csv.includes('synthetic-secret-source-id'));
  assert.ok(!csv.includes('synthetic-prior-source-id'));
