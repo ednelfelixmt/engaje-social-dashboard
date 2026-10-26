@@ -17,12 +17,16 @@ export function reconcilePaidFacts(rows:readonly ReconciliationRow[]):Reconcilia
  const seen=new Set<string>();
  const currency=rows[0].currency;
  for(const row of rows){
-  if(!row.platform||!row.accountId||!row.campaignId||!validCalendarDate(row.date)||!/^[A-Z]{3}$/.test(row.currency))
+  // Only Meta's act_ prefix is an alias; other providers may use it literally.
+  // Evaluate the canonical identifier before validating the grain to reject 'act_' alone.
+  const accountId = row.platform === 'meta_ads' && row.accountId
+    ? row.accountId.replace(/^act_/, '') : row.accountId;
+  if(!row.platform||!accountId||!row.campaignId||!validCalendarDate(row.date)||!/^[A-Z]{3}$/.test(row.currency))
    return {status:'invalid',reason:'Malformed fact grain'};
   if(row.currency!==currency)return {status:'mixed_currency',reason:'Currency conversion is required upstream'};
   if(!Number.isFinite(row.spend)||row.spend<0||[row.impressions,row.clicks,row.leads].some(v=>v!==null&&(!Number.isFinite(v)||v<0)))
    return {status:'invalid',reason:'Invalid numeric fact'};
-  const key=JSON.stringify([row.platform,row.accountId,row.campaignId,row.date,row.currency]);
+  const key=JSON.stringify([row.platform,accountId,row.campaignId,row.date,row.currency]);
   if(seen.has(key))return {status:'duplicate_grain',reason:'Repeated campaign-day fact'};
   seen.add(key);
  }
