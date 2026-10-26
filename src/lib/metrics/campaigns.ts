@@ -3,8 +3,9 @@ import type {CampaignPerformance} from '@/types/domain';
 import {finiteRatio,sum} from './aggregation';
 import {summarizeWeightedMetric, weightedMetricKeys, providerWeightedMetricBounds, type WeightedMetricSummaries} from './weighted-metrics';
 
-function normalizedAccountId(value: string) {
-  return value.replace(/^act_/, '');
+/** Only Meta defines act_ as an alias for the same advertising account. */
+function normalizedAccountId(value: string, platform: string) {
+  return platform === 'meta_ads' ? value.replace(/^act_/, '') : value;
 }
 
 /** A provider's distinct audience/clickers cannot be summed across daily facts. */
@@ -27,14 +28,14 @@ export function campaigns(
 ): CampaignPerformance[] {
   const groups = new Map<string, Row<'metrics_ads'>[]>();
   for (const ad of ads) {
-    const key = JSON.stringify([ad.organization_id,ad.platform,normalizedAccountId(ad.account_id),ad.campaign_id,ad.currency]);
+    const key = JSON.stringify([ad.organization_id,ad.platform,normalizedAccountId(ad.account_id,ad.platform),ad.campaign_id,ad.currency]);
     const group=groups.get(key);
     if(group)group.push(ad);else groups.set(key,[ad]);
   }
 
   const crmByCampaignDay=new Map<string,Row<'metrics_crm'>[]>();
   for(const row of crm){
-    const key=JSON.stringify([row.organization_id,row.metric_date,row.channel,normalizedAccountId(row.account_id),row.campaign_id,row.currency]);
+    const key=JSON.stringify([row.organization_id,row.metric_date,row.channel,normalizedAccountId(row.account_id,row.channel),row.campaign_id,row.currency]);
     const group=crmByCampaignDay.get(key);
     if(group)group.push(row);else crmByCampaignDay.set(key,[row]);
   }
@@ -51,7 +52,7 @@ export function campaigns(
     const sources = new Set<string>();
 
     for (const [day, daily] of byDay) {
-      const actual = (crmByCampaignDay.get(JSON.stringify([first.organization_id,day,first.platform,normalizedAccountId(first.account_id),first.campaign_id,first.currency]))||[])
+      const actual = (crmByCampaignDay.get(JSON.stringify([first.organization_id,day,first.platform,normalizedAccountId(first.account_id,first.platform),first.campaign_id,first.currency]))||[])
         .filter((row)=>row.is_complete&&row.revenue!=null);
       const chosen = actual.find((row) => row.source === preferred) || actual[0];
       // CRM revenue can be signed, but invalid measurements and negative
@@ -126,9 +127,9 @@ export function campaigns(
     };
   });
 
-  const known = new Set(performance.map((row) => JSON.stringify([row.organizationId,row.platform,normalizedAccountId(row.accountId),row.campaignId])));
+  const known = new Set(performance.map((row) => JSON.stringify([row.organizationId,row.platform,normalizedAccountId(row.accountId,row.platform),row.campaignId])));
   for (const campaign of catalog) {
-    const key = JSON.stringify([campaign.organization_id,campaign.platform,normalizedAccountId(campaign.account_id),campaign.external_id]);
+    const key = JSON.stringify([campaign.organization_id,campaign.platform,normalizedAccountId(campaign.account_id,campaign.platform),campaign.external_id]);
     if (known.has(key)) continue;
     performance.push({
       organizationId: campaign.organization_id,

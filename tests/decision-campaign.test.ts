@@ -62,3 +62,14 @@ test('decision-analysis uses the scoped historical matcher instead of campaignId
   assert.match(source, /findComparableCampaign\(row,previousCampaigns\)/);
   assert.doesNotMatch(source, /previousCampaigns\.find\(\(item\)=>item\.campaignId===row\.campaignId\)/);
 });
+
+
+test('act_ is a literal non-Meta account prefix and does not match another account', () => {
+  for (const platform of ['google_ads','tiktok_ads','microsoft_ads'] as const) {
+    const prefixed = campaign({platform, accountId: 'act_123'});
+    const plain = campaign({platform, accountId: '123'});
+    assert.equal(findComparableCampaign(prefixed, [plain]), null, platform);
+    assert.equal(findComparableCampaign(plain, [prefixed]), null, platform);
+    assert.equal(findComparableCampaign(prefixed, [campaign({platform, accountId: 'act_123'})])?.accountId, 'act_123', platform);
+  }
+});
