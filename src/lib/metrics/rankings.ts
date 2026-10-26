@@ -39,6 +39,11 @@ function known(value:number|null):number|null {
   return value != null && Number.isFinite(value) ? value : null;
 }
 
+/** Provider event counts may be fractional, but can never be negative. */
+function knownCount(value:number|null):number|null {
+  return value != null && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
 function checkedSpend(value:number):number {
   if (!Number.isFinite(value) || value < 0) throw new Error('Invalid ranking spend');
   return value;
@@ -69,8 +74,8 @@ function aggregateBreakdowns(rows:Row<'metrics_ads_breakdowns'>[],type:RankingDi
     const key=JSON.stringify([row.organization_id,row.platform,row.currency,row.dimension_value]);
     grouped.set(key,add(grouped.get(key),{
       key,label:row.dimension_label,spend:checkedSpend(row.spend),
-      revenue:known(row.revenue),impressions:known(row.impressions),
-      clicks:known(row.clicks),leads:known(row.leads),purchases:known(row.purchases),
+      revenue:known(row.revenue),impressions:knownCount(row.impressions),
+      clicks:knownCount(row.clicks),leads:knownCount(row.leads),purchases:knownCount(row.purchases),
     }));
   }
   return [...grouped.values()];
@@ -86,8 +91,8 @@ function fallbackAds(rows:Row<'metrics_ads'>[],type:'audience'|'creative',creati
     const label=type==='creative'?(creativeNames.get(creativeKey)||`Criativo ${value}`):`Público ${value}`;
     grouped.set(key,add(grouped.get(key),{
       key,label,spend:checkedSpend(row.spend),revenue:known(row.revenue),
-      impressions:known(row.impressions),clicks:known(row.clicks),
-      leads:known(row.leads),purchases:known(row.purchases),
+      impressions:knownCount(row.impressions),clicks:knownCount(row.clicks),
+      leads:knownCount(row.leads),purchases:knownCount(row.purchases),
     }));
   }
   return [...grouped.values()];
@@ -104,8 +109,8 @@ export function preparePerformanceRankings(campaigns:CampaignPerformance[],ads:R
   result.campaign=campaigns.map(row=>({
     key:JSON.stringify([row.organizationId,row.platform,row.accountId,row.campaignId,row.currency]),
     label:row.campaignName,spend:checkedSpend(row.spend),revenue:known(row.revenue),
-    impressions:known(row.impressions),clicks:known(row.clicks),
-    leads:known(row.leads),purchases:known(row.purchases),
+    impressions:knownCount(row.impressions),clicks:knownCount(row.clicks),
+    leads:knownCount(row.leads),purchases:knownCount(row.purchases),
   }));
   for(const type of dimensions){
     const detailed=aggregateBreakdowns(breakdowns,type);
