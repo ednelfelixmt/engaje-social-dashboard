@@ -74,10 +74,9 @@ export function campaigns(
     const pageViews = sum(rows, 'page_views');
     const leads = sum(rows, 'leads');
     const messageLeads = sum(rows, 'message_leads');
-    const storedRegistrationLeads = sum(rows, 'registration_leads');
-    const registrationLeads = storedRegistrationLeads ?? (leads != null && messageLeads != null
-      ? Math.max(0, leads - messageLeads)
-      : null);
+    // Registration leads must be observed from the source. Lead categories may overlap
+    // or be absent independently; subtraction from total/message leads fabricates data.
+    const registrationLeads = sum(rows, 'registration_leads');
     const checkouts = sum(rows, 'checkouts');
     const metricValues:Record<string,number|null>={};
     for(const key of primitiveMetricKeys)metricValues[key]=sum(rows,key);

@@ -148,3 +148,34 @@ test('a non-Meta catalog account cannot be hidden by another account with an act
  assert.equal(result.find(row=>row.accountId==='act_123')?.spend,100);
  assert.equal(result.find(row=>row.accountId==='123')?.revenue,null);
 });
+
+test('registration counts require direct source observations, never total-minus-messages inference',()=>{
+ const missing=campaigns([ad({registration_leads:null,leads:9,message_leads:2})],[],'crm')[0];
+ assert.equal(missing.leads,9);
+ assert.equal(missing.messageLeads,2);
+ assert.equal(missing.registrationLeads,null);
+ assert.equal(missing.metricValues.registration_leads,null);
+ assert.equal(missing.costPerRegistration,null);
+
+ const inconsistent=campaigns([ad({registration_leads:null,leads:1,message_leads:3})],[],'crm')[0];
+ assert.equal(inconsistent.registrationLeads,null); // Never clamp an inferred -2 to fabricated zero.
+
+ const partiallyReported=campaigns([
+  ad({metric_date:'2026-10-23',spend:50,leads:5,message_leads:2,registration_leads:3}),
+  ad({metric_date:'2026-10-24',spend:60,leads:8,message_leads:3,registration_leads:null}),
+ ],[],'crm')[0];
+ assert.equal(partiallyReported.registrationLeads,null);
+ assert.equal(partiallyReported.metricValues.registration_leads,null);
+ assert.equal(partiallyReported.costPerRegistration,null);
+ assert.equal(partiallyReported.leads,13);
+ assert.equal(partiallyReported.messageLeads,5);
+
+ const observedZero=campaigns([ad({registration_leads:0,leads:5,message_leads:2})],[],'crm')[0];
+ assert.equal(observedZero.registrationLeads,0);
+ assert.equal(observedZero.metricValues.registration_leads,0);
+ assert.equal(observedZero.costPerRegistration,null); // Cost requires a positive denominator.
+
+ const observedFraction=campaigns([ad({registration_leads:0.5,leads:5,message_leads:2})],[],'crm')[0];
+ assert.equal(observedFraction.registrationLeads,0.5);
+ assert.equal(observedFraction.costPerRegistration,200);
+});
