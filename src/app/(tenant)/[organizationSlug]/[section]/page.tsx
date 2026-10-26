@@ -6,7 +6,7 @@ import {filters, dashboardData, previous as previousRange} from '@/lib/metrics/q
 import {Ranking} from '@/components/dashboard/ranking';
 import {campaigns} from '@/lib/metrics/campaigns';
 import {preparePerformanceRankings} from '@/lib/metrics/rankings';
-import {defaultFunnelIcons, funnelMetricDefinitions, parseFunnelSteps, type FunnelDataKey} from '@/lib/metrics/funnel-config';
+import {configuredFunnel} from '@/lib/metrics/funnel-performance';
 import {platformDashboardByRoute, platformDashboards} from '@/lib/metrics/platforms';
 import {Filters} from '@/components/dashboard/filters';
 import {Funnel} from '@/components/dashboard/funnel';
@@ -56,21 +56,6 @@ function decisionTimeline(rows:Row<'metrics_ads'>[]):DecisionTimelinePoint[]{
   const grouped=new Map<string,DecisionTimelinePoint>();
   for(const row of rows){const item=grouped.get(row.metric_date)??{date:row.metric_date,spend:0,impressions:0,reach:0,clicks:0,leads:0};item.spend+=row.spend;for(const key of ['impressions','reach','clicks','leads'] as const)item[key]=item[key]===null||row[key]===null?null:Number(item[key])+Number(row[key]);grouped.set(row.metric_date,item);}
   return [...grouped.values()].sort((a,b)=>a.date.localeCompare(b.date));
-}
-
-function funnelValue(rows:CampaignPerformance[],key:FunnelDataKey|undefined){
-  const available=key?rows.filter((row)=>row[key]!=null):[];
-  return {value:key&&available.length?available.reduce((total,row)=>total+Number(row[key]),0):null,spend:available.reduce((total,row)=>total+row.spend,0)};
-}
-
-function configuredFunnel(rows:CampaignPerformance[],rawSteps:unknown,previousRows:CampaignPerformance[]=[]){
-  return parseFunnelSteps(rawSteps).map((step)=>{
-    const definition=funnelMetricDefinitions.find((item)=>item.key===step.metric)!;const key='dataKey' in definition?definition.dataKey:undefined;
-    const {value,spend}=funnelValue(rows,key);
-    const previous=previousRows.length?funnelValue(previousRows,key).value:null;
-    const cost=value?spend/value*('costMultiplier' in definition&&definition.costMultiplier?definition.costMultiplier:1):null;
-    return {label:step.label,value,costLabel:definition.costLabel,cost,color:step.color,icon:step.icon??defaultFunnelIcons[step.metric],target:step.target??null,previousValue:previous};
-  });
 }
 
 export default async function Page({params: params_, searchParams: searchParams_}: {params: Promise<{organizationSlug: string; section: string}>; searchParams: Promise<Record<string, string | undefined>>}) {
@@ -132,7 +117,7 @@ export default async function Page({params: params_, searchParams: searchParams_
   const previousCampaigns = campaigns(previousAds, data.crmComparison, config.preferred_revenue_source, catalog);
   const campaignsWithMovement = currentCampaigns.filter((row) => row.spend > 0 || Number(row.impressions ?? 0) > 0 || Number(row.clicks ?? 0) > 0 || Number(row.leads ?? 0) > 0 || Number(row.purchases ?? 0) > 0);
   const previousCampaignsWithMovement = previousCampaigns.filter((row) => row.spend > 0 || Number(row.impressions ?? 0) > 0 || Number(row.clicks ?? 0) > 0 || Number(row.leads ?? 0) > 0 || Number(row.purchases ?? 0) > 0);
-  const funnelSteps=configuredFunnel(campaignsWithMovement,config.funnel_steps,f.compare==='none'?[]:previousCampaignsWithMovement);
+  const funnelSteps=configuredFunnel(currentCampaigns,config.funnel_steps,{organizationId:org.id,currency:f.currency},f.compare==='none'?undefined:previousCampaigns);
   const paidCreativePlatforms=new Set(['meta_ads','google_ads','tiktok_ads']);
   const movingAdIds=new Set(data.ads.map((row)=>row.ad_id));
   const filteredCreatives = data.creatives.filter((creative) => contentMode==='paid'&&paidCreativePlatforms.has(creative.platform)&&(!movingAdIds.size||movingAdIds.has(creative.ad_id??'')));

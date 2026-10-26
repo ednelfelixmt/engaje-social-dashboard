@@ -32,3 +32,11 @@ Quality Gate e Vercel do mesmo SHA são obrigatórios para integrar. Não há mi
 Referências: [Supabase SSR/PKCE](https://supabase.com/docs/guides/auth/server-side/advanced-guide), [Password reset](https://supabase.com/docs/reference/javascript/auth-resetpasswordforemail), [Password security](https://supabase.com/docs/guides/auth/password-security), [Sign out](https://supabase.com/docs/reference/javascript/auth-signout). Estado da publicação e testes reais deve ser registrado sem confundir mocks com homologação.
 
 Validação local final: 265 testes, 140 checks SQL, lint ampliado, tipos, arquitetura e build aprovados. Os testes de renderização detectaram uma label sem fechamento no formulário; corrigida antes dos gates. O build gera as rotas forgot-password, recovery/callback e reset-password. Nenhum e-mail real foi enviado para essa validação.
+
+## Fechamento do código e bloqueio operacional
+
+PR #151 integrado em 5d3a180e6d3f327ae5f31262b1bd64b38d455d2e após Quality Gate #221 e Vercel aprovados no head 325cd235bfcdb74c732610b9b90feb11b8e31952. Em 25/10, a navegação ao painel Auth/URL configuration redirecionou ao login; nenhuma configuração foi alterada nem acesso contornado. Callback exato e SMTP seguem dependência operacional registrada.
+
+Sonda HTTP pública posterior encontrou produção ainda no deploy f6612cde do ciclo 04: forgot-password respondeu 307 para /login, com X-Matched-Path de tenant. O preview de #151 está READY, mas isso não confirma promoção produtiva; a publicação deve ser verificada separadamente. Nenhum pedido de e-mail ou mudança de senha real foi executado.
+
+Publicação concluída: deployment dpl_GizpzttpeEDxftwdSrRDeEFehziP READY em produção, commit 5d3a180e6d3f327ae5f31262b1bd64b38d455d2e, com domínio mediahub.engajeperformance.com.br atribuído. A árvore Git do merge é idêntica à do head aprovado de #151. Sondas HTTP reais sem sessão: forgot-password 200 com formulário de solicitação; reset-password 200 sem inputs de senha; callback sem código 307 para origem canônica/error=invalid_link, private/no-store, Pragma no-cache, Expires 0 e Referrer-Policy no-referrer. Somente GETs; não validam SMTP nem recuperação autenticada.
