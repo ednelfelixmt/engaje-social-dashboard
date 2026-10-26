@@ -53,3 +53,39 @@ test('rejects invalid facts and grain, and distinguishes missing data from zero'
  assert.equal(result.totals.clicks,0);
  assert.equal(result.totals.cpl,null);
 });
+
+test('Meta aliases cannot masquerade as independent daily account facts', () => {
+  const meta = {...a, platform: 'meta_ads', accountId: 'act_123'};
+  const alias = {...meta, accountId: '123', spend: 900};
+  assert.equal(reconcilePaidFacts([meta, alias]).status, 'duplicate_grain');
+  assert.equal(reconcilePaidFacts([alias, meta]).status, 'duplicate_grain');
+  assert.equal(reconcilePaidFacts([meta]).status, 'ready');
+  assert.equal(reconcilePaidFacts([alias]).status, 'ready');
+  assert.equal(reconcilePaidFacts([{...meta, accountId: 'act_'}]).status, 'invalid');
+});
+
+test('account identifiers with act_ remain separate for non-Meta providers', () => {
+  for (const platform of ['google_ads', 'tiktok_ads', 'microsoft_ads']) {
+    const first = {...a, platform, accountId: 'act_123'};
+    const second = {...b, platform, campaignId: first.campaignId, accountId: '123'};
+    const result = reconcilePaidFacts([first, second]);
+    assert.equal(result.status, 'ready', platform);
+    if (result.status === 'ready') {
+      assert.equal(result.totals.spend, first.spend + second.spend, platform);
+      assert.equal(result.rowCount, 2, platform);
+    }
+  }
+});
+
+test('Meta canonical account identity still distinguishes campaigns, dates and platforms', () => {
+  const meta = {...a, platform: 'meta_ads', accountId: 'act_123'};
+  const differentCampaign = {...b, platform: 'meta_ads', accountId: '123'};
+  const differentDate = {...meta, accountId: '123', date: '2026-10-23'};
+  const differentPlatform = {...meta, platform: 'google_ads', accountId: '123'};
+  const result = reconcilePaidFacts([meta, differentCampaign, differentDate, differentPlatform]);
+  assert.equal(result.status, 'ready');
+  if (result.status === 'ready') {
+    assert.equal(result.rowCount, 4);
+    assert.equal(result.totals.spend, 350);
+  }
+});
