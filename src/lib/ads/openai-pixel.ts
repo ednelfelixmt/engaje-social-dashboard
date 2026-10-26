@@ -31,8 +31,8 @@ export function initializeOpenAIAdsPixel(consentGranted: boolean): boolean {
     if (window.__openAIAdsPixelId) return window.__openAIAdsPixelId === pixelId;
     const existing = window.oaiq;
     if (!existing) {
-      const queue: unknown[][] = [];
-      const stub: Oaiq = (...args) => { queue.push(args); };
+      const queue: IArguments[] = [];
+      const stub: Oaiq = function (..._args: unknown[]) { queue.push(arguments); };
       Object.assign(stub, { q: queue });
       window.oaiq = stub;
       const script = document.createElement('script');
@@ -40,6 +40,7 @@ export function initializeOpenAIAdsPixel(consentGranted: boolean): boolean {
       script.src = PIXEL_SCRIPT;
       document.head.appendChild(script);
     }
+    window.oaiq?.('consent', true);
     window.oaiq?.('init', { pixelId });
     window.__openAIAdsPixelId = pixelId;
     return true;
@@ -52,8 +53,9 @@ export function initializeOpenAIAdsPixel(consentGranted: boolean): boolean {
 export function measureOpenAIAdsConversion(
   event: OpenAIAdsEvent,
   consentGranted: boolean,
-  options?: Record<string, string | number | boolean>,
+  data: { type: 'customer_action' | 'contents' | 'plan_enrollment'; [key: string]: unknown },
+  options?: { event_id?: string; opt_out?: boolean },
 ): void {
   if (!consentGranted || typeof window === 'undefined' || !window.__openAIAdsPixelId) return;
-  try { window.oaiq?.('measure', event, options ?? {}); } catch { /* optional telemetry */ }
+  try { window.oaiq?.('measure', event, data, options ?? {}); } catch { /* optional telemetry */ }
 }
