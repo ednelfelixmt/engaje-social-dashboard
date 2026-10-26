@@ -1,9 +1,11 @@
 import type {CampaignPerformance} from '@/types/domain';
 import {paidWeightedMetrics, weightedMetricKeys} from './weighted-metrics';
 
+// Revenue adjustments/refunds may be signed; impressions, events and spend cannot.
+const signedMonetaryMetrics = new Set(['revenue', 'conversion_value']);
 function availableTotal(rows:CampaignPerformance[],key:string){
   const values=rows.map(row=>row.metricValues[key]);
-  if(!values.length||values.some(value=>value==null||!Number.isFinite(value)))return null;
+  if(!values.length||values.some(value=>value==null||!Number.isFinite(value)||(!signedMonetaryMetrics.has(key)&&value<0)))return null;
   const total=values.reduce<number>((sum,value)=>sum+Number(value),0);
   return Number.isFinite(total)?total:null;
 }

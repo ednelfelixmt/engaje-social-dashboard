@@ -464,3 +464,12 @@ Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamen
   dependências em [24-release-readiness-2026-10-25.md](24-release-readiness-2026-10-25.md).
 - SEC-010/011, rollout SEC-014, UX-002, entrega de e-mail e cota Vercel continuam
   com seus próprios gates. Produção consultada ainda no commit `5d3a180e`.
+
+### 25/10/2026 — ANA-023: domínio válido para somas aditivas do dashboard (PR em validação)
+
+- **Falha P1 de contrato identificada em código:** `paidSummary.availableTotal` rejeitava valores ausentes/não finitos, mas agregava gastos negativos e eventos negativos como números observados. Isso permitia impressões, cliques, leads, compras e métricas de custo/CTR negativos, divergindo da validação já aplicada por `paidTotals` e pelos contratos do funil. A constatação decorre da inspeção estática, **não** de incidente confirmado em produção.
+- **Correção independente e reversível:** tornar indisponível (`null`) qualquer total de spend/evento com entrada negativa, preservando outros indicadores válidos, zero conhecido, frações legítimas de atribuição e guardas de overflow. Manter ajustes financeiros assinados apenas em `revenue` e `conversion_value` para não descartar estornos documentáveis. Nenhum dado de origem é alterado.
+- **Regressões sintéticas:** novo `tests/paid-summary-domain.test.ts` cobre gasto inválido, eventos negativos, ausência parcial por coluna, zeros/frações, receita ajustada e overflow; arquivo incluído no lint incremental. O runner `npm test` encontra o teste pelo glob existente.
+- **Aceite:** revisão do diff, Quality Gate completo e Vercel `success` no mesmo head SHA antes de qualquer merge; nenhuma homologação de JWT, fluxo UX ou dados do provedor é inferida. Falhas de CI/deploy impedem integração e devem ser registradas no PR.
+- **Risco/rollback:** KPIs que antes exibiam totais negativos passam a `—`, sem inventar zero. Reverter somente este pacote em caso de regressão operacional e preservar o princípio de não agregar fatos inválidos numa correção subsequente.
+- **Revisão de PRs no início do lote:** #149 e #154 abertos com conflitos; #157 aberto como draft sem testes declarados. Status Vercel dos respectivos heads: `failure` por `build-rate-limit`; não integrá-los nem remover proteções. **SEC-010/011, SEC-014 runtime e UX-002 seguem pendentes.** Sem migração, segredos, RLS, OAuth ou escrita em registros de clientes.
