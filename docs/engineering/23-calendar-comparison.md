@@ -19,3 +19,7 @@ No head inicial e6e328676e9c4f3c2ed272378e1b2546e9ddbd2f de #152, Quality Gate #
 O head final precisa repetir Quality Gate e Vercel; nenhum merge enquanto a Vercel não aprovar o mesmo SHA. Não foram alterados plano, limites, equipe ou proteções para contornar a cota. A hora de renovação não foi fornecida pelo status. Referência operacional: [limites da Vercel](https://vercel.com/docs/limits).
 
 Validação local consolidada: 292 testes aprovados (27 regressões novas no ciclo 07), lint ampliado, tipos da aplicação/helper Edge e arquitetura aprovados. 140 checks SQL já aprovados no mesmo ciclo, sem mudança de esquema. Build final e Vercel dependem da execução do novo head em CI/preview; não herdados do head anterior.
+
+## Gates finais e integração — 25/10/2026
+
+Quality Gate #226 passou no head a0d5869fa8035cbb735d951c66ab03d10936d40a. A nova tentativa de preview dpl_2NAqZNv9ezCRB9rXYgQxg1YRDYZf ficou READY e atualizou Vercel para success nesse SHA. PR #152 integrado em dfea7ccfc9c489ba8af9c56ff28924192d5819fd, árvore idêntica à aprovada. Deployment de produção recusado por api-deployments-free-per-day (HTTP 402, retryAfter 86400); produção ainda 5d3a180e. Ver [24-release-and-auth-operations.md](24-release-and-auth-operations.md). O erro local EPERM segue registro de ambiente, sem alterar o build validado no CI.
