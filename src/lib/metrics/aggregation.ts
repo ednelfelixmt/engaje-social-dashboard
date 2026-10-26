@@ -2,12 +2,17 @@
  * Pure, fail-closed aggregations for campaign and dashboard metrics.
  * No implicit currency conversion or conversion of missing values to zero.
  */
+/** Only revenue and conversion value can be signed (refunds/adjustments).
+ * Spend and event counts cannot be offset by negative observations.
+ */
+const signedMonetaryKeys = new Set(['revenue', 'conversion_value']);
+
 export function sum(rows:readonly Record<string,unknown>[],key:string):number|null {
   if(rows.length===0)return null;
   let total=0;
   for(const row of rows){
     const value=row[key];
-    if(typeof value!=='number'||!Number.isFinite(value))return null;
+    if(typeof value!=='number'||!Number.isFinite(value)||(!signedMonetaryKeys.has(key)&&value<0))return null;
     total+=value;
     if(!Number.isFinite(total))return null;
   }
