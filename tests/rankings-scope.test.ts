@@ -143,3 +143,52 @@ test('overflowed counts stay unavailable without affecting other ranking metrics
   assert.equal(row.purchases,0);
   assert.equal(row.spend,15);
 });
+
+
+test('Meta account aliases share the correct creative and audience fallback ranking',()=>{
+  // Two different daily observations from the same Meta account; IDs alone differ by act_.
+  const facts=[
+    ad({account_id:'act_123',metric_date:'2026-10-20',spend:10}),
+    ad({account_id:'123',metric_date:'2026-10-21',spend:20}),
+  ];
+  const creatives=[{organization_id:'tenant-a',platform:'meta_ads',account_id:'123',ad_id:'ad-1',caption:'Peça sintética'} as Row<'creatives'>];
+  const first=preparePerformanceRankings([],facts,[],creatives);
+  const reversed=preparePerformanceRankings([],[...facts].reverse(),[],creatives);
+  for(const dimension of ['creative','audience'] as const){
+    assert.equal(first[dimension].length,1,dimension);
+    assert.equal(first[dimension][0].spend,30);
+    assert.equal(first[dimension][0].clicks,20);
+    assert.deepEqual(first[dimension],reversed[dimension]);
+  }
+  assert.equal(first.creative[0].label,'Peça sintética');
+});
+
+test('non-Meta providers keep act_ as literal account ID in fallback rankings',()=>{
+  const facts=[
+    ad({platform:'google_ads',account_id:'act_123'}),
+    ad({platform:'google_ads',account_id:'123'}),
+  ];
+  const creatives=[{organization_id:'tenant-a',platform:'google_ads',account_id:'123',ad_id:'ad-1',caption:'Google synthetic'} as Row<'creatives'>];
+  const result=preparePerformanceRankings([],facts,[],creatives);
+  assert.equal(result.audience.length,2);
+  assert.equal(result.creative.length,2);
+  assert.deepEqual(result.creative.map(row=>row.label).sort(),['Criativo ad-1','Google synthetic']);
+});
+
+test('conflicting creative names across Meta aliases use a neutral label regardless of source order',()=>{
+  const creatives=[
+    {organization_id:'tenant-a',platform:'meta_ads',account_id:'act_123',ad_id:'ad-1',caption:'Versão A'} as Row<'creatives'>,
+    {organization_id:'tenant-a',platform:'meta_ads',account_id:'123',ad_id:'ad-1',caption:'Versão B'} as Row<'creatives'>,
+  ];
+  const first=preparePerformanceRankings([],[ad({account_id:'123'})],[],creatives);
+  const reversed=preparePerformanceRankings([],[ad({account_id:'123'})],[],[...creatives].reverse());
+  assert.equal(first.creative[0].label,'Criativo ad-1');
+  assert.deepEqual(first.creative,reversed.creative);
+});
+
+test('incomplete Meta act_ marker is not converted into an empty account identity',()=>{
+  const result=preparePerformanceRankings([],[
+    ad({account_id:'act_'}),ad({account_id:''}),
+  ],[],[]);
+  assert.equal(result.creative.length,2);
+});
