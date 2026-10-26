@@ -7,6 +7,11 @@ function normalizedAccountId(value: string) {
   return value.replace(/^act_/, '');
 }
 
+/** A provider's distinct audience/clickers cannot be summed across daily facts. */
+function knownUnique(value: number | null | undefined): number | null {
+  return value != null && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
 const primitiveMetricKeys = [
   'conversion_value','impressions','reach','clicks','link_clicks','outbound_clicks','unique_clicks','page_views',
   'video_views','video_2s_views','video_3s_views','video_6s_views','thruplays','video_25','video_50','video_75','video_95','video_100',
@@ -59,7 +64,8 @@ export function campaigns(
     }
 
     const impressions = sum(rows, 'impressions');
-    const reach = sum(rows, 'reach');
+    // Reach and unique clickers require source-level deduplication across days.
+    const reach = rows.length === 1 ? knownUnique(rows[0].reach) : null;
     const clicks = sum(rows, 'clicks');
     const pageViews = sum(rows, 'page_views');
     const leads = sum(rows, 'leads');
@@ -71,6 +77,8 @@ export function campaigns(
     const checkouts = sum(rows, 'checkouts');
     const metricValues:Record<string,number|null>={};
     for(const key of primitiveMetricKeys)metricValues[key]=sum(rows,key);
+    metricValues.reach = reach;
+    metricValues.unique_clicks = rows.length === 1 ? knownUnique(rows[0].unique_clicks) : null;
     const weightedMetrics = Object.fromEntries(weightedMetricKeys.map(key => [key, summarizeWeightedMetric(rows.map(row => ({value: row[key], weight: row.impressions})), providerWeightedMetricBounds[key])])) as WeightedMetricSummaries;
     for (const key of weightedMetricKeys) metricValues[key] = weightedMetrics[key].value;
     metricValues.spend=spend;metricValues.revenue=revenue;metricValues.registration_leads=registrationLeads;

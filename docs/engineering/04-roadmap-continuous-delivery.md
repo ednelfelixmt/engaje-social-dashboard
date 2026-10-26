@@ -450,3 +450,17 @@ Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamen
 - **Testes sintéticos adicionados:** `tests/decision-campaign.test.ts` verifica colisões de tenants, contas, plataformas, campanhas, moedas, ambas as formas de ID Meta, duplicatas ambíguas, campos ausentes e consumo do matcher pela UI. Execução automatizada e build ficam condicionados ao Quality Gate.
 - **Aceite e rollback:** exigir Quality Gate completo, Vercel `success` no mesmo SHA, diff revisado e mergeabilidade antes de integrar à `main`. Desfazer apenas o pacote se regredir o comparativo, sem restaurar a correspondência por ID isolado. Teste E2E de navegação autenticada permanece em UX-002; **não** constitui homologação SEC-010/011 ou de ingestão.
 - **PRs pendentes inspecionados nesta rodada:** #149, #153, #154, #155 e #157 estavam abertos, todos com Quality Gate concluído com sucesso, porém Vercel em `failure` no head consultado; #149/#153/#154/#155 com conflitos contra a `main`. Não integrar nenhum deles sem restaurar a compatibilidade e repetir ambos os gates. O limite de builds do Vercel documentado em OPS-002 continua sendo a dependência externa a revalidar, sem contorno de políticas.
+
+### 25/10/2026 — Consolidação para verificação de release com Codex e Claude
+
+- Correções de contagens negativas (#153) e medidas únicas não aditivas (#155)
+  reaproveitadas sobre `29729893`, preservando ANA-021 e ANA-022. Pacote ainda sujeito ao
+  Quality Gate e à Vercel no SHA final; não equivale à integração dos PRs de origem.
+- CI passa a verificar HTTP do build compilado: login, recuperação de senha,
+  acesso administrativo anônimo e callback sem código. Não envia credenciais ou
+  e-mails, altera dados nem substitui homologação autenticada.
+- Evidência local: 315 testes, 140 checks SQL, lint, tipos, arquitetura e build
+  aprovados; smoke HTTP 6/6 no build local e na produção existente. Relatório e
+  dependências em [24-release-readiness-2026-10-25.md](24-release-readiness-2026-10-25.md).
+- SEC-010/011, rollout SEC-014, UX-002, entrega de e-mail e cota Vercel continuam
+  com seus próprios gates. Produção consultada ainda no commit `5d3a180e`.
