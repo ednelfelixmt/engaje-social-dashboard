@@ -6,6 +6,7 @@ import {Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAx
 import {Card} from '@/components/ui/card';
 import {money, number} from '@/lib/utils';
 import type {CampaignPerformance} from '@/types/domain';
+import {findComparableCampaign} from '@/lib/metrics/decision-campaign';
 
 export type DecisionTimelinePoint={date:string;spend:number;impressions:number|null;reach:number|null;clicks:number|null;leads:number|null};
 type Metric='spend'|'impressions'|'reach'|'clicks'|'leads'|'cpl';
@@ -27,7 +28,7 @@ export function DecisionAnalysis({current,previous,campaigns,previousCampaigns,c
   const [metric,setMetric]=useState<Metric>('spend');
   const chart=useMemo(()=>Array.from({length:Math.max(current.length,previous.length)},(_,index)=>({index:index+1,date:current[index]?.date??previous[index]?.date??'',current:value(current[index],metric),previous:value(previous[index],metric)})),[current,previous,metric]);
   const impacts=useMemo(()=>campaigns.filter((row)=>row.spend>0).map((row)=>{
-    const before=previousCampaigns.find((item)=>item.campaignId===row.campaignId);
+    const before=findComparableCampaign(row,previousCampaigns);
     const cpl=row.leads?row.spend/row.leads:null;const previousCpl=before?.leads?before.spend/before.leads:null;
     const delta=comparing&&before&&before.spend?((row.spend/before.spend)-1)*100:null;
     const issue=!row.leads||cpl==null;const improved=previousCpl!=null&&cpl!=null?cpl<previousCpl:!issue;
