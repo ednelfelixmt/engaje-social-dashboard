@@ -12,6 +12,14 @@ npm run build
 node --import tsx scripts/verify-schema.ts
 ```
 
+Após o build, inicie `npm run start` e execute `npm run verify:http` para verificar
+login, recuperação de senha e negação de acesso administrativo sem sessão. O CI
+executa essa checagem contra o próprio build. Para verificar o domínio publicado,
+defina `SMOKE_BASE_URL=https://mediahub.engajeperformance.com.br`. Em previews que
+redirecionam a recuperação para produção, defina também `SMOKE_CALLBACK_ORIGIN`
+com a origem canônica configurada no servidor. A checagem faz somente GETs anônimos;
+não substitui login A/B, entrega de e-mail, testes visuais ou integrações reais.
+
 Node 22 ou superior. Configure `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` para outro projeto; `src/lib/supabase/config.ts` contém a configuração pública do Engaje. Nunca coloque service_role ou tokens de provedores no frontend.
 
 ## Banco novo

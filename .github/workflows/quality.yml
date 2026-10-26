@@ -27,6 +27,35 @@ jobs:
       - run: npm run verify:schema
       - run: npm run typecheck
       - run: npm run check:architecture
-      - run: npm run build
+      # Tests and typecheck ran above; skip the duplicate prebuild hook in CI.
+      - run: npm run build --ignore-scripts
         env:
           NEXT_TELEMETRY_DISABLED: '1'
+      - name: Verify built app HTTP and anonymous access boundaries
+        shell: bash
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+          APP_ORIGIN: http://127.0.0.1:3000
+          SMOKE_BASE_URL: http://127.0.0.1:3000
+        run: |
+          set -euo pipefail
+          node node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 3000 > "$RUNNER_TEMP/engaje-next.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          server_ready=false
+          for attempt in {1..30}; do
+            if curl --fail --silent --max-time 2 --output /dev/null "$SMOKE_BASE_URL/auth/forgot-password"; then
+              server_ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$server_ready" != true ]; then
+            echo "FAIL: Next.js did not become ready after 30 probes"
+            cat "$RUNNER_TEMP/engaje-next.log"
+            exit 1
+          fi
+          if ! npm run verify:http; then
+            cat "$RUNNER_TEMP/engaje-next.log"
+            exit 1
+          fi

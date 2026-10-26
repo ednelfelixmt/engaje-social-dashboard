@@ -7,6 +7,10 @@ export default tseslint.config(
   {ignores:['node_modules/**','.next/**']},
   {
     files:[
+      'scripts/verify-release-http.ts',
+      'tests/release-http.test.ts',
+      'src/lib/metrics/campaigns.ts',
+      'tests/nonadditive-reach.test.ts',
       'src/lib/metrics/query.ts',
       'src/components/dashboard/filters.tsx',
       'tests/comparison-query.test.ts',

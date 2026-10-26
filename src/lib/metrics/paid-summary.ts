@@ -8,6 +8,10 @@ function availableTotal(rows:CampaignPerformance[],key:string){
   return Number.isFinite(total)?total:null;
 }
 
+function knownUnique(value:number|null|undefined):number|null{
+  return value != null && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
 function ratio(numerator:number|null,denominator:number|null,multiplier=1){
   if(numerator==null||denominator==null||!Number.isFinite(numerator)||!Number.isFinite(denominator)||denominator<=0)return null;
   const result=numerator/denominator*multiplier;
@@ -15,14 +19,22 @@ function ratio(numerator:number|null,denominator:number|null,multiplier=1){
 }
 
 export function paidSummary(rows:CampaignPerformance[]):Record<string,number|null>{
+  // An accidental cross-tenant input must not yield any aggregate to a dashboard.
+  if(rows.length>1&&rows.some(row=>row.organizationId!==rows[0].organizationId)){
+    throw new Error('Paid summary requires a single organization');
+  }
   const additive=[
-    'spend','revenue','conversion_value','impressions','reach','clicks','link_clicks','outbound_clicks','unique_clicks','page_views',
+    'spend','revenue','conversion_value','impressions','clicks','link_clicks','outbound_clicks','page_views',
     'video_views','video_2s_views','video_3s_views','video_6s_views','thruplays','video_25','video_50','video_75','video_95','video_100',
     'leads','registration_leads','message_leads','phone_calls','form_starts','form_completions','content_views','add_to_cart',
     'checkouts','purchases','catalog_sales','subscriptions','conversions','all_conversions','view_through_conversions',
   ];
   const result:Record<string,number|null>={};
   for(const key of additive)result[key]=availableTotal(rows,key);
+  // Distinct users/clickers are not additive across campaigns or accounts.
+  // A single campaign row is usable only when its upstream daily grain was validated.
+  result.reach=rows.length===1?knownUnique(rows[0].metricValues.reach):null;
+  result.unique_clicks=rows.length===1?knownUnique(rows[0].metricValues.unique_clicks):null;
   // Monetary aggregation across currencies is not meaningful without an explicit FX conversion.
   const currencies=new Set(rows.map(row=>row.currency));
   if(currencies.size>1||[...currencies].some(currency=>!/^[A-Z]{3}$/.test(currency))){
