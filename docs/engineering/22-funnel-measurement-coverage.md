@@ -29,3 +29,9 @@ Aceite: testes, 140 checks SQL, lint, tipos, arquitetura, build e Quality Gate +
 Validação local: 281 testes, 140 checks SQL, lint, tipos e arquitetura passaram. O build compilou e tipou, mas falhou ao criar diretório _not-found em .next (EPERM Windows); repetição confirmou o problema local. Uma tentativa por outro runtime encontrou falha de processo do Turbopack. O aceite do build continua pendente até execução completa, local ou CI; não é tratado como aprovado pela compilação parcial.
 
 CI do head inicial e6e328676e9c4f3c2ed272378e1b2546e9ddbd2f: Quality Gate #223 aprovado, inclusive build Linux. Vercel recusou preview por build-rate-limit; não integrado. Calendário complementar descrito em [23-calendar-comparison.md](23-calendar-comparison.md); o head final deve repetir ambos os gates.
+
+## Integração confirmada — 25/10/2026
+
+PR #152 integrado como dfea7ccfc9c489ba8af9c56ff28924192d5819fd após Quality Gate #226 e Vercel success no head a0d5869fa8035cbb735d951c66ab03d10936d40a (preview dpl_2NAqZNv9ezCRB9rXYgQxg1YRDYZf READY). Publicação produtiva recusada por cota diária Vercel, não por falha do código. Produção permanece 5d3a180e; não classificar a correção de funil como publicada. Ver [24-release-and-auth-operations.md](24-release-and-auth-operations.md).
+
+Atualização 26/10/2026: produção verificada READY no commit 9db86da, incluindo #152. SMTP adiado pelo responsável. O registro anterior de cota não representa o estado atual da produção.

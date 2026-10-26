@@ -40,3 +40,9 @@ PR #151 integrado em 5d3a180e6d3f327ae5f31262b1bd64b38d455d2e após Quality Gate
 Sonda HTTP pública posterior encontrou produção ainda no deploy f6612cde do ciclo 04: forgot-password respondeu 307 para /login, com X-Matched-Path de tenant. O preview de #151 está READY, mas isso não confirma promoção produtiva; a publicação deve ser verificada separadamente. Nenhum pedido de e-mail ou mudança de senha real foi executado.
 
 Publicação concluída: deployment dpl_GizpzttpeEDxftwdSrRDeEFehziP READY em produção, commit 5d3a180e6d3f327ae5f31262b1bd64b38d455d2e, com domínio mediahub.engajeperformance.com.br atribuído. A árvore Git do merge é idêntica à do head aprovado de #151. Sondas HTTP reais sem sessão: forgot-password 200 com formulário de solicitação; reset-password 200 sem inputs de senha; callback sem código 307 para origem canônica/error=invalid_link, private/no-store, Pragma no-cache, Expires 0 e Referrer-Policy no-referrer. Somente GETs; não validam SMTP nem recuperação autenticada.
+
+## Atualização operacional — 25/10/2026
+
+A sessão do painel Supabase tornou-se disponível. Site URL foi corrigida de localhost para https://mediahub.engajeperformance.com.br; cadastrados e verificados exatamente /auth/recovery/callback e /auth/invite na mesma origem (antes não havia Redirect URLs). Sem curingas ou alteração de usuários/permissões. Custom SMTP permanece desligado; responsável informou não possuir provedor. Resend proposto, cadastro preparado para o responsável; conta, domínio, credencial e entrega ainda pendentes. Detalhes e evidências em [24-release-and-auth-operations.md](24-release-and-auth-operations.md). Não foi enviado e-mail ou alterada senha real.
+
+Atualização 26/10/2026: produção verificada READY no commit 9db86da, incluindo #152. SMTP adiado pelo responsável. O registro anterior de cota não representa o estado atual da produção.

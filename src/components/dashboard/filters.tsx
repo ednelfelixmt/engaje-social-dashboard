@@ -6,9 +6,9 @@ import {usePathname,useRouter,useSearchParams} from 'next/navigation';
 import {SlidersHorizontal,ArrowRight} from 'lucide-react';
 import type {Filters as FilterType} from '@/lib/metrics/query';
 
-export function Filters({value,organizations,slug,actions}:{value:FilterType;organizations:{name:string;slug:string}[];slug:string;actions?:ReactNode}){
+export function Filters({value,organizations,slug,actions,allowComparison=true}:{value:FilterType;organizations:{name:string;slug:string}[];slug:string;actions?:ReactNode;allowComparison?:boolean}){
  const router=useRouter(),path=usePathname(),search=useSearchParams();
- const comparison=value.compare==='none'?null:comparisonPeriod(value.from,value.to,value.compare);
+ const comparison=!allowComparison||value.compare==='none'?null:comparisonPeriod(value.from,value.to,value.compare);
  const dateLabel=(day:string)=>day.split('-').reverse().join('/');
  const field='!h-9 !min-h-0 !rounded-lg !border-white/10 !bg-[#111723] !px-2.5 !py-1 !text-xs text-zinc-200';
  const label='flex min-w-0 flex-col gap-1 text-[10px] font-medium leading-4 text-zinc-500';
@@ -27,9 +27,9 @@ export function Filters({value,organizations,slug,actions}:{value:FilterType;org
    <form onSubmit={submit} className="flex min-w-0 flex-1 flex-wrap items-end gap-x-2 gap-y-2">
     <label className={label}>De<input aria-label="Data inicial" className={field+' w-[132px]'} type="date" name="from" defaultValue={value.from} required/></label>
     <label className={label}>Até<input aria-label="Data final" className={field+' w-[132px]'} type="date" name="to" defaultValue={value.to} required/></label>
-    <label className={label}>Comparar
+    {allowComparison?<label className={label}>Comparar
      <select aria-label="Comparação" className={field+' w-[147px]'} name="compare" defaultValue={value.compare}><option value="previous_period">Período anterior</option><option value="previous_year">Ano anterior</option><option value="none">Sem comparação</option></select>
-    </label>
+    </label>:<input type="hidden" name="compare" value="none"/>}
     <label className={label+' hidden xl:flex'}>Moeda<input aria-label="Moeda" className={field+' w-[68px]'} name="currency" defaultValue={value.currency} pattern="[A-Z]{3}" maxLength={3} required/></label>
     <button type="submit" className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-primary/90 px-3 text-xs font-semibold text-black transition hover:bg-primary">Aplicar <ArrowRight size={13}/></button>
    </form>
