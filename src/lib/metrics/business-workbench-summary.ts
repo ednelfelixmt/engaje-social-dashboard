@@ -4,7 +4,7 @@ import {computeDelta} from './delta';
 /** The workbench only reports a total when every campaign supplied the metric. */
 export type WorkbenchMetric = 'spend' | 'impressions' | 'clicks' | 'leads' | 'cpl' | 'ctr';
 export type WorkbenchSummaryRow = {
-  spend: number;
+  spend: number | null;
   impressions: number | null;
   clicks: number | null;
   leads: number | null;
