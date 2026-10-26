@@ -27,8 +27,8 @@ function completeSum(rows: readonly WorkbenchSummaryRow[], key: keyof WorkbenchS
   if (!rows.length) return null;
   let total = 0;
   for (const row of rows) {
-    const value = row[key];
-    if (observed(value) == null) return null;
+    const value = observed(row[key]);
+    if (value == null) return null;
     total += value;
     if (!Number.isFinite(total)) return null;
   }
