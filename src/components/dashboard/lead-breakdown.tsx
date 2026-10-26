@@ -28,7 +28,7 @@ export function LeadBreakdown(props: LeadBreakdownProps) {
   return <section>
     <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
       <div><p className="eyebrow">Geração de demanda</p><h2 className="mt-1 text-base font-semibold">Leads por tipo e custo</h2></div>
-      <p className="text-xs text-zinc-500">Total = cadastros + conversas iniciadas</p>
+      <p className="text-xs text-zinc-500">Tipos de lead são informados pela origem; valores ausentes não são estimados.</p>
     </div>
     <div className="grid gap-4 md:grid-cols-3">
       {items.map(({key, label, costLabel, icon: Icon, tone, border}) => {
