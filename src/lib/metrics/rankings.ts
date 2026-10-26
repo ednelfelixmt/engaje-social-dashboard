@@ -81,13 +81,20 @@ function aggregateBreakdowns(rows:Row<'metrics_ads_breakdowns'>[],type:RankingDi
   return [...grouped.values()];
 }
 
-function fallbackAds(rows:Row<'metrics_ads'>[],type:'audience'|'creative',creativeNames:Map<string,string>){
+/** Only Meta's act_ prefix aliases its numeric account ID; other providers stay literal. */
+function rankingAccount(platform:string,accountId:string):string {
+  const normalized=platform==='meta_ads'?accountId.replace(/^act_/, ''):accountId;
+  return normalized || accountId;
+}
+
+function fallbackAds(rows:Row<'metrics_ads'>[],type:'audience'|'creative',creativeNames:Map<string,string|null>){
   const grouped=new Map<string,RankedPerformance>();
   for(const row of rows){
     const value=type==='audience'?row.adset_id:row.ad_id;
     if(!value)continue;
-    const key=JSON.stringify([row.organization_id,row.platform,row.account_id,row.currency,value]);
-    const creativeKey=JSON.stringify([row.organization_id,row.platform,row.account_id,value]);
+    const account=rankingAccount(row.platform,row.account_id);
+    const key=JSON.stringify([row.organization_id,row.platform,account,row.currency,value]);
+    const creativeKey=JSON.stringify([row.organization_id,row.platform,account,value]);
     const label=type==='creative'?(creativeNames.get(creativeKey)||`Criativo ${value}`):`Público ${value}`;
     grouped.set(key,add(grouped.get(key),{
       key,label,spend:checkedSpend(row.spend),revenue:known(row.revenue),
@@ -100,9 +107,17 @@ function fallbackAds(rows:Row<'metrics_ads'>[],type:'audience'|'creative',creati
 
 export function preparePerformanceRankings(campaigns:CampaignPerformance[],ads:Row<'metrics_ads'>[],breakdowns:Row<'metrics_ads_breakdowns'>[],creatives:Row<'creatives'>[]):PerformanceRankingGroups{
   assertSingleScope(campaigns,ads,breakdowns,creatives);
-  const creativeNames=new Map(creatives.filter(item=>item.ad_id).map(item=>[
-    JSON.stringify([item.organization_id,item.platform,item.account_id,item.ad_id]),
-    item.caption||`Criativo ${item.ad_id}`,
+  // Conflicting names for the same real ad must never depend on API row order.
+  const captions=new Map<string,Set<string>>();
+  for(const item of creatives){
+    if(!item.ad_id)continue;
+    const key=JSON.stringify([item.organization_id,item.platform,rankingAccount(item.platform,item.account_id),item.ad_id]);
+    const values=captions.get(key)??new Set<string>();
+    if(item.caption?.trim())values.add(item.caption.trim());
+    captions.set(key,values);
+  }
+  const creativeNames=new Map<string,string|null>([...captions].map(([key,values])=>[
+    key,values.size===1?[...values][0]:null,
   ]));
   const dimensions:RankingDimension[]=['audience','creative','gender','age','device','state','city'];
   const result={} as PerformanceRankingGroups;
