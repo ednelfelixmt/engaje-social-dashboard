@@ -198,3 +198,22 @@ html.is-touch-dragging * { cursor: grabbing !important; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* Scoped to the mounted executive report; removed on route unmount. */
+@media print {
+  html.engaje-performance-print,
+  html.engaje-performance-print body { background: white !important; color: black !important; color-scheme: light; min-width: 0; }
+  .engaje-performance-print [data-report-navigation],
+  .engaje-performance-print [data-print-hide] { display: none !important; }
+  .engaje-performance-print .dashboard-shell { margin: 0 !important; padding: 0 !important; min-height: 0 !important; background: white !important; }
+  .engaje-performance-print .dashboard-shell * { color: black !important; background: transparent !important; box-shadow: none !important; text-shadow: none !important; border-color: #ccc !important; }
+  .engaje-performance-print .performance-report section[aria-label="Indicadores consolidados"] { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .engaje-performance-print .performance-table { overflow: visible !important; }
+  .engaje-performance-print .performance-table table { width: 100% !important; min-width: 0 !important; table-layout: fixed; font-size: 8pt; }
+  .engaje-performance-print .performance-table th,
+  .engaje-performance-print .performance-table td { padding: 4px; overflow-wrap: anywhere; white-space: normal !important; position: static; }
+  .engaje-performance-print thead { display: table-header-group; }
+  .engaje-performance-print tr { break-inside: avoid; }
+  .engaje-performance-print h2,
+  .engaje-performance-print h3 { break-after: avoid; }
+}

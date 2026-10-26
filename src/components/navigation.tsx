@@ -24,6 +24,7 @@ const workspaceGroups:NavGroup[]=[
   ]},
   {id:'paid',label:'Outras análises',icon:Filter,collapsible:true,items:[
     {key:'paid',label:'Mídia paga consolidada',icon:ChartNoAxesCombined,requires:'paid'},
+    {key:'reports/performance',label:'Relatório executivo',icon:ChartNoAxesCombined,requires:'paid'},
     {key:'funnel',label:'Funil de conversão',icon:Filter,requires:'funnel'},
     {key:'paid-creatives',label:'Criativos dos anúncios',icon:Images,requires:'creatives'},
   ]},
@@ -66,7 +67,7 @@ export function Navigation({slug,admin=false,enabled=[],canShare=false}:{slug?:s
     return next;
   });
 
-  return <aside className="sticky top-0 z-40 flex w-full flex-col border-b border-white/[.08] bg-[#090d15] lg:fixed lg:inset-y-0 lg:w-[272px] lg:border-b-0 lg:border-r">
+  return <aside data-report-navigation className="sticky top-0 z-40 flex w-full flex-col border-b border-white/[.08] bg-[#090d15] lg:fixed lg:inset-y-0 lg:w-[272px] lg:border-b-0 lg:border-r">
     <Link prefetch href="/" className="flex items-center gap-3 px-5 py-4 lg:px-6 lg:py-7"><span className="grid size-10 place-items-center rounded-2xl border border-primary/25 bg-primary/10 shadow-[0_0_30px_rgb(var(--primary-rgb)/.08)]"><Crown className="text-primary" size={21}/></span><div><strong className="block tracking-[-.025em]">Engaje Mídia Hub</strong><p className="muted mt-0.5 text-[8px] font-bold tracking-[.16em]">MARKETING INTELLIGENCE</p></div></Link>
     <div className="hidden px-6 lg:block"><div className="h-px bg-gradient-to-r from-primary/40 via-white/10 to-transparent"/></div>
     <nav aria-label={admin?'Navegação da agência':'Navegação do workspace'} className="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-1 lg:flex-col lg:gap-1.5 lg:overflow-y-auto lg:px-4 lg:pb-5 lg:pt-5">
