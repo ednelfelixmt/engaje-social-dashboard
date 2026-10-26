@@ -28,7 +28,7 @@ const workspaceGroups:NavGroup[]=[
     {key:'funnel',label:'Funil de conversão',icon:Filter,requires:'funnel'},
     {key:'paid-creatives',label:'Criativos dos anúncios',icon:Images,requires:'creatives'},
   ]},
-  {id:'data',label:'Receita e dados externos',icon:Database,items:[{key:'external',label:'Receita e dados externos',icon:Database,requires:'external'}]},
+  {id:'data',label:'Receita e dados externos',icon:Database,items:[{key:'external',label:'Registros e importação',icon:Database,requires:'external'},{key:'reports/revenue',label:'Análise de receita',icon:ChartNoAxesCombined,requires:'external'}]},
   {id:'settings',label:'Configurações',icon:Settings,collapsible:true,items:[
     {key:'settings/dashboard',label:'Dashboard e funil',icon:Settings},
     {key:'settings/integrations',label:'Integrações',icon:Plug},

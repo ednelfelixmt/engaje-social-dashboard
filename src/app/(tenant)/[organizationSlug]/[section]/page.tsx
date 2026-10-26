@@ -146,7 +146,7 @@ export default async function Page({params: params_, searchParams: searchParams_
 
     {contentMode ? <section data-tv-panel><CreativeLibrary creatives={filteredCreatives} mode="paid" storageKey={`${org.id}:${params.section}:${chosen??'all'}:creatives`} organicInsightsUnavailable={false} /></section> : null}
 
-    {params.section === 'external' ? <><Card><h2 className="mb-3 text-lg font-semibold">Importar receita real</h2><p className="muted mb-5 text-sm">Importe CSV com datas, receita e compras conciliadas por dia. A importação é validada antes de gravar.</p>{superAdmin ? <UploadForm organizationId={org.id} /> : <p className="muted text-sm">Importações são gerenciadas pela agência.</p>}</Card><Card><h2 className="mb-4 font-semibold">Registros de receita</h2><p className="muted">{data.crm.length} registros no período selecionado.</p></Card></> : null}
+    {params.section === 'external' ? <><Card><h2 className="mb-3 text-lg font-semibold">Importar receita real</h2><p className="muted mb-5 text-sm">Importe CSV com datas, receita e compras conciliadas por dia. A importação é validada antes de gravar.</p>{superAdmin ? <UploadForm organizationId={org.id} /> : <p className="muted text-sm">Importações são gerenciadas pela agência.</p>}</Card><Card><h2 className="mb-4 font-semibold">Registros de receita</h2><p className="muted">{data.crm.length} registros no período selecionado.</p><Link className="mt-3 inline-flex text-sm text-primary" href={`/${org.slug}/reports/revenue?${new URLSearchParams(f).toString()}`}>Analisar receita e conciliação diária</Link></Card></> : null}
   </div>
   </DashboardLayoutProvider>;
 }

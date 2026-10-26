@@ -7,6 +7,11 @@ export default tseslint.config(
   {ignores:['node_modules/**','.next/**']},
   {
     files:[
+      'src/lib/reports/revenue-report.ts',
+      'src/components/dashboard/revenue-report-view.tsx',
+      'tests/revenue-report.test.ts',
+      'tests/revenue-report-page.test.ts',
+      'tests/revenue-report-ui.test.ts',
       'src/lib/reports/performance-report.ts',
       'src/components/dashboard/performance-report-print.tsx',
       'src/components/dashboard/performance-report-view.tsx',
