@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {compareWorkbenchPeriods, getWorkbenchSummary, type WorkbenchSummaryRow} from '../src/lib/metrics/business-workbench-summary';
+import {compareWorkbenchPeriods, getWorkbenchSummary, getWorkbenchDayMetric, type WorkbenchSummaryRow} from '../src/lib/metrics/business-workbench-summary';
 
 const campaign = (overrides: Partial<WorkbenchSummaryRow> = {}): WorkbenchSummaryRow =>
   ({spend: 100, impressions: 1000, clicks: 50, leads: 10, ...overrides});
@@ -39,4 +39,38 @@ test('workbench comparisons are finite and require a positive baseline', () => {
   assert.equal(compareWorkbenchPeriods(1e308, 1e-308), null);
   assert.equal(compareWorkbenchPeriods(10, 0), null);
   assert.equal(compareWorkbenchPeriods(null, 10), null);
+});
+
+
+test('workbench rejects negative paid investment and counts without contaminating unaffected indicators', () => {
+  const result = getWorkbenchSummary([campaign(), campaign({spend: -1, impressions: -2, clicks: -3, leads: -4})]);
+  assert.deepEqual(result, {spend: null, leads: null, impressions: null, clicks: null, cpl: null, ctr: null});
+  const spendOnly = getWorkbenchSummary([campaign({spend: -1})]);
+  assert.equal(spendOnly.spend, null);
+  assert.equal(spendOnly.cpl, null);
+  assert.equal(spendOnly.ctr, 5);
+});
+
+test('workbench accepts legitimate zero and attributed fractions', () => {
+  assert.deepEqual(getWorkbenchSummary([campaign({spend: 0, leads: 0.5, clicks: 0, impressions: 2.5})]), {
+    spend: 0, leads: 0.5, impressions: 2.5, clicks: 0, cpl: 0, ctr: 0,
+  });
+});
+
+test('daily chart and CSV scalar contract omits negative and non-finite facts', () => {
+  const row = campaign({spend: -12, leads: 5, clicks: -2, impressions: 100});
+  assert.equal(getWorkbenchDayMetric(row, 'spend'), null);
+  assert.equal(getWorkbenchDayMetric(row, 'cpl'), null);
+  assert.equal(getWorkbenchDayMetric(row, 'clicks'), null);
+  assert.equal(getWorkbenchDayMetric(row, 'ctr'), null);
+  assert.equal(getWorkbenchDayMetric(row, 'leads'), 5);
+  assert.equal(getWorkbenchDayMetric(campaign({spend: 0, clicks: 0, leads: 2}), 'cpl'), 0);
+  assert.equal(getWorkbenchDayMetric(campaign({impressions: 0}), 'ctr'), null);
+  assert.equal(getWorkbenchDayMetric(campaign({clicks: Infinity}), 'clicks'), null);
+  assert.equal(getWorkbenchDayMetric(undefined, 'spend'), null);
+});
+
+test('comparisons never characterize negative current counts or costs as improvement', () => {
+  assert.equal(compareWorkbenchPeriods(-10, 100, true), null);
+  assert.equal(compareWorkbenchPeriods(-1, 100), null);
 });
