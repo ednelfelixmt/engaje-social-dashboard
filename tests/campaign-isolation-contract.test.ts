@@ -81,3 +81,40 @@ test('normalized CRM account identifiers never match another account, tenant, pl
  assert.equal(result[0].revenue,200);
  assert.equal(result[0].revenueSource,'ads');
 });
+
+test('negative daily campaign observations cannot be concealed by positive observations',()=>{
+ const result=campaigns([
+  ad({metric_date:'2026-10-23',spend:50,impressions:100,clicks:10,leads:4,purchases:3}),
+  ad({metric_date:'2026-10-24',spend:60,impressions:-5,clicks:-2,leads:-1,purchases:-2}),
+ ],[],'crm')[0];
+ assert.equal(result.spend,110);
+ assert.equal(result.impressions,null);
+ assert.equal(result.clicks,null);
+ assert.equal(result.leads,null);
+ assert.equal(result.purchases,null);
+ assert.equal(result.ctr,null);
+ assert.equal(result.cpm,null);
+ assert.equal(result.cpc,null);
+ assert.equal(result.cpa,null);
+ assert.equal(result.revenue,400);
+ assert.equal(result.roas,400/110);
+ assert.throws(()=>campaigns([ad({spend:-1})],[],'crm'),/Invalid campaign spend aggregation/);
+});
+
+test('CRM purchases reject negative/nonfinite counts without discarding valid revenue',()=>{
+ for(const purchases of [-1,Number.NaN,Number.POSITIVE_INFINITY]){
+  const result=campaigns([ad()],[crm({purchases,revenue:450})],'crm')[0];
+  assert.equal(result.revenue,450);
+  assert.equal(result.revenueSource,'crm');
+  assert.equal(result.purchases,null);
+  assert.equal(result.cpa,null);
+  assert.equal(result.roas,4.5);
+ }
+ const valid=campaigns([ad()],[crm({purchases:0.5,revenue:450})],'crm')[0];
+ assert.equal(valid.purchases,0.5);
+ assert.equal(valid.cpa,200);
+ const invalidRevenue=campaigns([ad()],[crm({revenue:Number.NaN,purchases:2})],'crm')[0];
+ assert.equal(invalidRevenue.revenue,null);
+ assert.equal(invalidRevenue.roas,null);
+ assert.equal(invalidRevenue.purchases,2);
+});
