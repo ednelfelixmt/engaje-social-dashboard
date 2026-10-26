@@ -86,3 +86,46 @@ test('legacy campaign callers retain one-observation coverage without fabricated
   assert.equal(coverage.value, 8); assert.equal(coverage.rows, 2);
   assert.equal(coverage.includedRows, 1); assert.equal(coverage.invalidWeights, 1);
 });
+
+test('provider values outside documented ranges cannot inflate weighted campaign KPIs', () => {
+  const performance = campaigns([
+    ad({search_impression_share: -1, quality_score: 11, impressions: 100}),
+    ad({metric_date: '2026-10-02', search_impression_share: 25, quality_score: 8, impressions: 100}),
+    ad({metric_date: '2026-10-03', search_impression_share: 101, quality_score: -2, impressions: 100}),
+  ], [], 'crm');
+  const summary = paidWeightedMetrics(performance);
+  assert.equal(performance[0].metricValues.search_impression_share, 25);
+  assert.equal(performance[0].metricValues.quality_score, 8);
+  assert.equal(summary.search_impression_share.value, 25);
+  assert.equal(summary.search_impression_share.missingValues, 2);
+  assert.equal(summary.search_impression_share.includedRows, 1);
+  assert.equal(summary.search_impression_share.status, 'partial');
+  assert.equal(summary.quality_score.value, 8);
+  assert.equal(summary.quality_score.missingValues, 2);
+  assert.equal(summary.quality_score.status, 'partial');
+});
+
+test('weighted values at provider boundaries remain observed, including zero', () => {
+  const performance = campaigns([
+    ad({search_impression_share: 0, quality_score: 0, impressions: 100}),
+    ad({metric_date: '2026-10-02', search_impression_share: 100, quality_score: 10, impressions: 100}),
+  ], [], 'crm');
+  const weighted = paidWeightedMetrics(performance);
+  assert.equal(weighted.search_impression_share.value, 50);
+  assert.equal(weighted.quality_score.value, 5);
+  assert.equal(weighted.search_impression_share.status, 'complete');
+  assert.equal(weighted.quality_score.status, 'complete');
+});
+
+test('legacy weighted fallback also excludes invalid provider values', () => {
+  const summary = paidWeightedMetrics([
+    {impressions: 100, metricValues: {search_impression_share: 250, quality_score: -1}},
+    {impressions: 100, metricValues: {search_impression_share: 0, quality_score: 10}},
+  ]);
+  assert.equal(summary.search_impression_share.value, 0);
+  assert.equal(summary.search_impression_share.missingValues, 1);
+  assert.equal(summary.search_impression_share.status, 'partial');
+  assert.equal(summary.quality_score.value, 10);
+  assert.equal(summary.quality_score.missingValues, 1);
+  assert.equal(summary.quality_score.status, 'partial');
+});
