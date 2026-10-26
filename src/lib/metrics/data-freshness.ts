@@ -8,3 +8,14 @@ export function paidDataFreshness(dates:readonly string[],businessDate:string):F
  const daysOld=Math.floor((Date.parse(businessDate+'T00:00:00Z')-Date.parse(latest+'T00:00:00Z'))/86400000);
  return {status:daysOld<=2?'recent':'delayed',latest,daysOld};
 }
+
+/**
+ * A deliberately selected historical interval is not evidence of delayed ingestion.
+ * Diagnose freshness only when that interval ends on the tenant's current business date.
+ * Returning an empty status for invalid/future-only measurements avoids false "up to date" claims.
+ */
+export function currentPeriodFreshness(dates:readonly string[],selectedTo:string,businessDate:string):Freshness|null{
+ if(selectedTo!==businessDate||dates.length===0)return null;
+ const result=paidDataFreshness(dates,businessDate);
+ return result.status==='recent'?null:result;
+}
