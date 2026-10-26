@@ -23,6 +23,8 @@ export default tseslint.config(
       'tests/performance-report-ui.test.ts',
       'tests/performance-report-page.test.ts',
       'src/lib/metrics/data-freshness.ts',
+      'src/lib/metrics/dashboard-daily.ts',
+      'tests/dashboard-daily.test.ts',
       'tests/data-freshness.test.ts',
       'tests/paid-summary-domain.test.ts',
       'src/lib/reports/audience-report.ts',
