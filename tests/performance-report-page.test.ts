@@ -36,13 +36,13 @@ test('executive route authenticates, checks config and queries only tenant/curre
  for(const call of calls)for(const expected of [['eq','organization_id',scope.id],['eq','currency','BRL']]) assert.ok(call.filters.some(row=>JSON.stringify(row)===JSON.stringify(expected)));
  assert.ok(calls[0].filters.some(row=>row[0]==='gte'&&row[2]==='2026-10-20'));
  assert.ok(calls[1].filters.some(row=>row[0]==='gte'&&row[2]==='2025-10-20'));
- assert.ok(html.includes('Relatório executivo'));assert.ok(html.includes('Imprimir / salvar PDF'));assert.ok(html.includes('Comparativo: 2025-10-20 a 2025-10-21'));
+ assert.ok(html.includes('Relatório executivo'));assert.ok(html.includes('Imprimir / salvar PDF'));assert.ok(html.includes('Exportar CSV'));assert.ok(html.includes('Comparativo: 2025-10-20 a 2025-10-21'));
  assert.ok(!html.includes('Gerenciar'));assert.ok(!html.includes('settings/'));assert.ok(!html.includes('NaN'));assert.ok(!html.includes('Infinity'));
 });
 
 test('denied tenant and disabled paid page never read facts or expose print controls',async()=>{
  reset();denied=true;await assert.rejects(Page(props()),/access denied/);assert.deepEqual(events,['auth']);assert.equal(calls.length,0);
- reset();enabled=[];const html=renderToStaticMarkup(await Page(props()));assert.equal(calls.length,0);assert.ok(html.includes('indisponível nas configurações'));assert.ok(!html.includes('Imprimir / salvar PDF'));
+ reset();enabled=[];const html=renderToStaticMarkup(await Page(props()));assert.equal(calls.length,0);assert.ok(html.includes('indisponível nas configurações'));assert.ok(!html.includes('Imprimir / salvar PDF'));assert.ok(!html.includes('Exportar CSV'));
 });
 
 test('source failures and cross-tenant facts fail closed without upstream details or partial print',async()=>{
