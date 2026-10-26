@@ -2,6 +2,8 @@ import {Card} from '@/components/ui/card';
 import {performanceMetrics, performanceDelta, comparableAttribution, type PerformanceGroup, type PerformancePeriod, type PerformanceReport} from '@/lib/reports/performance-report';
 import type {PaidMetricKey} from '@/lib/metrics/paid-metrics';
 import {PerformanceReportPrint} from './performance-report-print';
+import {PerformanceReportExport} from './performance-report-export';
+import {performanceReportCsv, performanceReportFilename} from '@/lib/export/performance-report';
 
 const labels: Record<PaidMetricKey, string> = {spend: 'Investimento', impressions: 'Impressões', clicks: 'Cliques', leads: 'Leads atribuídos', ctr: 'CTR', cpc: 'CPC', cpm: 'CPM', cpl: 'CPL atribuído'};
 const platformLabel = (key: string) => ({meta_ads: 'Meta Ads', google_ads: 'Google Ads', tiktok_ads: 'TikTok Ads'}[key] ?? key);
@@ -38,7 +40,7 @@ export function PerformanceReportView({report}: {report: PerformanceReport}) {
  return <article className="performance-report space-y-5" aria-label="Relatório executivo de mídia paga">
   <Card><h2 className="text-lg font-semibold">Resumo executivo · {scope.organizationName}</h2><p className="mt-2 text-sm text-zinc-400">Período atual: {scope.from} a {scope.to} · {scope.currency} · Fuso cadastral: {scope.timezone}</p>
    <p className="mt-2 text-xs text-zinc-400">Gerado em {new Intl.DateTimeFormat('pt-BR', {timeZone: scope.timezone, dateStyle: 'short', timeStyle: 'short'}).format(new Date(scope.generatedAt))} ({scope.timezone}). Datas diárias conforme a fonte, sem conversão.</p>
-   <div className="mt-4"><PerformanceReportPrint disabled={empty}/></div>
+   <div className="mt-4 flex flex-wrap items-start gap-4"><PerformanceReportPrint disabled={empty}/><PerformanceReportExport content={empty ? '' : performanceReportCsv(report)} filename={performanceReportFilename(scope)} disabled={empty}/></div>
   </Card>
   {empty ? <Card><p>Sem registros de mídia paga nos períodos selecionados. Nenhum zero foi presumido.</p></Card> : null}
   <section aria-label="Indicadores consolidados" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{performanceMetrics.map(metric => <Card key={metric}>
