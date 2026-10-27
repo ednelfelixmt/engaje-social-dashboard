@@ -6,6 +6,7 @@
   "scripts": {
     "verify:http": "node --import tsx scripts/verify-release-http.ts",
     "verify:schema": "node --import tsx scripts/verify-schema.ts",
+    "verify:local-migrations": "node --import tsx scripts/audit-migration-history.ts --local-only",
     "types:generate": "node --import tsx scripts/generate-types.ts",
     "types:generate:functions": "node --import tsx scripts/generate-types.ts --functions-only",
     "typecheck": "tsc --noEmit && npm run typecheck:edge-auth",
