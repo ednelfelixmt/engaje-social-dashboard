@@ -6,7 +6,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import type {Row} from '../src/types/database.types';
 import {buildTargetReferences,targetFields,type TargetConfig,type TargetScope} from '../src/lib/reports/target-references';
 import {TargetReferences} from '../src/components/dashboard/target-references';
-const scope: TargetScope={organizationId:'synthetic-a',organizationName:'Synthetic A',organizationSlug:'synthetic-a',timezone:'America/Cuiaba',currency:'BRL',referenceCurrency:'BRL',from:'2026-10-20',to:'2026-10-20',generatedAt:'2026-10-26T12:00:00.000Z'};
+const scope: TargetScope={organizationId:'22222222-2222-4222-8222-222222222222',organizationName:'Synthetic A',organizationSlug:'synthetic-a',timezone:'America/Cuiaba',currency:'BRL',referenceCurrency:'BRL',from:'2026-10-20',to:'2026-10-20',generatedAt:'2026-10-26T12:00:00.000Z'};
 const fact={id:'synthetic',organization_id:scope.organizationId,metric_date:scope.from,platform:'meta_ads',account_id:'act_123',campaign_id:'synthetic-campaign',campaign_name:'Synthetic',ad_id:'synthetic-ad',currency:'BRL',spend:0,impressions:1000,clicks:20,leads:5,attribution_window:'7d_click'} as Row<'metrics_ads'>;
 const config={...Object.fromEntries(targetFields.map(key=>[key,null])),organization_id:scope.organizationId,target_spend:0,target_ctr:1} as TargetConfig;
 
