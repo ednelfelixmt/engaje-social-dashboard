@@ -1,5 +1,4 @@
 import type {CampaignPerformance} from '@/types/domain';
-import type {InsightCampaign} from '@/components/dashboard/business-analytics-workbench';
 
 /**
  * Catalog-only campaigns are placeholders without an observed ad fact.
@@ -9,7 +8,7 @@ import type {InsightCampaign} from '@/components/dashboard/business-analytics-wo
 export function intelligenceCampaignShape(
   rows: readonly CampaignPerformance[],
   authorizedOrganizationId: string,
-): InsightCampaign[] {
+) {
   if (!authorizedOrganizationId || rows.some(row => row.organizationId !== authorizedOrganizationId)) {
     throw new Error('Intelligence requires a single authorized organization');
   }
