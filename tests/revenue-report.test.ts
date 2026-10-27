@@ -2,10 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import type {Row} from '../src/types/database.types';
 import {buildRevenueReport, revenueDelta, type RevenueScope} from '../src/lib/reports/revenue-report';
-const scope: RevenueScope = {organizationId:'synthetic-a',organizationName:'Synthetic A',organizationSlug:'synthetic-a',timezone:'America/Cuiaba',currency:'BRL',source:'crm',from:'2026-10-20',to:'2026-10-21',compare:'previous_period'};
+const scope: RevenueScope = {organizationId:'11111111-1111-4111-8111-111111111111',organizationName:'Synthetic A',organizationSlug:'synthetic-a',timezone:'America/Cuiaba',currency:'BRL',source:'crm',from:'2026-10-20',to:'2026-10-21',compare:'previous_period'};
 const fact = (patch: Partial<Row<'metrics_crm'>> = {}) => ({id:'synthetic-current',organization_id:scope.organizationId,source:'crm',metric_date:scope.from,currency:'BRL',channel:'unattributed',account_id:'',campaign_id:'',revenue:100,purchases:2,leads:5,checkouts:3,is_complete:true,synced_at:'2026-10-22T12:00:00.000Z',...patch} as Row<'metrics_crm'>);
 const current=()=>[fact(),fact({id:'second-day',metric_date:scope.to,revenue:-20})];
 const previous=()=>[fact({id:'prior1',metric_date:'2026-10-18',revenue:20}),fact({id:'prior2',metric_date:'2026-10-19',revenue:20})];
+
+
+test('revenue scope rejects non-UUID organizations before any source or period aggregation',()=>{
+ for(const organizationId of ['', 'synthetic-a', '11111111-1111-4111-8111-11111111111g', '11111111111141118111111111111111']){
+  assert.throws(()=>buildRevenueReport([],[],{...scope,organizationId}),/Invalid revenue report scope/);
+  assert.throws(()=>buildRevenueReport([fact()],[],{...scope,organizationId}),/Invalid revenue report scope/);
+ }
+ assert.equal(buildRevenueReport([],[],{...scope,organizationId:scope.organizationId.toUpperCase(),compare:'none'}).current.records,0);
+});
 
 test('revenue report uses one explicit source, signed net revenue and actual calendar comparison',()=>{
  const report=buildRevenueReport([...current(),fact({id:'sheet',source:'spreadsheet',revenue:999})],previous(),scope);
