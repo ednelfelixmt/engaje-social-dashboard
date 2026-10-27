@@ -45,5 +45,12 @@ export function summarizeClientAds(organizationId: string, currency: string, row
   if (!canonicalUuid.test(organizationId) || rows.some(row => row.organization_id !== organizationId)) {
     throw new Error('Client summary requires a single matching organization');
   }
+  // Agency portfolio counts may span currencies, but a client's card cannot
+  // present leads, impressions or reach from a source currency other than its
+  // configured currency. Fail closed for the entire card, not just spend/CPL,
+  // while keeping the other clients' admin overview available.
+  if (!/^[A-Z]{3}$/.test(currency) || rows.some(row => row.currency !== currency)) {
+    return {spend: null, impressions: null, reach: null, leads: null, cpl: null, currency: null};
+  }
   return summarizeAgencyAds(rows, currency);
 }
