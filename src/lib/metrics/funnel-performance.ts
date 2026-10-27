@@ -18,26 +18,29 @@ function measurement(row: CampaignPerformance, metric: FunnelMetricKey) {
 
 export function summarizeFunnelMetric(rows: readonly CampaignPerformance[], metric: FunnelMetricKey, organizationId: string, currency: string) {
   const observed = rows.filter(hasFunnelMeasurements);
-  const scopeValid = rows.every(row => row.organizationId === organizationId);
+  // Reject a missing or malformed tenant identity even when there are no facts.
+  // Counts, not only costs, must respect the selected-currency boundary.
+  const scopeValid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(organizationId)
+    && rows.every(row => row.organizationId === organizationId);
+  const currencyValid = /^[A-Z]{3}$/.test(currency) && observed.every(row => row.currency === currency);
   const known = observed.filter(row => validCount(measurement(row, metric)));
   // Unique people are not additive between campaigns without provider-level deduplication.
   // Campaign-level reach is available only when its own daily source grain was validated.
   const reachNeedsDeduplication = metric === 'reach' && observed.length > 1;
-  let value: number | null = scopeValid && !reachNeedsDeduplication && observed.length > 0 && known.length === observed.length
+  let value: number | null = scopeValid && currencyValid && !reachNeedsDeduplication && observed.length > 0 && known.length === observed.length
     ? known.reduce((total, row) => total + (measurement(row, metric) as number), 0) : null;
   if (value != null && !Number.isFinite(value)) value = null;
-  const currencyValid = /^[A-Z]{3}$/.test(currency) && observed.every(row => row.currency === currency);
   const spend = observed.reduce((total, row) => validCount(row.spend) ? total + row.spend : Number.NaN, 0);
   const definition = funnelMetricDefinitions.find(item => item.key === metric)!;
   const multiplier = 'costMultiplier' in definition ? definition.costMultiplier : 1;
-  const cost = currencyValid && Number.isFinite(spend) ? finiteRatio(spend, value, multiplier) : null;
+  const cost = scopeValid && currencyValid && Number.isFinite(spend) ? finiteRatio(spend, value, multiplier) : null;
   const detail = !scopeValid ? 'Indicador indisponível: escopo de organização incompatível.'
+    : !currencyValid ? 'Indicador indisponível: moeda diferente da exibida ou seleção inválida.'
     : !observed.length ? 'Sem campanhas com medições no período.'
     : reachNeedsDeduplication ? 'Alcance indisponível: pessoas únicas entre campanhas exigem deduplicação comprovada na origem.'
     : value == null ? 'Total indisponível: ' + known.length + ' de ' + observed.length + ' campanhas com valor válido; ' + (known.length < observed.length ? 'cobertura incompleta.' : 'limite numérico excedido.')
     : 'Cobertura: ' + known.length + ' de ' + observed.length + ' campanhas com medições.';
-  const costDetail = !currencyValid && observed.length ? ' Custo indisponível: moeda diferente da exibida ou não identificada.'
-    : !Number.isFinite(spend) ? ' Custo indisponível: investimento inválido ou limite numérico.' : '';
+  const costDetail = !Number.isFinite(spend) && scopeValid && currencyValid ? ' Custo indisponível: investimento inválido ou limite numérico.' : '';
   return {value, cost, detail: detail + costDetail, observed: observed.length, known: known.length};
 }
 
