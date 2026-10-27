@@ -1,3 +1,4 @@
+import {finiteRatio} from './aggregation';
 import type {CampaignPerformance} from '@/types/domain';
 import {paidWeightedMetrics, weightedMetricKeys} from './weighted-metrics';
 
@@ -12,12 +13,6 @@ function availableTotal(rows:CampaignPerformance[],key:string){
 
 function knownUnique(value:number|null|undefined):number|null{
   return value != null && Number.isFinite(value) && value >= 0 ? value : null;
-}
-
-function ratio(numerator:number|null,denominator:number|null,multiplier=1){
-  if(numerator==null||denominator==null||!Number.isFinite(numerator)||!Number.isFinite(denominator)||denominator<=0)return null;
-  const result=numerator/denominator*multiplier;
-  return Number.isFinite(result)?result:null;
 }
 
 export function paidSummary(rows:CampaignPerformance[]):Record<string,number|null>{
@@ -46,16 +41,16 @@ export function paidSummary(rows:CampaignPerformance[]):Record<string,number|nul
   // Revenue minus ad spend is not accounting profit: product, operational and tax costs are unavailable.
   // Never infer ROI from ROAS or paid-media spend alone.
   result.profit=null;
-  result.roas=ratio(revenue,spend);result.roi=null;
-  result.frequency=ratio(result.impressions,result.reach);
-  result.cpm=ratio(spend,result.impressions,1000);result.cpc=ratio(spend,result.clicks);
-  result.ctr=ratio(result.clicks,result.impressions,100);result.unique_ctr=ratio(result.unique_clicks,result.reach,100);
-  result.cpl=ratio(spend,result.leads);result.cpa=ratio(spend,result.purchases);
-  result.conversion_rate=ratio(result.purchases,result.clicks,100);result.cost_per_conversion=ratio(spend,result.conversions);
-  result.cost_per_page_view=ratio(spend,result.page_views);result.cost_per_registration=ratio(spend,result.registration_leads);
-  result.cost_per_message=ratio(spend,result.message_leads);result.cost_per_call=ratio(spend,result.phone_calls);
-  result.cost_per_thruplay=ratio(spend,result.thruplays);result.cost_per_add_to_cart=ratio(spend,result.add_to_cart);
-  result.cost_per_checkout=ratio(spend,result.checkouts);result.cost_per_subscription=ratio(spend,result.subscriptions);
+  result.roas=finiteRatio(revenue,spend);result.roi=null;
+  result.frequency=finiteRatio(result.impressions,result.reach);
+  result.cpm=finiteRatio(spend,result.impressions,1000);result.cpc=finiteRatio(spend,result.clicks);
+  result.ctr=finiteRatio(result.clicks,result.impressions,100);result.unique_ctr=finiteRatio(result.unique_clicks,result.reach,100);
+  result.cpl=finiteRatio(spend,result.leads);result.cpa=finiteRatio(spend,result.purchases);
+  result.conversion_rate=finiteRatio(result.purchases,result.clicks,100);result.cost_per_conversion=finiteRatio(spend,result.conversions);
+  result.cost_per_page_view=finiteRatio(spend,result.page_views);result.cost_per_registration=finiteRatio(spend,result.registration_leads);
+  result.cost_per_message=finiteRatio(spend,result.message_leads);result.cost_per_call=finiteRatio(spend,result.phone_calls);
+  result.cost_per_thruplay=finiteRatio(spend,result.thruplays);result.cost_per_add_to_cart=finiteRatio(spend,result.add_to_cart);
+  result.cost_per_checkout=finiteRatio(spend,result.checkouts);result.cost_per_subscription=finiteRatio(spend,result.subscriptions);
   const weighted = paidWeightedMetrics(rows);
   for(const key of weightedMetricKeys)result[key]=weighted[key].value;
   // Compatibility aliases used by the funnel and lead-breakdown components.
