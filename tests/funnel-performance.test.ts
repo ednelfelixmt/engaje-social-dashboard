@@ -95,12 +95,45 @@ test('foreign tenant is rejected in current and prior periods, including foreign
   assert.equal(output[0].previousValue, null); assert.match(output[0].detail, /Comparação indisponível/);
 });
 
-test('currency must match displayed currency before computing a monetary cost', () => {
+test('currency mismatch makes both funnel counts and monetary cost unavailable', () => {
   for (const currency of ['USD', '', 'brl']) {
     const data = rows(fact()); data[0].currency = currency;
-    assert.equal(summary(data).value, 20); assert.equal(summary(data).cost, null);
+    assert.equal(summary(data).value, null); assert.equal(summary(data).cost, null);
     assert.match(summary(data).detail, /moeda diferente/);
   }
+});
+
+test('one foreign-currency row invalidates the entire funnel before summing even valid counts or zeros', () => {
+  const data = rows(fact(), fact({campaign_id: 'synthetic-other', spend: 0, clicks: 0, currency: 'USD'}));
+  const result = summary(data);
+  assert.equal(result.value, null);
+  assert.equal(result.cost, null);
+  assert.equal(result.observed, 2);
+  assert.equal(result.known, 2);
+  assert.match(result.detail, /moeda diferente/);
+  assert.equal(summary(rows(fact({spend: 0, clicks: 0}))).value, 0);
+});
+
+test('funnel rejects invalid tenant identity even for empty or equally malformed data', () => {
+  for (const organizationId of ['', 'bad-id', '11111111-1111']) {
+    const empty = summarizeFunnelMetric([], 'clicks', organizationId, scope.currency);
+    assert.equal(empty.value, null);
+    assert.match(empty.detail, /escopo de organização incompatível/);
+    const data = rows(fact());
+    data[0].organizationId = organizationId;
+    const result = summarizeFunnelMetric(data, 'clicks', organizationId, scope.currency);
+    assert.equal(result.value, null);
+    assert.equal(result.cost, null);
+    assert.match(result.detail, /escopo de organização incompatível/);
+  }
+});
+
+test('currency conflict in the prior period cannot produce a comparison', () => {
+  const prior = rows(fact({currency: 'USD'}));
+  const output = configuredFunnel(rows(fact()), steps, scope, prior);
+  assert.equal(output[0].value, 20);
+  assert.equal(output[0].previousValue, null);
+  assert.match(output[0].detail, /Comparação indisponível/);
 });
 
 test('incomplete prior period does not produce a comparison, while current counts stay valid', () => {
