@@ -936,3 +936,16 @@ Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamen
 - Permanecem registrados: SEC-010/011 e UX autenticada, OAuth real, pg_net no schema public, instalação pelo bootstrap histórico com upgrades obrigatórios, limite de ingestão por processo, reconciliação Storage após falha/concorrência, React 18/depreciação e SMTP adiado. Nenhuma dessas pendências foi declarada homologada.
 
 - Após a publicação, os 12 GETs anônimos também passaram no domínio de produção (login/recuperação e redirecionamento das rotas privadas). Não substituem UX autenticada.
+
+
+## 27/10/2026 — GOAL-003: impressão privada de metas e referências
+
+- Continuidade independente dos gates externos: controle Imprimir / salvar PDF no relatório autenticado reports/targets, reutilizando o fluxo local existente. Identidade do cliente incluída no documento, período/moedas/fuso/geração e todos os avisos preservados. Não classifica referência sem vigência como meta mensal.
+- CSS de impressão específico, uma coluna e prevenção de quebra por cartão. Filtros, navegação e configuração administrativa ficam fora da impressão; os dados continuam no componente servidor e o botão client recebe apenas disabled.
+- Cliente sem referências: controles desabilitados. Referência com dados ausentes: impressão permitida para registrar a ausência, mantendo métricas indisponíveis. Falha/escopo negado não renderiza botão de impressão nem comparação parcial.
+- Evidência local: 581 testes, tipos, lint sem advertências, arquitetura e build aprovados. Consulta de proposta e revisão real do diff por Claude Sonnet 4.6; condição de ocultação confirmada na regra preexistente globals.css:207. Revisão React: sem novo fetching, estado compartilhado de request ou ampliação de client props; limpeza do modo de impressão e fallback de erro reutilizados.
+- VIS-GOAL-003: Chrome headless não iniciou no ambiente. A tentativa de validação normal foi interrompida pelo controle do Windows por não conseguir confirmar a URL do navegador; nenhuma impressão/PDF ou paginação foi homologada visualmente. Registrar como pendência não bloqueante para a entrega interna, mantendo teste real de salvar PDF e UX autenticada abertos. Nenhuma proteção foi desabilitada.
+- Sem migrações, Auth/RLS/Storage/Edge, escrita, dados reais como fixtures, segredos, novas rotas ou compartilhamento. SMTP segue adiado. SEC-014 teve rollout concluído no ciclo anterior; SEC-010/011 e OAuth real continuam pendentes.
+- Integração somente após PR revisado, mergeável, Quality Gate integral e Vercel aprovados no mesmo SHA. Confirmar produção separadamente; preservar os módulos existentes e reverter somente GOAL-003 em regressão.
+
+- Complemento GOAL-003: os 12 GETs do build local passaram, incluindo negação anônima de reports/targets. Nenhuma jornada autenticada foi inferida dessas sondas.

@@ -55,3 +55,20 @@ Regressões sintéticas em `tests/target-references-export.test.ts`, `tests/targ
 ### Precisão do CSV no lote REL-002
 
 O contrato CSV versão 2 inclui unidade_diferenca: percentage_points para CTR, currency/count/percent conforme a referência nos demais campos. Uma diferença de 1 ponto percentual nunca é rotulada como variação relativa de 1%. Testes de clique verificam download somente por ação do usuário, bloqueio de conteúdo vazio/desabilitado e erro anunciado sem detalhes privados.
+
+
+## GOAL-003 — Impressão e PDF local
+
+Data: 27/10/2026. A tela privada de referências agora reutiliza o controle de impressão do relatório executivo. O documento inclui identificação do cliente, período, moedas filtrada/cadastral, fuso, geração UTC, valores observados, referências, diferenças e motivos de indisponibilidade. As dez referências e os avisos de origem/cobertura permanecem visíveis. Não inferir meta mensal ou cumprimento sem vigência.
+
+O botão só aparece quando a rota autenticada produziu um relatório validado e recebe apenas disabled; nenhum fato adicional é serializado para um novo componente client. Sem referências cadastradas, impressão e CSV ficam desabilitados. Havendo referência, um recorte sem fatos pode documentar a indisponibilidade, sem presumir zero. Filtros, cabeçalho de navegação, link administrativo e controles são ocultados somente em impressão; o documento conserva sua própria identidade e contexto. O CSS novo é restrito a target-reference-report, com cartões em uma coluna e tentativa de evitar quebras dentro de cada indicador.
+
+Segurança: nenhum endpoint, consulta, escrita, banco, RLS, Storage, OAuth, segredo, dependência ou compartilhamento público foi criado/alterado. O fluxo continua restrito ao tenant autenticado e usa o diálogo local do navegador, sem upload do documento.
+
+Validação: 581 testes, tipos, lint sem advertências, arquitetura e build local aprovados. Regressões cobrem cliente escapado, metadata/unidades, cobertura e causas de indisponibilidade, botão habilitado com referência sem fatos, bloqueio sem referências e ausência do controle em erro de dados/tenant. Os testes existentes do controle exercitam clique, disabled mesmo por chamada direta, erro acessível sem detalhe interno e limpeza da classe ao desmontar. Outros relatórios mantêm seus testes de apresentação.
+
+Claude Code / Sonnet 4.6 revisou proposta antes da implementação e o diff após. A condição sobre data-print-hide foi resolvida por inspeção: globals.css:207 já aplica display:none!important dentro do modo de impressão. Sem esse contexto no diff, o parecer não confirmava a regra. Sem impedimento restante no escopo revisado.
+
+**Limitação de homologação:** o Chrome headless local não iniciou (falha do ambiente); a alternativa visual pelo Windows foi interrompida pelo controle de Computer Use por não conseguir confirmar a URL com confiança. Nenhum PDF foi gerado ou aprovado visualmente. Paginação real, margens, salvamento e jornada em sessão autenticada seguem pendentes; não confundir SSR/doubles ou CI com essas verificações. Não foram alteradas proteções do navegador para contornar a falha.
+
+Exigir Quality Gate completo e Vercel READY/success no mesmo head antes de integrar. Rollback: reverter apenas GOAL-003; preservar CSV, referências e autorização existentes.

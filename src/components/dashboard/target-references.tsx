@@ -1,4 +1,5 @@
 import {Card} from '@/components/ui/card';
+import {PerformanceReportPrint} from '@/components/dashboard/performance-report-print';
 import {TargetReferencesExport} from '@/components/dashboard/target-references-export';
 import {targetReferencesCsv, targetReferencesFilename} from '@/lib/export/target-references';
 import type {TargetReference, TargetReferenceReport, TargetStatus} from '@/lib/reports/target-references';
@@ -13,13 +14,13 @@ function format(value: number | null, row: TargetReference, currency: string) {
 }
 export function TargetReferences({report}: {report: TargetReferenceReport}) {
  const {scope} = report;
- return <article className="space-y-4" aria-label="Referências de desempenho cadastradas">
-  <Card><h2 className="text-lg font-semibold">Comparação numérica no recorte selecionado</h2><p className="mt-3 text-sm text-zinc-400">As referências cadastradas não possuem vigência definida. Esta tela não presume meta mensal, ritmo esperado, projeção ou cumprimento de objetivo. Investimento maior ou menor, por si só, não classifica desempenho.</p>
+ return <article className="target-reference-report space-y-4" aria-label="Referências de desempenho cadastradas">
+  <Card><p className="eyebrow break-words">Metas e referências · {scope.organizationName}</p><h2 className="mt-2 text-lg font-semibold">Comparação numérica no recorte selecionado</h2><p className="mt-3 text-sm text-zinc-400">As referências cadastradas não possuem vigência definida. Esta tela não presume meta mensal, ritmo esperado, projeção ou cumprimento de objetivo. Investimento maior ou menor, por si só, não classifica desempenho.</p>
    <p className="mt-3 text-sm text-zinc-400">{report.configured} de 10 referências cadastradas. Período: {scope.from} a {scope.to}. Moeda filtrada: {scope.currency}. Moeda cadastral das referências: {scope.referenceCurrency}. Sem conversão cambial.</p>
   </Card>
-  <TargetReferencesExport content={targetReferencesCsv(report)} filename={targetReferencesFilename(report)} disabled={report.configured === 0}/>
+  <div data-print-hide className="flex flex-wrap items-start gap-4"><PerformanceReportPrint disabled={report.configured === 0}/><TargetReferencesExport content={targetReferencesCsv(report)} filename={targetReferencesFilename(report)} disabled={report.configured === 0}/></div>
   {report.configured === 0 ? <Card><p role="status">A agência ainda não cadastrou referências para este cliente.</p></Card> : null}
-  <section className="grid gap-4 md:grid-cols-2" aria-label="Valores e referências">{report.rows.map(row => <Card key={row.field}>
+  <section className="grid gap-4 md:grid-cols-2" aria-label="Valores e referências">{report.rows.map(row => <Card key={row.field} data-reference-card>
    <h2 className="text-lg font-semibold">{row.label}</h2><p className="mt-2 text-sm text-cyan-200">{statusLabels[row.status]}</p>
    <dl className="mt-4 grid grid-cols-2 gap-4"><div><dt className="text-xs text-zinc-400">Observado no período · {row.unit === 'money' ? scope.currency : 'fonte de anúncios'}</dt><dd className="mt-1 break-words text-xl font-semibold">{format(row.actual,row,scope.currency)}</dd></div><div><dt className="text-xs text-zinc-400">Referência cadastrada · {row.unit === 'money' ? scope.referenceCurrency : row.unit === 'percent' ? '%' : row.unit === 'ratio' ? 'x' : 'contagem'}</dt><dd className="mt-1 break-words text-xl font-semibold">{format(row.target,row,scope.referenceCurrency)}</dd></div></dl>
    {row.difference !== null ? <p className="mt-3 text-sm text-zinc-300">Diferença observada − referência: {row.unit === 'percent' ? numeric(row.difference)+' p.p.' : format(row.difference,row,scope.currency)}</p> : null}

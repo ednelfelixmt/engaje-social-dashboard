@@ -66,3 +66,31 @@ test('reference download is click-only and guards disabled/empty content even un
 test('reference download errors are announced without exposing private failure details or claiming success',()=>{
  exportMessage='';exportFailure=true;findExportButton(TargetReferencesExport({content:'synthetic',filename:'synthetic.csv',disabled:false}))!.props.onClick();const html=renderToStaticMarkup(TargetReferencesExport({content:'synthetic',filename:'synthetic.csv',disabled:false}));assert.ok(html.includes('role="alert"'));assert.ok(!html.includes('Private synthetic export failure'));exportFailure=false;
 });
+
+
+test('printed reference document identifies its tenant and keeps provenance, units and unavailable reasons',()=>{
+ const named={...scope,organizationName:'Synthetic <script>example</script> & A'};
+ const settings={...config,target_roi:15,target_frequency:2,target_leads:10};
+ const html=renderToStaticMarkup(React.createElement(TargetReferences,{report:buildTargetReferences([{...fact,currency:'USD',leads:null}],settings,{...named,currency:'USD'})}));
+ for(const text of ['target-reference-report','Metas e referências','Synthetic &lt;script&gt;example&lt;/script&gt; &amp; A',
+  scope.from,scope.to,scope.timezone,scope.generatedAt,'Moeda filtrada: USD','Moeda cadastral das referências: BRL',
+  'Moeda não comparável','custos financeiros completos','audiência deduplicada','não possuem vigência definida',
+  'não comprovam que todas as contas','Janela: 7d_click','Imprimir / salvar PDF'])
+  assert.ok(html.includes(text),text);
+ assert.ok(!html.includes('<script>example'));
+ assert.equal((html.match(/data-reference-card/g)||[]).length,10);
+ assert.ok(html.includes('data-print-hide="true"'));
+});
+
+test('printing uses the registered reference document even with missing facts, and disables an unconfigured document',()=>{
+ const configured=renderToStaticMarkup(React.createElement(TargetReferences,{report:buildTargetReferences([],config,scope)}));
+ const printButton=configured.match(/<button[^>]*>Imprimir \/ salvar PDF<\/button>/)?.[0];
+ assert.ok(printButton);assert.ok(!/\sdisabled=/.test(printButton));
+ assert.ok(configured.includes('Dados insuficientes'));assert.ok(configured.includes('0 registros de anúncios'));
+ assert.ok(configured.includes('0 de 1 dias'));assert.ok(configured.includes('escolha salvar como PDF'));
+ const settings={...Object.fromEntries(targetFields.map(key=>[key,null])),organization_id:scope.organizationId} as TargetConfig;
+ const empty=renderToStaticMarkup(React.createElement(TargetReferences,{report:buildTargetReferences([],settings,scope)}));
+ assert.match(empty,/<button type="button" disabled=""[^>]*>Imprimir \/ salvar PDF<\/button>/);
+ assert.equal((empty.match(/disabled=""/g)||[]).length,2);
+ assert.ok(empty.includes('A agência ainda não cadastrou referências'));
+});

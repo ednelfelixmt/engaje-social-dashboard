@@ -217,3 +217,13 @@ html.is-touch-dragging * { cursor: grabbing !important; }
   .engaje-performance-print h2,
   .engaje-performance-print h3 { break-after: avoid; }
 }
+
+
+/* Preserve all reference reasons and provenance in the local printed document. */
+@media print {
+  .engaje-performance-print .target-reference-report { font-size: 10pt; line-height: 1.4; overflow-wrap: anywhere; }
+  .engaje-performance-print .target-reference-report section[aria-label="Valores e referências"] { display: block; }
+  .engaje-performance-print .target-reference-report [data-reference-card] { break-inside: avoid; margin-bottom: 3mm; padding: 3mm; }
+  .engaje-performance-print .target-reference-report [data-reference-card] h2 { font-size: 12pt; }
+  .engaje-performance-print .target-reference-report [data-reference-card] dd { font-size: 14pt; }
+}
