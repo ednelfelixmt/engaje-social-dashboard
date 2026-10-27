@@ -69,6 +69,7 @@ export default tseslint.config(
       'scripts/verify-release-http.ts',
       'tests/release-http.test.ts',
       'src/lib/metrics/campaigns.ts',
+      'tests/campaigns-authorized-scope.test.ts',
       'tests/nonadditive-reach.test.ts',
       'src/lib/metrics/query.ts',
       'src/components/dashboard/filters.tsx',

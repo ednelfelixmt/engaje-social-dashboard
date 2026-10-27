@@ -173,3 +173,24 @@ export function campaigns(
   }
   return performance;
 }
+
+// Fail closed if an API query returns a row outside the tenant/currency selected
+// by the authenticated route. Validate *all* sources, including unused CRM facts
+// and catalog-only campaigns, before projecting any figures.
+export function scopedCampaigns(
+  ads: Row<'metrics_ads'>[],
+  crm: Row<'metrics_crm'>[],
+  preferred: 'crm' | 'spreadsheet',
+  catalog: Row<'ad_campaigns'>[],
+  authorizedOrganizationId: string,
+  selectedCurrency: string,
+): CampaignPerformance[] {
+  if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(authorizedOrganizationId)
+    || !/^[A-Z]{3}$/.test(selectedCurrency)
+    || ads.some(row => row.organization_id !== authorizedOrganizationId || row.currency !== selectedCurrency)
+    || crm.some(row => row.organization_id !== authorizedOrganizationId || row.currency !== selectedCurrency)
+    || catalog.some(row => row.organization_id !== authorizedOrganizationId)) {
+    throw new Error('Campaign aggregation requires authorized organization and currency');
+  }
+  return campaigns(ads, crm, preferred, catalog);
+}
