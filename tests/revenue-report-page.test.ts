@@ -35,6 +35,7 @@ test('revenue route authorizes before querying tenant/currency/date facts and re
  const html=renderToStaticMarkup(await Page(props()));assert.deepEqual(events.slice(0,2),['auth','config']);assert.deepEqual(calls.map(c=>c.table),['metrics_crm','metrics_crm']);
  for(const call of calls)for(const expected of [['eq','organization_id',scope.id],['eq','currency','BRL']])assert.ok(call.filters.some(f=>JSON.stringify(f)===JSON.stringify(expected)));
  assert.ok(calls[0].filters.some(f=>f[0]==='gte'&&f[2]==='2026-10-20'));assert.ok(calls[1].filters.some(f=>f[0]==='gte'&&f[2]==='2025-10-20'));
+ assert.ok(html.includes('Exportar CSV de receita'));
  assert.ok(html.includes('Fonte selecionada: CRM'));assert.ok(html.includes('Comparativo: 2025-10-20 a 2025-10-21'));assert.ok(!html.includes('Importar planilha'));assert.ok(!html.includes('settings/'));
 });
 
@@ -53,7 +54,8 @@ test('denied tenant, disabled external setting and invalid source cannot query o
 test('source read failures and cross-tenant payloads redact data and never expose partial totals',async()=>{
  for(const sourceError of [true,false]){
   reset();readError=sourceError;corrupt=!sourceError;rows=[fact({id:'PRIVATE_OTHER',organization_id:'synthetic-other'})];
-  const html=renderToStaticMarkup(await Page(props()));assert.ok(html.includes('role="alert"'));assert.ok(html.includes('Nenhum total parcial'));assert.ok(!html.includes('PRIVATE_OTHER'));assert.ok(!html.includes('Synthetic upstream'));assert.ok(!html.includes('Indicadores da fonte selecionada'));
+  const html=renderToStaticMarkup(await Page(props()));assert.ok(html.includes('role="alert"'));assert.ok(html.includes('Nenhum total parcial'));assert.ok(!html.includes('PRIVATE_OTHER'));assert.ok(!html.includes('Exportar CSV de receita'));
+  assert.ok(!html.includes('Synthetic upstream'));assert.ok(!html.includes('Indicadores da fonte selecionada'));
  }
 });
 
