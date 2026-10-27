@@ -8,12 +8,26 @@ import type {CampaignPerformance} from '@/types/domain';
 export function intelligenceCampaignShape(
   rows: readonly CampaignPerformance[],
   authorizedOrganizationId: string,
+  selectedCurrency: string,
 ) {
-  if (!authorizedOrganizationId || rows.some(row => row.organizationId !== authorizedOrganizationId)) {
-    throw new Error('Intelligence requires a single authorized organization');
+  // Even an empty response must have the scope of the authenticated tenant.
+  if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(authorizedOrganizationId)
+    || !/^[A-Z]{3}$/.test(selectedCurrency)) {
+    throw new Error('Intelligence campaigns require authorized organization and currency');
+  }
+  const observed = (row: CampaignPerformance) =>
+    row.metricValues != null && Object.hasOwn(row.metricValues, 'spend');
+
+  // Validate all rows before selecting observed facts. Catalog-only rows are
+  // deliberately currency-less; any nonempty currency must still match.
+  // A measured campaign must always carry the selected source currency.
+  if (rows.some(row => row.organizationId !== authorizedOrganizationId
+    || (observed(row) ? row.currency !== selectedCurrency
+      : row.currency !== '' && row.currency !== selectedCurrency))) {
+    throw new Error('Intelligence campaigns require authorized organization and currency');
   }
   return rows
-    .filter(row => row.metricValues != null && Object.hasOwn(row.metricValues, 'spend'))
+    .filter(observed)
     .map(row => ({
       id: `${row.platform}:${row.accountId}:${row.campaignId}`,
       name: row.campaignName,
