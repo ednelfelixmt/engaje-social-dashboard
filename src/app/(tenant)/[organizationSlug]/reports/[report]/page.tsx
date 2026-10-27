@@ -1,3 +1,4 @@
+import {InvalidReportFilters} from '@/components/dashboard/invalid-report-filters';
 import Link from 'next/link';
 import {notFound} from 'next/navigation';
 import {BarChart3, MapPinned, MousePointer2, Users, Globe2} from 'lucide-react';
@@ -31,8 +32,9 @@ export default async function Page({params:pendingParams,searchParams:pendingSea
  const {db,org,superAdmin}=await tenant(organizationSlug);
  const config=await dashboardConfig(organizationSlug);
  if(!config.enabled_pages.includes(report==='google-analytics'?'overview':'paid'))return <Card>Este relatório está indisponível nas configurações deste cliente.</Card>;
+ let f:ReturnType<typeof filters>&{compare:'none'};
+ try{f={...filters(search,org.timezone,org.currency),compare:'none'};}catch{return <InvalidReportFilters search={search}/>;}
  const [{data:organizations}]=await Promise.all([superAdmin?db.from('organizations').select('name,slug').eq('status','active').order('name'):Promise.resolve({data:[{name:org.name,slug:org.slug}]})]);
- const f={...filters(search,org.timezone,org.currency),compare:'none' as const};
  if(report==='google-analytics'){
   return <main className="mx-auto max-w-[1680px] space-y-4"><header><p className="eyebrow">Inteligência comportamental</p><h1 className="mt-2 text-2xl font-semibold text-white">Google Analytics 4</h1><p className="mt-2 text-sm text-zinc-400">Sessões, usuários, origens de tráfego, engajamento, eventos e conversões do site.</p></header>
    <Filters value={f} organizations={organizations??[]} slug={org.slug} allowComparison={false}/>

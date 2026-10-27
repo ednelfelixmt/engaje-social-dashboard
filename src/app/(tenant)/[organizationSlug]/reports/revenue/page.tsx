@@ -1,3 +1,4 @@
+import {InvalidReportFilters} from '@/components/dashboard/invalid-report-filters';
 import Link from 'next/link';
 import {Card} from '@/components/ui/card';
 import {Filters} from '@/components/dashboard/filters';
@@ -15,7 +16,8 @@ export default async function Page({params, searchParams}: {params: Promise<{org
  const search = await searchParams;
  const source = search.source ?? config.preferred_revenue_source;
  if (source !== 'crm' && source !== 'spreadsheet') return <Card><p role="alert">Selecione uma fonte válida: CRM ou planilha.</p></Card>;
- const f = filters(search, org.timezone, org.currency);
+ let f:ReturnType<typeof filters>;
+ try{f=filters(search,org.timezone,org.currency);}catch{return <InvalidReportFilters search={search}/>;}
  const {data: organizations} = superAdmin ? await db.from('organizations').select('name,slug').eq('status', 'active').order('name') : {data: [{name: org.name, slug: org.slug}]};
  let report: RevenueReport | null = null;
  try {

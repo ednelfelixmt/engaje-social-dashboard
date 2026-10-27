@@ -1,0 +1,17 @@
+# FILTER-DATE-001 — período solicitado sem substituição silenciosa
+
+O filtro central em src/lib/metrics/query.ts rejeita from/to presentes e inválidos, incluindo vazio, data impossível, formato sem zeros, timestamp no lugar de dia, array de parâmetro repetido, null e outros tipos. Defaults só se aplicam a campos ausentes (undefined). Calendário local do tenant, ausência parcial, comparação, moeda e limite inclusivo de até dois anos preservam o comportamento existente.
+
+As sete rotas genéricas — dashboard/section, Intelligence, executivo, receita, referências, campanha e público/GA4 — exibem aviso seguro de período inválido antes de consultar fatos. A autenticação do tenant permanece anterior e fora do catch; não se transforma negação de acesso em feedback de data. A página section valida antes de suas leituras auxiliares; a seleção de organizações do relatório de público também ocorre depois da validação. Relatórios orgânicos já rejeitavam datas explícitas inválidas e mantêm seus controles.
+
+A recuperação exige clicar Restaurar período padrão. Não há redirect automático, query, escrita ou default silencioso no caminho inválido. A âncora é relativa ao mesmo caminho e remove as duas datas, preservando apenas platform/account/campaign/source/currency/compare quando são strings de até 512 caracteres. URLSearchParams codifica os valores; parâmetros desconhecidos, arrays ou valores longos não são refletidos. A seleção preservada volta a ser validada na rota; IDs continuam opacos e o tenant permanece no caminho autenticado.
+
+Nenhuma alteração em configuração do Supabase, schema, Auth, RLS, Storage, Edge, OAuth, segredos, permissões ou consultas SDK. Os dados e o feedback são renderizados no servidor, sem novo estado client ou requisição de navegador. Não foi criado recurso público. Não há mídia ou credencial no novo componente.
+
+Testes exercitam o helper real, defaults com relógio sintético e fusos diferentes, ausência parcial, leap day, limites, arrays/null, recuperação relativa com contexto e ausência de parâmetros privados. Testes das sete páginas demonstram tenant antes da validação e nenhum fato/catálogo/branding/exportação no caminho inválido da página. O layout pai mantém as leituras anteriores de sessão/branding; não confundir este teste de página com ausência de toda consulta da árvore SSR.
+
+O lint incremental foi ampliado para section/Intelligence. Imports sem uso foram removidos; helper legado e resultados auxiliares não utilizados permanecem explicitamente inativos, sem mudar consultas ou reativar lógica antiga. Código legado analítico continua sujeito ao seu próprio contrato antes de reativação.
+
+Risco/rollback: links antigos contendo from= ou to= agora exibem feedback, em vez de escolher outro período sem aviso. Reverter isoladamente a UI se houver regressão comprovada, preservando a rejeição de dados inválidos e a autorização. A recuperação restaura o período padrão vigente no momento do clique, não o período digitado incorretamente.
+
+Proposta/diff revisados independentemente por Codex; Claude CLI retornou saída vazia, sem parecer verificável. Testes sintéticos e CI não homologam navegação autenticada real. Exigir Quality Gate integral e Vercel success/READY no mesmo head antes de integrar; cota de builds existente não autoriza bypass, upgrade ou deploy alternativo. PRs #207/#214/#215 seguem independentes e não são declarados publicados por este pacote.

@@ -7,6 +7,9 @@ export default tseslint.config(
   {ignores:['node_modules/**','.next/**']},
   {
     files:[
+      'src/app/(tenant)/*/*/page.tsx',
+      'src/components/dashboard/invalid-report-filters.tsx',
+      'tests/strict-date-filters.test.ts',
       'tests/organic-accounts-ui.test.ts',
       'tests/organic-accounts.test.ts',
       'tests/organic-accounts-page.test.ts',

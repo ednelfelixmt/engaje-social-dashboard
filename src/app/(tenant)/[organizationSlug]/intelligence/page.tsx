@@ -1,3 +1,4 @@
+import {InvalidReportFilters} from '@/components/dashboard/invalid-report-filters';
 import {notFound} from 'next/navigation';
 import {tenant,dashboardConfig} from '@/lib/auth/session';
 import {filters,dashboardData} from '@/lib/metrics/query';
@@ -12,7 +13,9 @@ export default async function Page({params:pending,searchParams:pendingSearch}:{
  const {db,org,superAdmin}=await tenant(organizationSlug);
  const config=await dashboardConfig(organizationSlug);
  if(!config.enabled_pages.includes('overview'))notFound();
- const search=await pendingSearch,f=filters(search,org.timezone,org.currency);
+ const search=await pendingSearch;
+ let f:ReturnType<typeof filters>;
+ try{f=filters(search,org.timezone,org.currency);}catch{return <InvalidReportFilters search={search}/>;}
  const [{data:orgs},data]=await Promise.all([
   superAdmin?db.from('organizations').select('name,slug').eq('status','active').order('name'):Promise.resolve({data:[{name:org.name,slug:org.slug}]}),
   dashboardData(db,org.id,f,{ads:true,adsComparison:f.compare!=='none',crm:true,crmComparison:f.compare!=='none',adCampaigns:true}),
