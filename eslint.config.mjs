@@ -112,6 +112,8 @@ export default tseslint.config(
       'tests/tenant-admin-boundary.test.ts',
       'tests/navigation-permissions.test.ts',
       'tests/helpers/load-typescript.ts',
+      'src/lib/metrics/efficiency.ts',
+      'tests/efficiency.test.ts',
       'src/lib/metrics/paid-metrics.ts',
       'src/lib/metrics/agency-overview.ts',
       'tests/agency-overview-metrics.test.ts',

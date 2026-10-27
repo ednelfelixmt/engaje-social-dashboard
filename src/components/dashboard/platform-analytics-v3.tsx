@@ -5,6 +5,7 @@ import {Bar,BarChart,CartesianGrid,Cell,ComposedChart,Line,Pie,PieChart,Responsi
 import {ArrowUpRight,Download,Filter,Layers3,ChartNoAxesCombined,Target} from 'lucide-react';
 import {money,number} from '@/lib/utils';
 import {paidMetric,paidTotals,sumKnown,percentChange} from '@/lib/metrics/paid-metrics';
+import {campaignCpl} from '@/lib/metrics/efficiency';
 import {serializeCsv} from '@/lib/export/csv';
 import {Card} from '@/components/ui/card';
 
@@ -34,7 +35,7 @@ export function PlatformAnalyticsV3({rows,previous,days,previousDays,currency,pl
  const rank=useMemo(()=>rows.filter(r=>r.name.toLocaleLowerCase('pt-BR').includes(search.toLocaleLowerCase('pt-BR'))).sort((a,b)=>(metric(b,rankKey)??-1)-(metric(a,rankKey)??-1)),[rows,rankKey,search]);
  const trend=useMemo(()=>Array.from({length:Math.max(days.length,previousDays.length)},(_,i)=>({day:i+1,current:days[i]?metric(days[i],metricKey):null,previous:previousDays[i]?metric(previousDays[i],metricKey):null})),[days,previousDays,metricKey]);
  const leaders=rank.filter(r=>metric(r,rankKey)!=null).slice(0,7).map((r,i)=>({name:r.name.length>32?r.name.slice(0,29)+'…':r.name,value:metric(r,rankKey),fill:palette[i%palette.length]}));
- const scatter=rows.filter(r=>r.spend>0&&r.leads!=null&&r.leads>0).map(r=>({x:r.spend,y:r.spend/r.leads!,size:r.leads,name:r.name}));
+ const scatter=rows.flatMap(r=>{const cpl=campaignCpl(r.spend,r.leads);return cpl===null?[]:[{x:r.spend,y:cpl,size:r.leads!,name:r.name}];});
  const stages=[{label:'Impressões',count:current.impressions,color:'#5bb8ff'},{label:'Cliques',count:current.clicks,color:'#facc15'},{label:'Leads',count:current.leads,color:'#50d4a0'}];
  const name=platform==='meta_ads'?'Meta Ads':platform==='google_ads'?'Google Ads':'TikTok Ads';
  return <div className="space-y-3" aria-label={'Análise profissional '+name}>
