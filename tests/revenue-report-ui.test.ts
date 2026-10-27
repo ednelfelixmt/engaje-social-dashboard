@@ -5,7 +5,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {RevenueReportView} from '../src/components/dashboard/revenue-report-view';
 import {buildRevenueReport} from '../src/lib/reports/revenue-report';
 import type {Row} from '../src/types/database.types';
-const scope={organizationId:'synthetic-a',organizationName:'Synthetic A',organizationSlug:'synthetic-a',timezone:'America/Cuiaba',currency:'BRL',source:'crm' as const,from:'2026-10-20',to:'2026-10-21',compare:'previous_period' as const};
+const scope={organizationId:'11111111-1111-4111-8111-111111111111',organizationName:'Synthetic A',organizationSlug:'synthetic-a',timezone:'America/Cuiaba',currency:'BRL',source:'crm' as const,from:'2026-10-20',to:'2026-10-21',compare:'previous_period' as const};
 const fact={id:'synthetic<script>private</script>',organization_id:scope.organizationId,source:'crm',metric_date:scope.from,currency:'BRL',channel:'unattributed',account_id:'',campaign_id:'',revenue:-20,purchases:0,leads:null,checkouts:2,is_complete:true,synced_at:'2026-10-22T12:00:00.000Z'} as Row<'metrics_crm'>;
 test('daily revenue view makes gaps, source choice, zero, provenance and limits visible',()=>{
  const html=renderToStaticMarkup(React.createElement(RevenueReportView,{report:buildRevenueReport([fact],[],scope)}));

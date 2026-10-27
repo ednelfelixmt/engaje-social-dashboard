@@ -9,7 +9,7 @@ import {loadTypescript} from './helpers/load-typescript';
 import type {Row} from '../src/types/database.types';
 
 const scope: RevenueScope = {
- organizationId: 'synthetic-a', organizationName: 'Synthetic A', organizationSlug: 'synthetic-a',
+ organizationId:'11111111-1111-4111-8111-111111111111', organizationName: 'Synthetic A', organizationSlug: 'synthetic-a',
  timezone: 'America/Cuiaba', currency: 'BRL', source: 'crm',
  from: '2026-10-20', to: '2026-10-21', compare: 'previous_period',
 };
