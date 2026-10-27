@@ -25,3 +25,19 @@ Antes do rollout: preservar ambas as fontes publicadas e seus metadados em ambie
 O bundle anterior de engaje-integrations v41/meta-auth v24 foi preservado fora do repositório. Reverter o pacote completo restaura também a autorização legada: isso reabre SEC-014 e exige contenção explícita, nunca rollback silencioso. Preferir correção posterior preservando a autorização admin-only. Não remover migrações de autorização do banco para acompanhar runtime antigo.
 
 Revisão independente concluída por Claude Code / Claude Sonnet 4.6. Não identificou impedimento técnico; a resolução de imports do teste foi restringida aos módulos explicitamente esperados. Codex conferiu os achados: o callback recusado permanece em 400, enquanto ações POST sem autorização retornam 401/403. A base combinada com e0a4f63 executou 579 testes e lint sem advertências.
+
+
+## Resultado do rollout em 27/10/2026
+
+PR #202 integrado em cc44b0f43ff43ce9a222cc69983fc2ba6fb7f08e após Quality Gate #40511172581 e Vercel no head ffcfce3d3d3542a7d9b6a18cbabdee82af2a718d. Produção dpl_GJ5S4TsKgXKNmkmX64KEhgfbNFq4 READY no commit integrado.
+
+| Função | Versão | verify_jwt | Hash do bundle |
+| --- | --- | --- | --- |
+| engaje-integrations | 42 | true | 1509556d817dc0d12af43a454c4b349e2143df6e01d731f89f9c2d45465700a8 |
+| meta-auth | 25 | false | c4fb4eed19d18ab739fab80daef4bc6a67266b815e088fb0e5763acab6e06f62 |
+
+Os arquivos relidos das duas funções coincidem integralmente com o pacote aprovado. O wrapper faz os hashes de bundle diferirem sem duplicar a implementação. As oito sondas negativas de HTTP passaram. Sessões ausentes/inválidas em meta-auth agora recebem 401; cron sem segredo permanece negado e state forjado não avança. A verificação do gateway em engaje-integrations foi preservada.
+
+A regra de proteção main 85421414 foi salva após confirmação de identidade do proprietário e relida no painel; API confirmou protected=true e checks GitHub Actions/Vercel. Clientes reais não foram usados como fixtures.
+
+SEC-014 teve o drift de código corrigido no runtime, mas o fluxo positivo com JWT real e provedor OAuth continua sem homologação. O ambiente phase02-homologation e suas fixtures protegidas são pré-requisitos ausentes; a lista atual de ambientes tem apenas Preview e Production. A proteção Supabase contra senhas vazadas está limitada ao plano Pro ou superior, enquanto a organização usa Free. Nenhum plano foi contratado.
