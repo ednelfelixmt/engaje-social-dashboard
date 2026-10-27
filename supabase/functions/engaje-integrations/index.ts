@@ -1,4 +1,5 @@
 import {createClient} from 'npm:@supabase/supabase-js@2.76.1';
+import {listTenantStorage,removeTenantStorage} from '../_shared/tenant-storage.ts';
 import {verifiedOAuthScopes} from '../_shared/oauth-permissions.ts';
 import {AgencyAuthorizationError,requireAgencyAdministrator,isActiveAgencyAdministrator} from '../_shared/agency-authorization.ts';
 const base=Deno.env.get('SUPABASE_URL')!;
@@ -417,13 +418,11 @@ Deno.serve(async(req:Request)=>{
    if(confirmation!==organization.name)throw new Error('Digite o nome exato do cliente para confirmar a exclusão.');
    const storedObjects:{bucket:string;paths:string[]}[]=[];
    for(const bucket of ['branding','creatives','spreadsheets']){
-    const {data:objects,error}=await service.storage.from(bucket).list(org,{limit:1000,offset:0});
-    if(error)console.warn('[client-delete-storage-list]',{organization_id:org,bucket,message:error.message});
-    storedObjects.push({bucket,paths:(objects||[]).map((item:any)=>org+'/'+item.name)});
+    storedObjects.push({bucket,paths:await listTenantStorage(service.storage.from(bucket),org)});
    }
    const {data,error}=await client.rpc('delete_client_organization',{p_organization_id:org});if(error)throw new Error(error.message);
    const cleanupErrors:string[]=[];
-   for(const item of storedObjects)if(item.paths.length){const {error:removeError}=await service.storage.from(item.bucket).remove(item.paths);if(removeError)cleanupErrors.push(item.bucket);}
+   for(const item of storedObjects)try{await removeTenantStorage(service.storage.from(item.bucket),item.paths);}catch{cleanupErrors.push(item.bucket);}
    console.info('[client-delete]',{organization_id:org,actor_id:user.id,storage_cleanup_errors:cleanupErrors});
    return json({message:cleanupErrors.length?'Cliente excluído. Alguns arquivos órfãos exigem limpeza técnica.':'Cliente excluído permanentemente.',result:data,cleanupErrors});
   }
