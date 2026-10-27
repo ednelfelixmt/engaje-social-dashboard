@@ -7,6 +7,15 @@ export default tseslint.config(
   {ignores:['node_modules/**','.next/**']},
   {
     files:[
+      'tests/organic-content-ui.test.ts',
+      'tests/organic-content.test.ts',
+      'tests/organic-content-page.test.ts',
+      'src/lib/reports/organic-content.ts',
+      'src/lib/reports/organic-content-query.ts',
+      'src/lib/export/organic-content.ts',
+      'src/components/dashboard/organic-content-export.tsx',
+      'src/components/dashboard/organic-content-report.tsx',
+      'src/app/(tenant)/*/reports/organic-content/page.tsx',
       'src/lib/export/csv.ts',
       'tests/csv-export.test.ts',
       'src/lib/export/campaign-report.ts',

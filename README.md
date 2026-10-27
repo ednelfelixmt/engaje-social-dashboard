@@ -64,6 +64,8 @@ O relatório executivo oferece comparação, impressão e CSV local. A análise 
 
 No executivo, o nome da campanha abre o detalhamento privado por conta e plataforma, com tabela diária, filtros, comparação, impressão/PDF e CSV local de valores recebidos, cobertura e calendário. Lacunas permanecem indisponíveis e valores observados são distinguidos de coleta completa; veja `docs/engineering/campaign-detail.md`.
 
+O relatório privado de conteúdos orgânicos em `reports/organic-content` lista publicações recebidas de Facebook e Instagram, por data de publicação UTC, com contadores acumulados por conteúdo e coleta identificada. Inclui CSV local, distingue zero de indisponibilidade e sinaliza o limite de 500 linhas; não apresenta os contadores como atividade do período. Requer a página organic habilitada. Contrato em `docs/engineering/organic-content.md`.
+
 ## Estágio dos integradores
 
 - Operacionais: Meta Ads, Facebook orgânico, Instagram orgânico e Google Ads via Windsor.

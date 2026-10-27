@@ -19,6 +19,7 @@ const workspaceGroups:NavGroup[]=[
     {key:'google_ads',label:'Campanhas Google Ads',icon:ChartNoAxesCombined,requires:'paid'},
     {key:'reports/google-audience',label:'Demografia e geografia',icon:Users,requires:'paid'},
   ]},
+  {id:'organic',label:'Conteúdos orgânicos',icon:Images,items:[{key:'reports/organic-content',label:'Publicações e contadores',icon:Images,requires:'organic'}]},
   {id:'analytics',label:'Google Analytics',icon:ChartNoAxesCombined,items:[
     {key:'reports/google-analytics',label:'Comportamento no site',icon:ChartNoAxesCombined,requires:'overview'},
   ]},
