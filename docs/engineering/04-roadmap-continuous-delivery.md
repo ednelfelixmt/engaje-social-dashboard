@@ -922,3 +922,17 @@ Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamen
 - **Condição de integração:** PR mergeável e revisão do diff, Quality Gate integral e Vercel Preview success/READY **no mesmo head SHA**. Verificação de produção separada após merge; não presumir aprovação. Pendências SEC-010/011 (JWT A/B), SEC-014 runtime, UX-002, OPS-SEC-002 (#175), #149 conflitante e #157 draft continuam abertas.
 
 - Atualização AUD-FIX-001: base combinada e0a4f63 preservada; 579 testes e lint sem advertências aprovados. Claude Sonnet 4.6 concluiu revisão real do diff (95 s de API), sem impedimento técnico; recomendação sobre dependências de teste foi aplicada com resolução explícita. O callback revogado retorna 400 no handler existente, não 403 como suposto em uma linha do parecer. Homologação real permanece aberta.
+
+
+## 27/10/2026 — AUD-FIX-001: integração e rollout confirmados
+
+- PR #202 integrado em cc44b0f43ff43ce9a222cc69983fc2ba6fb7f08e. Quality Gate #40511172581 e Vercel aprovaram o head ffcfce3d3d3542a7d9b6a18cbabdee82af2a718d; preview dpl_Fj97GRZyqMY7uurWnwbWJcM8r16s READY. Produção dpl_GJ5S4TsKgXKNmkmX64KEhgfbNFq4 READY no commit integrado.
+- SEC-014: correção de código efetivamente publicada no projeto Engaje. engaje-integrations v42 ACTIVE, verify_jwt=true, bundle 1509556d817dc0d12af43a454c4b349e2143df6e01d731f89f9c2d45465700a8. meta-auth v25 ACTIVE, verify_jwt=false, bundle c4fb4eed19d18ab739fab80daef4bc6a67266b815e088fb0e5763acab6e06f62. Os hashes diferem pelo entrypoint/wrapper; os arquivos relidos de ambos os bundles correspondem integralmente ao pacote revisado.
+- Backups das fontes antigas v41/v24 e metadados preservados localmente fora do repositório. Nenhum segredo copiado. O rollout inclui gates de agência, revalidação de callback, escopos confirmados pelo provedor e limpeza Storage paginada.
+- 8 sondas HTTP negativas após rollout aprovadas: sessões ausentes/inválidas, cron sem segredo e callback forjado rejeitados. Não foram executadas ações mutantes com JWT real nem exclusão de cliente real. Isso confirma implantação e negativas básicas, sem encerrar homologação de OAuth, JWT A/B ou Storage HTTP.
+- Evidência final de código: 579 testes, 140 checks SQL sintéticos, tipos, arquitetura, lint sem advertências, build local e 12 GETs locais aprovados; CI do head aprovado. npm audit --omit=dev retornou zero vulnerabilidades reportadas.
+- OPSSEC-002 resolvido: proteção da main criada (regra 85421414), persistência relida no painel e protected=true confirmado por API, com checks vinculados aos apps corretos e sem bypass de administradores.
+- Dependências externas confirmadas: proteção contra senhas vazadas exige Supabase Pro; organização permanece Free, sem contratação. GitHub só possui ambientes Preview/Production; phase02-homologation exigido pelo runner JWT protegido ainda não existe. Não expor credenciais nem executar o runner fora da proteção.
+- Permanecem registrados: SEC-010/011 e UX autenticada, OAuth real, pg_net no schema public, instalação pelo bootstrap histórico com upgrades obrigatórios, limite de ingestão por processo, reconciliação Storage após falha/concorrência, React 18/depreciação e SMTP adiado. Nenhuma dessas pendências foi declarada homologada.
+
+- Após a publicação, os 12 GETs anônimos também passaram no domínio de produção (login/recuperação e redirecionamento das rotas privadas). Não substituem UX autenticada.
