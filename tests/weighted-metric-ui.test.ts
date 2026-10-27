@@ -25,7 +25,9 @@ const {CampaignWorkspace} = loadTypescript<{CampaignWorkspace: React.ComponentTy
   if (id === '@/components/dashboard/sortable-card-grid') return {SortableCardGrid: ({items}: {items: {id: string; content: React.ReactNode}[]}) => React.createElement('div', null, items.map(item => React.createElement('div', {key: item.id}, item.content)))};
   return resolve(id, native);
 });
-const fact = (score: number | null, impressions: number | null = 100): CampaignPerformance => ({spend: 10, currency: 'BRL', platform: 'google_ads', impressions, metricValues: {quality_score: score}} as CampaignPerformance);
+const orgA = '11111111-1111-4111-8111-111111111111';
+const orgB = '22222222-2222-4222-8222-222222222222';
+const fact = (score: number | null, impressions: number | null = 100): CampaignPerformance => ({organizationId: orgA, spend: 10, currency: 'BRL', platform: 'google_ads', impressions, metricValues: {quality_score: score}} as CampaignPerformance);
 
 test('visible note explains partial data, missing weights and approximation', () => {
   const summary = weighted.summarizeWeightedMetric([{value: 8, weight: 100}, {value: null, weight: 100}, {value: 2, weight: 0}]);
@@ -54,7 +56,7 @@ test('actual overview keeps a complete comparison and its methodology visible', 
 });
 
 test('actual workspace and platform cards show coverage beside the weighted KPI', () => {
-  const html = renderToStaticMarkup(React.createElement(CampaignWorkspace, {rows: [fact(8), fact(null)], previousRows: [fact(4)], comparing: true, showPlatforms: true, currency: 'BRL', enabledMetrics: ['quality_score'], timeline: [], funnelSteps: [], rankings: {}, storageKey: 'synthetic'}));
+  const html = renderToStaticMarkup(React.createElement(CampaignWorkspace, {organizationId: orgA,rows: [fact(8), fact(null)], previousRows: [fact(4)], comparing: true, showPlatforms: true, currency: 'BRL', enabledMetrics: ['quality_score'], timeline: [], funnelSteps: [], rankings: {}, storageKey: 'synthetic'}));
   assert.ok((html.match(/Cobertura parcial/g) ?? []).length >= 2);
   assert.match(html, /Comparação indisponível/); assert.doesNotMatch(html, /100% vs. comparação/);
 });
@@ -67,24 +69,24 @@ test('complete current period cannot compare against a partial prior period', ()
 });
 
 test('disabled comparison does not expose prior weighted values in workspace', () => {
-  const html = renderToStaticMarkup(React.createElement(CampaignWorkspace, {rows: [fact(8)], previousRows: [fact(4)], comparing: false, currency: 'BRL', enabledMetrics: ['quality_score'], timeline: [], funnelSteps: [], rankings: {}, storageKey: 'synthetic'}));
+  const html = renderToStaticMarkup(React.createElement(CampaignWorkspace, {organizationId: orgA,rows: [fact(8)], previousRows: [fact(4)], comparing: false, currency: 'BRL', enabledMetrics: ['quality_score'], timeline: [], funnelSteps: [], rankings: {}, storageKey: 'synthetic'}));
   assert.match(html, /Cobertura completa/); assert.doesNotMatch(html, /% vs. comparação/);
   assert.doesNotMatch(html, /Comparação indisponível/);
 });
 
 test('workspace renders an empty weighted KPI as unavailable with zero observations', () => {
-  const html = renderToStaticMarkup(React.createElement(CampaignWorkspace, {rows: [], previousRows: [], comparing: false, currency: 'BRL', enabledMetrics: ['quality_score'], timeline: [], funnelSteps: [], rankings: {}, storageKey: 'synthetic'}));
+  const html = renderToStaticMarkup(React.createElement(CampaignWorkspace, {organizationId: orgA,rows: [], previousRows: [], comparing: false, currency: 'BRL', enabledMetrics: ['quality_score'], timeline: [], funnelSteps: [], rankings: {}, storageKey: 'synthetic'}));
   assert.match(html, /Métrica indisponível: 0 de 0 registros/);
   assert.doesNotMatch(html, /Cobertura completa/); assert.doesNotMatch(html, /Estimativa ponderada/);
 });
 
 
 const paidFact = (spend: number, leads: number): CampaignPerformance => ({
-  ...fact(8), organizationId: 'synthetic-tenant', accountId: 'synthetic-account',
+  ...fact(8), organizationId: orgA, accountId: 'synthetic-account',
   campaignId: 'synthetic-campaign', campaignName: 'Synthetic', spend, leads,
   metricValues: {spend, leads, quality_score: 8},
 });
-const paidWorkspace = (spend: number, priorSpend: number) => renderToStaticMarkup(React.createElement(CampaignWorkspace, {
+const paidWorkspace = (spend: number, priorSpend: number) => renderToStaticMarkup(React.createElement(CampaignWorkspace, {organizationId: orgA,
   rows: [paidFact(spend, 10)], previousRows: [paidFact(priorSpend, 10)], comparing: true,
   currency: 'BRL', enabledMetrics: ['spend', 'cpl'], timeline: [], funnelSteps: [], rankings: {}, storageKey: 'synthetic',
 }));
@@ -105,4 +107,13 @@ test('workspace flags reduced CPL as favorable and never renders infinite delta'
   assert.doesNotMatch(extreme, /Infinity|NaN/);
   assert.match(extreme, /No período selecionado/);
   assert.match(extreme, /Sem base/);
+});
+
+test('actual workspace denies a foreign organization before rendering campaign data', () => {
+  assert.throws(() => renderToStaticMarkup(React.createElement(CampaignWorkspace, {
+    organizationId: orgA,
+    rows: [{...paidFact(0, 0), organizationId: orgB}], previousRows: [],
+    comparing: false, currency: 'BRL', enabledMetrics: ['spend'],
+    timeline: [], funnelSteps: [], rankings: {}, storageKey: 'synthetic',
+  })), /Workspace campaigns require authorized organization and currency/);
 });

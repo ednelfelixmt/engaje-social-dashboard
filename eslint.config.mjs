@@ -109,6 +109,8 @@ export default tseslint.config(
       'src/components/dashboard/weighted-metric-note.tsx',
       'tests/weighted-metrics.test.ts',
       'tests/weighted-metric-ui.test.ts',
+      'src/lib/metrics/workspace-campaigns.ts',
+      'tests/workspace-campaigns.test.ts',
       'src/lib/auth/session.ts',
       'supabase/functions/_shared/agency-authorization.ts',
       'tests/edge-agency-authorization.test.ts',
