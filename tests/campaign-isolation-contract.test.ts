@@ -179,3 +179,47 @@ test('registration counts require direct source observations, never total-minus-
  assert.equal(observedFraction.registrationLeads,0.5);
  assert.equal(observedFraction.costPerRegistration,200);
 });
+
+test('duplicate complete CRM facts under Meta account aliases fail closed regardless of result order',()=>{
+ const first=crm({source:'crm',account_id:'act_123',revenue:500,purchases:5});
+ const alias=crm({source:'crm',account_id:'123',revenue:900,purchases:9});
+ for(const facts of [[first,alias],[alias,first]]){
+  const result=campaigns([ad()],facts,'crm')[0];
+  assert.equal(result.spend,100);
+  assert.equal(result.impressions,1000);
+  assert.equal(result.revenue,null);
+  assert.equal(result.purchases,null);
+  assert.equal(result.roas,null);
+  assert.equal(result.cpa,null);
+  assert.equal(result.revenueSource,'unavailable');
+ }
+});
+
+test('one preferred source remains authoritative when the other source also has a complete fact',()=>{
+ const facts=[crm({source:'crm',account_id:'act_123',revenue:500,purchases:5}),crm({source:'spreadsheet',account_id:'123',revenue:250,purchases:2})];
+ const selected=campaigns([ad()],facts,'spreadsheet')[0];
+ assert.equal(selected.revenue,250);
+ assert.equal(selected.purchases,2);
+ assert.equal(selected.revenueSource,'spreadsheet');
+ assert.equal(campaigns([ad()],[...facts].reverse(),'crm')[0].revenue,500);
+});
+
+test('duplicate alternative-source Meta aliases cannot become arbitrary fallback revenue',()=>{
+ const facts=[crm({source:'spreadsheet',account_id:'act_123',revenue:300}),crm({source:'spreadsheet',account_id:'123',revenue:600})];
+ const result=campaigns([ad()],facts,'crm')[0];
+ assert.equal(result.revenue,null);
+ assert.equal(result.purchases,null);
+ assert.equal(result.revenueSource,'unavailable');
+});
+
+test('CRM ambiguity is scoped to the affected tenant, not another organization or provider',()=>{
+ const facts=[crm({account_id:'act_123'}),crm({account_id:'123'}),crm({organization_id:orgB,account_id:'123',revenue:800,purchases:8})];
+ const rows=campaigns([ad(),ad({organization_id:orgB,account_id:'123'})],facts,'crm');
+ assert.equal(rows.find(row=>row.organizationId===orgA)?.revenue,null);
+ assert.equal(rows.find(row=>row.organizationId===orgB)?.revenue,800);
+ const google=campaigns([ad({platform:'google_ads',account_id:'act_123'})],[
+  crm({channel:'google_ads',account_id:'act_123',revenue:400}),
+  crm({channel:'google_ads',account_id:'123',revenue:700}),
+ ],'crm')[0];
+ assert.equal(google.revenue,400); // Other providers have literal account IDs.
+});
