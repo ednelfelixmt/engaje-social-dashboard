@@ -10,6 +10,13 @@ export default tseslint.config(
       'src/app/(tenant)/*/*/page.tsx',
       'src/components/dashboard/invalid-report-filters.tsx',
       'tests/strict-date-filters.test.ts',
+
+      'src/lib/metrics/data-quality.ts',
+      'src/lib/metrics/data-quality-query.ts',
+      'src/components/dashboard/sync-job-history.tsx',
+      'src/app/(tenant)/*/settings/data-quality/page.tsx',
+      'tests/data-quality.test.ts',
+      'tests/data-quality-page.test.ts',
       'tests/organic-accounts-ui.test.ts',
       'tests/organic-accounts.test.ts',
       'tests/organic-accounts-page.test.ts',

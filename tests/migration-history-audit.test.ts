@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {auditMigrationHistory,parseLocalMigrationFiles,parseRemoteMigrationHistory} from '../scripts/audit-migration-history';
+import {auditMigrationHistory,auditLocalMigrationInventory,parseLocalMigrationFiles,parseRemoteMigrationHistory} from '../scripts/audit-migration-history';
 
 const local=['20261001010000_one.sql','20261002020000_two.sql'];
 const remote={migrations:[{version:'20261001010000',name:'one'},{version:'20261002020000',name:'two'}]};
@@ -48,4 +48,40 @@ test('unknown remote/local records and empty inventories cannot be treated as al
 test('non-SQL files are ignored, but unsafely named SQL is rejected',()=>{
  assert.deepEqual(parseLocalMigrationFiles(['README.md','20261001010000_one.sql']),[{version:'20261001010000',name:'one'}]);
  assert.throws(()=>parseLocalMigrationFiles(['migration.sql']),/Unsupported/);
+});
+
+const legacyTestFiles=[
+ '20260930230000_organization_niche_sales_model.sql',
+ '20260930230000_scheduled_sync_history_days.sql',
+];
+
+test('local guard allows only the unchanged baseline and reports unresolved #211',()=>{
+ const report=auditLocalMigrationInventory([...legacyTestFiles,'20261028010101_new.sql']);
+ assert.equal(report.regressionFree,true);
+ assert.equal(report.unresolvedLegacyCollision.issue,211);
+ assert.equal(report.unresolvedLegacyCollision.reconciliationPending,true);
+ assert.deepEqual(report.newDuplicateVersions,[]);
+});
+
+test('local guard rejects a newly duplicated version',()=>{
+ const report=auditLocalMigrationInventory([...legacyTestFiles,'20261028010101_one.sql','20261028010101_two.sql']);
+ assert.equal(report.regressionFree,false);
+ assert.deepEqual(report.newDuplicateVersions,['20261028010101']);
+});
+
+test('local guard rejects a third file in the legacy version',()=>{
+ const report=auditLocalMigrationInventory([...legacyTestFiles,'20260930230000_third.sql']);
+ assert.equal(report.regressionFree,false);
+ assert.equal(report.unresolvedLegacyCollision.baselineUnchanged,false);
+});
+
+test('local guard fails on removal or rename of legacy files',()=>{
+ for(const f of [[legacyTestFiles[0]],[legacyTestFiles[0],'20260930230000_renamed.sql'],['20261028010101_unrelated.sql']]){
+  assert.equal(auditLocalMigrationInventory(f).regressionFree,false);
+ }
+});
+
+test('local guard rejects empty or malformed inventories',()=>{
+ assert.throws(()=>auditLocalMigrationInventory([]),/nonempty/);
+ assert.throws(()=>auditLocalMigrationInventory([...legacyTestFiles,'20261028010101-invalid.sql']),/Unsupported/);
 });

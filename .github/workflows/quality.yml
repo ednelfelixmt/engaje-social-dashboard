@@ -21,6 +21,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - run: npm run verify:local-migrations
       # Lint tooling is pinned in package-lock.json and installed by npm ci.
       - run: npm run lint
       - run: npm run test
