@@ -1,3 +1,5 @@
+import {finiteRatio as measuredRatio} from './aggregation';
+
 /**
  * Canonical, presentation-independent paid media metrics.
  *
@@ -34,8 +36,7 @@ function nonnegativeOrNull(value: number | null): number | null {
 /** Ratios must never leak negative, NaN or Infinity to charts. */
 function finiteRatio(numerator: number, denominator: number, multiplier = 1): number | null {
   if (!Number.isFinite(numerator) || numerator < 0 || !Number.isFinite(denominator) || denominator <= 0) return null;
-  const result = numerator / denominator * multiplier;
-  return Number.isFinite(result) ? result : null;
+  return measuredRatio(numerator, denominator, multiplier);
 }
 
 /** A weighted ratio of aggregate numerators/denominators, never an average of ratios. */

@@ -114,6 +114,8 @@ export default tseslint.config(
       'tests/helpers/load-typescript.ts',
       'src/lib/metrics/efficiency.ts',
       'tests/efficiency.test.ts',
+      'src/lib/metrics/aggregation.ts',
+      'tests/ratio-integrity.test.ts',
       'src/lib/metrics/paid-metrics.ts',
       'src/lib/metrics/agency-overview.ts',
       'tests/agency-overview-metrics.test.ts',

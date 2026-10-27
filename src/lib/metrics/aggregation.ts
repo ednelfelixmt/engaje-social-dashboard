@@ -21,8 +21,15 @@ export function sum(rows:readonly Record<string,unknown>[],key:string):number|nu
 
 export function finiteRatio(numerator:number|null,denominator:number|null,multiplier=1):number|null {
   if(numerator==null||denominator==null||!Number.isFinite(numerator)||!Number.isFinite(denominator)||!Number.isFinite(multiplier)||denominator<=0)return null;
-  const result=numerator/denominator*multiplier;
-  return Number.isFinite(result)?result:null;
+  let result=numerator/denominator*multiplier;
+  // Underflow can erase a measured nonzero value (for example a positive cost
+  // wrongly rendered as free). Scale first only when the normal path returned
+  // zero; preserve its existing rounding for ordinary observations.
+  if(result===0&&numerator!==0&&multiplier>1){
+    const scaled=numerator*multiplier;
+    if(Number.isFinite(scaled))result=scaled/denominator;
+  }
+  return Number.isFinite(result)&&(result!==0||numerator===0)?result:null;
 }
 
 /** Ad spend is not total business cost; revenue minus ad spend is not ROI. */
