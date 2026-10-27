@@ -7,7 +7,7 @@ import {loadTypescript} from './helpers/load-typescript';
 const {Navigation}=loadTypescript<{Navigation:(props:{slug:string;canShare:boolean;enabled:string[]})=>React.ReactNode}>(
  new URL('../src/components/navigation.tsx',import.meta.url),(id,native)=>{
   if(id==='next/navigation')return {usePathname:()=>'/fixture-a/overview'};
-  if(id==='next/link')return ({children,...props}:{children:React.ReactNode})=>createElement('a',props,children);
+  if(id==='next/link')return ({children,prefetch:_prefetch,...props}:{children:React.ReactNode;prefetch?:boolean})=>createElement('a',props,children);
   return native(id);
  });
 test('viewer navigation retains dashboards and filters while hiding administrative settings',()=>{
@@ -35,4 +35,11 @@ test('revenue analysis is a read-only option gated by the tenant external-page s
  const shown=renderToStaticMarkup(createElement(Navigation,{slug:'fixture-a',canShare:false,enabled:['external']}));
  const hidden=renderToStaticMarkup(createElement(Navigation,{slug:'fixture-a',canShare:false,enabled:['paid']}));
  assert.ok(shown.includes('/fixture-a/reports/revenue'));assert.ok(shown.includes('/fixture-a/external'));assert.ok(!hidden.includes('/fixture-a/reports/revenue'));assert.ok(!shown.includes('/fixture-a/settings/'));
+});
+
+
+test('target-reference navigation is read-only and follows the paid-page setting',()=>{
+ const shown=renderToStaticMarkup(createElement(Navigation,{slug:'fixture-a',canShare:false,enabled:['paid']}));
+ const hidden=renderToStaticMarkup(createElement(Navigation,{slug:'fixture-a',canShare:false,enabled:['external']}));
+ assert.ok(shown.includes('/fixture-a/reports/targets'));assert.ok(!shown.includes('/fixture-a/settings/'));assert.ok(!hidden.includes('/fixture-a/reports/targets'));
 });

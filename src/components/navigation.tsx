@@ -25,6 +25,7 @@ const workspaceGroups:NavGroup[]=[
   {id:'paid',label:'Outras análises',icon:Filter,collapsible:true,items:[
     {key:'paid',label:'Mídia paga consolidada',icon:ChartNoAxesCombined,requires:'paid'},
     {key:'reports/performance',label:'Relatório executivo',icon:ChartNoAxesCombined,requires:'paid'},
+    {key:'reports/targets',label:'Metas e referências',icon:ChartNoAxesCombined,requires:'paid'},
     {key:'funnel',label:'Funil de conversão',icon:Filter,requires:'funnel'},
     {key:'paid-creatives',label:'Criativos dos anúncios',icon:Images,requires:'creatives'},
   ]},
