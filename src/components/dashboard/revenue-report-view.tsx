@@ -1,4 +1,6 @@
 import {Card} from '@/components/ui/card';
+import {RevenueReportExport} from './revenue-report-export';
+import {revenueReportCsv, revenueReportFilename} from '@/lib/export/revenue-report';
 import {revenueMetrics, revenueDelta, type RevenueMetric, type RevenuePeriod, type RevenueReport} from '@/lib/reports/revenue-report';
 const labels: Record<RevenueMetric, string> = {revenue: 'Receita líquida informada', purchases: 'Compras informadas', leads: 'Leads informados', checkouts: 'Checkouts informados'};
 function display(value: number | null, key: RevenueMetric, currency: string) {
@@ -19,6 +21,7 @@ function Daily({period, title, currency, timezone}: {period: RevenuePeriod; titl
 }
 export function RevenueReportView({report}: {report: RevenueReport}) {
  const {scope, current, previous} = report;
+ const empty = current.records === 0 && (!previous || previous.records === 0);
  return <article className="space-y-4" aria-label="Análise de receita externa">
   <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Indicadores da fonte selecionada">{revenueMetrics.map(key => {
    const change = revenueDelta(report, key);
@@ -27,7 +30,9 @@ export function RevenueReportView({report}: {report: RevenueReport}) {
     {previous ? <p className="mt-2 text-xs text-zinc-400">Comparativo: {display(previous.totals[key], key, scope.currency)} ({previous.knownDays[key]}/{previous.days.length} dias). {change === null ? 'Variação indisponível' : (change > 0 ? '+' : '') + new Intl.NumberFormat('pt-BR', {maximumFractionDigits: 2}).format(change) + '%'}.</p> : null}
    </Card>;
   })}</section>
-  <Card><h2 className="font-semibold">Fonte e limites da análise</h2><p className="mt-3 text-sm text-zinc-400">Fonte selecionada: {scope.source === 'crm' ? 'CRM' : 'Planilha'} · Moeda: {scope.currency} · Fuso cadastral: {scope.timezone}. As datas diárias seguem a origem, sem conversão.</p>
+  <Card><h2 className="font-semibold">Fonte e limites da análise</h2>
+   <div className="mt-3"><RevenueReportExport content={empty ? '' : revenueReportCsv(report)} filename={revenueReportFilename(scope)} disabled={empty}/></div>
+   <p className="mt-3 text-sm text-zinc-400">Fonte selecionada: {scope.source === 'crm' ? 'CRM' : 'Planilha'} · Moeda: {scope.currency} · Fuso cadastral: {scope.timezone}. As datas diárias seguem a origem, sem conversão.</p>
    <p className="mt-3 text-sm text-zinc-400">CRM e planilha são analisados separadamente. Não há troca automática para outra fonte nem soma entre elas. Ausência, conciliação pendente ou valor inválido tornam o total do indicador indisponível; zero só aparece quando informado. Estornos podem produzir receita negativa. Leads e eventos não são pessoas únicas.</p>
    <p className="mt-3 text-sm text-zinc-400">Este relatório apresenta valores externos registrados. Não calcula lucro, ROI, ROAS ou causalidade de campanhas, nem substitui conciliação financeira.</p>
   </Card>
