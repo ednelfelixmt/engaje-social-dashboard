@@ -56,6 +56,8 @@ A view `daily_performance` agrega cada origem separadamente por organização/di
 
 Ao importar planilha, o lote substitui atomicamente todos os registros de planilha nos dias/moedas presentes. Só confirme conciliação completa quando cobrir integralmente esses dias.
 
+Datas explicitamente inválidas nos filtros são recusadas com orientação e recuperação do período padrão por clique; não são trocadas silenciosamente por outro recorte. Filtros conhecidos de campanha, plataforma, fonte e moeda são preservados na recuperação. Contrato em `docs/engineering/strict-date-filters.md`.
+
 ## Relatórios privados
 
 As páginas de público/dispositivos Meta e Google oferecem CSV com período, fonte, moeda, cobertura por indicador e registros de origem. Campos ausentes ficam vazios; cada dimensão é independente. O download é local e mantém a autorização de leitura do cliente, sem criar links públicos. Consulte `docs/engineering/audience-reports-and-csv.md` para limites e homologação pendente.

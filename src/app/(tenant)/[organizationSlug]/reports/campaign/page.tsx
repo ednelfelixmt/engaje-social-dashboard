@@ -1,3 +1,4 @@
+import {InvalidReportFilters} from '@/components/dashboard/invalid-report-filters';
 import Link from 'next/link';
 import {notFound} from 'next/navigation';
 import {Card} from '@/components/ui/card';
@@ -16,7 +17,8 @@ export default async function Page({params,searchParams}:{params:Promise<{organi
  if(!config.enabled_pages.includes('paid'))return <Card>Este relatório está indisponível nas configurações deste cliente.</Card>;
  const search=await searchParams,selection=campaignSelection(search);
  if(!selection)notFound();
- const f=filters(search,org.timezone,org.currency);
+ let f:ReturnType<typeof filters>;
+ try{f=filters(search,org.timezone,org.currency);}catch{return <InvalidReportFilters search={search}/>;}
  const {data:organizations}=superAdmin?await db.from('organizations').select('name,slug').eq('status','active').order('name'):{data:[{name:org.name,slug:org.slug}]};
  let report:CampaignReport|null=null;
  try{
