@@ -1,9 +1,10 @@
 /**
  * A daily chart must not display a partial sum as a complete observation.
  * Count metrics and media costs are nonnegative; revenue may be signed for refunds.
- * All monetary observations in a period must match the selected currency.
+ * All observations must match the authenticated tenant and selected currency.
  */
 export type PaidDailyRecord = Readonly<{
+  organization_id: string;
   metric_date: string;
   currency: string;
   spend: number | null;
@@ -32,17 +33,22 @@ function combine(total: number | null, next: number | null): number | null {
   return Number.isFinite(result) ? result : null;
 }
 
-/** Preserve known zero, reject missing/negative/nonfinite values and overflow, never mix currencies. */
-export function dashboardPaidDays(rows: readonly PaidDailyRecord[], selectedCurrency: string): PaidDashboardDay[] {
+/** Preserve known zero and missing coverage, reject invalid numbers, mixed tenants and currencies. */
+export function dashboardPaidDays(rows: readonly PaidDailyRecord[], authorizedOrganizationId: string, selectedCurrency: string): PaidDashboardDay[] {
+  // The SQL query is already tenant/currency scoped. Verify the scope again before
+  // aggregating, including on an empty result; never render partial foreign data.
+  if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(authorizedOrganizationId)
+    || !/^[A-Z]{3}$/.test(selectedCurrency)
+    || rows.some(row => row.organization_id !== authorizedOrganizationId || row.currency !== selectedCurrency)) {
+    throw new Error('Dashboard timeline requires authorized organization and currency');
+  }
   if (!rows.length) return [];
-  // A cross-day chart with different currencies is as misleading as a mixed day.
-  const comparableMoney = /^[A-Z]{3}$/.test(selectedCurrency) && rows.every(row => row.currency === selectedCurrency);
   const days = new Map<string, PaidDashboardDay>();
   for (const row of rows) {
     const values: PaidDashboardDay = {
       date: row.metric_date,
-      spend: comparableMoney ? observed(row.spend) : null,
-      revenue: comparableMoney ? observed(row.revenue, true) : null,
+      spend: observed(row.spend),
+      revenue: observed(row.revenue, true),
       impressions: observed(row.impressions),
       clicks: observed(row.clicks),
       leads: observed(row.leads),
