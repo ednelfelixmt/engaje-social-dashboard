@@ -1,4 +1,6 @@
 import {Card} from '@/components/ui/card';
+import {TargetReferencesExport} from '@/components/dashboard/target-references-export';
+import {targetReferencesCsv, targetReferencesFilename} from '@/lib/export/target-references';
 import type {TargetReference, TargetReferenceReport, TargetStatus} from '@/lib/reports/target-references';
 const statusLabels: Record<TargetStatus, string> = {not_configured:'Sem referência',invalid_target:'Cadastro inválido',unsupported:'Aguardando base compatível',currency_mismatch:'Moeda não comparável',insufficient_data:'Dados insuficientes',below:'Abaixo da referência',equal:'Igual à referência',above:'Acima da referência'};
 function numeric(value: number) {
@@ -15,6 +17,7 @@ export function TargetReferences({report}: {report: TargetReferenceReport}) {
   <Card><h2 className="text-lg font-semibold">Comparação numérica no recorte selecionado</h2><p className="mt-3 text-sm text-zinc-400">As referências cadastradas não possuem vigência definida. Esta tela não presume meta mensal, ritmo esperado, projeção ou cumprimento de objetivo. Investimento maior ou menor, por si só, não classifica desempenho.</p>
    <p className="mt-3 text-sm text-zinc-400">{report.configured} de 10 referências cadastradas. Período: {scope.from} a {scope.to}. Moeda filtrada: {scope.currency}. Moeda cadastral das referências: {scope.referenceCurrency}. Sem conversão cambial.</p>
   </Card>
+  <TargetReferencesExport content={targetReferencesCsv(report)} filename={targetReferencesFilename(report)} disabled={report.configured === 0}/>
   {report.configured === 0 ? <Card><p role="status">A agência ainda não cadastrou referências para este cliente.</p></Card> : null}
   <section className="grid gap-4 md:grid-cols-2" aria-label="Valores e referências">{report.rows.map(row => <Card key={row.field}>
    <h2 className="text-lg font-semibold">{row.label}</h2><p className="mt-2 text-sm text-cyan-200">{statusLabels[row.status]}</p>
