@@ -17,6 +17,7 @@ import {dashboardMetricLabels, paidMetricKeys, type DashboardMetricKey} from '@/
 import type {CampaignPerformance, Platform} from '@/types/domain';
 import type {PerformanceRankingGroups} from '@/lib/metrics/rankings';
 import {paidSummary} from '@/lib/metrics/paid-summary';
+import {scopedWorkspaceMeasurements} from '@/lib/metrics/workspace-campaigns';
 import {computeDelta} from '@/lib/metrics/delta';
 import {paidWeightedMetrics, type WeightedMetricSummary} from '@/lib/metrics/weighted-metrics';
 import {WeightedMetricNote} from '@/components/dashboard/weighted-metric-note';
@@ -30,15 +31,6 @@ const platformLabels: Partial<Record<Platform, string>> = {
   google_ads: 'Google Ads',
   tiktok_ads: 'TikTok Ads',
 };
-
-function hasMeasuredPerformance(row: CampaignPerformance) {
-  return row.spend > 0
-    || (row.impressions ?? 0) > 0
-    || (row.clicks ?? 0) > 0
-    || row.leads != null
-    || row.revenue != null
-    || row.purchases != null;
-}
 
 function metrics(rows: CampaignPerformance[]) {
   return paidSummary(rows);
@@ -187,6 +179,7 @@ export function CampaignWorkspace({
   previousRows,
   comparing = true,
   timeline,
+  organizationId,
   currency,
   showPlatforms = false,
   enabledMetrics,
@@ -198,6 +191,7 @@ export function CampaignWorkspace({
   previousRows: CampaignPerformance[];
   comparing?: boolean;
   timeline: TimelineRow[];
+  organizationId: string;
   currency: string;
   showPlatforms?: boolean;
   enabledMetrics: string[];
@@ -205,8 +199,9 @@ export function CampaignWorkspace({
   funnelSteps: FunnelStep[];
   storageKey: string;
 }) {
-  const measuredRows = rows.filter(hasMeasuredPerformance);
-  const measuredPreviousRows = previousRows.filter(hasMeasuredPerformance);
+  // Check both complete periods before any KPI, ranking, or comparison is rendered.
+  const measuredRows = scopedWorkspaceMeasurements(rows, organizationId, currency);
+  const measuredPreviousRows = scopedWorkspaceMeasurements(previousRows, organizationId, currency);
   const current = metrics(measuredRows);
   const previous = metrics(measuredPreviousRows);
   const coverage: Record<string, WeightedMetricSummary> = paidWeightedMetrics(measuredRows);
