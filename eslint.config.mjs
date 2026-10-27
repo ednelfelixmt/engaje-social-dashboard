@@ -7,6 +7,9 @@ export default tseslint.config(
   {ignores:['node_modules/**','.next/**']},
   {
     files:[
+      'src/lib/export/target-references.ts',
+      'src/components/dashboard/target-references-export.tsx',
+      'tests/target-references-export.test.ts',
       'src/lib/reports/target-references.ts',
       'src/components/dashboard/target-references.tsx',
       'tests/target-references.test.ts',
