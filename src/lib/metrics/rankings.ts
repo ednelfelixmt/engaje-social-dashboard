@@ -7,14 +7,16 @@ export type PerformanceRankingGroups = Record<'campaign'|RankingDimension,Ranked
 
 /**
  * Ranking values are displayed with one currency and one tenant context.
- * Never display a mixed source as if it belonged to the selected client/currency.
- * The database query also scopes these rows; this is a defensive aggregation boundary.
+ * Never display a source that differs from the authenticated client and selected currency.
+ * The database query also scopes these rows; this is an independent fail-closed boundary.
  */
 function assertSingleScope(
   campaigns: readonly CampaignPerformance[],
   ads: readonly Row<'metrics_ads'>[],
   breakdowns: readonly Row<'metrics_ads_breakdowns'>[],
   creatives: readonly Row<'creatives'>[],
+  expectedOrganizationId: string,
+  expectedCurrency: string,
 ) {
   const organizations = new Set([
     ...campaigns.map(row => row.organizationId),
@@ -22,7 +24,10 @@ function assertSingleScope(
     ...breakdowns.map(row => row.organization_id),
     ...creatives.map(row => row.organization_id),
   ]);
-  if (organizations.size > 1 || organizations.has('')) throw new Error('Rankings require a single organization');
+  if (!expectedOrganizationId.trim() || organizations.size > 1 ||
+    [...organizations].some(organization => organization !== expectedOrganizationId)) {
+    throw new Error('Rankings require a single organization matching authorization');
+  }
 
   // Catalog-only campaigns have no metrics and carry an empty currency by design.
   const currencies = new Set([
@@ -30,7 +35,8 @@ function assertSingleScope(
     ...ads.map(row => row.currency),
     ...breakdowns.map(row => row.currency),
   ]);
-  if (currencies.size > 1 || currencies.has('') || [...currencies].some(currency => !/^[A-Z]{3}$/.test(currency))) {
+  if (!/^[A-Z]{3}$/.test(expectedCurrency) || currencies.size > 1 ||
+    [...currencies].some(currency => currency !== expectedCurrency)) {
     throw new Error('Rankings require one known source currency');
   }
 }
@@ -105,8 +111,8 @@ function fallbackAds(rows:Row<'metrics_ads'>[],type:'audience'|'creative',creati
   return [...grouped.values()];
 }
 
-export function preparePerformanceRankings(campaigns:CampaignPerformance[],ads:Row<'metrics_ads'>[],breakdowns:Row<'metrics_ads_breakdowns'>[],creatives:Row<'creatives'>[]):PerformanceRankingGroups{
-  assertSingleScope(campaigns,ads,breakdowns,creatives);
+export function preparePerformanceRankings(campaigns:CampaignPerformance[],ads:Row<'metrics_ads'>[],breakdowns:Row<'metrics_ads_breakdowns'>[],creatives:Row<'creatives'>[],expectedOrganizationId:string,expectedCurrency:string):PerformanceRankingGroups{
+  assertSingleScope(campaigns,ads,breakdowns,creatives,expectedOrganizationId,expectedCurrency);
   // Conflicting names for the same real ad must never depend on API row order.
   const captions=new Map<string,Set<string>>();
   for(const item of creatives){

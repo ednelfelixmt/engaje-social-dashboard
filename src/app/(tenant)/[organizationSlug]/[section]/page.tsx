@@ -109,7 +109,7 @@ export default async function Page({params: params_, searchParams: searchParams_
   const paidCreativePlatforms=new Set(['meta_ads','google_ads','tiktok_ads']);
   const movingAdIds=new Set(data.ads.map((row)=>row.ad_id));
   const filteredCreatives = data.creatives.filter((creative) => contentMode==='paid'&&paidCreativePlatforms.has(creative.platform)&&(!movingAdIds.size||movingAdIds.has(creative.ad_id??'')));
-  const performanceRankings = sectionGroup==='paid'||params.section==='overview'?preparePerformanceRankings(campaignsWithMovement, ads, breakdowns, filteredCreatives):{campaign:[],audience:[],creative:[],gender:[],age:[],device:[],state:[],city:[]};
+  const performanceRankings = sectionGroup==='paid'||params.section==='overview'?preparePerformanceRankings(campaignsWithMovement, ads, breakdowns, filteredCreatives, org.id, f.currency):{campaign:[],audience:[],creative:[],gender:[],age:[],device:[],state:[],city:[]};
   const queryWithoutPlatform = Object.fromEntries(Object.entries(f));
   return <DashboardLayoutProvider slug={org.slug} scope={params.section} initialLayout={initialLayout} initialPersonalized={personalized} canPromote={canCustomizeClient} blocks={blockCatalog} defaultBlockOrder={config.widget_order}>
   <div className="dashboard-content mx-auto max-w-[1780px] space-y-6 lg:space-y-8">
