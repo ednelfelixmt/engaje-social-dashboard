@@ -81,3 +81,16 @@ test('empty portfolio has unknown metrics instead of fabricated zero', () => {
     spend: null, impressions: null, reach: null, leads: null, cpl: null, currency: null,
   });
 });
+
+test('customer cards reject missing and malformed tenant identities even with no data', () => {
+  for (const bad of ['', ' ', 'tenant-a', '11111111-1111-1111']) {
+    assert.throws(() => summarizeClientAds(bad, 'BRL', []), /matching organization/, JSON.stringify(bad));
+    assert.throws(() => summarizeClientAds(bad, 'BRL', [fact({organization_id: bad})]), /matching organization/, JSON.stringify(bad));
+  }
+});
+
+test('valid tenant with no observed facts remains an unavailable card, not zero', () => {
+  assert.deepEqual(summarizeClientAds(orgA, 'BRL', []), {
+    spend: null, impressions: null, reach: null, leads: null, cpl: null, currency: null,
+  });
+});

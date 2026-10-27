@@ -37,9 +37,12 @@ export function summarizeAgencyAds(rows: readonly AgencyAdRow[], expectedCurrenc
   };
 }
 
-/** Fail closed when a client card accidentally receives another tenant's data. */
+/** A client card requires an actual tenant UUID, including when no facts were ingested. */
 export function summarizeClientAds(organizationId: string, currency: string, rows: readonly AgencyAdRow[]) {
-  if (rows.some(row => row.organization_id !== organizationId)) {
+  // A missing or malformed expected identity must never authenticate itself by
+  // equality with an equally malformed record (or by the vacuous empty array).
+  const canonicalUuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
+  if (!canonicalUuid.test(organizationId) || rows.some(row => row.organization_id !== organizationId)) {
     throw new Error('Client summary requires a single matching organization');
   }
   return summarizeAgencyAds(rows, currency);
