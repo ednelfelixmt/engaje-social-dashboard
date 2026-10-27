@@ -938,6 +938,14 @@ Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamen
 - Após a publicação, os 12 GETs anônimos também passaram no domínio de produção (login/recuperação e redirecionamento das rotas privadas). Não substituem UX autenticada.
 
 
+### 27/10/2026 — SEC-REV-SCOPE-001: identificação canônica no relatório privado de receita (aguardando gates)
+
+- **Achado P1 de defesa em profundidade:** `buildRevenueReport` exigia apenas organização não vazia. Um identificador arbitrário poderia passar com fatos vazios e rotular um relatório/CSV com escopo que não corresponde a uma organização UUID. A consulta da página privada já recebe o `org.id` autenticado e aplica filtro de tenant; não foi constatado incidente real de exposição.
+- **Correção isolada:** validar formato UUID da organização **antes** de processar qualquer linha ou período, inclusive relatórios vazios e dados de outra fonte. Não modificar consulta, seleção CRM/planilha, calendário, moeda, reconciliação, receitas negativas ou comportamento de cliente somente leitura.
+- **Testes sintéticos:** novos casos recusam escopos vazios, arbitrários, contendo caracteres não hexadecimais e sem hífens com listas vazias e preenchidas; aceitam UUID canônico em maiúsculas no recorte vazio. Fixtures existentes do relatório, CSV e apresentação passam a usar organização UUID sintética; demais invariantes permanecem cobertas.
+- **Riscos e reversão:** IDs de organizações inválidos deixam de gerar relatório em vez de produzir conteúdo com proveniência incorreta. Reverter apenas SEC-REV-SCOPE-001 se houver regressão comprovada e corrigir a fonte de identidade; não enfraquecer o isolamento. Nenhuma migração, RLS, Auth, Storage, OAuth, Edge, segredo, nova rota, permissão ou dado real de cliente é alterado.
+- **Validação/integração:** manter o PR sem merge até Quality Gate completo **e** Vercel Preview success/READY no mesmo head SHA e revisão do diff; depois verificar produção separadamente. OPS-VERCEL-QUOTA-001 (HTTP 402 por cota diária) bloqueia previews novos nesta execução; não modificar cobrança nem forçar merge. SEC-010/011, UX-002, OAuth real e GOAL-003 visual permanecem sem homologação.
+
 ## 27/10/2026 — GOAL-003: impressão privada de metas e referências
 
 - Continuidade independente dos gates externos: controle Imprimir / salvar PDF no relatório autenticado reports/targets, reutilizando o fluxo local existente. Identidade do cliente incluída no documento, período/moedas/fuso/geração e todos os avisos preservados. Não classifica referência sem vigência como meta mensal.

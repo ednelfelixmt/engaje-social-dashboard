@@ -12,6 +12,7 @@ export type RevenueScope = {organizationId: string; organizationName: string; or
 export type RevenueDay = {date: string; values: Values; sourceIds: string[]; reconciled: boolean; syncedAt: string | null};
 export type RevenuePeriod = {from: string; to: string; days: RevenueDay[]; totals: Values; knownDays: Record<RevenueMetric, number>; records: number; otherSourceRecords: number; reconciledDays: number};
 export type RevenueReport = {scope: RevenueScope; current: RevenuePeriod; previous: RevenuePeriod | null};
+const organizationUuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const channels = ['meta_ads', 'google_ads', 'tiktok_ads', 'organic', 'direct', 'unattributed'];
 const account = (row: Fact) => row.channel === 'meta_ads' ? row.account_id.replace(/^act_/, '') : row.account_id;
 function period(rows: readonly Fact[], scope: RevenueScope, range: {from: string; to: string}): RevenuePeriod {
@@ -43,7 +44,7 @@ function period(rows: readonly Fact[], scope: RevenueScope, range: {from: string
 }
 /** One source only, with an observation required for every calendar day of each total. */
 export function buildRevenueReport(current: readonly Fact[], previous: readonly Fact[], scope: RevenueScope): RevenueReport {
- if (!scope.organizationId || !scope.organizationSlug || !['crm', 'spreadsheet'].includes(scope.source) || !/^[A-Z]{3}$/.test(scope.currency) || !['none', 'previous_period', 'previous_year'].includes(scope.compare)) throw new Error('Invalid revenue report scope');
+ if (!organizationUuid.test(scope.organizationId) || !scope.organizationSlug || !['crm', 'spreadsheet'].includes(scope.source) || !/^[A-Z]{3}$/.test(scope.currency) || !['none', 'previous_period', 'previous_year'].includes(scope.compare)) throw new Error('Invalid revenue report scope');
  new Intl.DateTimeFormat('pt-BR', {timeZone: scope.timezone});
  if (scope.compare === 'none' && previous.length) throw new Error('Unexpected revenue comparison facts');
  return {scope: {...scope}, current: period(current, scope, {from: scope.from, to: scope.to}), previous: scope.compare === 'none' ? null : period(previous, scope, comparisonPeriod(scope.from, scope.to, scope.compare))};
