@@ -33,7 +33,7 @@ test('smoke only permits local builds and deployment roots without credentials',
 });
 
 test('smoke verifies login, recovery and private routes with anonymous GETs',async()=>{
-  assert.equal((await verifyReleaseHttp(base,base,responses())).length,10);
+  assert.equal((await verifyReleaseHttp(base,base,responses())).length,11);
 });
 
 test('smoke catches exposed admin pages and cross-origin login redirects',async()=>{
@@ -59,7 +59,7 @@ test('smoke requires the configured canonical callback and a referrer policy',as
     if(path.endsWith('/callback'))response.headers.set('location',callback+'/auth/reset-password?error=invalid_link');
     return response;
   });
-  assert.equal((await verifyReleaseHttp(base,callback,canonical)).length,10);
+  assert.equal((await verifyReleaseHttp(base,callback,canonical)).length,11);
   await assert.rejects(verifyReleaseHttp(base,base,responses((path,response)=>{if(path.endsWith('/callback'))response.headers.delete('referrer-policy');return response;})),/referrer/);
 });
 
