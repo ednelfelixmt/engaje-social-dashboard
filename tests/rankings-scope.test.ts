@@ -1,8 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {preparePerformanceRankings} from '../src/lib/metrics/rankings';
+import {preparePerformanceRankings as scopedRankings} from '../src/lib/metrics/rankings';
+import {readFileSync} from 'node:fs';
 import type {Row} from '../src/types/database.types';
 import type {CampaignPerformance} from '../src/types/domain';
+
+// Preserve the synthetic baseline for existing ranking scenarios.
+const preparePerformanceRankings = (...args: [
+  Parameters<typeof scopedRankings>[0], Parameters<typeof scopedRankings>[1],
+  Parameters<typeof scopedRankings>[2], Parameters<typeof scopedRankings>[3],
+]) => scopedRankings(...args, 'tenant-a', 'BRL');
 
 // Deliberately partial, synthetic facts: only fields consumed by rankings are needed.
 const breakdown=(overrides:Partial<Row<'metrics_ads_breakdowns'>>={})=>({
@@ -191,4 +198,27 @@ test('incomplete Meta act_ marker is not converted into an empty account identit
     ad({account_id:'act_'}),ad({account_id:''}),
   ],[],[]);
   assert.equal(result.creative.length,2);
+});
+
+
+test('single-source tenant mismatch is rejected for all four ranking inputs',()=>{
+  const wrongCreative = {organization_id:'tenant-b',platform:'meta_ads',account_id:'account-1',ad_id:'ad-1'} as Row<'creatives'>;
+  assert.throws(()=>scopedRankings([campaign({organizationId:'tenant-b'})],[],[],[],'tenant-a','BRL'),/single organization/);
+  assert.throws(()=>scopedRankings([],[ad({organization_id:'tenant-b'})],[],[],'tenant-a','BRL'),/single organization/);
+  assert.throws(()=>scopedRankings([],[],[breakdown({organization_id:'tenant-b'})],[],'tenant-a','BRL'),/single organization/);
+  assert.throws(()=>scopedRankings([],[],[],[wrongCreative],'tenant-a','BRL'),/single organization/);
+});
+
+test('rankings reject single-currency mismatches and invalid expected scopes',()=>{
+  assert.throws(()=>scopedRankings([], [ad({currency:'USD'})], [], [], 'tenant-a', 'BRL'),/one known source currency/);
+  assert.throws(()=>scopedRankings([campaign({currency:'USD'})], [], [], [], 'tenant-a', 'BRL'),/one known source currency/);
+  assert.throws(()=>scopedRankings([], [], [breakdown({currency:'USD'})], [], 'tenant-a', 'BRL'),/one known source currency/);
+  assert.throws(()=>scopedRankings([], [], [], [], '', 'BRL'),/single organization/);
+  assert.throws(()=>scopedRankings([], [], [], [], 'tenant-a', 'brl'),/one known source currency/);
+  assert.deepEqual(scopedRankings([], [], [], [], 'tenant-a', 'BRL'), preparePerformanceRankings([], [], [], []));
+});
+
+test('authenticated tenant dashboard supplies organization and selected currency to rankings',()=>{
+  const source = readFileSync(new URL('../src/app/(tenant)/[organizationSlug]/[section]/page.tsx',import.meta.url),'utf8');
+  assert.match(source,/preparePerformanceRankings\(campaignsWithMovement, ads, breakdowns, filteredCreatives, org\.id, f\.currency\)/);
 });
