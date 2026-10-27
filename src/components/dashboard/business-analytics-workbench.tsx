@@ -12,7 +12,6 @@ export type InsightDay={date:string;spend:number|null;impressions:number|null;cl
 type Metric=WorkbenchMetric;
 const labels:Record<Metric,string>={spend:'Investimento',impressions:'Impressões',clicks:'Cliques',leads:'Leads',cpl:'CPL',ctr:'CTR'};
 const names:Record<string,string>={meta_ads:'Meta Ads',google_ads:'Google Ads',tiktok_ads:'TikTok Ads'};
-const colors:Record<string,string>={meta_ads:'#ffd524',google_ads:'#5bb8ff',tiktok_ads:'#b49cff'};
 function amount(v:number|null|undefined,key:Metric,currency:string){return v==null?'—':['spend','cpl'].includes(key)?money(v,currency):key==='ctr'?number(v,2)+'%':number(v);}
 function exportCsv(rows:InsightCampaign[],currency:string){
  const header=['Plataforma','Campanha','Investimento ('+currency+')','Impressoes','Cliques','Leads','CPL ('+currency+')','Receita atribuida','Compras atribuidas'];
