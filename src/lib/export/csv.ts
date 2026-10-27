@@ -7,13 +7,29 @@
  */
 export type CsvCell = string | number | null | undefined;
 
+// Invisible Unicode format characters (e.g. BOM, bidi controls and zero-width
+// marks) and C0/C1 controls may be stripped by spreadsheet importers before
+// formula detection. Treat any such leading characters as untrusted text.
+const hiddenPrefix = /[\p{Cc}\p{Cf}]/u;
+const whitespace = /\s/u;
+
+function needsTextEscape(raw: string): boolean {
+  let hasHiddenPrefix = false;
+  for (const char of raw) {
+    if (char === '=' || char === '+' || char === '-' || char === '@') return true;
+    if (hiddenPrefix.test(char)) { hasHiddenPrefix = true; continue; }
+    if (whitespace.test(char)) continue;
+    return hasHiddenPrefix;
+  }
+  return hasHiddenPrefix;
+}
+
 function escapeCell(value: CsvCell): string {
   if (value == null || (typeof value === 'number' && !Number.isFinite(value))) return '""';
   const raw = String(value);
-  // Leading whitespace/control characters can hide a formula prefix in Excel.
-  const safe = typeof value === 'string' && (/^\s*[=+\-@]/u.test(raw) || /^[\t\r\n]/u.test(raw))
-    ? "'" + raw
-    : raw;
+  // Neutralize formula-like text and leading invisible/control characters.
+  // Ordinary leading spaces remain unchanged; trusted numeric cells stay numeric.
+  const safe = typeof value === 'string' && needsTextEscape(raw) ? "'" + raw : raw;
   return '"' + safe.replaceAll('"', '""') + '"';
 }
 
