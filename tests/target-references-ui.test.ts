@@ -33,3 +33,15 @@ test('sub-cent observations and derived ratios cannot be rendered as an invented
  const html=renderToStaticMarkup(React.createElement(TargetReferences,{report:buildTargetReferences([{...fact,spend:0.000001}],config,scope)}));
  assert.ok(html.includes('0,000001'));assert.ok(html.includes('E-7'));assert.ok(html.includes('Acima da referência'));assert.ok(!html.includes('NaN'));assert.ok(!html.includes('Infinity'));
 });
+
+
+test('local export is available to a viewer without mutating references or implying a monthly goal',()=>{
+ const html=renderToStaticMarkup(React.createElement(TargetReferences,{report:buildTargetReferences([fact],config,scope)}));
+ assert.ok(html.includes('Exportar referências CSV'));
+ assert.ok(html.includes('sem vigência da referência'));
+ assert.ok(html.includes('não representa meta mensal'));
+ assert.ok(!html.includes('type="submit"'));
+ const empty={...Object.fromEntries(targetFields.map(key=>[key,null])),organization_id:scope.organizationId} as TargetConfig;
+ const noTargets=renderToStaticMarkup(React.createElement(TargetReferences,{report:buildTargetReferences([],empty,scope)}));
+ assert.match(noTargets,/<button type="button" disabled=""/);
+});
