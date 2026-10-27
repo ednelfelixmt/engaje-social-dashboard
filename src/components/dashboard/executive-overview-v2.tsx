@@ -7,7 +7,7 @@ import {money,number} from '@/lib/utils';
 import {paidMetric,paidTotals,sumKnown,percentChange} from '@/lib/metrics/paid-metrics';
 import {BudgetTreemap,PeriodBridge} from '@/components/dashboard/analytics-chart-library';
 export type ExecutiveCampaign={id:string;name:string;platform:string;spend:number;impressions:number|null;clicks:number|null;leads:number|null};
-export type ExecutiveDay={date:string;spend:number;impressions:number|null;clicks:number|null;leads:number|null};
+export type ExecutiveDay={date:string;spend:number|null;impressions:number|null;clicks:number|null;leads:number|null};
 type Metric='spend'|'impressions'|'clicks'|'leads'|'ctr'|'cpc'|'cpl';
 const labels:Record<Metric,string>={spend:'Investimento',impressions:'Impressões',clicks:'Cliques',leads:'Leads',ctr:'CTR',cpc:'CPC',cpl:'CPL'};
 const palette=['#facc15','#53a8f8','#a78bfa','#32c5a0','#fb923c','#f472b6'];

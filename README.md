@@ -60,7 +60,9 @@ Ao importar planilha, o lote substitui atomicamente todos os registros de planil
 
 As páginas de público/dispositivos Meta e Google oferecem CSV com período, fonte, moeda, cobertura por indicador e registros de origem. Campos ausentes ficam vazios; cada dimensão é independente. O download é local e mantém a autorização de leitura do cliente, sem criar links públicos. Consulte `docs/engineering/audience-reports-and-csv.md` para limites e homologação pendente.
 
-O relatório executivo oferece comparação, impressão e CSV local. A análise de receita externa separa CRM/planilha e exibe conciliação por dia. A consulta de metas e referências em `reports/targets` compara quatro indicadores de anúncios com o cadastro da agência, preserva ausências e não presume vigência mensal; referências ainda sem base compatível ficam explícitas. Veja `docs/engineering/target-references.md`.
+O relatório executivo oferece comparação, impressão e CSV local. A análise de receita externa separa CRM/planilha e exibe conciliação por dia. A consulta de metas e referências em `reports/targets` compara quatro indicadores de anúncios com o cadastro da agência, preserva ausências e não presume vigência mensal; referências ainda sem base compatível ficam explícitas. O CSV local inclui unidades, diferenças, estados e cobertura. Veja `docs/engineering/target-references.md`.
+
+No executivo, o nome da campanha abre o detalhamento privado por conta e plataforma, com tabela diária, filtros, comparação e impressão/PDF. Lacunas permanecem indisponíveis e valores observados são distinguidos de coleta completa; veja `docs/engineering/campaign-detail.md`.
 
 ## Estágio dos integradores
 

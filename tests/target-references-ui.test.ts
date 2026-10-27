@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
+import {loadTypescript} from './helpers/load-typescript';
 import {renderToStaticMarkup} from 'react-dom/server';
 import type {Row} from '../src/types/database.types';
 import {buildTargetReferences,targetFields,type TargetConfig,type TargetScope} from '../src/lib/reports/target-references';
@@ -32,4 +33,36 @@ test('unsupported metrics, invalid configuration and currency mismatch carry exp
 test('sub-cent observations and derived ratios cannot be rendered as an invented zero',()=>{
  const html=renderToStaticMarkup(React.createElement(TargetReferences,{report:buildTargetReferences([{...fact,spend:0.000001}],config,scope)}));
  assert.ok(html.includes('0,000001'));assert.ok(html.includes('E-7'));assert.ok(html.includes('Acima da referência'));assert.ok(!html.includes('NaN'));assert.ok(!html.includes('Infinity'));
+});
+
+
+test('local export is available to a viewer without mutating references or implying a monthly goal',()=>{
+ const html=renderToStaticMarkup(React.createElement(TargetReferences,{report:buildTargetReferences([fact],config,scope)}));
+ assert.ok(html.includes('Exportar referências CSV'));
+ assert.ok(html.includes('sem vigência da referência'));
+ assert.ok(html.includes('não representa meta mensal'));
+ assert.ok(!html.includes('type="submit"'));
+ const empty={...Object.fromEntries(targetFields.map(key=>[key,null])),organization_id:scope.organizationId} as TargetConfig;
+ const noTargets=renderToStaticMarkup(React.createElement(TargetReferences,{report:buildTargetReferences([],empty,scope)}));
+ assert.match(noTargets,/<button type="button" disabled=""/);
+});
+
+
+let exportMessage='',exportCount=0,exportFailure=false;
+const {TargetReferencesExport}=loadTypescript<typeof import('../src/components/dashboard/target-references-export')>(new URL('../src/components/dashboard/target-references-export.tsx',import.meta.url),(id,native)=>{
+ if(id==='react')return {...React,useId:()=> 'synthetic-export-note',useState:()=>[exportMessage,(value:string)=>{exportMessage=value;}]};
+ if(id==='@/lib/export/download')return {downloadCsv:()=>{exportCount++;if(exportFailure)throw new Error('Private synthetic export failure');}};
+ return native(id);
+});
+function findExportButton(node:React.ReactNode):React.ReactElement<{onClick:()=>void;disabled:boolean}>|undefined{
+ if(!React.isValidElement<{children?:React.ReactNode}>(node))return;
+ if(node.type==='button')return node as React.ReactElement<{onClick:()=>void;disabled:boolean}>;
+ for(const child of React.Children.toArray(node.props.children)){const found=findExportButton(child);if(found)return found;}
+}
+test('reference download is click-only and guards disabled/empty content even under direct handler invocation',()=>{
+ exportMessage='';exportCount=0;exportFailure=false;const enabled=TargetReferencesExport({content:'synthetic',filename:'synthetic.csv',disabled:false});assert.equal(exportCount,0);findExportButton(enabled)!.props.onClick();assert.equal(exportCount,1);
+ findExportButton(TargetReferencesExport({content:'synthetic',filename:'synthetic.csv',disabled:true}))!.props.onClick();findExportButton(TargetReferencesExport({content:'',filename:'synthetic.csv',disabled:false}))!.props.onClick();assert.equal(exportCount,1);
+});
+test('reference download errors are announced without exposing private failure details or claiming success',()=>{
+ exportMessage='';exportFailure=true;findExportButton(TargetReferencesExport({content:'synthetic',filename:'synthetic.csv',disabled:false}))!.props.onClick();const html=renderToStaticMarkup(TargetReferencesExport({content:'synthetic',filename:'synthetic.csv',disabled:false}));assert.ok(html.includes('role="alert"'));assert.ok(!html.includes('Private synthetic export failure'));exportFailure=false;
 });
