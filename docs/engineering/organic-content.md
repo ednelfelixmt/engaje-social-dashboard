@@ -33,3 +33,7 @@ Claude Code 2.1.91 recebeu consultas de proposta e diff, mas retornou exit 0 com
 O primeiro lint apontou let desnecessário, corrigido para const. O primeiro build compilou e encontrou EPERM na pasta gerada _not-found do Windows; uma repetição intermediária concluiu após preparar o diretório. O build local da fonte final voltou a encontrar o mesmo erro de ambiente após compilação e tipos, portanto build e 13 GETs da fonte final dependem do CI Linux obrigatório. Resultados finais e gates são registrados no PR. Esses testes não homologam JWT A/B, RLS via HTTP real, coleta de provedor, UX autenticada ou interpretação de métricas externas. SMTP permanece adiado.
 
 Integração exige Quality Gate integral e Vercel READY/success no mesmo head. Confirmar produção separadamente e executar os 13 GETs anônimos. Rollback: reverter somente ORG-001, preservando dados, autorização e integrações existentes.
+
+## Publicação pendente
+
+O PR #209 foi aberto com código revisado e 610 testes aprovados na base combinada 658a264. A Vercel recusou o preview do código 38b7054 por build-rate-limit e não criou deployment para esse SHA. O módulo permanece em branch, sem integração à main; reavaliar Quality Gate e Vercel no head atual após disponibilidade de cota. Não contratar plano, criar projeto alternativo nem ignorar o gate como forma de publicar.
