@@ -1,3 +1,4 @@
+import {OrganicReportNavigation} from '@/components/dashboard/organic-report-navigation';
 import {Card} from '@/components/ui/card';
 import {OrganicContentReportView} from '@/components/dashboard/organic-content-report';
 import {tenant,dashboardConfig} from '@/lib/auth/session';
@@ -24,6 +25,7 @@ export default async function Page({params,searchParams}:{params:Promise<{organi
  try{const records=await readOrganicContent(db,scope);report=buildOrganicContentReport(records,{...scope,generatedAt:new Date().toISOString()});}catch{/* Private source diagnostics never leave the server. */}
  return <main className="mx-auto max-w-[1680px] space-y-5">
   <header><p className="eyebrow">Conteúdos orgânicos</p><h1 className="mt-2 text-3xl font-semibold">Publicações e contadores recebidos</h1></header>
+  <OrganicReportNavigation scope={scope} active="content"/>
   <form method="get" aria-label="Filtros de publicação orgânica" className="flex flex-wrap items-end gap-3 rounded-xl border border-white/10 p-4">
    <label className="text-sm">Publicação inicial (UTC)<input className="input mt-1 block" type="date" name="from" defaultValue={scope.from} required/></label>
    <label className="text-sm">Publicação final (UTC)<input className="input mt-1 block" type="date" name="to" defaultValue={scope.to} required/></label>

@@ -48,6 +48,6 @@ test('target-reference navigation is read-only and follows the paid-page setting
 test('organic content report is read-only and visible only when organic is enabled for the tenant',()=>{
  const shown=renderToStaticMarkup(createElement(Navigation,{slug:'fixture-a',canShare:false,enabled:['organic']}));
  const hidden=renderToStaticMarkup(createElement(Navigation,{slug:'fixture-a',canShare:false,enabled:['paid','creatives']}));
- assert.ok(shown.includes('/fixture-a/reports/organic-content'));assert.ok(!shown.includes('/fixture-a/settings/'));
- assert.ok(!hidden.includes('/fixture-a/reports/organic-content'));
+ assert.ok(shown.includes('/fixture-a/reports/organic-content'));assert.ok(shown.includes('/fixture-a/reports/organic-accounts'));assert.ok(!shown.includes('/fixture-a/settings/'));
+ assert.ok(!hidden.includes('/fixture-a/reports/organic-content'));assert.ok(!hidden.includes('/fixture-a/reports/organic-accounts'));
 });

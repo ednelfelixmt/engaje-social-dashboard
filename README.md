@@ -66,6 +66,8 @@ No executivo, o nome da campanha abre o detalhamento privado por conta e platafo
 
 O relatório privado de conteúdos orgânicos em `reports/organic-content` lista publicações recebidas de Facebook e Instagram, por data de publicação UTC, com contadores acumulados por conteúdo e coleta identificada. Inclui CSV local, distingue zero de indisponibilidade e sinaliza o limite de 500 linhas; não apresenta os contadores como atividade do período. Requer a página organic habilitada. Contrato em `docs/engineering/organic-content.md`.
 
+O relatório privado de dados recebidos por conta em `reports/organic-accounts` consulta registros de Facebook/Instagram com presença de datas e campos aceitos e CSV local. A janela original de medição não está confirmada: o rótulo diário armazenado pode conter totais de vários dias. Não oferece somas, taxas ou crescimento; seguidores são estoque e alcance pode se sobrepor. Requer organic habilitado. Veja `docs/engineering/organic-accounts.md`.
+
 ## Estágio dos integradores
 
 - Operacionais: Meta Ads, Facebook orgânico, Instagram orgânico e Google Ads via Windsor.
@@ -76,7 +78,7 @@ O relatório privado de conteúdos orgânicos em `reports/organic-content` lista
 
 ## Limitações desta versão
 
-Google Business, YouTube, TikTok, Stract e conectores CRM ainda precisam dos respectivos adaptadores e credenciais. Métricas orgânicas diárias não são sincronizadas pelo conector Meta atual; conteúdos e contadores acumulados de curtidas/comentários, e reações/compartilhamentos quando retornados pela API. Os acumulados são exibidos por post e não entram nas séries diárias. As metas são armazenadas, mas ainda não têm alertas de acompanhamento. Favicon enviado ainda não é aplicado aos metadados. Convites e recuperação de senha possuem fluxos implementados; entrega de e-mail, expiração e jornada autenticada exigem homologação protegida. Configuração de recuperação em `docs/engineering/21-password-recovery.md`. URLs de imagens da Meta podem expirar e exigem nova sincronização; não são copiadas para Storage. Essas capacidades não devem ser apresentadas como prontas para produção.
+Google Business, YouTube, TikTok, Stract e conectores CRM ainda precisam dos respectivos adaptadores e credenciais. O conector Meta recebe registros de contas e conteúdos com contadores acumulados de curtidas/comentários, e reações/compartilhamentos quando retornados pela API. O rótulo diário dos registros de contas não comprova a janela de medição; totais sem pontos temporais podem estar associados à data de sincronização (DATA-ORG-PERIOD-001). Os acumulados são exibidos por post e não entram nas séries diárias. As metas são armazenadas, mas ainda não têm alertas de acompanhamento. Favicon enviado ainda não é aplicado aos metadados. Convites e recuperação de senha possuem fluxos implementados; entrega de e-mail, expiração e jornada autenticada exigem homologação protegida. Configuração de recuperação em `docs/engineering/21-password-recovery.md`. URLs de imagens da Meta podem expirar e exigem nova sincronização; não são copiadas para Storage. Essas capacidades não devem ser apresentadas como prontas para produção.
 
 ## Deploy
 

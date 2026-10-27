@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import type {Row} from '../src/types/database.types';
 import {buildTargetReferences,targetFields,type TargetConfig,type TargetScope} from '../src/lib/reports/target-references';
-const scope: TargetScope = {organizationId:'synthetic-a',organizationName:'Synthetic A',organizationSlug:'synthetic-a',timezone:'America/Cuiaba',currency:'BRL',referenceCurrency:'BRL',from:'2026-10-20',to:'2026-10-21',generatedAt:'2026-10-26T12:00:00.000Z'};
+const scope: TargetScope = {organizationId:'22222222-2222-4222-8222-222222222222',organizationName:'Synthetic A',organizationSlug:'synthetic-a',timezone:'America/Cuiaba',currency:'BRL',referenceCurrency:'BRL',from:'2026-10-20',to:'2026-10-21',generatedAt:'2026-10-26T12:00:00.000Z'};
 const fact = (patch: Partial<Row<'metrics_ads'>> = {}) => ({id:'synthetic-one',organization_id:scope.organizationId,metric_date:scope.from,platform:'meta_ads',account_id:'act_123',campaign_id:'synthetic-campaign',campaign_name:'Synthetic',ad_id:'synthetic-ad',currency:'BRL',spend:100,impressions:1000,clicks:20,leads:5,attribution_window:'7d_click',...patch} as Row<'metrics_ads'>);
 const config = (patch: Partial<TargetConfig> = {}) => ({...Object.fromEntries(targetFields.map(key=>[key,null])),organization_id:scope.organizationId,target_spend:200,target_leads:10,target_cpl:20,target_ctr:2,...patch} as TargetConfig);
 const facts = () => [fact(),fact({id:'synthetic-two',metric_date:scope.to})];
@@ -75,4 +75,19 @@ test('unsupported references stay visible with dependency reasons even when ads 
 test('input data and configuration are not mutated and ordering cannot change the reference document',()=>{
  const rows=facts(),settings=config(),before=structuredClone({rows,settings});
  const a=buildTargetReferences(rows,settings,scope),b=buildTargetReferences([...rows].reverse(),settings,scope);assert.deepEqual(a,b);assert.deepEqual({rows,settings},before);
+});
+
+
+test('target references reject malformed or absent tenant IDs even for an empty period',()=>{
+ for(const invalid of ['', 'synthetic-a', '22222222-2222-4222-8222-22222222222Z', '22222222222242228222222222222222']){
+  assert.throws(()=>buildTargetReferences([],config({organization_id:invalid}),{...scope,organizationId:invalid}),/configuration scope mismatch/);
+ }
+ const valid=buildTargetReferences([],config(),scope);
+ assert.equal(valid.receivedDays,0);
+ assert.equal(get(valid,'target_spend').status,'insufficient_data');
+});
+
+test('target references do not accept matching synthetic non-UUID scope and facts',()=>{
+ const invalid='synthetic-a';
+ assert.throws(()=>buildTargetReferences([fact({organization_id:invalid})],config({organization_id:invalid}),{...scope,organizationId:invalid}),/configuration scope mismatch/);
 });
