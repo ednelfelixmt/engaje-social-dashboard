@@ -8,7 +8,7 @@ import {serializeCsv} from '@/lib/export/csv';
 import {getWorkbenchSummary, compareWorkbenchPeriods, getWorkbenchDayMetric, type WorkbenchMetric} from '@/lib/metrics/business-workbench-summary';
 
 export type InsightCampaign={id:string;name:string;platform:string;spend:number;impressions:number|null;clicks:number|null;leads:number|null;revenue:number|null;purchases:number|null};
-export type InsightDay={date:string;spend:number;impressions:number|null;clicks:number|null;leads:number|null};
+export type InsightDay={date:string;spend:number|null;impressions:number|null;clicks:number|null;leads:number|null};
 type Metric=WorkbenchMetric;
 const labels:Record<Metric,string>={spend:'Investimento',impressions:'Impressões',clicks:'Cliques',leads:'Leads',cpl:'CPL',ctr:'CTR'};
 const names:Record<string,string>={meta_ads:'Meta Ads',google_ads:'Google Ads',tiktok_ads:'TikTok Ads'};

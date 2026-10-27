@@ -14,7 +14,7 @@ function resolve(id: string, native: NodeRequire): unknown {
   if (id === '@/lib/metrics/weighted-metrics') return weighted;
   if (id === '@/lib/metrics/paid-summary') return {paidSummary};
   if (id === '@/lib/metrics/delta') return {computeDelta};
-  if (id === '@/lib/metrics/catalog') return {paidMetricKeys: ['quality_score'], dashboardMetricLabels: {quality_score: 'Índice de qualidade'}};
+  if (id === '@/lib/metrics/catalog') return {paidMetricKeys: ['quality_score', 'spend', 'cpl'], dashboardMetricLabels: {quality_score: 'Índice de qualidade', spend: 'Investimento', cpl: 'CPL'}};
   if (id === '@/lib/utils') return {number: (value: number | null) => value == null ? '—' : String(value), money: String};
   if (id === '@/components/dashboard/weighted-metric-note') return {WeightedMetricNote};
   if (id.startsWith('@/components/')) return new Proxy({}, {get: () => passthrough});
@@ -76,4 +76,33 @@ test('workspace renders an empty weighted KPI as unavailable with zero observati
   const html = renderToStaticMarkup(React.createElement(CampaignWorkspace, {rows: [], previousRows: [], comparing: false, currency: 'BRL', enabledMetrics: ['quality_score'], timeline: [], funnelSteps: [], rankings: {}, storageKey: 'synthetic'}));
   assert.match(html, /Métrica indisponível: 0 de 0 registros/);
   assert.doesNotMatch(html, /Cobertura completa/); assert.doesNotMatch(html, /Estimativa ponderada/);
+});
+
+
+const paidFact = (spend: number, leads: number): CampaignPerformance => ({
+  ...fact(8), organizationId: 'synthetic-tenant', accountId: 'synthetic-account',
+  campaignId: 'synthetic-campaign', campaignName: 'Synthetic', spend, leads,
+  metricValues: {spend, leads, quality_score: 8},
+});
+const paidWorkspace = (spend: number, priorSpend: number) => renderToStaticMarkup(React.createElement(CampaignWorkspace, {
+  rows: [paidFact(spend, 10)], previousRows: [paidFact(priorSpend, 10)], comparing: true,
+  currency: 'BRL', enabledMetrics: ['spend', 'cpl'], timeline: [], funnelSteps: [], rankings: {}, storageKey: 'synthetic',
+}));
+
+test('workspace displays budget deltas neutrally while higher CPL remains adverse', () => {
+  const html = paidWorkspace(120, 100);
+  assert.match(html, /Variação neutra/);
+  assert.match(html, /text-zinc-400">\+20% vs\. comparação/);
+  assert.match(html, /text-red-400">\+20% vs\. comparação/);
+  assert.match(html, /Atenção/);
+});
+
+test('workspace flags reduced CPL as favorable and never renders infinite delta', () => {
+  const lower = paidWorkspace(80, 100);
+  assert.match(lower, /text-emerald-400">-20% vs\. comparação/);
+  assert.match(lower, /Variação neutra/);
+  const extreme = paidWorkspace(1e308, 1e-308);
+  assert.doesNotMatch(extreme, /Infinity|NaN/);
+  assert.match(extreme, /No período selecionado/);
+  assert.match(extreme, /Sem base/);
 });

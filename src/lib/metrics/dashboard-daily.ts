@@ -1,0 +1,61 @@
+/**
+ * A daily chart must not display a partial sum as a complete observation.
+ * Count metrics and media costs are nonnegative; revenue may be signed for refunds.
+ * All monetary observations in a period must match the selected currency.
+ */
+export type PaidDailyRecord = Readonly<{
+  metric_date: string;
+  currency: string;
+  spend: number | null;
+  revenue: number | null;
+  impressions: number | null;
+  clicks: number | null;
+  leads: number | null;
+}>;
+
+export type PaidDashboardDay = Readonly<{
+  date: string;
+  spend: number | null;
+  revenue: number | null;
+  impressions: number | null;
+  clicks: number | null;
+  leads: number | null;
+}>;
+
+function observed(value: number | null, signed = false): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && (signed || value >= 0) ? value : null;
+}
+
+function combine(total: number | null, next: number | null): number | null {
+  if (total === null || next === null) return null;
+  const result = total + next;
+  return Number.isFinite(result) ? result : null;
+}
+
+/** Preserve known zero, reject missing/negative/nonfinite values and overflow, never mix currencies. */
+export function dashboardPaidDays(rows: readonly PaidDailyRecord[], selectedCurrency: string): PaidDashboardDay[] {
+  if (!rows.length) return [];
+  // A cross-day chart with different currencies is as misleading as a mixed day.
+  const comparableMoney = /^[A-Z]{3}$/.test(selectedCurrency) && rows.every(row => row.currency === selectedCurrency);
+  const days = new Map<string, PaidDashboardDay>();
+  for (const row of rows) {
+    const values: PaidDashboardDay = {
+      date: row.metric_date,
+      spend: comparableMoney ? observed(row.spend) : null,
+      revenue: comparableMoney ? observed(row.revenue, true) : null,
+      impressions: observed(row.impressions),
+      clicks: observed(row.clicks),
+      leads: observed(row.leads),
+    };
+    const prior = days.get(row.metric_date);
+    days.set(row.metric_date, prior ? {
+      date: row.metric_date,
+      spend: combine(prior.spend, values.spend),
+      revenue: combine(prior.revenue, values.revenue),
+      impressions: combine(prior.impressions, values.impressions),
+      clicks: combine(prior.clicks, values.clicks),
+      leads: combine(prior.leads, values.leads),
+    } : values);
+  }
+  return [...days.values()].sort((a, b) => a.date.localeCompare(b.date));
+}

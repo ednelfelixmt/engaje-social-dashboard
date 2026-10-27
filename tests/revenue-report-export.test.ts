@@ -134,3 +134,13 @@ test('download errors are sanitized, not leaked into customer-facing messages', 
  assert.ok(!html.includes('PRIVATE UPSTREAM ERROR'));
  fail = false;
 });
+
+
+test('spreadsheet year comparison exports each canonical metric without coercing overflow or inventing a leap date',()=>{
+ const report=buildRevenueReport([fact({source:'spreadsheet',metric_date:'2024-02-29',revenue:Number.MAX_VALUE,purchases:3,leads:0,checkouts:null}),fact({id:'synthetic-2',source:'spreadsheet',channel:'direct',metric_date:'2024-02-29',revenue:Number.MAX_VALUE,purchases:4,leads:0,checkouts:2})],[fact({source:'spreadsheet',metric_date:'2023-02-28',revenue:-0.000001,purchases:0,leads:5,checkouts:1})],{...scope,source:'spreadsheet',from:'2024-02-29',to:'2024-02-29',compare:'previous_year'});
+ const before=JSON.stringify(report);const csv=revenueReportCsv(report);assert.equal(JSON.stringify(report),before);
+ const parsed=Papa.parse<Record<string,string>>(csv,{header:true,delimiter:';'});assert.deepEqual(parsed.errors,[]);assert.equal(parsed.data.length,4);
+ const columns={revenue:'receita_liquida_informada',purchases:'compras_informadas',leads:'leads_informados',checkouts:'checkouts_informados'} as const;
+ for(const [label,period] of [['atual',report.current],['comparativo',report.previous!]] as const){const rows=parsed.data.filter(row=>row.periodo===label);assert.ok(rows.every(row=>row.fonte==='spreadsheet'));for(const row of rows){const values=row.tipo_linha==='dia'?period.days[0].values:period.totals;for(const key of Object.keys(columns) as (keyof typeof columns)[])assert.equal(row[columns[key]],values[key]===null?'':String(values[key]));}}
+ assert.equal(parsed.data.find(row=>row.periodo==='comparativo'&&row.tipo_linha==='dia')?.dia,'2023-02-28');assert.ok(!csv.includes('Infinity'));assert.ok(!csv.includes('NaN'));
+});

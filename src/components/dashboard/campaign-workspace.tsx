@@ -17,6 +17,7 @@ import {dashboardMetricLabels, paidMetricKeys, type DashboardMetricKey} from '@/
 import type {CampaignPerformance, Platform} from '@/types/domain';
 import type {PerformanceRankingGroups} from '@/lib/metrics/rankings';
 import {paidSummary} from '@/lib/metrics/paid-summary';
+import {computeDelta} from '@/lib/metrics/delta';
 import {paidWeightedMetrics, type WeightedMetricSummary} from '@/lib/metrics/weighted-metrics';
 import {WeightedMetricNote} from '@/components/dashboard/weighted-metric-note';
 import {SortableCardGrid} from '@/components/dashboard/sortable-card-grid';
@@ -46,7 +47,6 @@ function metrics(rows: CampaignPerformance[]) {
 const paidCardDefinitions = paidMetricKeys.map((key) => ({
   key: key as DashboardMetricKey,
   label: dashboardMetricLabels[key as DashboardMetricKey],
-  inverse: ['cpa','cpm','cpc','cpl','cost_per_conversion','cost_per_registration','cost_per_message','cost_per_call','cost_per_page_view','cost_per_thruplay','cost_per_add_to_cart','cost_per_checkout','cost_per_subscription'].includes(key),
   icon: ['spend','revenue','conversion_value','profit','cpa','cpm','cpc','cpl'].includes(key) || key.startsWith('cost_per_') ? BadgeDollarSign : ['purchases','checkouts','add_to_cart'].includes(key) ? ShoppingCart : ['impressions','reach','page_views','video_views'].includes(key) ? Eye : ['clicks','link_clicks','outbound_clicks','ctr','conversion_rate'].includes(key) ? MousePointerClick : TrendingUp,
 }));
 
@@ -57,33 +57,28 @@ function formatPaidMetric(key: string, value: number | null, currency: string) {
   return number(value);
 }
 
-function delta(current: number | null, previous: number | null) {
-  return current != null && previous != null && previous !== 0
-    ? (current - previous) / Math.abs(previous) * 100
-    : null;
-}
-
 function KpiCard({
+  metric,
   label,
   value,
   previous,
   format,
-  inverse = false,
   coverage,
   comparisonIncomplete,
   icon: Icon,
 }: {
+  metric: string;
   label: string;
   value: number | null;
   previous: number | null;
   format: (value: number | null) => string;
-  inverse?: boolean;
   coverage?: WeightedMetricSummary;
   comparisonIncomplete?: boolean;
   icon: typeof Eye;
 }) {
-  const change = delta(value, previous);
-  const positive = change == null ? null : inverse ? change < 0 : change > 0;
+  const comparison = computeDelta(value, previous, metric);
+  const change = comparison?.change ?? null;
+  const good = comparison?.good ?? null;
 
   return <Card className="group relative overflow-hidden !p-5">
     <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent opacity-0 transition group-hover:opacity-100" />
@@ -94,7 +89,7 @@ function KpiCard({
       </div>
       <span className="rounded-xl border border-white/10 bg-white/[0.04] p-2.5 text-primary"><Icon size={18} /></span>
     </div>
-    <p className={`mt-4 text-xs ${change == null ? 'text-zinc-600' : positive ? 'text-emerald-400' : 'text-red-400'}`}>
+    <p className={`mt-4 text-xs ${change == null ? 'text-zinc-600' : good === null ? 'text-zinc-400' : good ? 'text-emerald-400' : 'text-red-400'}`}>
       {change == null ? (value == null ? 'Métrica indisponível' : 'No período selecionado') : `${change > 0 ? '+' : ''}${number(change, 1)}% vs. comparação`}
     </p>
     <WeightedMetricNote summary={coverage} comparisonIncomplete={comparisonIncomplete} />
@@ -134,11 +129,11 @@ function ComparisonPanel({currentRows, previousRows, currency}: {currentRows: Ca
   const current = metrics(currentRows);
   const previous = metrics(previousRows);
   const comparisonRows = [
-    {label: 'Investimento', current: current.spend, previous: previous.spend, format: (value: number | null) => money(value, currency), inverse: false},
-    {label: 'Leads', current: current.leads, previous: previous.leads, format: (value: number | null) => number(value), inverse: false},
-    {label: 'CPL', current: current.cpl, previous: previous.cpl, format: (value: number | null) => money(value, currency), inverse: true},
-    {label: 'Compras', current: current.purchases, previous: previous.purchases, format: (value: number | null) => number(value), inverse: false},
-    {label: 'ROAS', current: current.roas, previous: previous.roas, format: (value: number | null) => value == null ? '—' : `${number(value, 2)}x`, inverse: false},
+    {metric: 'spend', label: 'Investimento', current: current.spend, previous: previous.spend, format: (value: number | null) => money(value, currency)},
+    {metric: 'leads', label: 'Leads', current: current.leads, previous: previous.leads, format: (value: number | null) => number(value)},
+    {metric: 'cpl', label: 'CPL', current: current.cpl, previous: previous.cpl, format: (value: number | null) => money(value, currency)},
+    {metric: 'purchases', label: 'Compras', current: current.purchases, previous: previous.purchases, format: (value: number | null) => number(value)},
+    {metric: 'roas', label: 'ROAS', current: current.roas, previous: previous.roas, format: (value: number | null) => value == null ? '—' : `${number(value, 2)}x`},
   ];
 
   return <Card>
@@ -146,9 +141,10 @@ function ComparisonPanel({currentRows, previousRows, currency}: {currentRows: Ca
     <div className="overflow-x-auto">
       <table><thead><tr><th>Métrica</th><th>Período atual</th><th>Período comparado</th><th>Variação</th><th>Leitura</th></tr></thead>
         <tbody>{comparisonRows.map((row) => {
-          const change = delta(row.current, row.previous);
-          const good = change == null ? null : row.inverse ? change < 0 : change > 0;
-          return <tr key={row.label}><td className="font-medium text-zinc-200">{row.label}</td><td>{row.format(row.current)}</td><td>{row.format(row.previous)}</td><td className={change == null ? 'text-zinc-500' : good ? 'text-emerald-400' : 'text-red-400'}>{change == null ? '—' : `${change > 0 ? '+' : ''}${number(change, 1)}%`}</td><td><span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${good == null ? 'bg-white/5 text-zinc-500' : good ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>{good == null ? 'Sem base' : good ? 'Evolução' : 'Atenção'}</span></td></tr>;
+          const comparison = computeDelta(row.current, row.previous, row.metric);
+          const change = comparison?.change ?? null;
+          const good = comparison?.good ?? null;
+          return <tr key={row.label}><td className="font-medium text-zinc-200">{row.label}</td><td>{row.format(row.current)}</td><td>{row.format(row.previous)}</td><td className={change == null ? 'text-zinc-500' : good === null ? 'text-zinc-400' : good ? 'text-emerald-400' : 'text-red-400'}>{change == null ? '—' : `${change > 0 ? '+' : ''}${number(change, 1)}%`}</td><td><span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${good == null ? 'bg-white/5 text-zinc-500' : good ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>{change == null ? 'Sem base' : good === null ? 'Variação neutra' : good ? 'Evolução' : 'Atenção'}</span></td></tr>;
         })}</tbody>
       </table>
     </div>
@@ -217,6 +213,7 @@ export function CampaignWorkspace({
   const previousCoverage: Record<string, WeightedMetricSummary> = paidWeightedMetrics(measuredPreviousRows);
   const kpis = paidCardDefinitions.filter((item)=>enabledMetrics.includes(item.key)).map((item)=>({
     ...item,
+    metric: item.key,
     value: current[item.key as keyof typeof current] as number|null,
     previous: !comparing || (coverage[item.key] && (coverage[item.key].status !== 'complete' || previousCoverage[item.key].status !== 'complete')) ? null : previous[item.key as keyof typeof previous] as number|null,
     coverage: coverage[item.key],

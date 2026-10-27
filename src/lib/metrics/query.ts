@@ -3,6 +3,7 @@ import {z} from 'zod';
 import {calendarDays,comparisonPeriod} from './calendar';
 import {tenant} from '@/lib/auth/session';
 import type {Row} from '@/types/database.types';
+import {campaignSelection} from './campaign-selection';
 export type Filters={from:string;to:string;compare:'none'|'previous_period'|'previous_year';currency:string};
 const iso=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(s=>!isNaN(Date.parse(s))&&new Date(s).toISOString().slice(0,10)===s);
 export function filters(search:Record<string,string|undefined>,timezone:string,currency:string):Filters{const today=new Intl.DateTimeFormat('en-CA',{timeZone:timezone}).format(new Date());const end=new Date(today+'T12:00:00Z');end.setUTCDate(end.getUTCDate()-29);const from=iso.safeParse(search.from),to=iso.safeParse(search.to);const result={from:from.success?from.data:end.toISOString().slice(0,10),to:to.success?to.data:today,compare:z.enum(['none','previous_period','previous_year']).catch('previous_period').parse(search.compare),currency:/^[A-Z]{3}$/.test(search.currency||'')?search.currency!:currency};if(result.from>result.to)throw new Error('A data inicial deve anteceder a final.');try{calendarDays(result.from,result.to);}catch{throw new Error('Selecione um intervalo de até dois anos.');}return result;}
@@ -12,6 +13,7 @@ export {sum,totals} from './aggregation';
 type DashboardDb=Awaited<ReturnType<typeof tenant>>['db'];
 type DashboardDataOptions={
   platform?:string|null;
+  campaign?:{account:string;campaign:string};
   ads?:boolean;
   adsComparison?:boolean;
   breakdowns?:boolean;
@@ -29,9 +31,16 @@ type DashboardDataOptions={
 
 export async function dashboardData(db:DashboardDb,organizationId:string,f:Filters,options:DashboardDataOptions={}){
   const platform=options.platform??null;
+  const selectedCampaign=options.campaign?campaignSelection({platform,account:options.campaign.account,campaign:options.campaign.campaign}):null;
+  if(options.campaign&&!selectedCampaign)throw new Error('Invalid campaign query scope');
+  if(selectedCampaign&&[options.breakdowns,options.crm,options.crmComparison,options.organic,options.organicComparison,options.organicAccounts,options.organicAccountsComparison,options.creatives,options.adCampaigns].some(Boolean))throw new Error('Campaign selector only supports ad reads');
   const readAds=(range:Filters)=>all<Row<'metrics_ads'>>((a,b)=>{
     let query=db.from('metrics_ads').select('*').eq('organization_id',organizationId).eq('currency',f.currency).gte('metric_date',range.from).lte('metric_date',range.to).order('id');
     if(platform)query=query.eq('platform',platform as Row<'metrics_ads'>['platform']);
+    if(selectedCampaign){
+      query=query.eq('campaign_id',selectedCampaign.campaign);
+      query=selectedCampaign.platform==='meta_ads'?query.in('account_id',[selectedCampaign.account,'act_'+selectedCampaign.account]):query.eq('account_id',selectedCampaign.account);
+    }
     return query.range(a,b);
   });
   const readBreakdowns=(range:Filters)=>all<Row<'metrics_ads_breakdowns'>>((a,b)=>{
