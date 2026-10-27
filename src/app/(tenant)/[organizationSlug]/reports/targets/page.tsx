@@ -19,9 +19,9 @@ export default async function Page({params,searchParams}: {params: Promise<{orga
   const {ads} = await dashboardData(db,org.id,f,{ads:true});
   report = buildTargetReferences(ads,config,{organizationId:org.id,organizationName:org.name,organizationSlug:org.slug,timezone:org.timezone,currency:f.currency,referenceCurrency:org.currency,from:f.from,to:f.to,generatedAt:new Date().toISOString()});
  } catch { /* Auth failures stay outside this boundary; source details never escape. */ }
- return <div className="mx-auto max-w-[1680px] space-y-5"><header><p className="eyebrow">Metas e referências · {org.name}</p><h1 className="mt-2 text-3xl font-semibold">Referências de desempenho</h1><p className="mt-2 text-sm text-zinc-400">Consulte os valores cadastrados pela agência e os dados disponíveis no período.</p></header>
-  <Filters value={f} organizations={organizations ?? []} slug={org.slug} allowComparison={false}/>
-  {superAdmin ? <Link className="inline-flex rounded-xl border border-white/15 px-4 py-2 text-sm" href={'/'+org.slug+'/settings/dashboard'}>Configurar referências</Link> : null}
+ return <div className="mx-auto max-w-[1680px] space-y-5"><header data-print-hide><p className="eyebrow">Metas e referências · {org.name}</p><h1 className="mt-2 text-3xl font-semibold">Referências de desempenho</h1><p className="mt-2 text-sm text-zinc-400">Consulte os valores cadastrados pela agência e os dados disponíveis no período.</p></header>
+  <div data-print-hide><Filters value={f} organizations={organizations ?? []} slug={org.slug} allowComparison={false}/></div>
+  {superAdmin ? <Link data-print-hide className="inline-flex rounded-xl border border-white/15 px-4 py-2 text-sm" href={'/'+org.slug+'/settings/dashboard'}>Configurar referências</Link> : null}
   {report ? <TargetReferences report={report}/> : <Card><p role="alert">Não foi possível carregar as referências e os dados deste recorte. Verifique o cadastro e a origem com a agência. Nenhuma comparação parcial foi produzida.</p></Card>}
  </div>;
 }

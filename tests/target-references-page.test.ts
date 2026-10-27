@@ -34,13 +34,13 @@ test('reference page authenticates and checks config before querying only its te
  reset();rows.push(fact({id:'second-day',metric_date:'2026-10-21'}));const html=renderToStaticMarkup(await Page(props()));
  assert.deepEqual(events.slice(0,2),['auth','config']);assert.deepEqual(calls.map(c=>c.table),['metrics_ads']);
  for(const expected of [['eq','organization_id',scope.id],['eq','currency','BRL'],['gte','metric_date','2026-10-20'],['lte','metric_date','2026-10-21']])assert.ok(calls[0].filters.some(f=>JSON.stringify(f)===JSON.stringify(expected)));
- assert.ok(html.includes('Referências de desempenho'));assert.ok(html.includes('não possuem vigência definida'));assert.ok(html.includes('Exportar referências CSV'));assert.ok(!html.includes('aria-label="Comparação"'));assert.ok(!html.includes('Comparação aplicada'));assert.ok(!html.includes('Configurar referências'));assert.ok(!html.includes('settings/'));
+ assert.ok(html.includes('Referências de desempenho'));assert.ok(html.includes('não possuem vigência definida'));assert.ok(html.includes('Exportar referências CSV'));assert.ok(html.includes('Imprimir / salvar PDF'));assert.ok(!html.includes('aria-label="Comparação"'));assert.ok(!html.includes('Comparação aplicada'));assert.ok(!html.includes('Configurar referências'));assert.ok(!html.includes('settings/'));
 });
 
 test('denied viewer, disabled paid setting and cross-organization config never reach metric queries',async()=>{
  reset();denied=true;await assert.rejects(Page(props()),/access denied/);assert.deepEqual(events,['auth']);assert.equal(calls.length,0);
  reset();enabled=[];let html=renderToStaticMarkup(await Page(props()));assert.equal(calls.length,0);assert.ok(html.includes('indisponível nas configurações'));
- reset();configOrg='synthetic-other';html=renderToStaticMarkup(await Page(props()));assert.equal(calls.length,0);assert.ok(html.includes('role="alert"'));assert.ok(!html.includes('Valores e referências'));
+ reset();configOrg='synthetic-other';html=renderToStaticMarkup(await Page(props()));assert.equal(calls.length,0);assert.ok(html.includes('role="alert"'));assert.ok(!html.includes('Valores e referências'));assert.ok(!html.includes('Imprimir / salvar PDF'));
 });
 
 test('source errors and cross-tenant facts cannot expose partial comparisons or upstream diagnostics',async()=>{
