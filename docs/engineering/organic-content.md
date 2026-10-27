@@ -34,6 +34,8 @@ O primeiro lint apontou let desnecessário, corrigido para const. O primeiro bui
 
 Integração exige Quality Gate integral e Vercel READY/success no mesmo head. Confirmar produção separadamente e executar os 13 GETs anônimos. Rollback: reverter somente ORG-001, preservando dados, autorização e integrações existentes.
 
-## Publicação pendente
+## Integração verificada — 27/10/2026
 
-O PR #209 foi aberto com código revisado e 610 testes aprovados na base combinada 658a264. A Vercel recusou o preview do código 38b7054 por build-rate-limit e não criou deployment para esse SHA. O módulo permanece em branch, sem integração à main; reavaliar Quality Gate e Vercel no head atual após disponibilidade de cota. Não contratar plano, criar projeto alternativo nem ignorar o gate como forma de publicar.
+ORG-001/002 foram integrados pelo PR #209 em 13c65d57c82d2179312e35fc0df47f49dc84bdf2 após Quality Gate #40569243053 e Vercel preview dpl_RPNHoFtmKznuLJyWPFVpkBjyZp1h READY no mesmo head a1799ce. Produção dpl_8juqhH1GBPgi2jsBfq8kExNfMF3L READY no merge SHA, domínio atribuído e 14 GETs anônimos aprovados; CI main #40569587772 também passou. A cota que bloqueou a tentativa anterior não se repetiu. Resultado combinado:633 testes e 140 checks SQL; não homologa UX/JWT/provedores.
+
+ORG-003 acrescenta impressão local, com contrato e pendências em organic-print.md. Os gates do novo pacote são próprios; a publicação anterior não o aprova.

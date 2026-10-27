@@ -48,3 +48,13 @@ test('account CSV only downloads after click, blocks empty/disabled content and 
  const html=renderToStaticMarkup(OrganicAccountExport({content:'synthetic',filename:'synthetic.csv',disabled:false}));
  assert.ok(html.includes('role="alert"'));assert.ok(!html.includes('PRIVATE_ACCOUNT_DOWNLOAD'));failure=false;
 });
+
+test('account print document preserves unverified windows, field absence and selected context with no inferred activity',()=>{
+ const html=renderToStaticMarkup(React.createElement(OrganicAccountsReportView,{report:buildOrganicAccountsReport([{...record,synced_at:'invalid'}],scope)}));
+ for(const text of ['organic-report organic-accounts-report','Dados orgânicos recebidos por conta','Plataforma selecionada: Instagram',scope.from,scope.to,scope.timezone,scope.generatedAt,'Janela original de medição não confirmada','não comprova atividade diária','Seguidores são estoque','sem crescimento inferido','Coleta desconhecida','campo aceito em 0 de 1 registros','2 datas sem registro','Imprimir / salvar PDF'])assert.ok(html.includes(text),text);
+ assert.match(html,/<button type="button"(?![^>]*\sdisabled=)[^>]*>Imprimir \/ salvar PDF<\/button>/);
+ assert.ok(!html.includes('>0</td>'));assert.ok(!html.includes('<script>synthetic-account'));
+ const empty=renderToStaticMarkup(React.createElement(OrganicAccountsReportView,{report:buildOrganicAccountsReport([],{...scope,platform:'all'})}));
+ assert.match(empty,/<button type="button" disabled=""[^>]*>Imprimir \/ salvar PDF<\/button>/);
+ assert.ok(empty.includes('Plataforma selecionada: Facebook e Instagram'));
+});

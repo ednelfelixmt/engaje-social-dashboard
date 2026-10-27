@@ -24,9 +24,9 @@ export default async function Page({params,searchParams}:{params:Promise<{organi
  let report:OrganicContentReport|null=null;
  try{const records=await readOrganicContent(db,scope);report=buildOrganicContentReport(records,{...scope,generatedAt:new Date().toISOString()});}catch{/* Private source diagnostics never leave the server. */}
  return <main className="mx-auto max-w-[1680px] space-y-5">
-  <header><p className="eyebrow">Conteúdos orgânicos</p><h1 className="mt-2 text-3xl font-semibold">Publicações e contadores recebidos</h1></header>
+  <header data-print-hide><p className="eyebrow">Conteúdos orgânicos</p><h1 className="mt-2 text-3xl font-semibold">Publicações e contadores recebidos</h1></header>
   <OrganicReportNavigation scope={scope} active="content"/>
-  <form method="get" aria-label="Filtros de publicação orgânica" className="flex flex-wrap items-end gap-3 rounded-xl border border-white/10 p-4">
+  <form data-print-hide method="get" aria-label="Filtros de publicação orgânica" className="flex flex-wrap items-end gap-3 rounded-xl border border-white/10 p-4">
    <label className="text-sm">Publicação inicial (UTC)<input className="input mt-1 block" type="date" name="from" defaultValue={scope.from} required/></label>
    <label className="text-sm">Publicação final (UTC)<input className="input mt-1 block" type="date" name="to" defaultValue={scope.to} required/></label>
    <label className="text-sm">Plataforma<select className="input mt-1 block" name="platform" defaultValue={scope.platform}><option value="all">Facebook e Instagram</option><option value="facebook_organic">Facebook</option><option value="instagram_organic">Instagram</option></select></label>

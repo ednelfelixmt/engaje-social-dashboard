@@ -21,7 +21,7 @@ test('organic UI preserves empty, invalid-collection and explicitly truncated st
  assert.ok(invalid.includes('Coleta inválida ou não informada'));assert.ok(!invalid.includes('>0</td>'));
  const records=Array.from({length:501},(_,i)=>({...record,id:'post-'+i,external_id:'post-'+i}));
  const capped=renderToStaticMarkup(React.createElement(OrganicContentReportView,{report:buildOrganicContentReport(records,scope)}));
- assert.ok(capped.includes('limitado aos 500 conteúdos'));assert.ok(capped.includes('CSV contém somente as linhas exibidas'));
+ assert.ok(capped.includes('limitado aos 500 conteúdos'));assert.ok(capped.includes('CSV e a impressão contêm somente as linhas exibidas'));
 });
 let count=0,error='',failed=false;
 const {OrganicContentExport}=loadTypescript<typeof import('../src/components/dashboard/organic-content-export')>(new URL('../src/components/dashboard/organic-content-export.tsx',import.meta.url),(id,native)=>{
@@ -47,4 +47,17 @@ test('organic download failures are announced without exposing internal data or 
  const html=renderToStaticMarkup(OrganicContentExport({content:'synthetic',filename:'synthetic.csv',disabled:false}));
  assert.ok(html.includes('role="alert"'));assert.ok(html.includes('Não foi possível preparar'));assert.ok(!html.includes('PRIVATE_DOWNLOAD_DETAIL'));
  failed=false;
+});
+
+test('content print document retains selected scope, snapshot caveats and long-caption limits without external resources',()=>{
+ const selected={...scope,platform:'instagram_organic' as const};
+ const report=buildOrganicContentReport([{...record,caption:'Synthetic caption\n'+'x'.repeat(2100),synced_at:'invalid'}],selected);
+ const html=renderToStaticMarkup(React.createElement(OrganicContentReportView,{report}));
+ for(const text of ['organic-report organic-content-report','Publicações e contadores orgânicos','Plataforma selecionada: Instagram',scope.from,scope.to,scope.timezone,scope.generatedAt,'contadores acumulados','Não representam atividade gerada no período','Coleta inválida','Legenda truncada','Conta synthetic-account','Conteúdo synthetic-external','Imprimir / salvar PDF'])assert.ok(html.includes(text),text);
+ assert.match(html,/<button type="button"(?![^>]*\sdisabled=)[^>]*>Imprimir \/ salvar PDF<\/button>/);
+ assert.ok(html.includes('Synthetic caption'));assert.ok(!html.includes('x'.repeat(2100)));
+ assert.ok(!html.includes('<img'));assert.ok(!html.includes('>0</td>'));
+ const empty=renderToStaticMarkup(React.createElement(OrganicContentReportView,{report:buildOrganicContentReport([],scope)}));
+ assert.match(empty,/<button type="button" disabled=""[^>]*>Imprimir \/ salvar PDF<\/button>/);
+ assert.ok(empty.includes('Plataforma selecionada: Facebook e Instagram'));
 });
