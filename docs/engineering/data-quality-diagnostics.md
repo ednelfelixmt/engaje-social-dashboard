@@ -23,3 +23,5 @@ Testes sintéticos de domínio/página/histórico cobrem fronteiras de tenant na
 Revisão independente Codex da proposta/diff sem impedimento restante. Claude CLI recebeu proposta e diff, mas retornou saída vazia/exit 0; sem parecer Claude. Suite/tipos/lint/SQL/arquitetura/build e gates remotos devem ser registrados no PR final. JWT A/B, RLS via HTTP real, provedores e UX autenticada não são inferidos desses testes; SMTP adiado.
 
 Integração exige PR revisado/mergeável, Quality Gate integral e Vercel success/READY no mesmo SHA. Produção deve ser confirmada separadamente por SHA/alias e 15 GETs. Reverter isoladamente DATAQUAL-001 se houver regressão, sem afrouxar autorização ou converter ausências em zero.
+
+A ordem dos timestamps conserva microssegundos internamente, inclusive em offsets. Duração positiva de1µs não é arredondada a zero; diferença fora da faixa de precisão segura fica indisponível. BigInt é interno ao domínio; os componentes recebem apenas strings/números/null.

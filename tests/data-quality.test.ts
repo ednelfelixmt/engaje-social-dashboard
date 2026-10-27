@@ -44,3 +44,11 @@ test('synchronization history renders recorded provenance, unavailable counts an
  assert.ok(!html.includes('0 registros'));assert.ok(!html.includes('error_summary'));assert.ok(!html.includes('NaN'));assert.ok(!html.includes('Invalid Date'));
  const empty=renderToStaticMarkup(React.createElement(SyncJobHistory,{jobs:[]}));assert.ok(empty.includes('Isso não comprova ausência de sincronização'));
 });
+
+test('microsecond precision preserves positive sub-millisecond duration and rejects reversed instants within one millisecond',()=>{
+ const precise={...job,created_at:'2026-10-27T12:00:00.000001Z',started_at:'2026-10-27T12:00:00.000002Z',completed_at:'2026-10-27T12:00:00.000003Z'};
+ const report=buildDataQuality({...input(),jobs:[precise],metrics:[{...metric,synced_at:'2026-10-27T12:00:00.000001Z'},{...metric,id:'later',synced_at:'2026-10-27T14:00:00.000002+02:00'}]},scope);
+ assert.equal(report.jobs[0].durationMs,0.001);assert.equal(report.jobs[0].recordedCount,0);assert.equal(report.items[0].lastReceived,'2026-10-27T12:00:00.000002Z');
+ const html=renderToStaticMarkup(React.createElement(SyncJobHistory,{jobs:report.jobs}));assert.ok(html.includes('0,000001 s'));assert.ok(!html.includes('>0 s<'));
+ for(const patch of [{created_at:'2026-10-27T12:00:00.000003Z'},{completed_at:'2026-10-27T12:00:00.000001Z'}]){const invalid=buildDataQuality({...input(),jobs:[{...precise,...patch}]},scope).jobs[0];assert.equal(invalid.timelineInvalid,true);assert.equal(invalid.durationMs,null);assert.equal(invalid.recordedCount,null);}
+});

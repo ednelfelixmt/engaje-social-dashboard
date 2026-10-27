@@ -1,7 +1,7 @@
 import {Card} from '@/components/ui/card';
 import type {QualityJobView} from '@/lib/metrics/data-quality';
 const labels={queued:'Na fila',running:'Em execução',completed:'Conclusão registrada',failed:'Falha registrada',unknown:'Status não reconhecido'};
-const number=(value:number)=>new Intl.NumberFormat('pt-BR',{maximumFractionDigits:3}).format(value);
+const number=(value:number)=>new Intl.NumberFormat('pt-BR',{maximumFractionDigits:6}).format(value);
 export function SyncJobHistory({jobs}:{jobs:QualityJobView[]}){
  return <Card className="!p-4"><h2 className="font-semibold">Últimos registros de sincronização</h2>
   <p className="mt-2 text-xs text-zinc-400">Até 12 registros mais recentes por criação, com horários UTC. Agendamentos externos podem não registrar cada disparo aqui. Estado e contador registrados não comprovam qualidade, completude ou correspondência com o provedor.</p>
