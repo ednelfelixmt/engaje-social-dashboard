@@ -1,10 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {buildIntelligenceTimeline, type IntelligenceDailyFact} from '../src/lib/metrics/intelligence-daily';
+import {buildIntelligenceTimeline as buildScopedIntelligenceTimeline, type IntelligenceDailyFact} from '../src/lib/metrics/intelligence-daily';
 import {getWorkbenchDayMetric} from '../src/lib/metrics/business-workbench-summary';
 
+const organizationId = '11111111-1111-4111-8111-111111111111';
+const otherOrganizationId = '22222222-2222-4222-8222-222222222222';
+const currency = 'BRL';
+const buildIntelligenceTimeline = (rows: readonly IntelligenceDailyFact[]) =>
+  buildScopedIntelligenceTimeline(rows, organizationId, currency);
+
 const fact = (overrides: Partial<IntelligenceDailyFact> = {}): IntelligenceDailyFact => ({
+  organization_id: organizationId, currency,
   metric_date: '2026-10-25', spend: 100, impressions: 1000, clicks: 50, leads: 10, ...overrides,
 });
 
@@ -55,8 +62,34 @@ test('missing or invalid measures on one date do not contaminate another date', 
 
 test('the authenticated intelligence page uses strict daily aggregation for both periods', () => {
   const source = readFileSync('src/app/(tenant)/[organizationSlug]/intelligence/page.tsx', 'utf8');
-  assert.match(source, /timeline=\{buildIntelligenceTimeline\(data\.ads\)\}/);
-  assert.match(source, /priorTimeline=\{buildIntelligenceTimeline\(data\.adsComparison\)\}/);
+  assert.match(source, /timeline=\{buildIntelligenceTimeline\(data\.ads,org\.id,f\.currency\)\}/);
+  assert.match(source, /priorTimeline=\{buildIntelligenceTimeline\(data\.adsComparison,org\.id,f\.currency\)\}/);
   assert.doesNotMatch(source, /function dayShape/);
   assert.match(source, /dashboardData\(db,org\.id,f,/);
+});
+
+test('SEC-INT-DAY-001: foreign tenant is rejected even on another date or when all measurements are zero', () => {
+  const foreign = fact({organization_id: otherOrganizationId, metric_date: '2026-10-26',
+    spend: 0, impressions: 0, clicks: 0, leads: 0});
+  assert.throws(() => buildScopedIntelligenceTimeline([fact(), foreign], organizationId, currency), /authorized organization/);
+  assert.throws(() => buildScopedIntelligenceTimeline([foreign], organizationId, currency), /authorized organization/);
+});
+
+test('SEC-INT-DAY-001: any incompatible or missing currency invalidates the entire timeline', () => {
+  for (const invalidCurrency of ['USD', '', 'brl']) {
+    const foreignCurrency = fact({currency: invalidCurrency, metric_date: '2026-10-26', spend: 0});
+    assert.throws(() => buildScopedIntelligenceTimeline([fact(), foreignCurrency], organizationId, currency),
+      /authorized organization and currency/);
+  }
+  assert.equal(buildScopedIntelligenceTimeline([fact({spend: 0})], organizationId, currency)[0].spend, 0);
+});
+
+test('SEC-INT-DAY-001: empty data never bypasses invalid authorization or currency', () => {
+  for (const invalidOrg of ['', 'not-a-uuid', otherOrganizationId.slice(0, 12)]) {
+    assert.throws(() => buildScopedIntelligenceTimeline([], invalidOrg, currency), /authorized organization/);
+  }
+  for (const invalidCurrency of ['', 'usd', 'UNKNOWN']) {
+    assert.throws(() => buildScopedIntelligenceTimeline([], organizationId, invalidCurrency), /authorized organization/);
+  }
+  assert.deepEqual(buildScopedIntelligenceTimeline([], organizationId, currency), []);
 });
