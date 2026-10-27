@@ -37,3 +37,22 @@ test('keeps trusted numeric values numeric, while omitting unknown and non-finit
 test('preserves ordinary campaign names and accents', () => {
   assert.equal(serializeCsv([['Campanha Outubro', 'São Paulo', 'Meta Ads']]), '\ufeff"Campanha Outubro";"São Paulo";"Meta Ads"');
 });
+
+test('SEC-CSV-001: Unicode format and control prefixes cannot disguise spreadsheet formulas', () => {
+  const values = [
+    '\u0000=1+1', '\u001b+1+1', '\u007f@SUM(1,2)', '\u0085=1+1',
+    '\u200b=1+1', '\u200e-1+2', '\u2066+1+2', '\ufeff@SUM(1,2)',
+    ' \u200f=1+1', '\u00ad=1+1', '\u200bTexto comum',
+  ];
+  for (const value of values) {
+    const expected = '\ufeff' + '"' + "'" + value.replaceAll('"', '""') + '"';
+    assert.equal(serializeCsv([[value]]), expected, 'leading invisible text must be escaped');
+  }
+});
+
+test('SEC-CSV-001: ordinary leading spaces, accents, formulas in the middle and numeric values remain intact', () => {
+  assert.equal(
+    serializeCsv([['  Campanha de Outubro', 'São Paulo', 'A+B', 'Promo = 1', -25, 0, 1.5]]),
+    '\ufeff"  Campanha de Outubro";"São Paulo";"A+B";"Promo = 1";"-25";"0";"1.5"',
+  );
+});
