@@ -220,5 +220,6 @@ test('rankings reject single-currency mismatches and invalid expected scopes',()
 
 test('authenticated tenant dashboard supplies organization and selected currency to rankings',()=>{
   const source = readFileSync(new URL('../src/app/(tenant)/[organizationSlug]/[section]/page.tsx',import.meta.url),'utf8');
-  assert.match(source,/preparePerformanceRankings\(campaignsWithMovement, ads, breakdowns, filteredCreatives, org\.id, f\.currency\)/);
+  assert.match(source,/const measuredCampaigns = scopedWorkspaceMeasurements\(currentCampaigns, org\.id, f\.currency\)/);
+  assert.match(source,/preparePerformanceRankings\(measuredCampaigns, ads, breakdowns, filteredCreatives, org\.id, f\.currency\)/);
 });
