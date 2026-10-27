@@ -31,7 +31,8 @@ export function ExecutiveOverviewV2({rows,previous,days,previousDays,currency,sl
  const timeline=useMemo(()=>Array.from({length:Math.max(days.length,previousDays.length)},(_,i)=>({day:i+1,date:days[i]?.date??null,current:days[i]?metric(days[i],selected):null,previous:previousDays[i]?metric(previousDays[i],selected):null})),[days,previousDays,selected]);
  const channelRows=Object.keys(channelNames).map((platform,i)=>{const values=rows.filter(r=>r.platform===platform);return {platform,name:channelNames[platform],...rollup(values),count:values.length,fill:palette[i]};});
  const activeChannels=channelRows.filter(r=>r.count>0&&r.spend!=null&&r.spend>0);
- const campaigns=[...rows].filter(r=>r.spend>0||r.impressions||r.clicks||r.leads).sort((a,b)=>b.spend-a.spend);
+ // The authenticated route supplies measured facts only; zero is a measured result.
+ const campaigns=[...rows].sort((a,b)=>b.spend-a.spend);
  const ranked=campaigns.filter(r=>metric(r,campaignMetric)!=null).sort((a,b)=>(metric(b,campaignMetric)??-1)-(metric(a,campaignMetric)??-1)).slice(0,6).map((r,i)=>({name:r.name.length>25?r.name.slice(0,25)+'…':r.name,value:metric(r,campaignMetric),color:palette[i%palette.length],full:r.name}));
  const scatter=campaigns.flatMap(r=>{const cpl=campaignCpl(r.spend,r.leads);return cpl===null?[]:[{spend:r.spend,cpl,leads:r.leads!,name:r.name}];});
  const tiers=[{name:'Impressões',value:aggregate.impressions,color:'#53a8f8'},{name:'Cliques',value:aggregate.clicks,color:'#facc15'},{name:'Leads',value:aggregate.leads,color:'#3bc7a0'}];
