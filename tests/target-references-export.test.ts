@@ -5,7 +5,7 @@ import type {Row} from '../src/types/database.types';
 import {buildTargetReferences, targetFields, type TargetConfig, type TargetScope} from '../src/lib/reports/target-references';
 import {targetReferencesCsv, targetReferencesFilename} from '../src/lib/export/target-references';
 
-const scope: TargetScope = {organizationId:'synthetic-a',organizationName:'Synthetic client',organizationSlug:'synthetic',timezone:'America/Cuiaba',currency:'BRL',referenceCurrency:'BRL',from:'2026-10-20',to:'2026-10-20',generatedAt:'2026-10-26T12:00:00.000Z'};
+const scope: TargetScope = {organizationId:'22222222-2222-4222-8222-222222222222',organizationName:'Synthetic client',organizationSlug:'synthetic',timezone:'America/Cuiaba',currency:'BRL',referenceCurrency:'BRL',from:'2026-10-20',to:'2026-10-20',generatedAt:'2026-10-26T12:00:00.000Z'};
 const config = (patch: Partial<TargetConfig> = {}) => ({...Object.fromEntries(targetFields.map(key=>[key,null])),organization_id:scope.organizationId,target_spend:0,target_leads:5,target_ctr:2,...patch} as TargetConfig);
 const fact = (patch: Partial<Row<'metrics_ads'>> = {}) => ({id:'synthetic-one',organization_id:scope.organizationId,metric_date:scope.from,platform:'meta_ads',account_id:'act_123',campaign_id:'synthetic',campaign_name:'Synthetic',ad_id:'synthetic-ad',currency:'BRL',spend:0,impressions:1000,clicks:20,leads:5,attribution_window:'7d_click',...patch} as Row<'metrics_ads'>);
 const parse = (csv: string) => {
