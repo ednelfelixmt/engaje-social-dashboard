@@ -69,8 +69,8 @@ test('missing authorization or a cross-tenant campaign fails closed even for cat
 test('the authenticated Intelligence page applies the observed-fact selector to both periods', async () => {
   const {readFileSync} = await import('node:fs');
   const source = readFileSync(new URL('../src/app/(tenant)/[organizationSlug]/intelligence/page.tsx', import.meta.url), 'utf8');
-  assert.match(source, /intelligenceCampaignShape\\(current,org\\.id,f\\.currency\\)/);
-  assert.match(source, /intelligenceCampaignShape\\(previous,org\\.id,f\\.currency\\)/);
+  assert.match(source, /intelligenceCampaignShape\(current,org\.id,f\.currency\)/);
+  assert.match(source, /intelligenceCampaignShape\(previous,org\.id,f\.currency\)/);
   assert.doesNotMatch(source, /\.filter\(r=>r\.spend>0\|\|/);
 });
 
