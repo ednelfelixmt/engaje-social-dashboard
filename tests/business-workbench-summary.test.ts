@@ -74,3 +74,19 @@ test('comparisons never characterize negative current counts or costs as improve
   assert.equal(compareWorkbenchPeriods(-10, 100, true), null);
   assert.equal(compareWorkbenchPeriods(-1, 100), null);
 });
+
+
+test('unchanged metrics and budget adjustments are neutral, not improvements', () => {
+  assert.deepEqual(compareWorkbenchPeriods(100, 100), {delta: 0, positive: null});
+  assert.deepEqual(compareWorkbenchPeriods(100, 100, true), {delta: 0, positive: null});
+  assert.deepEqual(compareWorkbenchPeriods(120, 100, false, true), {delta: 20, positive: null});
+  assert.deepEqual(compareWorkbenchPeriods(80, 100, false, true), {delta: -20, positive: null});
+  assert.deepEqual(compareWorkbenchPeriods(120, 100, true), {delta: 20, positive: false});
+  assert.deepEqual(compareWorkbenchPeriods(80, 100, true), {delta: -20, positive: true});
+});
+
+test('neutral classification still rejects a missing or invalid comparison baseline', () => {
+  assert.equal(compareWorkbenchPeriods(10, 0, false, true), null);
+  assert.equal(compareWorkbenchPeriods(null, 10, false, true), null);
+  assert.equal(compareWorkbenchPeriods(Number.POSITIVE_INFINITY, 10, false, true), null);
+});
