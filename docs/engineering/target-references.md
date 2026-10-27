@@ -41,3 +41,17 @@ Em 26/10, produção b8b96b9 / dpl_12QmkMfrSngcbKhC4LP7go4Kg1wY foi confirmada R
 SMTP adiado. SEC-010/011, SEC-014 runtime, UX-002, ingestões reais e homologação financeira permanecem pendentes. Vigência/moeda versionada das metas requer desenho e validação próprios. Metas de planejamento do projeto permanecem: analytics 06/11, integrações 20/11, relatórios/TV 04/12, estabilização 11/12, entrega geral 18/12/2026.
 
 Rollback: reverter apenas GOAL-001 em regressão comprovada, preservando configurações, dados, receitas e relatórios existentes.
+
+
+## GOAL-002 — CSV local de referências (proposto para gates em 26/10/2026)
+
+O mesmo relatório privado autorizado pelo servidor agora fornece um CSV local, sem endpoint de exportação, permissão adicional ou escrita. O objeto `TargetReferenceReport` já validado gera exatamente dez linhas, uma por referência; cada linha explicita campo, indicador, valor observado, referência, diferença somente quando comparável, estado, motivo, dias com componentes, dias esperados/recebidos, registros, janela de datas, fuso e moedas separadas. Nenhum ID bruto de anúncio, identidade de membro, token ou fato individual é exportado.
+
+Os valores observados continuam distintos das referências cadastradas; zero observado é zero, indisponibilidade é célula vazia. Divergência de moeda não gera diferença, e referências sem origem válida não viram observações. Não somar linhas nem interpretar os valores como metas mensais, porque as referências não possuem vigência cadastrada. Texto externo é neutralizado contra fórmulas em planilhas, e o arquivo é baixado no navegador apenas após clique, usando URL local revogada após o acionamento. O botão fica desabilitado quando nenhuma referência está cadastrada; erro de tenant/fonte não o renderiza.
+
+Regressões sintéticas em `tests/target-references-export.test.ts`, `tests/target-references-ui.test.ts` e `tests/target-references-page.test.ts`. A homologação de UX em sessão autenticada e a validação de fatos reais continuam pendentes. Integração exige Quality Gate e Vercel aprovados para o mesmo SHA; em falha de preview por cota, não integrar, mesmo se os testes passarem. Rollback: reversão independente de GOAL-002, mantendo o relatório GOAL-001.
+
+
+### Precisão do CSV no lote REL-002
+
+O contrato CSV versão 2 inclui unidade_diferenca: percentage_points para CTR, currency/count/percent conforme a referência nos demais campos. Uma diferença de 1 ponto percentual nunca é rotulada como variação relativa de 1%. Testes de clique verificam download somente por ação do usuário, bloqueio de conteúdo vazio/desabilitado e erro anunciado sem detalhes privados.

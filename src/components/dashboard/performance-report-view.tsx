@@ -1,3 +1,6 @@
+import Link from 'next/link';
+import {campaignSelection,campaignHref} from '@/lib/metrics/campaign-selection';
+import type {PerformanceScope} from '@/lib/reports/performance-report';
 import {Card} from '@/components/ui/card';
 import {performanceMetrics, performanceDelta, comparableAttribution, type PerformanceGroup, type PerformancePeriod, type PerformanceReport} from '@/lib/reports/performance-report';
 import type {PaidMetricKey} from '@/lib/metrics/paid-metrics';
@@ -23,12 +26,14 @@ function Source({period, title}: {period: PerformancePeriod; title: string}) {
   <ul className="space-y-1">{period.attribution.map(entry => <li key={JSON.stringify([entry.platform, entry.account])}>{platformLabel(entry.platform)} · Conta {entry.account} · Janela reportada: {entry.windows.map(window => window || 'não informada').join(' / ')}</li>)}</ul>
  </section>;
 }
-function Detail({groups, campaigns, currency, comparison}: {groups: PerformanceGroup[]; campaigns?: boolean; currency: string; comparison: boolean}) {
+function Detail({groups, campaigns, scope, comparison}: {groups: PerformanceGroup[]; campaigns?: boolean; scope: PerformanceScope; comparison: boolean}) {
+ const currency=scope.currency;
+ const campaignLink=(group:PerformanceGroup)=>{if(group.platform==='meta_ads'&&group.account?.startsWith('act_'))return null;const selected=campaignSelection({platform:group.platform,account:group.account,campaign:group.campaignId});return selected?campaignHref(scope.organizationSlug,scope,selected):null;};
  return <div className="performance-table overflow-x-auto"><table className="w-full text-left text-sm">
   <caption className="py-3 text-left text-zinc-400">{campaigns ? 'Campanhas com fatos em pelo menos um período' : 'Plataformas com fatos em pelo menos um período'}. {comparison ? 'Cada linha apresenta os dois períodos; ausência permanece indisponível.' : 'Período selecionado.'}</caption>
   <thead><tr><th scope="col" className="p-2">{campaigns ? 'Campanha / conta' : 'Plataforma'}</th><th scope="col" className="p-2">Período</th>{performanceMetrics.map(metric => <th scope="col" className="p-2" key={metric}>{labels[metric]}</th>)}</tr></thead>
   <tbody>{groups.flatMap(group => [{name: 'Atual', data: group.current}, ...(group.previous ? [{name: 'Comparativo', data: group.previous}] : [])].map(({name, data}) => <tr className="border-t border-white/10 align-top" key={group.key + name}>
-   <th scope="row" className="p-2 font-medium">{campaigns ? group.label : platformLabel(group.platform)}{campaigns ? <small className="block text-zinc-400">{platformLabel(group.platform)} · {group.account} · {group.campaignId}</small> : null}</th>
+   <th scope="row" className="p-2 font-medium">{campaigns ? (campaignLink(group) ? <Link className="text-primary underline underline-offset-2" href={campaignLink(group)!}>{group.label}</Link> : group.label) : platformLabel(group.platform)}{campaigns ? <small className="block text-zinc-400">{platformLabel(group.platform)} · {group.account} · {group.campaignId}</small> : null}</th>
    <td className="p-2">{name}<small className="block">{data.from} a {data.to}</small><small className="block">{data.sourceIds.length} registros</small></td>
    {performanceMetrics.map(metric => <td className="p-2 tabular-nums" key={metric}>{value(data.totals[metric], metric, currency)}</td>)}
   </tr>))}</tbody>
@@ -52,7 +57,7 @@ export function PerformanceReportView({report}: {report: PerformanceReport}) {
    <p className="text-sm">Leads são atribuições reportadas pelas plataformas, podem se sobrepor entre canais e não representam pessoas únicas ou vendas. Receita e ROI não são calculados neste relatório.</p>
    {previous && !comparableAttribution(current, previous) ? <p className="text-sm">Variação de leads e CPL indisponível: contas e janelas de atribuição precisam ser conhecidas, únicas por conta e equivalentes nos dois períodos.</p> : null}
   </div></Card>
-  {report.platforms.length ? <Card><h2 className="text-lg font-semibold">Por plataforma</h2><Detail groups={report.platforms} currency={scope.currency} comparison={!!previous}/></Card> : null}
-  {report.campaigns.length ? <Card><h2 className="text-lg font-semibold">Por campanha</h2><Detail groups={report.campaigns} campaigns currency={scope.currency} comparison={!!previous}/></Card> : null}
+  {report.platforms.length ? <Card><h2 className="text-lg font-semibold">Por plataforma</h2><Detail groups={report.platforms} scope={scope} comparison={!!previous}/></Card> : null}
+  {report.campaigns.length ? <Card><h2 className="text-lg font-semibold">Por campanha</h2><Detail groups={report.campaigns} campaigns scope={scope} comparison={!!previous}/></Card> : null}
  </article>;
 }

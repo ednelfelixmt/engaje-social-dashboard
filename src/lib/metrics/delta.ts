@@ -18,6 +18,7 @@ export function computeDelta(current: number | null | undefined, previous: numbe
     ? difference / Math.abs(previous)
     : current / Math.abs(previous) - Math.sign(previous)) * 100;
   if (!Number.isFinite(change)) return null;
-  if (change === 0 || metric === 'frequency') return {change, good: null};
+  // Spend reflects budget allocation, not independently a favorable business outcome.
+  if (change === 0 || metric === 'frequency' || metric === 'spend') return {change, good: null};
   return {change, good: lowerIsBetter(metric) ? change < 0 : change > 0};
 }

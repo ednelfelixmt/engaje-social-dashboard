@@ -9,7 +9,7 @@ import {serializeCsv} from '@/lib/export/csv';
 import {Card} from '@/components/ui/card';
 
 export type PlatformRow={id:string;name:string;spend:number;impressions:number|null;clicks:number|null;leads:number|null;reach:number|null;messages:number|null;revenue:number|null;status:string|null};
-export type PlatformDay={date:string;spend:number;impressions:number|null;clicks:number|null;leads:number|null};
+export type PlatformDay={date:string;spend:number|null;impressions:number|null;clicks:number|null;leads:number|null};
 type Metric='spend'|'impressions'|'clicks'|'leads'|'ctr'|'cpc'|'cpm'|'cpl';
 const labels:Record<Metric,string>={spend:'Investimento',impressions:'Impressões',clicks:'Cliques',leads:'Leads',ctr:'CTR',cpc:'CPC',cpm:'CPM',cpl:'CPL'};
 const palette=['#facc15','#5bb8ff','#b49cff','#50d4a0','#f59e75','#f27aa8'];

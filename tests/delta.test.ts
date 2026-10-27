@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {computeDelta, lowerIsBetter} from '../src/lib/metrics/delta';
 
 test('computeDelta calcula a variação e classifica se foi boa ou ruim', () => {
-  assert.deepEqual(computeDelta(120, 100, 'spend'), {change: 20, good: true});
+  assert.deepEqual(computeDelta(120, 100, 'spend'), {change: 20, good: null});
   assert.deepEqual(computeDelta(80, 100, 'clicks'), {change: -20, good: false});
   // custo menor é melhor
   assert.deepEqual(computeDelta(8, 10, 'cpl'), {change: -20, good: true});
@@ -33,7 +33,15 @@ test('computeDelta fails closed on unrepresentable percent changes', () => {
 });
 
 test('computeDelta preserves finite changes when subtraction overflows', () => {
-  assert.deepEqual(computeDelta(1e308, -1e308, 'spend'), {change: 200, good: true});
+  assert.deepEqual(computeDelta(1e308, -1e308, 'spend'), {change: 200, good: null});
   assert.deepEqual(computeDelta(-1e308, 1e308, 'cpl'), {change: -200, good: true});
   assert.deepEqual(computeDelta(1e308, 1e308, 'spend'), {change: 0, good: null});
+});
+
+
+test('budget changes and flat performance are neutral; efficiency costs remain directional', () => {
+  assert.deepEqual(computeDelta(80, 100, 'spend'), {change: -20, good: null});
+  assert.deepEqual(computeDelta(100, 100, 'cpl'), {change: 0, good: null});
+  assert.deepEqual(computeDelta(8, 10, 'cost_per_registration'), {change: -20, good: true});
+  assert.deepEqual(computeDelta(12, 10, 'cpl'), {change: 20, good: false});
 });
