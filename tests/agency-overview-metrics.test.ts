@@ -94,3 +94,37 @@ test('valid tenant with no observed facts remains an unavailable card, not zero'
     spend: null, impressions: null, reach: null, leads: null, cpl: null, currency: null,
   });
 });
+
+test('client summary with a foreign source currency hides every metric, not only monetary totals', () => {
+  const result = summarizeClientAds(orgA, 'BRL', [
+    fact({spend: 100, leads: 5, impressions: 1000, reach: 900}),
+    fact({currency: 'USD', spend: 0, leads: 0, impressions: 0, reach: 0}),
+  ]);
+  assert.deepEqual(result, {
+    spend: null, impressions: null, reach: null, leads: null, cpl: null, currency: null,
+  });
+  assert.deepEqual(summarizeClientAds(orgA, 'USD', [fact()]), result);
+});
+
+test('invalid client currency stays unavailable even with no facts or observed zeros', () => {
+  const empty = {spend: null, impressions: null, reach: null, leads: null, cpl: null, currency: null};
+  for (const invalid of ['', 'brl', 'BR1', 'BRL/USD']) {
+    assert.deepEqual(summarizeClientAds(orgA, invalid, []), empty);
+    assert.deepEqual(summarizeClientAds(orgA, invalid, [fact({spend: 0, leads: 0})]), empty);
+  }
+  const validZero = summarizeClientAds(orgA, 'BRL', [
+    fact({spend: 0, impressions: 0, reach: 0, clicks: 0, leads: 0}),
+  ]);
+  assert.equal(validZero.spend, 0);
+  assert.equal(validZero.leads, 0);
+  assert.equal(validZero.impressions, 0);
+});
+
+test('agency portfolio may still report nonmonetary observed counts across source currencies', () => {
+  const portfolio = summarizeAgencyAds([fact(), fact({organization_id: orgB, currency: 'USD', leads: 3})]);
+  assert.equal(portfolio.currency, null);
+  assert.equal(portfolio.spend, null);
+  assert.equal(portfolio.cpl, null);
+  assert.equal(portfolio.leads, 7);
+  assert.equal(portfolio.impressions, 2000);
+});
