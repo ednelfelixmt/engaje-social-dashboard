@@ -227,3 +227,22 @@ html.is-touch-dragging * { cursor: grabbing !important; }
   .engaje-performance-print .target-reference-report [data-reference-card] h2 { font-size: 12pt; }
   .engaje-performance-print .target-reference-report [data-reference-card] dd { font-size: 14pt; }
 }
+
+
+/* Organic documents keep raw-record warnings; long captions may span pages. */
+@media print {
+  .engaje-performance-print .organic-report { font-size: 9pt; line-height: 1.35; overflow-wrap: anywhere; }
+  .engaje-performance-print .organic-report > div { padding: 3mm; margin-bottom: 3mm; }
+  .engaje-performance-print .organic-report .organic-report-table { overflow: visible !important; }
+  .engaje-performance-print .organic-report table { width: 100% !important; min-width: 0 !important; table-layout: fixed; font-size: 8pt; }
+  .engaje-performance-print .organic-report th,
+  .engaje-performance-print .organic-report td { padding: 3px; overflow-wrap: anywhere; word-break: normal; white-space: normal !important; position: static; max-width: none; }
+  .engaje-performance-print .organic-content-report th:first-child { width: 32%; }
+  .engaje-performance-print .organic-accounts-report th:first-child { width: 20%; }
+  .engaje-performance-print .organic-report thead { display: table-header-group; }
+  .engaje-performance-print .organic-report tbody { break-inside: auto; }
+  .engaje-performance-print .organic-report tr { break-inside: auto; }
+  .engaje-performance-print .organic-content-report tbody th { white-space: pre-wrap !important; }
+  .engaje-performance-print .organic-accounts-report section[aria-label="Presença de registros por conta"] { display: block; }
+  .engaje-performance-print .organic-report [data-organic-coverage] { break-inside: avoid; margin-bottom: 3mm; padding: 3mm; }
+}

@@ -56,7 +56,7 @@ test('organic report denies unauthorized viewers, wrong config, disabled organic
  for(const bad of ['config','disabled','platform','dates']){
   reset();if(bad==='config')configOrg='foreign';if(bad==='disabled')enabled=false;
   const html=renderToStaticMarkup(await Page(props(bad==='platform'?{platform:'meta_ads'}:bad==='dates'?{from:'2026-10-22'}:{})));
-  assert.ok(!events.includes('query:creatives'));assert.ok(!html.includes('Exportar conteúdos CSV'));assert.ok(!html.includes('Synthetic &lt;script&gt;'));
+  assert.ok(!events.includes('query:creatives'));assert.ok(!html.includes('Exportar conteúdos CSV'));assert.ok(!html.includes('Imprimir / salvar PDF'));assert.ok(!html.includes('Synthetic &lt;script&gt;'));
  }
 });
 test('organic source or scope errors cannot render partial rows, exports or internal errors',async()=>{
@@ -64,7 +64,7 @@ test('organic source or scope errors cannot render partial rows, exports or inte
   reset();if(bad==='upstream')queryError=true;else rows=[{...fact(),...(bad==='tenant'?{organization_id:'foreign'}:{platform:'meta_ads' as const})}];
   const html=renderToStaticMarkup(await Page(props()));
   assert.ok(html.includes('role="alert"'));assert.ok(html.includes('Nenhum relatório ou CSV parcial'));
-  assert.ok(!html.includes('PRIVATE_UPSTREAM_DETAIL'));assert.ok(!html.includes('Synthetic &lt;script&gt;'));assert.ok(!html.includes('Exportar conteúdos CSV'));
+  assert.ok(!html.includes('PRIVATE_UPSTREAM_DETAIL'));assert.ok(!html.includes('Synthetic &lt;script&gt;'));assert.ok(!html.includes('Exportar conteúdos CSV'));assert.ok(!html.includes('Imprimir / salvar PDF'));
  }
 });
 test('organic filters select one authorized platform and empty results explain absence without counters',async()=>{
@@ -80,7 +80,7 @@ test('explicit malformed or impossible publication dates cannot fall back to a d
   reset();
   const html=renderToStaticMarkup(await Page(props(extra)));
   assert.ok(html.includes('Selecione datas válidas'));assert.deepEqual(events,['auth','config']);
-  assert.ok(!html.includes('Exportar conteúdos CSV'));
+  assert.ok(!html.includes('Exportar conteúdos CSV'));assert.ok(!html.includes('Imprimir / salvar PDF'));
  }
  reset();rows=[];
  const html=renderToStaticMarkup(await Page({params:Promise.resolve({organizationSlug:org.slug}),searchParams:Promise.resolve({})}));
