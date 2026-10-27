@@ -51,9 +51,10 @@ export function getWorkbenchSummary(rows: readonly WorkbenchSummaryRow[]) {
 }
 
 /** A comparison without a finite positive baseline must remain unavailable. */
-export function compareWorkbenchPeriods(current: number | null, previous: number | null, lowerBetter = false) {
+/** Budget changes and unchanged metrics are neutral: neither is an improvement. */
+export function compareWorkbenchPeriods(current: number | null, previous: number | null, lowerBetter = false, neutral = false) {
   if (current == null || !Number.isFinite(current) || current < 0 || previous == null || !Number.isFinite(previous) || previous <= 0) return null;
   const delta = computeDelta(current, previous);
   if (!delta) return null;
-  return {delta: delta.change, positive: lowerBetter ? delta.change <= 0 : delta.change >= 0};
+  return {delta: delta.change, positive: neutral || delta.change === 0 ? null : lowerBetter ? delta.change < 0 : delta.change > 0};
 }
