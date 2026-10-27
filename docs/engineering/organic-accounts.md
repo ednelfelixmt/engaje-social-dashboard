@@ -24,3 +24,7 @@ Testes sintéticos de domínio, CSV, página com sessão/query explícitas, comp
 Claude CLI recebeu proposta e diff mas devolveu saída vazia (exit 0); não há revisão Claude comprovada. Revisão independente Codex e gates são registrados no PR #209. Não substituem JWT real A/B, UX autenticada, semântica/completude dos provedores ou homologação geral. SMTP continua adiado.
 
 ORG-001/002 compõem o mesmo PR. Não integrar sem Quality Gate integral e Vercel success/READY no mesmo SHA. OPS-ORG-001 registra bloqueio de cota de builds, sem alterar plano nem contornar a proteção. ENV-BUILD-001 registra EPERM Windows no diretório gerado _not-found; CI Linux deve concluir build e os 14 GETs anônimos antes do merge. Produção deve ser verificada separadamente após integração; rollback isolado destas rotas/helpers preserva dados e autorização.
+
+## Continuidade ORG-003
+
+ORG-001/002 integrados em 13c65d5 pelo PR #209, com preview/CI no mesmo head, produção READY e 14 GETs anônimos confirmados. O bloqueio anterior de cota não se repetiu. Impressão local adicionada em ciclo separado ORG-003; veja organic-print.md para contrato, gates próprios e paginação visual pendente.

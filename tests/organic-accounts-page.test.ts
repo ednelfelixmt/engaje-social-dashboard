@@ -50,7 +50,7 @@ test('account route rejects denied users, foreign config, disabled organic and e
  for(const bad of ['config','disabled','provider','date','empty']){
   reset();if(bad==='config')configOrg='foreign';if(bad==='disabled')enabled=false;
   const html=renderToStaticMarkup(await Page(props(bad==='provider'?{platform:'meta_ads'}:bad==='date'?{from:'2026-02-30'}:bad==='empty'?{to:''}:{})));
-  assert.ok(!events.includes('query:metrics_organic_accounts'));assert.ok(!html.includes('Exportar contas CSV'));
+  assert.ok(!events.includes('query:metrics_organic_accounts'));assert.ok(!html.includes('Exportar contas CSV'));assert.ok(!html.includes('Imprimir / salvar PDF'));
  }
 });
 test('account source and grain failures cannot render partial records or export source diagnostics',async()=>{
@@ -58,7 +58,7 @@ test('account source and grain failures cannot render partial records or export 
   reset();if(bad==='upstream')queryError=true;
   else rows=[{...record(),account_id:'PRIVATE_ACCOUNT_ID',...(bad==='tenant'?{organization_id:'foreign'}:bad==='period'?{source_period:'week'}:{metric_date:'2026-10-23'})}];
   const html=renderToStaticMarkup(await Page(props()));
-  assert.ok(html.includes('Nenhum relatório ou CSV parcial'));assert.ok(!html.includes('Exportar contas CSV'));
+  assert.ok(html.includes('Nenhum relatório ou CSV parcial'));assert.ok(!html.includes('Exportar contas CSV'));assert.ok(!html.includes('Imprimir / salvar PDF'));
   assert.ok(!html.includes('PRIVATE_ACCOUNT_SOURCE'));assert.ok(!html.includes('PRIVATE_ACCOUNT_ID'));
  }
 });

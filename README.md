@@ -68,6 +68,8 @@ O relatório privado de conteúdos orgânicos em `reports/organic-content` lista
 
 O relatório privado de dados recebidos por conta em `reports/organic-accounts` consulta registros de Facebook/Instagram com presença de datas e campos aceitos e CSV local. A janela original de medição não está confirmada: o rótulo diário armazenado pode conter totais de vários dias. Não oferece somas, taxas ou crescimento; seguidores são estoque e alcance pode se sobrepor. Requer organic habilitado. Veja `docs/engineering/organic-accounts.md`.
 
+Os dois relatórios orgânicos oferecem impressão e salvamento local em PDF, preservando contexto e avisos e ocultando filtros/controles. Paginação e salvamento real ainda exigem homologação visual; contrato em `docs/engineering/organic-print.md`.
+
 ## Estágio dos integradores
 
 - Operacionais: Meta Ads, Facebook orgânico, Instagram orgânico e Google Ads via Windsor.

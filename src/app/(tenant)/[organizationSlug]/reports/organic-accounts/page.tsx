@@ -25,9 +25,9 @@ export default async function Page({params,searchParams}:{params:Promise<{organi
  let report:OrganicAccountsReport|null=null;
  try{const records=await readOrganicAccounts(db,scope);report=buildOrganicAccountsReport(records,{...scope,generatedAt:new Date().toISOString()});}catch{/* No private source diagnostics or partial values. */}
  return <main className="mx-auto max-w-[1680px] space-y-5">
-  <header><p className="eyebrow">Contas orgânicas</p><h1 className="mt-2 text-3xl font-semibold">Dados recebidos por conta</h1></header>
+  <header data-print-hide><p className="eyebrow">Contas orgânicas</p><h1 className="mt-2 text-3xl font-semibold">Dados recebidos por conta</h1></header>
   <OrganicReportNavigation scope={scope} active="accounts"/>
-  <form method="get" aria-label="Filtros de dados orgânicos por conta" className="flex flex-wrap items-end gap-3 rounded-xl border border-white/10 p-4">
+  <form data-print-hide method="get" aria-label="Filtros de dados orgânicos por conta" className="flex flex-wrap items-end gap-3 rounded-xl border border-white/10 p-4">
    <label className="text-sm">Data registrada inicial<input className="input mt-1 block" type="date" name="from" defaultValue={scope.from} required/></label>
    <label className="text-sm">Data registrada final<input className="input mt-1 block" type="date" name="to" defaultValue={scope.to} required/></label>
    <label className="text-sm">Plataforma<select className="input mt-1 block" name="platform" defaultValue={scope.platform}><option value="all">Facebook e Instagram</option><option value="facebook_organic">Facebook</option><option value="instagram_organic">Instagram</option></select></label>
