@@ -7,6 +7,8 @@ export default tseslint.config(
   {ignores:['node_modules/**','.next/**']},
   {
     files:[
+      'scripts/audit-migration-history.ts',
+      'tests/migration-history-audit.test.ts',
       'src/lib/export/csv.ts',
       'tests/csv-export.test.ts',
       'src/lib/export/campaign-report.ts',
