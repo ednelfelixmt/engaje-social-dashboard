@@ -54,11 +54,19 @@ export function campaigns(
     for (const [day, daily] of byDay) {
       const actual = (crmByCampaignDay.get(JSON.stringify([first.organization_id,day,first.platform,normalizedAccountId(first.account_id,first.platform),first.campaign_id,first.currency]))||[])
         .filter((row)=>row.is_complete&&row.revenue!=null);
-      const chosen = actual.find((row) => row.source === preferred) || actual[0];
+      const preferredRows = actual.filter((row) => row.source === preferred);
+      const eligible = preferredRows.length ? preferredRows : actual;
+      // Meta act_ aliases can bypass the raw account-id uniqueness constraint.
+      // More than one complete record for the same source/campaign/day is ambiguous:
+      // never silently select the first row based on database result order.
+      const ambiguous = eligible.length > 1;
+      const chosen = eligible.length === 1 ? eligible[0] : null;
       // CRM revenue can be signed, but invalid measurements and negative
       // purchase counts must never be compensated by other days.
-      const amount = chosen ? (chosen.revenue != null && Number.isFinite(chosen.revenue) ? chosen.revenue : null) : sum(daily, 'revenue');
-      const rawCount = chosen ? chosen.purchases : sum(daily, 'purchases');
+      const amount = ambiguous ? null : chosen
+        ? (chosen.revenue != null && Number.isFinite(chosen.revenue) ? chosen.revenue : null)
+        : sum(daily, 'revenue');
+      const rawCount = ambiguous ? null : chosen ? chosen.purchases : sum(daily, 'purchases');
       const count = rawCount != null && Number.isFinite(rawCount) && rawCount >= 0 ? rawCount : null;
       const nextRevenue:number|null=amount == null || revenue == null ? null : revenue + amount;
       const nextPurchases:number|null=count == null || purchases == null ? null : purchases + count;
