@@ -33,7 +33,7 @@ function reset(){calls=[];events=[];denied=false;superAdmin=false;readError=fals
 test('campaign page authenticates before current/prior queries and applies every campaign-scope predicate',async()=>{
  reset();rows.push(fact({id:'second',metric_date:'2026-10-21'}),fact({id:'prior',metric_date:'2025-10-20'}));const html=renderToStaticMarkup(await Page(props()));assert.deepEqual(events.slice(0,2),['auth','config']);assert.deepEqual(calls.map(c=>c.table),['metrics_ads','metrics_ads']);
  for(const call of calls)for(const expected of [['eq','organization_id',scope.id],['eq','currency','BRL'],['eq','platform','meta_ads'],['eq','campaign_id','synthetic'],['in','account_id',['123','act_123']]])assert.ok(call.filters.some(row=>JSON.stringify(row)===JSON.stringify(expected)),JSON.stringify(expected));
- assert.ok(html.includes('Detalhamento de campanha'));assert.ok(html.includes('Imprimir / salvar PDF'));assert.ok(html.includes('Calendário completo'));assert.ok(html.includes('Comparativo: 2025-10-20 a 2025-10-21'));assert.ok(!html.includes('settings/'));
+ assert.ok(html.includes('Detalhamento de campanha'));assert.ok(html.includes('Imprimir / salvar PDF'));assert.ok(html.includes('Calendário completo'));assert.ok(html.includes('Exportar CSV da campanha'));assert.ok(html.includes('Comparativo: 2025-10-20 a 2025-10-21'));assert.ok(!html.includes('settings/'));
 });
 
 test('denied tenant, disabled setting, foreign configuration and missing selector cannot read campaign facts',async()=>{
@@ -45,7 +45,7 @@ test('denied tenant, disabled setting, foreign configuration and missing selecto
 
 test('query failures and off-selection rows return a redacted error without print controls or partial values',async()=>{
  for(const patch of [{read:true},{account_id:'other'},{campaign_id:'other'},{organization_id:'other'}]){
-  reset();readError='read' in patch;corrupt=!readError;rows=[fact({...patch,campaign_name:'PRIVATE_OFF_SCOPE'})];const html=renderToStaticMarkup(await Page(props()));assert.ok(html.includes('role="alert"'));assert.ok(html.includes('Nenhum valor parcial'));assert.ok(!html.includes('PRIVATE_OFF_SCOPE'));assert.ok(!html.includes('Synthetic upstream'));assert.ok(!html.includes('Imprimir / salvar PDF'));
+  reset();readError='read' in patch;corrupt=!readError;rows=[fact({...patch,campaign_name:'PRIVATE_OFF_SCOPE'})];const html=renderToStaticMarkup(await Page(props()));assert.ok(html.includes('role="alert"'));assert.ok(html.includes('Nenhum valor parcial'));assert.ok(!html.includes('PRIVATE_OFF_SCOPE'));assert.ok(!html.includes('Synthetic upstream'));assert.ok(!html.includes('Imprimir / salvar PDF'));assert.ok(!html.includes('Exportar CSV da campanha'));
  }
 });
 

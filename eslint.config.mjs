@@ -7,6 +7,11 @@ export default tseslint.config(
   {ignores:['node_modules/**','.next/**']},
   {
     files:[
+      'src/lib/export/csv.ts',
+      'tests/csv-export.test.ts',
+      'src/lib/export/campaign-report.ts',
+      'src/components/dashboard/campaign-report-export.tsx',
+      'tests/campaign-report-export.test.ts',
       'src/lib/export/revenue-report.ts',
       'src/components/dashboard/revenue-report-export.tsx',
       'tests/revenue-report-export.test.ts',

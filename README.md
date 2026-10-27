@@ -62,7 +62,7 @@ As páginas de público/dispositivos Meta e Google oferecem CSV com período, fo
 
 O relatório executivo oferece comparação, impressão e CSV local. A análise de receita externa separa CRM/planilha e exibe conciliação por dia, com CSV local por fonte e período. A consulta de metas e referências em `reports/targets` compara quatro indicadores de anúncios com o cadastro da agência, preserva ausências e não presume vigência mensal; referências ainda sem base compatível ficam explícitas. O CSV local inclui unidades, diferenças, estados e cobertura. Veja `docs/engineering/target-references.md`.
 
-No executivo, o nome da campanha abre o detalhamento privado por conta e plataforma, com tabela diária, filtros, comparação e impressão/PDF. Lacunas permanecem indisponíveis e valores observados são distinguidos de coleta completa; veja `docs/engineering/campaign-detail.md`.
+No executivo, o nome da campanha abre o detalhamento privado por conta e plataforma, com tabela diária, filtros, comparação, impressão/PDF e CSV local de valores recebidos, cobertura e calendário. Lacunas permanecem indisponíveis e valores observados são distinguidos de coleta completa; veja `docs/engineering/campaign-detail.md`.
 
 ## Estágio dos integradores
 

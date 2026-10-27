@@ -37,3 +37,33 @@ test('keeps trusted numeric values numeric, while omitting unknown and non-finit
 test('preserves ordinary campaign names and accents', () => {
   assert.equal(serializeCsv([['Campanha Outubro', 'São Paulo', 'Meta Ads']]), '\ufeff"Campanha Outubro";"São Paulo";"Meta Ads"');
 });
+
+test('SEC-CSV-001: Unicode format and control prefixes cannot disguise spreadsheet formulas', () => {
+  const values = [
+    '\u0000=1+1', '\u001b+1+1', '\u007f@SUM(1,2)', '\u0085=1+1',
+    '\u200b=1+1', '\u200e-1+2', '\u2066+1+2', '\ufeff@SUM(1,2)',
+    ' \u200f=1+1', '\u00ad=1+1', '\u200bTexto comum',
+  ];
+  for (const value of values) {
+    const expected = '\ufeff' + '"' + "'" + value.replaceAll('"', '""') + '"';
+    assert.equal(serializeCsv([[value]]), expected, 'leading invisible text must be escaped');
+  }
+});
+
+test('SEC-CSV-001: ordinary leading spaces, accents, formulas in the middle and numeric values remain intact', () => {
+  assert.equal(
+    serializeCsv([['  Campanha de Outubro', 'São Paulo', 'A+B', 'Promo = 1', -25, 0, 1.5]]),
+    '\ufeff"  Campanha de Outubro";"São Paulo";"A+B";"Promo = 1";"-25";"0";"1.5"',
+  );
+});
+
+
+test('full-width formula initiators are neutralized without normalizing external text',()=>{
+ for(const prefix of ['＝','＋','－','＠'])for(const leading of ['','  ','\u200b']){const value=leading+prefix+'SUM(1;2)';assert.equal(serializeCsv([[value]]),'\ufeff"'+"'"+value+'"');}
+});
+
+test('delimiter and quote attacks remain one neutralized text field with original bytes preserved',async()=>{
+ const {default:Papa}=await import('papaparse');
+ const values=['\u200b=1;"x"\r\n@SUM(1;2)','\u2066＠SUM(1;2);"quoted"','\u0000safe;"text"'];
+ for(const value of values){const csv=serializeCsv([['name','count'],[value,0]]);const parsed=Papa.parse<string[]>(csv,{delimiter:';'});assert.deepEqual(parsed.errors,[]);assert.equal(parsed.data.length,2);assert.deepEqual(parsed.data[1],["'"+value,'0']);}
+});
