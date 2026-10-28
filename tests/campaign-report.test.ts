@@ -74,3 +74,24 @@ test('SEC-PERF-SCOPE-001: campaign detail shares the UUID guard before empty or 
  ), /Invalid performance report scope/);
  assert.equal(buildCampaignReport([], [], scope, selected).current.totals.spend, null);
 });
+
+test('SEC-CAMPAIGN-SELECT-GRAIN-001: reject padded identifiers at every report selection boundary', () => {
+ const invalid = [
+  {...selected,account:' 123'},
+  {...selected,account:'123 '},
+  {...selected,account:'act_ 123'},
+  {...selected,account:'act_\u00a0123'},
+  {...selected,campaign:' synthetic-campaign'},
+  {...selected,campaign:'synthetic-campaign '},
+  {...selected,campaign:'synthetic-campaign\u00a0'},
+ ];
+ for (const selection of invalid) {
+  assert.equal(campaignSelection(selection),null,JSON.stringify(selection));
+  assert.throws(
+   () => buildCampaignReport([],[],{...scope,compare:'none'},selection),
+   /Invalid campaign report selection/,
+  );
+ }
+ assert.deepEqual(campaignSelection({...selected,account:'act_123'}),selected);
+ assert.deepEqual(campaignSelection({...selected,platform:'google_ads',account:'act_123'}),{...selected,platform:'google_ads',account:'act_123'});
+});
