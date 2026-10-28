@@ -93,3 +93,19 @@ test('SEC-INT-DAY-001: empty data never bypasses invalid authorization or curren
   }
   assert.deepEqual(buildScopedIntelligenceTimeline([], organizationId, currency), []);
 });
+
+test('intelligence daily guard rejects non-RFC organization UUIDs even on an empty set', () => {
+ for (const invalid of ['11111111-1111-0111-8111-111111111111','11111111-1111-4111-7111-111111111111','11111111-1111-9111-8111-111111111111']) {
+  assert.throws(() => buildScopedIntelligenceTimeline([], invalid, 'BRL'), /authorized organization and currency/);
+  assert.throws(() => buildScopedIntelligenceTimeline([fact({spend: 0})], invalid, 'BRL'), /authorized organization and currency/);
+ }
+ assert.deepEqual(buildScopedIntelligenceTimeline([], '11111111-1111-7111-8111-111111111111', 'BRL'), []);
+});
+
+test('intelligence daily guard rejects impossible dates before grouping valid campaign facts', () => {
+ for (const invalid of ['2026-02-29','2026-02-30','2026-04-31','2026-13-01','2026-2-01','2026-10-26T00:00:00Z']) {
+  assert.throws(() => buildIntelligenceTimeline([fact(), fact({metric_date: invalid, spend: 0})]), /valid ISO calendar days/, invalid);
+  assert.throws(() => buildIntelligenceTimeline([fact({metric_date: invalid})]), /valid ISO calendar days/, invalid);
+ }
+ assert.equal(buildIntelligenceTimeline([fact({metric_date: '2024-02-29'})])[0].date, '2024-02-29');
+});
