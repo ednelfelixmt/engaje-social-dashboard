@@ -124,3 +124,19 @@ test('raw additive counts reject negative values but preserve explicit zero and 
 test('generic sumKnown retains signed-value support outside the paid count contract', () => {
  assert.equal(sumKnown([{delta:-2},{delta:3}], row => row.delta),1);
 });
+
+test('signed period adjustments use baseline magnitude rather than reversing direction',()=>{
+ assert.equal(percentChange(-50,-100),50); // a refund became smaller
+ assert.equal(percentChange(-150,-100),-50); // a refund became larger
+ assert.equal(percentChange(0,-100),100);
+ assert.equal(percentChange(100,-100),200);
+ assert.equal(percentChange(-100,100),-200);
+});
+
+test('signed period comparison preserves representable opposite-sign extremes',()=>{
+ assert.equal(percentChange(1e308,-1e308),200);
+ assert.equal(percentChange(-1e308,1e308),-200);
+ assert.equal(percentChange(-1e308,-1e308),0);
+ assert.equal(percentChange(Number.NaN,-100),null);
+ assert.equal(percentChange(100,Number.NEGATIVE_INFINITY),null);
+});
