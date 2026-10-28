@@ -79,3 +79,26 @@ test('DATAQUAL-TZ-001: UTC offset boundaries preserve legitimate collection time
  assert.equal(view.recordedCount,0);
  assert.equal(view.completedAt,'2026-10-27T12:00:01.000002Z');
 });
+
+
+test('DATAQUAL-MIXED-DATE-001: mixed valid and impossible/future dates do not claim healthy freshness',()=>{
+ const valid={...metric,id:'valid',metric_date:'2026-10-27'};
+ for(const anomalous of [
+  {...metric,id:'future',metric_date:'2026-10-28'},
+  {...metric,id:'impossible',metric_date:'2026-02-30'},
+ ]){
+  const result=buildDataQuality({...input(),metrics:[valid,anomalous]},scope).items[0];
+  assert.equal(result.status,'invalid',anomalous.metric_date);
+  assert.equal(result.days,1);
+  assert.equal(result.latest,'2026-10-27');
+  assert.equal(result.age,0);
+  assert.equal(result.invalidDates,anomalous.id==='impossible'?1:0);
+  assert.equal(result.futureDates,anomalous.id==='future'?1:0);
+ }
+ const clean=buildDataQuality({...input(),metrics:[valid]},scope).items[0];
+ assert.equal(clean.status,'recent');assert.equal(clean.invalidDates,0);assert.equal(clean.futureDates,0);
+ const delayed=buildDataQuality({...input(),metrics:[{...valid,metric_date:'2026-10-20'}]},scope).items[0];
+ assert.equal(delayed.status,'delayed');
+ const missing=buildDataQuality({...input(),metrics:[]},scope).items[0];
+ assert.equal(missing.status,'missing');
+});
