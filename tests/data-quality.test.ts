@@ -112,7 +112,7 @@ test('DATAQUAL-SOURCE-GRAIN-001: reject padded or whitespace-only source IDs acr
   jobs:job,
  };
  for(const key of ['integrations','metrics','dimensions','jobs'] as const){
-  for(const id of [' synthetic','synthetic ','\\tsynthetic','synthetic\\n',' \\t ']){
+  for(const id of [' synthetic','synthetic ','\tsynthetic','synthetic\n',' \t ']){
    const data=input();Object.assign(data,{[key]:[{...sources[key],id}]});
    assert.throws(()=>buildDataQuality(data,scope),/Quality source scope or identity mismatch/,` ${key} ${JSON.stringify(id)}`);
   }
@@ -122,12 +122,12 @@ test('DATAQUAL-SOURCE-GRAIN-001: reject padded or whitespace-only source IDs acr
 
 test('DATAQUAL-SOURCE-GRAIN-001: reject padded account, campaign and dimension identities without partial output',()=>{
  for(const key of ['account_id','campaign_id'] as const){
-  for(const value of ['','  ',' opaque','opaque ','\\topaque','opaque\\n']){
+  for(const value of ['','  ',' opaque','opaque ','\topaque','opaque\n']){
    const rows=[metric,{...metric,id:'metric-other',[key]:value}];
    assert.throws(()=>buildDataQuality({...input(),metrics:rows},scope),/Quality campaign identity missing/,` ${key} ${JSON.stringify(value)}`);
   }
  }
- for(const dimension_type of [' ',' age','age ','\\tage','age\\n']){
+ for(const dimension_type of [' ',' age','age ','\tage','age\n']){
   const dimensions=[{id:'dim',organization_id:scope.organizationId,platform:'meta_ads' as const,dimension_type}];
   assert.throws(()=>buildDataQuality({...input(),dimensions},scope),/Quality dimension missing/);
  }
