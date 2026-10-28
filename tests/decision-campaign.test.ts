@@ -4,8 +4,10 @@ import {readFileSync} from 'node:fs';
 import {findComparableCampaign} from '../src/lib/metrics/decision-campaign';
 import type {CampaignPerformance} from '../src/types/domain';
 
+const orgA = '11111111-1111-4111-8111-111111111111';
+const orgB = '22222222-2222-4222-8222-222222222222';
 const campaign = (override: Partial<CampaignPerformance> = {}): CampaignPerformance => ({
-  organizationId: 'tenant-a',
+  organizationId: orgA,
   platform: 'meta_ads',
   accountId: 'act_123',
   campaignId: 'shared-campaign-id',
@@ -20,7 +22,7 @@ test('decision comparison matches tenant, provider, account, campaign and curren
   const current = campaign();
   const correct = campaign({spend: 80});
   const collisions = [
-    campaign({organizationId: 'tenant-b', spend: 800}),
+    campaign({organizationId: orgB, spend: 800}),
     campaign({platform: 'google_ads', spend: 700}),
     campaign({accountId: 'act_456', spend: 600}),
     campaign({campaignId: 'different-id', spend: 500}),
@@ -72,4 +74,26 @@ test('act_ is a literal non-Meta account prefix and does not match another accou
     assert.equal(findComparableCampaign(plain, [prefixed]), null, platform);
     assert.equal(findComparableCampaign(prefixed, [campaign({platform, accountId: 'act_123'})])?.accountId, 'act_123', platform);
   }
+});
+
+
+test('decision comparison rejects RFC-invalid organization identity in either period', () => {
+  for (const invalid of [
+    'tenant-a',
+    '11111111-1111-0111-8111-111111111111',
+    '11111111-1111-9111-8111-111111111111',
+    '11111111-1111-4111-7111-111111111111',
+    '11111111-1111-4111-c111-111111111111',
+  ]) {
+    assert.equal(findComparableCampaign(campaign({organizationId: invalid}), [campaign({organizationId: invalid})]), null);
+    assert.equal(findComparableCampaign(campaign(), [campaign({organizationId: invalid})]), null);
+  }
+});
+
+test('decision comparison accepts legitimate v7 identity but not a different tenant', () => {
+  const uuidV7 = '123e4567-e89b-7d3a-a456-426614174000';
+  const current = campaign({organizationId: uuidV7, spend: 0});
+  const previous = campaign({organizationId: uuidV7, spend: 30});
+  assert.equal(findComparableCampaign(current, [previous]), previous);
+  assert.equal(findComparableCampaign(current, [campaign({organizationId: orgA})]), null);
 });
