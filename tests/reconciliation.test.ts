@@ -92,13 +92,13 @@ test('Meta canonical account identity still distinguishes campaigns, dates and p
 
 
 test('RECON-GRAIN-IDENTITY-001: whitespace-only or padded source identities do not become reconciled facts',()=>{
- for(const platform of ['', ' ', '\\t', 'meta_ads ', ' meta_ads']){
+ for(const platform of ['', ' ', '\t', 'meta_ads ', ' meta_ads']){
   assert.equal(reconcilePaidFacts([{...a,platform}]).status,'invalid',JSON.stringify(platform));
  }
- for(const accountId of ['', ' ', ' 123', '123 ', '\\n123', 'act_', 'act_ ', 'act_ 123', 'act_123 ']){
+ for(const accountId of ['', ' ', ' 123', '123 ', '\n123', 'act_', 'act_ ', 'act_ 123', 'act_123 ']){
   assert.equal(reconcilePaidFacts([{...a,platform:'meta_ads',accountId}]).status,'invalid',JSON.stringify(accountId));
  }
- for(const campaignId of ['', ' ', ' c1', 'c1 ', '\\tc1']){
+ for(const campaignId of ['', ' ', ' c1', 'c1 ', '\tc1']){
   assert.equal(reconcilePaidFacts([{...a,campaignId}]).status,'invalid',JSON.stringify(campaignId));
  }
  // A malformed row cannot inflate a otherwise valid total or masquerade as a second grain.
