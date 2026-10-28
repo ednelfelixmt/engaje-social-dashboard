@@ -1,4 +1,5 @@
 import type {CampaignPerformance} from '@/types/domain';
+import {isRfcOrganizationUuid} from './organization-scope';
 import type {Row} from '@/types/database.types';
 
 export type RankingDimension = Row<'metrics_ads_breakdowns'>['dimension_type'];
@@ -24,7 +25,7 @@ function assertSingleScope(
     ...breakdowns.map(row => row.organization_id),
     ...creatives.map(row => row.organization_id),
   ]);
-  if (!expectedOrganizationId.trim() || organizations.size > 1 ||
+  if (!isRfcOrganizationUuid(expectedOrganizationId) || organizations.size > 1 ||
     [...organizations].some(organization => organization !== expectedOrganizationId)) {
     throw new Error('Rankings require a single organization matching authorization');
   }

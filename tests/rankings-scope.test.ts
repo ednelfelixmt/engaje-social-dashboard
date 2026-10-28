@@ -9,24 +9,24 @@ import type {CampaignPerformance} from '../src/types/domain';
 const preparePerformanceRankings = (...args: [
   Parameters<typeof scopedRankings>[0], Parameters<typeof scopedRankings>[1],
   Parameters<typeof scopedRankings>[2], Parameters<typeof scopedRankings>[3],
-]) => scopedRankings(...args, 'tenant-a', 'BRL');
+]) => scopedRankings(...args, '11111111-1111-4111-8111-111111111111', 'BRL');
 
 // Deliberately partial, synthetic facts: only fields consumed by rankings are needed.
 const breakdown=(overrides:Partial<Row<'metrics_ads_breakdowns'>>={})=>({
-  organization_id:'tenant-a',platform:'meta_ads',account_id:'account-1',
+  organization_id:'11111111-1111-4111-8111-111111111111',platform:'meta_ads',account_id:'account-1',
   currency:'BRL',dimension_type:'gender',dimension_value:'female',
   dimension_label:'Mulheres',spend:50,revenue:20,impressions:100,
   clicks:10,leads:2,purchases:0,...overrides,
 } as Row<'metrics_ads_breakdowns'>);
 
 const ad=(overrides:Partial<Row<'metrics_ads'>>={})=>({
-  organization_id:'tenant-a',platform:'meta_ads',account_id:'account-1',
+  organization_id:'11111111-1111-4111-8111-111111111111',platform:'meta_ads',account_id:'account-1',
   currency:'BRL',ad_id:'ad-1',adset_id:'set-1',spend:10,revenue:10,
   impressions:100,clicks:10,leads:1,purchases:0,...overrides,
 } as Row<'metrics_ads'>);
 
 const campaign=(overrides:Partial<CampaignPerformance>={})=>({
-  organizationId:'tenant-a',platform:'meta_ads',accountId:'account-1',
+  organizationId:'11111111-1111-4111-8111-111111111111',platform:'meta_ads',accountId:'account-1',
   campaignId:'campaign-1',campaignName:'Campanha',currency:'BRL',
   spend:50,revenue:20,impressions:100,clicks:10,leads:2,purchases:0,
   ...overrides,
@@ -49,12 +49,12 @@ test('dimension totals preserve missing components instead of counting them as z
 
 test('ranking refuses to mix tenant identities from any source, including creative metadata',()=>{
   assert.throws(
-    ()=>preparePerformanceRankings([campaign()],[],[breakdown({organization_id:'tenant-b'})],[]),
+    ()=>preparePerformanceRankings([campaign()],[],[breakdown({organization_id:'22222222-2222-4222-8222-222222222222'})],[]),
     /single organization/,
   );
   assert.throws(
     ()=>preparePerformanceRankings([],[],[breakdown()],[
-      {organization_id:'tenant-b',platform:'meta_ads',account_id:'account-1',ad_id:'ad-1'} as Row<'creatives'>,
+      {organization_id:'22222222-2222-4222-8222-222222222222',platform:'meta_ads',account_id:'account-1',ad_id:'ad-1'} as Row<'creatives'>,
     ]),
     /single organization/,
   );
@@ -75,8 +75,8 @@ test('ranking refuses mixed and unknown currencies instead of displaying convert
 
 test('creative fallback separates account identifiers and uses the matching creative label',()=>{
   const creatives=[
-    {organization_id:'tenant-a',platform:'meta_ads',account_id:'account-1',ad_id:'ad-1',caption:'Criativo A'} as Row<'creatives'>,
-    {organization_id:'tenant-a',platform:'meta_ads',account_id:'account-2',ad_id:'ad-1',caption:'Criativo B'} as Row<'creatives'>,
+    {organization_id:'11111111-1111-4111-8111-111111111111',platform:'meta_ads',account_id:'account-1',ad_id:'ad-1',caption:'Criativo A'} as Row<'creatives'>,
+    {organization_id:'11111111-1111-4111-8111-111111111111',platform:'meta_ads',account_id:'account-2',ad_id:'ad-1',caption:'Criativo B'} as Row<'creatives'>,
   ];
   const result=preparePerformanceRankings([],[ad(),ad({account_id:'account-2'})],[],creatives);
   assert.equal(result.creative.length,2);
@@ -158,7 +158,7 @@ test('Meta account aliases share the correct creative and audience fallback rank
     ad({account_id:'act_123',metric_date:'2026-10-20',spend:10}),
     ad({account_id:'123',metric_date:'2026-10-21',spend:20}),
   ];
-  const creatives=[{organization_id:'tenant-a',platform:'meta_ads',account_id:'123',ad_id:'ad-1',caption:'Peça sintética'} as Row<'creatives'>];
+  const creatives=[{organization_id:'11111111-1111-4111-8111-111111111111',platform:'meta_ads',account_id:'123',ad_id:'ad-1',caption:'Peça sintética'} as Row<'creatives'>];
   const first=preparePerformanceRankings([],facts,[],creatives);
   const reversed=preparePerformanceRankings([],[...facts].reverse(),[],creatives);
   for(const dimension of ['creative','audience'] as const){
@@ -175,7 +175,7 @@ test('non-Meta providers keep act_ as literal account ID in fallback rankings',(
     ad({platform:'google_ads',account_id:'act_123'}),
     ad({platform:'google_ads',account_id:'123'}),
   ];
-  const creatives=[{organization_id:'tenant-a',platform:'google_ads',account_id:'123',ad_id:'ad-1',caption:'Google synthetic'} as Row<'creatives'>];
+  const creatives=[{organization_id:'11111111-1111-4111-8111-111111111111',platform:'google_ads',account_id:'123',ad_id:'ad-1',caption:'Google synthetic'} as Row<'creatives'>];
   const result=preparePerformanceRankings([],facts,[],creatives);
   assert.equal(result.audience.length,2);
   assert.equal(result.creative.length,2);
@@ -184,8 +184,8 @@ test('non-Meta providers keep act_ as literal account ID in fallback rankings',(
 
 test('conflicting creative names across Meta aliases use a neutral label regardless of source order',()=>{
   const creatives=[
-    {organization_id:'tenant-a',platform:'meta_ads',account_id:'act_123',ad_id:'ad-1',caption:'Versão A'} as Row<'creatives'>,
-    {organization_id:'tenant-a',platform:'meta_ads',account_id:'123',ad_id:'ad-1',caption:'Versão B'} as Row<'creatives'>,
+    {organization_id:'11111111-1111-4111-8111-111111111111',platform:'meta_ads',account_id:'act_123',ad_id:'ad-1',caption:'Versão A'} as Row<'creatives'>,
+    {organization_id:'11111111-1111-4111-8111-111111111111',platform:'meta_ads',account_id:'123',ad_id:'ad-1',caption:'Versão B'} as Row<'creatives'>,
   ];
   const first=preparePerformanceRankings([],[ad({account_id:'123'})],[],creatives);
   const reversed=preparePerformanceRankings([],[ad({account_id:'123'})],[],[...creatives].reverse());
@@ -202,24 +202,43 @@ test('incomplete Meta act_ marker is not converted into an empty account identit
 
 
 test('single-source tenant mismatch is rejected for all four ranking inputs',()=>{
-  const wrongCreative = {organization_id:'tenant-b',platform:'meta_ads',account_id:'account-1',ad_id:'ad-1'} as Row<'creatives'>;
-  assert.throws(()=>scopedRankings([campaign({organizationId:'tenant-b'})],[],[],[],'tenant-a','BRL'),/single organization/);
-  assert.throws(()=>scopedRankings([],[ad({organization_id:'tenant-b'})],[],[],'tenant-a','BRL'),/single organization/);
-  assert.throws(()=>scopedRankings([],[],[breakdown({organization_id:'tenant-b'})],[],'tenant-a','BRL'),/single organization/);
-  assert.throws(()=>scopedRankings([],[],[],[wrongCreative],'tenant-a','BRL'),/single organization/);
+  const wrongCreative = {organization_id:'22222222-2222-4222-8222-222222222222',platform:'meta_ads',account_id:'account-1',ad_id:'ad-1'} as Row<'creatives'>;
+  assert.throws(()=>scopedRankings([campaign({organizationId:'22222222-2222-4222-8222-222222222222'})],[],[],[],'11111111-1111-4111-8111-111111111111','BRL'),/single organization/);
+  assert.throws(()=>scopedRankings([],[ad({organization_id:'22222222-2222-4222-8222-222222222222'})],[],[],'11111111-1111-4111-8111-111111111111','BRL'),/single organization/);
+  assert.throws(()=>scopedRankings([],[],[breakdown({organization_id:'22222222-2222-4222-8222-222222222222'})],[],'11111111-1111-4111-8111-111111111111','BRL'),/single organization/);
+  assert.throws(()=>scopedRankings([],[],[],[wrongCreative],'11111111-1111-4111-8111-111111111111','BRL'),/single organization/);
 });
 
 test('rankings reject single-currency mismatches and invalid expected scopes',()=>{
-  assert.throws(()=>scopedRankings([], [ad({currency:'USD'})], [], [], 'tenant-a', 'BRL'),/one known source currency/);
-  assert.throws(()=>scopedRankings([campaign({currency:'USD'})], [], [], [], 'tenant-a', 'BRL'),/one known source currency/);
-  assert.throws(()=>scopedRankings([], [], [breakdown({currency:'USD'})], [], 'tenant-a', 'BRL'),/one known source currency/);
+  assert.throws(()=>scopedRankings([], [ad({currency:'USD'})], [], [], '11111111-1111-4111-8111-111111111111', 'BRL'),/one known source currency/);
+  assert.throws(()=>scopedRankings([campaign({currency:'USD'})], [], [], [], '11111111-1111-4111-8111-111111111111', 'BRL'),/one known source currency/);
+  assert.throws(()=>scopedRankings([], [], [breakdown({currency:'USD'})], [], '11111111-1111-4111-8111-111111111111', 'BRL'),/one known source currency/);
   assert.throws(()=>scopedRankings([], [], [], [], '', 'BRL'),/single organization/);
-  assert.throws(()=>scopedRankings([], [], [], [], 'tenant-a', 'brl'),/one known source currency/);
-  assert.deepEqual(scopedRankings([], [], [], [], 'tenant-a', 'BRL'), preparePerformanceRankings([], [], [], []));
+  assert.throws(()=>scopedRankings([], [], [], [], '11111111-1111-4111-8111-111111111111', 'brl'),/one known source currency/);
+  assert.deepEqual(scopedRankings([], [], [], [], '11111111-1111-4111-8111-111111111111', 'BRL'), preparePerformanceRankings([], [], [], []));
 });
 
 test('authenticated tenant dashboard supplies organization and selected currency to rankings',()=>{
   const source = readFileSync(new URL('../src/app/(tenant)/[organizationSlug]/[section]/page.tsx',import.meta.url),'utf8');
   assert.match(source,/const measuredCampaigns = scopedWorkspaceMeasurements\(currentCampaigns, org\.id, f\.currency\)/);
   assert.match(source,/preparePerformanceRankings\(measuredCampaigns, ads, breakdowns, filteredCreatives, org\.id, f\.currency\)/);
+});
+
+test('SEC-CAMP-UUID-001: ranking rejects non-RFC tenant scope on empty sources',()=>{
+  for(const invalidId of [
+    'tenant-a','11111111-1111-0111-8111-111111111111',
+    '11111111-1111-9111-8111-111111111111',
+    '11111111-1111-4111-7111-111111111111',
+    '11111111-1111-4111-8111-11111111111x',
+    '11111111-1111-4111-8111-111111111111 ',
+  ]){
+    assert.throws(()=>scopedRankings([],[],[],[],invalidId,'BRL'),/single organization/,invalidId);
+  }
+  const validV7='01933a7b-4f88-7a12-8d29-111111111111';
+  assert.equal(scopedRankings([],[],[],[],validV7,'BRL').campaign.length,0);
+});
+
+test('SEC-CAMP-UUID-001: matching invalid organization in source rows still fails closed',()=>{
+  const invalid='11111111-1111-0111-8111-111111111111';
+  assert.throws(()=>scopedRankings([campaign({organizationId:invalid})],[],[],[],invalid,'BRL'),/single organization/);
 });

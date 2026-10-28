@@ -1,4 +1,5 @@
 import type {CampaignPerformance} from '@/types/domain';
+import {isRfcOrganizationUuid} from './organization-scope';
 
 /**
  * Catalog-only campaigns are placeholders without an observed ad fact.
@@ -11,7 +12,7 @@ export function intelligenceCampaignShape(
   selectedCurrency: string,
 ) {
   // Even an empty response must have the scope of the authenticated tenant.
-  if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(authorizedOrganizationId)
+  if (!isRfcOrganizationUuid(authorizedOrganizationId)
     || !/^[A-Z]{3}$/.test(selectedCurrency)) {
     throw new Error('Intelligence campaigns require authorized organization and currency');
   }

@@ -113,3 +113,18 @@ test('SEC-INT-CAMP-001: currency-less catalog placeholders remain excluded and o
   assert.equal(result[0].spend, 0);
   assert.equal(result[0].leads, null);
 });
+
+test('SEC-CAMP-UUID-001: intelligence rejects invalid RFC organization variants before selecting observed facts',()=>{
+  for(const invalidId of [
+    '11111111-1111-0111-8111-111111111111',
+    '11111111-1111-9111-8111-111111111111',
+    '11111111-1111-4111-7111-111111111111',
+    '11111111-1111-4111-8111-111111111111 ',
+  ]){
+    assert.throws(()=>intelligenceCampaignShape([],invalidId,currency),/authorized organization and currency/);
+    assert.throws(()=>intelligenceCampaignShape([campaign({organizationId:invalidId})],invalidId,currency),/authorized organization and currency/);
+  }
+  const validV7='01933a7b-4f88-7a12-8d29-111111111111';
+  assert.deepEqual(intelligenceCampaignShape([],validV7,currency),[]);
+  assert.equal(intelligenceCampaignShape([campaign({organizationId:validV7})],validV7,currency).length,1);
+});
