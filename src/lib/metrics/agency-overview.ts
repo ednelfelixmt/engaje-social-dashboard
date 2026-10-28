@@ -1,5 +1,6 @@
 import type {Row} from '@/types/database.types';
 import {paidMetric, paidTotals} from './paid-metrics';
+import {isRfcOrganizationUuid} from './organization-scope';
 
 /**
  * Facts shown to agency administrators. Portfolio totals may span multiple
@@ -41,8 +42,7 @@ export function summarizeAgencyAds(rows: readonly AgencyAdRow[], expectedCurrenc
 export function summarizeClientAds(organizationId: string, currency: string, rows: readonly AgencyAdRow[]) {
   // A missing or malformed expected identity must never authenticate itself by
   // equality with an equally malformed record (or by the vacuous empty array).
-  const canonicalUuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
-  if (!canonicalUuid.test(organizationId) || rows.some(row => row.organization_id !== organizationId)) {
+  if (!isRfcOrganizationUuid(organizationId) || rows.some(row => row.organization_id !== organizationId)) {
     throw new Error('Client summary requires a single matching organization');
   }
   // Agency portfolio counts may span currencies, but a client's card cannot
