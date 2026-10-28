@@ -1,4 +1,5 @@
 import {finiteRatio as measuredRatio} from './aggregation';
+import {computeDelta} from './delta';
 
 /**
  * Canonical, presentation-independent paid media metrics.
@@ -70,8 +71,9 @@ export function paidTotals<T extends PaidFact>(rows: readonly T[]): PaidTotals {
   };
 }
 
+/** Use a positive baseline magnitude for signed corrections/refunds, as in computeDelta.
+ * This also preserves representable changes when raw subtraction overflows.
+ */
 export function percentChange(current: number | null, previous: number | null): number | null {
-  if (current == null || previous == null || !Number.isFinite(current) || !Number.isFinite(previous) || previous === 0) return null;
-  const change = (current / previous - 1) * 100;
-  return Number.isFinite(change) ? change : null;
+  return computeDelta(current, previous)?.change ?? null;
 }
