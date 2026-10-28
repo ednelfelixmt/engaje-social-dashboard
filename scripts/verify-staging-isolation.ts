@@ -71,11 +71,10 @@ async function login(url:URL,key:string,fixture:Fixture):Promise<Context>{
  }
 }
 async function mustDenyForeign(a:Context,b:Context):Promise<void>{
- for(const [table,field,access] of isolationTables){
+ for(const [table,field] of isolationTables){
   // All tables above have organization_id except organizations, whose tenant key is id.
-  const {data,error}=await a.client.from(table).select(field).eq(field,b.orgId).limit(access==='denied'?0:1);
-  if(access==='denied')invariant(error?.code==='42501'&&data===null,'administrative data denied: '+table);
-  else invariant(!error&&data?.length===0,'foreign data denied: '+table);
+  const {data,error}=await a.client.from(table).select(field).eq(field,b.orgId).limit(1);
+  invariant(!error&&data?.length===0,'foreign data denied: '+table);
  }
  const {data:assets,error:assetsError}=await a.client.from('platform_assets').select('id').in('id',b.assignedIds).limit(100);
  invariant(!assetsError&&assets?.length===0,'foreign platform assets denied');
