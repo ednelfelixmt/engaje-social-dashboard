@@ -5,6 +5,7 @@ import {notFound, redirect} from 'next/navigation';
 import {dashboardConfig, tenant} from '@/lib/auth/session';
 import {filters, dashboardData} from '@/lib/metrics/query';
 import {scopedCampaigns} from '@/lib/metrics/campaigns';
+import {scopedWorkspaceMeasurements} from '@/lib/metrics/workspace-campaigns';
 import {preparePerformanceRankings} from '@/lib/metrics/rankings';
 import {configuredFunnel} from '@/lib/metrics/funnel-performance';
 import {platformDashboardByRoute, platformDashboards} from '@/lib/metrics/platforms';
@@ -101,13 +102,15 @@ export default async function Page({params: params_, searchParams: searchParams_
   const catalog = data.adCampaigns;
   const currentCampaigns = scopedCampaigns(ads, data.crm, config.preferred_revenue_source, catalog, org.id, f.currency);
   const previousCampaigns = scopedCampaigns(previousAds, data.crmComparison, config.preferred_revenue_source, catalog, org.id, f.currency);
-  const campaignsWithMovement = currentCampaigns.filter((row) => row.spend > 0 || Number(row.impressions ?? 0) > 0 || Number(row.clicks ?? 0) > 0 || Number(row.leads ?? 0) > 0 || Number(row.purchases ?? 0) > 0);
-  const previousCampaignsWithMovement = previousCampaigns.filter((row) => row.spend > 0 || Number(row.impressions ?? 0) > 0 || Number(row.clicks ?? 0) > 0 || Number(row.leads ?? 0) > 0 || Number(row.purchases ?? 0) > 0);
+  // Exclude only unmeasured catalog rows. A recorded zero is a valid observation.
+  // Validate both periods before executive/platform KPIs and rankings are produced.
+  const measuredCampaigns = scopedWorkspaceMeasurements(currentCampaigns, org.id, f.currency);
+  const measuredPreviousCampaigns = scopedWorkspaceMeasurements(previousCampaigns, org.id, f.currency);
   const funnelSteps=configuredFunnel(currentCampaigns,config.funnel_steps,{organizationId:org.id,currency:f.currency},f.compare==='none'?undefined:previousCampaigns);
   const paidCreativePlatforms=new Set(['meta_ads','google_ads','tiktok_ads']);
   const movingAdIds=new Set(data.ads.map((row)=>row.ad_id));
   const filteredCreatives = data.creatives.filter((creative) => contentMode==='paid'&&paidCreativePlatforms.has(creative.platform)&&(!movingAdIds.size||movingAdIds.has(creative.ad_id??'')));
-  const performanceRankings = sectionGroup==='paid'||params.section==='overview'?preparePerformanceRankings(campaignsWithMovement, ads, breakdowns, filteredCreatives, org.id, f.currency):{campaign:[],audience:[],creative:[],gender:[],age:[],device:[],state:[],city:[]};
+  const performanceRankings = sectionGroup==='paid'||params.section==='overview'?preparePerformanceRankings(measuredCampaigns, ads, breakdowns, filteredCreatives, org.id, f.currency):{campaign:[],audience:[],creative:[],gender:[],age:[],device:[],state:[],city:[]};
   const queryWithoutPlatform = Object.fromEntries(Object.entries(f));
   return <DashboardLayoutProvider slug={org.slug} scope={params.section} initialLayout={initialLayout} initialPersonalized={personalized} canPromote={canCustomizeClient} blocks={blockCatalog} defaultBlockOrder={config.widget_order}>
   <div className="dashboard-content mx-auto max-w-[1780px] space-y-6 lg:space-y-8">
@@ -122,8 +125,8 @@ export default async function Page({params: params_, searchParams: searchParams_
     {platformPage&&!platformHasData?<Card><strong className="text-sm text-zinc-200">Sem resultados registrados para {platformPage.label}</strong><p className="mt-2 text-sm leading-6 text-zinc-400">Não há métricas disponíveis no período selecionado. Consulte o histórico de outros períodos quando necessário.</p></Card>:null}
 
     {sectionGroup && !platformPage ? <div className="tv-hide flex flex-wrap gap-3"><Link prefetch className={`rounded-lg px-4 py-2 text-sm ${chosen ? 'bg-white/5' : 'bg-primary text-black'}`} href={`?${new URLSearchParams(queryWithoutPlatform).toString()}`}>Todas</Link>{visible.map((platform) => {const definition = platformDashboards.find((item) => item.platform === platform); return <Link prefetch key={platform} className={`rounded-lg px-4 py-2 text-sm ${chosen === platform ? 'bg-primary text-black' : 'bg-white/5'}`} href={`?${new URLSearchParams({...queryWithoutPlatform, platform}).toString()}`}>{definition?.label ?? platform}</Link>;})}</div> : null}
-    {params.section === 'overview' ? <ExecutiveOverviewV2 rows={executiveShape(campaignsWithMovement)} previous={f.compare==='none'?[]:executiveShape(previousCampaignsWithMovement)} days={dashboardPaidDays(ads,org.id,f.currency)} previousDays={f.compare==='none'?[]:dashboardPaidDays(previousAds,org.id,f.currency)} currency={f.currency} slug={org.slug} period={f.from+' a '+f.to}/> : null}
-    {platformPage ? <PlatformAnalyticsV3 rows={platformRows(campaignsWithMovement)} previous={f.compare==='none'?[]:platformRows(previousCampaignsWithMovement)} days={dashboardPaidDays(ads,org.id,f.currency)} previousDays={f.compare==='none'?[]:dashboardPaidDays(previousAds,org.id,f.currency)} currency={f.currency} platform={platformPage.platform} slug={org.slug}/> : null}
+    {params.section === 'overview' ? <ExecutiveOverviewV2 rows={executiveShape(measuredCampaigns)} previous={f.compare==='none'?[]:executiveShape(measuredPreviousCampaigns)} days={dashboardPaidDays(ads,org.id,f.currency)} previousDays={f.compare==='none'?[]:dashboardPaidDays(previousAds,org.id,f.currency)} currency={f.currency} slug={org.slug} period={f.from+' a '+f.to}/> : null}
+    {platformPage ? <PlatformAnalyticsV3 rows={platformRows(measuredCampaigns)} previous={f.compare==='none'?[]:platformRows(measuredPreviousCampaigns)} days={dashboardPaidDays(ads,org.id,f.currency)} previousDays={f.compare==='none'?[]:dashboardPaidDays(previousAds,org.id,f.currency)} currency={f.currency} platform={platformPage.platform} slug={org.slug}/> : null}
     {sectionGroup === 'paid' && !platformPage ? <CampaignWorkspace organizationId={org.id} rows={currentCampaigns} previousRows={f.compare === 'none' ? [] : previousCampaigns} comparing={f.compare!=='none'} timeline={dashboardPaidDays(ads,org.id,f.currency)} currency={f.currency} showPlatforms={!chosen} enabledMetrics={config.enabled_metrics} rankings={performanceRankings} funnelSteps={funnelSteps} storageKey={`${org.id}:${params.section}:${chosen??'all'}:paid-metrics`} /> : null}
 
     {params.section === 'funnel' ? <section data-tv-panel><Card><h2 className="font-semibold">Funil do modelo de negócio</h2><p className="muted mt-2 text-sm">Etapas configuradas para este cliente. As taxas são relações entre eventos agregados e não representam uma coorte individual.</p><Funnel currency={f.currency} steps={funnelSteps} comparing={f.compare!=='none'} /></Card></section> : null}

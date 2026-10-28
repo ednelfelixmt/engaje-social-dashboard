@@ -63,11 +63,48 @@ export function auditMigrationHistory(local:readonly Migration[],remote:readonly
  };
 }
 
+
+/** Detect NEW local migration-version collisions, not resolve the historic #211 drift. */
+const legacyVersion='20260930230000';
+const legacyFiles=[
+ '20260930230000_organization_niche_sales_model.sql',
+ '20260930230000_scheduled_sync_history_days.sql',
+] as const;
+
+export function auditLocalMigrationInventory(files:readonly string[]){
+ const local=parseLocalMigrationFiles(files);
+ if(local.length===0)throw new Error('Local migration inventory must be nonempty');
+ const versions=new Map<string,string[]>();
+ for(const entry of local){
+  const names=versions.get(entry.version)??[];
+  names.push(entry.version+'_'+entry.name+'.sql');
+  versions.set(entry.version,names);
+ }
+ const observed=(versions.get(legacyVersion)??[]).sort();
+ const expected=[...legacyFiles].sort();
+ const baselineUnchanged=observed.length===expected.length&&observed.every((name,index)=>name===expected[index]);
+ const newDuplicateVersions=duplicateVersions(local).filter(version=>version!==legacyVersion);
+ return {
+  regressionFree:baselineUnchanged&&newDuplicateVersions.length===0,
+  localFiles:local.length,
+  newDuplicateVersions,
+  unresolvedLegacyCollision:{
+   issue:211,version:legacyVersion,baselineUnchanged,
+   expectedFiles:expected,observedFiles:observed,reconciliationPending:true,
+  },
+ };
+}
+
 /** Offline diagnostic only: accepts an explicitly exported manifest, never repairs migrations. */
 if(process.argv[1]&&/audit-migration-history\.(?:ts|js)$/.test(process.argv[1])){
  try{
-  if(process.argv.length!==3)throw new Error('Usage: npm run verify:migration-history -- <remote-migrations.json>');
-  const contents=readFileSync(resolve(process.argv[2]),'utf8');
+  if(process.argv.length!==3)throw new Error('Usage: npm run verify:migration-history -- <remote-migrations.json> or npm run verify:local-migrations');
+  if(process.argv[2]==='--local-only'){
+   const report=auditLocalMigrationInventory(readdirSync(resolve('supabase/migrations')));
+   process.stdout.write(JSON.stringify(report,null,2)+'\n');
+   if(!report.regressionFree)process.exitCode=1;
+  }else{
+   const contents=readFileSync(resolve(process.argv[2]),'utf8');
   let manifest:unknown;
   try{manifest=JSON.parse(contents) as unknown;}catch{throw new Error('Invalid JSON migration manifest');}
   const remote=parseRemoteMigrationHistory(manifest);
@@ -75,6 +112,7 @@ if(process.argv[1]&&/audit-migration-history\.(?:ts|js)$/.test(process.argv[1]))
   const report=auditMigrationHistory(local,remote);
   process.stdout.write(JSON.stringify(report,null,2)+'\n');
   if(!report.aligned)process.exitCode=1;
+  }
  }catch(error){
   process.stderr.write('Migration history audit failed: '+(error instanceof Error?error.message:'unknown')+'\n');
   process.exitCode=1;

@@ -22,13 +22,13 @@ function check(value:unknown,path:string,message:string):asserts value{
 export async function verifyReleaseHttp(baseInput:string,callbackInput=baseInput,request:typeof fetch=fetch){
   const base=releaseOrigin(baseInput),callback=releaseOrigin(callbackInput);
   const results:{path:string;status:number}[]=[];
-  for(const path of ['/login','/auth/forgot-password','/auth/reset-password','/admin','/admin/organizations','/__smoke__/reports/meta-audience','/__smoke__/reports/google-audience','/__smoke__/reports/performance','/__smoke__/reports/revenue','/__smoke__/reports/targets','/__smoke__/reports/campaign','/__smoke__/reports/organic-content','/__smoke__/reports/organic-accounts','/auth/recovery/callback']){
+  for(const path of ['/login','/auth/forgot-password','/auth/reset-password','/admin','/admin/organizations','/__smoke__/reports/meta-audience','/__smoke__/reports/google-audience','/__smoke__/reports/performance','/__smoke__/reports/revenue','/__smoke__/reports/targets','/__smoke__/reports/campaign','/__smoke__/reports/organic-content','/__smoke__/reports/organic-accounts','/__smoke__/reports/methodology','/__smoke__/settings/data-quality','/auth/recovery/callback']){
     const response=await request(new URL(path,base),{
       method:'GET',redirect:'manual',cache:'no-store',credentials:'omit',
       headers:{Accept:'text/html'},signal:AbortSignal.timeout(15000),
     });
     check(/\bno-store\b/i.test(response.headers.get('cache-control')??''),path,'response must not be cached');
-    if(path.startsWith('/admin')||path.includes('/reports/')){
+    if(path.startsWith('/admin')||path.includes('/reports/')||path.includes('/settings/')){
       check(response.status===307,path,'anonymous private access must redirect');
       const location=response.headers.get('location');
       check(location&&new URL(location,base).href===new URL('/login',base).href,path,'redirect must point to this app login');
