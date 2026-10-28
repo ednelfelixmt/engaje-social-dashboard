@@ -91,3 +91,31 @@ test('target references do not accept matching synthetic non-UUID scope and fact
  const invalid='synthetic-a';
  assert.throws(()=>buildTargetReferences([fact({organization_id:invalid})],config({organization_id:invalid}),{...scope,organizationId:invalid}),/configuration scope mismatch/);
 });
+
+test('target reference boundary rejects RFC-invalid matching tenant IDs before evaluating facts',()=>{
+ const invalidIds=[
+  '22222222-2222-0222-8222-222222222222',
+  '22222222-2222-9222-8222-222222222222',
+  '22222222-2222-4222-7222-222222222222',
+  '22222222-2222-4222-c222-222222222222',
+ ];
+ for(const invalid of invalidIds){
+  const authorized={...scope,organizationId:invalid};
+  const settings=config({organization_id:invalid});
+  assert.throws(()=>buildTargetReferences([],settings,authorized),/Target configuration scope mismatch/);
+  assert.throws(()=>buildTargetReferences(facts().map(row=>({...row,organization_id:invalid})),settings,authorized),/Target configuration scope mismatch/);
+ }
+});
+
+test('target reference boundary accepts RFC v7 tenant and keeps observed zero distinct from missing facts',()=>{
+ const uuidV7='123e4567-e89b-7d3a-a456-426614174000';
+ const authorized={...scope,organizationId:uuidV7};
+ const settings=config({organization_id:uuidV7,target_spend:0,target_leads:0});
+ const rows=facts().map(row=>({...row,organization_id:uuidV7,spend:0,leads:0}));
+ const report=buildTargetReferences(rows,settings,authorized);
+ assert.equal(get(report,'target_spend').status,'equal');
+ assert.equal(get(report,'target_spend').actual,0);
+ assert.equal(get(report,'target_leads').status,'equal');
+ assert.equal(get(report,'target_leads').actual,0);
+ assert.equal(get(buildTargetReferences([],settings,authorized),'target_spend').status,'insufficient_data');
+});

@@ -1,5 +1,6 @@
 import type {Row} from '@/types/database.types';
 import {calendarDays} from '@/lib/metrics/calendar';
+import {isRfcOrganizationUuid} from '@/lib/metrics/organization-scope';
 import {paidTotals} from '@/lib/metrics/paid-metrics';
 import {buildPerformanceReport, comparableAttribution, type PerformanceScope, type PerformancePeriod} from './performance-report';
 
@@ -23,12 +24,11 @@ const definitions: {field: TargetField; label: string; unit: TargetReference['un
  {field:'target_revenue',label:'Receita',unit:'money',metric:null,dependency:'Consulte a análise de receita externa; este recorte usa exclusivamente fatos de anúncios.'},
  {field:'target_purchases',label:'Compras',unit:'count',metric:null,dependency:'Requer fonte de compras conciliada; leads não equivalem a vendas.'},
 ];
-const organizationUuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const components: Record<SupportedMetric, ('spend' | 'leads' | 'clicks' | 'impressions')[]> = {spend:['spend'],leads:['leads'],cpl:['spend','leads'],ctr:['clicks','impressions']};
 
 /** Factual comparison with undated references, never monthly achievement or a forecast. */
 export function buildTargetReferences(facts: readonly Row<'metrics_ads'>[], config: TargetConfig, scope: TargetScope): TargetReferenceReport {
- if (!organizationUuid.test(scope.organizationId) || config.organization_id !== scope.organizationId || !/^[A-Z]{3}$/.test(scope.referenceCurrency)) throw new Error('Target configuration scope mismatch');
+ if (!isRfcOrganizationUuid(scope.organizationId) || config.organization_id !== scope.organizationId || !/^[A-Z]{3}$/.test(scope.referenceCurrency)) throw new Error('Target configuration scope mismatch');
  const report = buildPerformanceReport(facts, [], {...scope, compare:'none'});
  const dates = calendarDays(scope.from, scope.to), byDay = new Map<string, Row<'metrics_ads'>[]>();
  for (const row of facts) {const day = byDay.get(row.metric_date) ?? []; day.push(row); byDay.set(row.metric_date, day);}
