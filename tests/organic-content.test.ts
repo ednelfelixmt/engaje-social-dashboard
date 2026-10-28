@@ -86,3 +86,18 @@ test('DATA-ORG-TZ-001: invalid UTC offsets cannot validate organic publication o
  assert.equal(boundary.publishedAt,'2026-10-20T00:00:00.000Z');
  assert.equal(boundary.likes,0);
 });
+
+test('ORG-GRAIN-001: content reports reject padded or whitespace-only source identities without silently trimming',()=>{
+ for(const patch of [
+  {id:' post-1'}, {id:'post-1\\t'}, {id:' \\t '},
+  {account_id:' synthetic-account'}, {account_id:'synthetic-account '},
+  {external_id:' external-1'}, {external_id:'external-1\\n'}
+ ]){
+  const value=Object.fromEntries(Object.entries(patch).map(([key,text])=>[key,text.replace('\\t','\t').replace('\\n','\n')]));
+  assert.throws(()=>buildOrganicContentReport([post(value)],scope),/Organic source identity is missing/);
+ }
+ assert.throws(()=>buildOrganicContentReport([post(),post({id:'post-2',external_id:'external-2 '})],scope));
+ const accepted=buildOrganicContentReport([post({id:'post:alpha/1',account_id:'provider:account-1',external_id:'provider:external-1'})],scope);
+ assert.equal(accepted.rows[0].externalId,'provider:external-1');
+ assert.equal(accepted.rows[0].account,'provider:account-1');
+});
