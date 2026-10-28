@@ -6,7 +6,18 @@ import type {Row} from '@/types/database.types';
 import {campaignSelection} from './campaign-selection';
 export type Filters={from:string;to:string;compare:'none'|'previous_period'|'previous_year';currency:string};
 const iso=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(s=>!isNaN(Date.parse(s))&&new Date(s).toISOString().slice(0,10)===s);
-export function filters(search:Record<string,string|undefined>,timezone:string,currency:string):Filters{const today=new Intl.DateTimeFormat('en-CA',{timeZone:timezone}).format(new Date());const end=new Date(today+'T12:00:00Z');end.setUTCDate(end.getUTCDate()-29);const from=iso.safeParse(search.from),to=iso.safeParse(search.to);const result={from:from.success?from.data:end.toISOString().slice(0,10),to:to.success?to.data:today,compare:z.enum(['none','previous_period','previous_year']).catch('previous_period').parse(search.compare),currency:/^[A-Z]{3}$/.test(search.currency||'')?search.currency!:currency};if(result.from>result.to)throw new Error('A data inicial deve anteceder a final.');try{calendarDays(result.from,result.to);}catch{throw new Error('Selecione um intervalo de até dois anos.');}return result;}
+export function filters(search:Record<string,string|undefined>,timezone:string,currency:string):Filters{
+ const from=iso.safeParse(search.from),to=iso.safeParse(search.to);
+ if(search.from!==undefined&&!from.success||search.to!==undefined&&!to.success)throw new Error('Informe datas válidas no formato AAAA-MM-DD.');
+ const today=new Intl.DateTimeFormat('en-CA',{timeZone:timezone}).format(new Date());
+ const end=new Date(today+'T12:00:00Z');end.setUTCDate(end.getUTCDate()-29);
+ const result={from:from.success?from.data:end.toISOString().slice(0,10),to:to.success?to.data:today,
+  compare:z.enum(['none','previous_period','previous_year']).catch('previous_period').parse(search.compare),
+  currency:/^[A-Z]{3}$/.test(search.currency||'')?search.currency!:currency};
+ if(result.from>result.to)throw new Error('A data inicial deve anteceder a final.');
+ try{calendarDays(result.from,result.to);}catch{throw new Error('Selecione um intervalo de até dois anos.');}
+ return result;
+}
 export function previous(f:Filters){return {...f,...comparisonPeriod(f.from,f.to,f.compare)};}
 export async function all<T>(query:(from:number,to:number)=>PromiseLike<{data:T[]|null;error:unknown}>){const rows:T[]=[];for(let offset=0;;offset+=1000){const {data,error}=await query(offset,offset+999);if(error)throw error;rows.push(...(data||[]));if(!data||data.length<1000)return rows;}}
 export {sum,totals} from './aggregation';

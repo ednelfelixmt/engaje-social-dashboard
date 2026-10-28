@@ -78,3 +78,41 @@ test('workspace validates current and previous inputs before rendering private a
   assert.doesNotMatch(source, /rows\.filter\(hasMeasuredPerformance\)/);
   assert.match(route, /<CampaignWorkspace organizationId=\{org\.id\}/);
 });
+
+test('executive and platform projections retain measured zero and ignore catalog-only rows', () => {
+  const zero = observed({leads: 0, metricValues: {spend: 0, impressions: 0, clicks: 0, leads: 0}});
+  const selected = scopedWorkspaceMeasurements([catalog(), zero], orgA, 'BRL');
+  assert.deepEqual(selected, [zero]);
+  const total = paidSummary(selected);
+  assert.equal(total.spend, 0);
+  assert.equal(total.impressions, 0);
+  assert.equal(total.clicks, 0);
+  assert.equal(total.leads, 0);
+  // Before this projection, a catalog placeholder could invalidate every
+  // aggregate with an absent observation despite a measured zero in the same period.
+  assert.equal(paidSummary([catalog(), zero]).spend, null);
+});
+
+test('current and previous projections preserve zero without inventing an empty period', () => {
+  const zero = observed();
+  for (const period of [[zero, catalog()], [catalog(), zero]]) {
+    const selected = scopedWorkspaceMeasurements(period, orgA, 'BRL');
+    assert.deepEqual(selected, [zero]);
+    assert.equal(paidSummary(selected).spend, 0);
+    assert.equal(paidSummary(selected).leads, null);
+  }
+  assert.deepEqual(scopedWorkspaceMeasurements([catalog()], orgA, 'BRL'), []);
+});
+
+test('executive KPIs, platform KPIs and rankings consume scoped measured rows', () => {
+  const route = readFileSync('src/app/(tenant)/[organizationSlug]/[section]/page.tsx', 'utf8');
+  const executive = readFileSync('src/components/dashboard/executive-overview-v2.tsx', 'utf8');
+  assert.match(route, /const measuredCampaigns = scopedWorkspaceMeasurements\(currentCampaigns, org\.id, f\.currency\)/);
+  assert.match(route, /const measuredPreviousCampaigns = scopedWorkspaceMeasurements\(previousCampaigns, org\.id, f\.currency\)/);
+  assert.match(route, /<ExecutiveOverviewV2 rows=\{executiveShape\(measuredCampaigns\)\} previous=\{f\.compare==='none'\?\[\]:executiveShape\(measuredPreviousCampaigns\)\}/);
+  assert.match(route, /<PlatformAnalyticsV3 rows=\{platformRows\(measuredCampaigns\)\} previous=\{f\.compare==='none'\?\[\]:platformRows\(measuredPreviousCampaigns\)\}/);
+  assert.match(route, /preparePerformanceRankings\(measuredCampaigns, ads, breakdowns/);
+  assert.doesNotMatch(route, /campaignsWithMovement/);
+  assert.match(executive, /const campaigns=\[\.\.\.rows\]\.sort\(/);
+  assert.doesNotMatch(executive, /const campaigns=\[\.\.\.rows\]\.filter\(/);
+});

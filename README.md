@@ -56,6 +56,8 @@ A view `daily_performance` agrega cada origem separadamente por organização/di
 
 Ao importar planilha, o lote substitui atomicamente todos os registros de planilha nos dias/moedas presentes. Só confirme conciliação completa quando cobrir integralmente esses dias.
 
+Datas explicitamente inválidas nos filtros são recusadas com orientação e recuperação do período padrão por clique; não são trocadas silenciosamente por outro recorte. Filtros conhecidos de campanha, plataforma, fonte e moeda são preservados na recuperação. Contrato em `docs/engineering/strict-date-filters.md`.
+
 ## Relatórios privados
 
 As páginas de público/dispositivos Meta e Google oferecem CSV com período, fonte, moeda, cobertura por indicador e registros de origem. Campos ausentes ficam vazios; cada dimensão é independente. O download é local e mantém a autorização de leitura do cliente, sem criar links públicos. Consulte `docs/engineering/audience-reports-and-csv.md` para limites e homologação pendente.
@@ -69,6 +71,8 @@ O relatório privado de conteúdos orgânicos em `reports/organic-content` lista
 O relatório privado de dados recebidos por conta em `reports/organic-accounts` consulta registros de Facebook/Instagram com presença de datas e campos aceitos e CSV local. A janela original de medição não está confirmada: o rótulo diário armazenado pode conter totais de vários dias. Não oferece somas, taxas ou crescimento; seguidores são estoque e alcance pode se sobrepor. Requer organic habilitado. Veja `docs/engineering/organic-accounts.md`.
 
 Os dois relatórios orgânicos oferecem impressão e salvamento local em PDF, preservando contexto e avisos e ocultando filtros/controles. Paginação e salvamento real ainda exigem homologação visual; contrato em `docs/engineering/organic-print.md`.
+
+O guia privado em reports/methodology permite consultar as79 definições do catálogo com busca, filtros, condições de cálculo e limites por contexto pago, orgânico e CRM. Acesso exige overview habilitado. Seleção no catálogo não comprova recebimento ou homologação. Veja docs/engineering/metric-methodology.md.
 
 ## Estágio dos integradores
 
@@ -99,6 +103,8 @@ Um job do `pg_cron` (`engaje-scheduled-sync`) roda às 09:00 e 21:00 UTC (06:00 
 ## Login da Meta com configuração (opcional)
 
 O ID fica no Vault do banco (segredo `meta_login_config_id`, lido por `public.meta_login_config_id()`); o secret `META_LOGIN_CONFIG_ID` da função, se existir, tem prioridade. Para voltar ao login por permissões: `delete from vault.secrets where name = 'meta_login_config_id';`. Quando há ID, o login usa o ID da configuração de Login do Facebook para Empresas (`config_id`, com `override_default_response_type=true`) em vez de `scope`. Sem ele, nada muda. `engaje-integrations` e `meta-auth` devem ser publicadas com o mesmo código.
+
+O diagnóstico de qualidade em `settings/data-quality` é restrito à agência. Distingue datas futuras/inválidas de ausência de histórico e mostra sincronizações com horários, cronologia e contador final registrado, sem presumir zero processado em trabalhos incompletos. Veja `docs/engineering/data-quality-diagnostics.md`.
 
 ## Engenharia e implantação por fases
 

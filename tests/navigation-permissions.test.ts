@@ -51,3 +51,9 @@ test('organic content report is read-only and visible only when organic is enabl
  assert.ok(shown.includes('/fixture-a/reports/organic-content'));assert.ok(shown.includes('/fixture-a/reports/organic-accounts'));assert.ok(!shown.includes('/fixture-a/settings/'));
  assert.ok(!hidden.includes('/fixture-a/reports/organic-content'));assert.ok(!hidden.includes('/fixture-a/reports/organic-accounts'));
 });
+
+test('metric guide is a read-only overview option for viewers and respects overview configuration',()=>{
+ const shown=renderToStaticMarkup(createElement(Navigation,{slug:'fixture-a',canShare:false,enabled:['overview']}));
+ const hidden=renderToStaticMarkup(createElement(Navigation,{slug:'fixture-a',canShare:false,enabled:['paid','external']}));
+ assert.ok(shown.includes('/fixture-a/reports/methodology'));assert.ok(!hidden.includes('/fixture-a/reports/methodology'));assert.ok(!shown.includes('/fixture-a/settings/'));
+});

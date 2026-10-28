@@ -1,4 +1,5 @@
 import type {Row} from '@/types/database.types';
+import {z} from 'zod';
 import {calendarDays, comparisonPeriod} from '@/lib/metrics/calendar';
 import {paidTotals, type PaidMetricKey, type PaidTotals} from '@/lib/metrics/paid-metrics';
 import {computeDelta} from '@/lib/metrics/delta';
@@ -18,6 +19,7 @@ export type PerformancePeriod = {
 export type PerformanceGroup = {key: string; label: string; platform: string; account?: string; campaignId?: string; current: PerformancePeriod; previous: PerformancePeriod | null};
 export type PerformanceReport = {scope: PerformanceScope; current: PerformancePeriod; previous: PerformancePeriod | null; platforms: PerformanceGroup[]; campaigns: PerformanceGroup[]};
 const platforms = ['meta_ads', 'google_ads', 'tiktok_ads'];
+const organizationUuid = z.string().uuid();
 const accountOf = (row: Fact) => row.platform === 'meta_ads' ? row.account_id.replace(/^act_/, '') : row.account_id;
 const observed = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value >= 0;
 
@@ -57,7 +59,7 @@ export function performanceDelta(current: PerformancePeriod, previous: Performan
 
 /** Consolidates only validated ad/day facts. It never deduplicates people across providers. */
 export function buildPerformanceReport(currentRows: readonly Fact[], previousRows: readonly Fact[], scope: PerformanceScope): PerformanceReport {
- if (!scope.organizationId || !scope.organizationSlug || !/^[A-Z]{3}$/.test(scope.currency) || !['none', 'previous_period', 'previous_year'].includes(scope.compare) || !Number.isFinite(Date.parse(scope.generatedAt))) throw new Error('Invalid performance report scope');
+ if (!organizationUuid.safeParse(scope.organizationId).success || !scope.organizationSlug || !/^[A-Z]{3}$/.test(scope.currency) || !['none', 'previous_period', 'previous_year'].includes(scope.compare) || !Number.isFinite(Date.parse(scope.generatedAt))) throw new Error('Invalid performance report scope');
  if (new Date(scope.generatedAt).toISOString() !== scope.generatedAt) throw new Error('Report timestamp must be canonical UTC');
  new Intl.DateTimeFormat('pt-BR', {timeZone: scope.timezone});
  const range = {from: scope.from, to: scope.to};

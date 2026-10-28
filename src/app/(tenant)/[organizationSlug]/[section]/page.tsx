@@ -1,26 +1,23 @@
+import {InvalidReportFilters} from '@/components/dashboard/invalid-report-filters';
 import Link from 'next/link';
 import {Suspense} from 'react';
 import {notFound, redirect} from 'next/navigation';
 import {dashboardConfig, tenant} from '@/lib/auth/session';
-import {filters, dashboardData, previous as previousRange} from '@/lib/metrics/query';
-import {Ranking} from '@/components/dashboard/ranking';
+import {filters, dashboardData} from '@/lib/metrics/query';
 import {scopedCampaigns} from '@/lib/metrics/campaigns';
+import {scopedWorkspaceMeasurements} from '@/lib/metrics/workspace-campaigns';
 import {preparePerformanceRankings} from '@/lib/metrics/rankings';
 import {configuredFunnel} from '@/lib/metrics/funnel-performance';
 import {platformDashboardByRoute, platformDashboards} from '@/lib/metrics/platforms';
 import {Filters} from '@/components/dashboard/filters';
 import {Funnel} from '@/components/dashboard/funnel';
 import {CampaignWorkspace} from '@/components/dashboard/campaign-workspace';
-import {CampaignOverview} from '@/components/dashboard/campaign-overview';
 import {DisplayModeController} from '@/components/dashboard/display-mode-controller';
 import {CreativeSummary} from '@/components/dashboard/creative-summary';
 import {CreativeLibrary} from '@/components/dashboard/creative-library';
-import {AudienceControl} from '@/components/dashboard/performance-rankings';
-import {ExecutiveIntelligence} from '@/components/dashboard/executive-intelligence';
-import {StrategicDecisionBrief} from '@/components/dashboard/strategic-decision-brief';
 import {PlatformAnalyticsV3,type PlatformRow} from '@/components/dashboard/platform-analytics-v3';
 import {ExecutiveOverviewV2,type ExecutiveCampaign} from '@/components/dashboard/executive-overview-v2';
-import {DecisionAnalysis, type DecisionTimelinePoint} from '@/components/dashboard/decision-analysis';
+import type {DecisionTimelinePoint} from '@/components/dashboard/decision-analysis';
 import {Card} from '@/components/ui/card';
 import {currentPeriodFreshness} from '@/lib/metrics/data-freshness';
 import {dashboardPaidDays} from '@/lib/metrics/dashboard-daily';
@@ -28,7 +25,6 @@ import {paidCompleteness,paidCoverage} from '@/lib/metrics/data-completeness';
 import {UploadForm} from '@/components/upload-form';
 import {DashboardLayoutProvider} from '@/components/layout/dashboard-layout';
 import {PersonalizeBar} from '@/components/layout/personalize-bar';
-import {Block} from '@/components/layout/block';
 import {effectiveLayout} from '@/lib/layout/schema';
 import type {CampaignPerformance} from '@/types/domain';
 import type {Row} from '@/types/database.types';
@@ -40,7 +36,8 @@ const baseTitles: Record<string, string> = {
 
 function platformRows(rows:CampaignPerformance[]):PlatformRow[]{return rows.map(r=>({id:[r.platform,r.accountId,r.campaignId].join(':'),name:r.campaignName,spend:r.spend,impressions:r.impressions,clicks:r.clicks,leads:r.leads,reach:r.reach,messages:r.messageLeads,revenue:r.revenue,status:r.campaignStatus}));}
 function executiveShape(rows:CampaignPerformance[]):ExecutiveCampaign[]{return rows.map(r=>({id:[r.platform,r.accountId,r.campaignId].join(':'),name:r.campaignName,platform:r.platform,spend:r.spend,impressions:r.impressions,clicks:r.clicks,leads:r.leads}));}
-function decisionTimeline(rows:Row<'metrics_ads'>[]):DecisionTimelinePoint[]{
+// Legacy projection retained for a separately reviewed reactivation.
+function _decisionTimeline(rows:Row<'metrics_ads'>[]):DecisionTimelinePoint[]{
   const grouped=new Map<string,DecisionTimelinePoint>();
   for(const row of rows){const item=grouped.get(row.metric_date)??{date:row.metric_date,spend:0,impressions:0,reach:0,clicks:0,leads:0};item.spend+=row.spend;for(const key of ['impressions','reach','clicks','leads'] as const)item[key]=item[key]===null||row[key]===null?null:Number(item[key])+Number(row[key]);grouped.set(row.metric_date,item);}
   return [...grouped.values()].sort((a,b)=>a.date.localeCompare(b.date));
@@ -58,14 +55,16 @@ export default async function Page({params: params_, searchParams: searchParams_
   const sectionGroup = platformPage?.group ?? (params.section === 'paid' ? 'paid' : null);
   const contentMode=params.section==='paid-creatives'?'paid':null;
 
-  const [config, {data: orgs}, {data: latestMovement}, {data: personalLayout}, {data: branding}] = await Promise.all([
+  let f:ReturnType<typeof filters>;
+  try{f=filters(searchParams,org.timezone,org.currency);}catch{return <InvalidReportFilters search={searchParams}/>;}
+  const [config, {data: orgs}, {data: _latestMovement}, {data: personalLayout}, {data: branding}] = await Promise.all([
     dashboardConfig(params.organizationSlug),
     superAdmin?db.from('organizations').select('name,slug').eq('status', 'active').order('name'):Promise.resolve({data:[{name:org.name,slug:org.slug}]}),
     params.section==='overview'?db.from('metrics_ads').select('metric_date').eq('organization_id', org.id).gt('spend', 0).order('metric_date', {ascending: false}).limit(1).maybeSingle():Promise.resolve({data:null}),
     db.from('user_dashboard_layouts').select('layout').eq('user_id', user.id).eq('organization_id', org.id).eq('scope', params.section).maybeSingle(),
     db.from('branding').select('logo_path').eq('organization_id', org.id).maybeSingle(),
   ]);
-  const clientLogoUrl = branding?.logo_path
+  const _clientLogoUrl = branding?.logo_path
     ? (await db.storage.from('branding').createSignedUrl(branding.logo_path, 3600)).data?.signedUrl ?? null
     : null;
   const requiredPage = params.section==='paid-creatives'?'creatives':platformPage?.group ?? params.section;
@@ -80,7 +79,7 @@ export default async function Page({params: params_, searchParams: searchParams_
   const layoutDefaults = (config.default_layouts && typeof config.default_layouts === 'object' && !Array.isArray(config.default_layouts) ? (config.default_layouts as Record<string, unknown>)[params.section] : null) ?? null;
   const {layout: initialLayout, personalized} = effectiveLayout(personalLayout?.layout, layoutDefaults);
   const canCustomizeClient = superAdmin;
-  const f = filters(searchParams, org.timezone, org.currency);
+
   const visible = platformDashboards.filter((item)=>item.group===sectionGroup).map((item)=>item.platform);
   const requestedPlatform = visible.find((platform) => platform === searchParams.platform);
   const chosen = platformPage?.platform ?? requestedPlatform ?? null;
@@ -103,13 +102,15 @@ export default async function Page({params: params_, searchParams: searchParams_
   const catalog = data.adCampaigns;
   const currentCampaigns = scopedCampaigns(ads, data.crm, config.preferred_revenue_source, catalog, org.id, f.currency);
   const previousCampaigns = scopedCampaigns(previousAds, data.crmComparison, config.preferred_revenue_source, catalog, org.id, f.currency);
-  const campaignsWithMovement = currentCampaigns.filter((row) => row.spend > 0 || Number(row.impressions ?? 0) > 0 || Number(row.clicks ?? 0) > 0 || Number(row.leads ?? 0) > 0 || Number(row.purchases ?? 0) > 0);
-  const previousCampaignsWithMovement = previousCampaigns.filter((row) => row.spend > 0 || Number(row.impressions ?? 0) > 0 || Number(row.clicks ?? 0) > 0 || Number(row.leads ?? 0) > 0 || Number(row.purchases ?? 0) > 0);
+  // Exclude only unmeasured catalog rows. A recorded zero is a valid observation.
+  // Validate both periods before executive/platform KPIs and rankings are produced.
+  const measuredCampaigns = scopedWorkspaceMeasurements(currentCampaigns, org.id, f.currency);
+  const measuredPreviousCampaigns = scopedWorkspaceMeasurements(previousCampaigns, org.id, f.currency);
   const funnelSteps=configuredFunnel(currentCampaigns,config.funnel_steps,{organizationId:org.id,currency:f.currency},f.compare==='none'?undefined:previousCampaigns);
   const paidCreativePlatforms=new Set(['meta_ads','google_ads','tiktok_ads']);
   const movingAdIds=new Set(data.ads.map((row)=>row.ad_id));
   const filteredCreatives = data.creatives.filter((creative) => contentMode==='paid'&&paidCreativePlatforms.has(creative.platform)&&(!movingAdIds.size||movingAdIds.has(creative.ad_id??'')));
-  const performanceRankings = sectionGroup==='paid'||params.section==='overview'?preparePerformanceRankings(campaignsWithMovement, ads, breakdowns, filteredCreatives, org.id, f.currency):{campaign:[],audience:[],creative:[],gender:[],age:[],device:[],state:[],city:[]};
+  const performanceRankings = sectionGroup==='paid'||params.section==='overview'?preparePerformanceRankings(measuredCampaigns, ads, breakdowns, filteredCreatives, org.id, f.currency):{campaign:[],audience:[],creative:[],gender:[],age:[],device:[],state:[],city:[]};
   const queryWithoutPlatform = Object.fromEntries(Object.entries(f));
   return <DashboardLayoutProvider slug={org.slug} scope={params.section} initialLayout={initialLayout} initialPersonalized={personalized} canPromote={canCustomizeClient} blocks={blockCatalog} defaultBlockOrder={config.widget_order}>
   <div className="dashboard-content mx-auto max-w-[1780px] space-y-6 lg:space-y-8">
@@ -124,8 +125,8 @@ export default async function Page({params: params_, searchParams: searchParams_
     {platformPage&&!platformHasData?<Card><strong className="text-sm text-zinc-200">Sem resultados registrados para {platformPage.label}</strong><p className="mt-2 text-sm leading-6 text-zinc-400">Não há métricas disponíveis no período selecionado. Consulte o histórico de outros períodos quando necessário.</p></Card>:null}
 
     {sectionGroup && !platformPage ? <div className="tv-hide flex flex-wrap gap-3"><Link prefetch className={`rounded-lg px-4 py-2 text-sm ${chosen ? 'bg-white/5' : 'bg-primary text-black'}`} href={`?${new URLSearchParams(queryWithoutPlatform).toString()}`}>Todas</Link>{visible.map((platform) => {const definition = platformDashboards.find((item) => item.platform === platform); return <Link prefetch key={platform} className={`rounded-lg px-4 py-2 text-sm ${chosen === platform ? 'bg-primary text-black' : 'bg-white/5'}`} href={`?${new URLSearchParams({...queryWithoutPlatform, platform}).toString()}`}>{definition?.label ?? platform}</Link>;})}</div> : null}
-    {params.section === 'overview' ? <ExecutiveOverviewV2 rows={executiveShape(campaignsWithMovement)} previous={f.compare==='none'?[]:executiveShape(previousCampaignsWithMovement)} days={dashboardPaidDays(ads,org.id,f.currency)} previousDays={f.compare==='none'?[]:dashboardPaidDays(previousAds,org.id,f.currency)} currency={f.currency} slug={org.slug} period={f.from+' a '+f.to}/> : null}
-    {platformPage ? <PlatformAnalyticsV3 rows={platformRows(campaignsWithMovement)} previous={f.compare==='none'?[]:platformRows(previousCampaignsWithMovement)} days={dashboardPaidDays(ads,org.id,f.currency)} previousDays={f.compare==='none'?[]:dashboardPaidDays(previousAds,org.id,f.currency)} currency={f.currency} platform={platformPage.platform} slug={org.slug}/> : null}
+    {params.section === 'overview' ? <ExecutiveOverviewV2 rows={executiveShape(measuredCampaigns)} previous={f.compare==='none'?[]:executiveShape(measuredPreviousCampaigns)} days={dashboardPaidDays(ads,org.id,f.currency)} previousDays={f.compare==='none'?[]:dashboardPaidDays(previousAds,org.id,f.currency)} currency={f.currency} slug={org.slug} period={f.from+' a '+f.to}/> : null}
+    {platformPage ? <PlatformAnalyticsV3 rows={platformRows(measuredCampaigns)} previous={f.compare==='none'?[]:platformRows(measuredPreviousCampaigns)} days={dashboardPaidDays(ads,org.id,f.currency)} previousDays={f.compare==='none'?[]:dashboardPaidDays(previousAds,org.id,f.currency)} currency={f.currency} platform={platformPage.platform} slug={org.slug}/> : null}
     {sectionGroup === 'paid' && !platformPage ? <CampaignWorkspace organizationId={org.id} rows={currentCampaigns} previousRows={f.compare === 'none' ? [] : previousCampaigns} comparing={f.compare!=='none'} timeline={dashboardPaidDays(ads,org.id,f.currency)} currency={f.currency} showPlatforms={!chosen} enabledMetrics={config.enabled_metrics} rankings={performanceRankings} funnelSteps={funnelSteps} storageKey={`${org.id}:${params.section}:${chosen??'all'}:paid-metrics`} /> : null}
 
     {params.section === 'funnel' ? <section data-tv-panel><Card><h2 className="font-semibold">Funil do modelo de negócio</h2><p className="muted mt-2 text-sm">Etapas configuradas para este cliente. As taxas são relações entre eventos agregados e não representam uma coorte individual.</p><Funnel currency={f.currency} steps={funnelSteps} comparing={f.compare!=='none'} /></Card></section> : null}

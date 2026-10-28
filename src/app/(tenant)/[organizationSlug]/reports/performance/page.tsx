@@ -1,3 +1,4 @@
+import {InvalidReportFilters} from '@/components/dashboard/invalid-report-filters';
 import {Card} from '@/components/ui/card';
 import {Filters} from '@/components/dashboard/filters';
 import {PerformanceReportView} from '@/components/dashboard/performance-report-view';
@@ -12,7 +13,9 @@ export default async function Page({params, searchParams}: {params: Promise<{org
  const {db, org, superAdmin} = await tenant(organizationSlug);
  const config = await dashboardConfig(organizationSlug);
  if (!config.enabled_pages.includes('paid')) return <Card>Este relatório está indisponível nas configurações deste cliente.</Card>;
- const f = filters(await searchParams, org.timezone, org.currency);
+ const search=await searchParams;
+ let f:ReturnType<typeof filters>;
+ try{f=filters(search,org.timezone,org.currency);}catch{return <InvalidReportFilters search={search}/>;}
  const {data: organizations} = superAdmin ? await db.from('organizations').select('name,slug').eq('status', 'active').order('name') : {data: [{name: org.name, slug: org.slug}]};
  let report: PerformanceReport | null = null;
  try {

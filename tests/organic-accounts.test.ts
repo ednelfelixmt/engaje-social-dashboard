@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import Papa from 'papaparse';
 import {calendarDays} from '../src/lib/metrics/calendar';
 import {buildOrganicAccountsReport,organicAccountMetrics,type OrganicAccountRecord} from '../src/lib/reports/organic-accounts';
-import type {OrganicScope} from '../src/lib/reports/organic-scope';
+import {organicTimestamp,validateOrganicScope,type OrganicScope} from '../src/lib/reports/organic-scope';
 import {organicAccountsCsv,organicAccountsFilename} from '../src/lib/export/organic-accounts';
 
 const scope:OrganicScope={organizationId:'10000000-0000-4000-8000-000000000001',organizationName:'Synthetic organization',organizationSlug:'synthetic',timezone:'America/Cuiaba',from:'2026-10-20',to:'2026-10-22',platform:'all',generatedAt:'2026-10-27T13:00:00Z'};
@@ -91,4 +91,13 @@ test('DATA-ORG-TZ-001: impossible source UTC offsets do not verify account measu
  assert.equal(boundary.collectionKnown,true);
  assert.equal(boundary.collectedAt,'2026-10-27T00:00:00.000Z');
  assert.equal(boundary.values.impressions,0);
+});
+
+test('DATA-ORG-TZ-001: report generation timestamps reject impossible offsets and accept both UTC boundaries',()=>{
+ for(const generatedAt of ['2026-10-27T12:00:00+14:01','2026-10-27T12:00:00-14:01','2026-10-27T12:00:00+15:00','2026-10-27T12:00:00-15:00']){
+  assert.equal(organicTimestamp(generatedAt),null,generatedAt);
+  assert.throws(()=>validateOrganicScope({...scope,generatedAt}));
+ }
+ assert.equal(organicTimestamp('2026-10-27T14:00:00+14:00'),Date.parse('2026-10-27T00:00:00Z'));
+ assert.equal(organicTimestamp('2026-10-27T00:00:00-14:00'),Date.parse('2026-10-27T14:00:00Z'));
 });

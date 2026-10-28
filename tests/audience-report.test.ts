@@ -9,6 +9,22 @@ let id=0;
 const fact=(patch:Partial<Row<'metrics_ads_breakdowns'>>={})=>({id:'synthetic-'+(++id),organization_id:scope.organizationId,platform:'meta_ads',account_id:'act_123',campaign_id:'synthetic-campaign',metric_date:'2026-10-20',dimension_type:'gender',dimension_value:'male',dimension_label:'male',currency:'BRL',spend:100,impressions:1000,clicks:20,leads:5,attribution_window:'7d_click',...patch} as Row<'metrics_ads_breakdowns'>);
 const build=(rows:Row<'metrics_ads_breakdowns'>[])=>buildAudienceReport(rows,scope);
 
+test('audience scope requires a UUID even for reports without any facts',()=>{
+ for(const organizationId of ['', 'synthetic', '11111111-1111-0111-8111-111111111111', '11111111-1111-4111-7111-111111111111', scope.organizationId+' ']){
+  assert.throws(()=>buildAudienceReport([],{...scope,organizationId}),/Invalid audience report scope/);
+ }
+});
+
+test('matched invalid organization identifiers never become valid audience or CSV data',()=>{
+ for(const organizationId of ['synthetic','11111111-1111-0111-8111-111111111111', '11111111-1111-4111-7111-111111111111']){
+  assert.throws(()=>buildAudienceReport([fact({organization_id:organizationId})],{...scope,organizationId}),/Invalid audience report scope/);
+ }
+ const report=build([fact({spend:0,impressions:0,clicks:0,leads:0})]);
+ assert.equal(report.groups.gender[0].spend,0);
+ assert.equal(report.groups.gender[0].impressions,0);
+ assert.equal(report.groups.gender[0].leads,0);
+});
+
 test('report consolidates only complete observations and retains provenance',()=>{
  const a=fact(),b=fact({metric_date:'2026-10-21',spend:50,clicks:10,leads:0.5});
  const report=build([a,b]);const row=report.groups.gender[0];
