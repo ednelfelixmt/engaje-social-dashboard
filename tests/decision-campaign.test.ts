@@ -61,7 +61,9 @@ test('unknown or malformed campaign grain never matches historical results', () 
 
 test('decision-analysis uses the scoped historical matcher instead of campaignId alone', () => {
   const source = readFileSync('src/components/dashboard/decision-analysis.tsx', 'utf8');
-  assert.match(source, /findComparableCampaign\(row,previousCampaigns\)/);
+  assert.match(source, /rankCampaignDecisionImpacts\(campaigns,previousCampaigns,comparing\)/);
+  const helper = readFileSync('src/lib/metrics/decision-campaign.ts', 'utf8');
+  assert.match(helper, /findComparableCampaign\(row, previous\)/);
   assert.doesNotMatch(source, /previousCampaigns\.find\(\(item\)=>item\.campaignId===row\.campaignId\)/);
 });
 
