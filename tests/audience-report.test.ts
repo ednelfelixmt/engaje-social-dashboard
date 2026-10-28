@@ -10,13 +10,13 @@ const fact=(patch:Partial<Row<'metrics_ads_breakdowns'>>={})=>({id:'synthetic-'+
 const build=(rows:Row<'metrics_ads_breakdowns'>[])=>buildAudienceReport(rows,scope);
 
 test('audience scope requires a UUID even for reports without any facts',()=>{
- for(const organizationId of ['', 'synthetic', '11111111-1111-1111-8111-111111111111', '11111111-1111-4111-7111-111111111111', scope.organizationId+' ']){
+ for(const organizationId of ['', 'synthetic', '11111111-1111-0111-8111-111111111111', '11111111-1111-4111-7111-111111111111', scope.organizationId+' ']){
   assert.throws(()=>buildAudienceReport([],{...scope,organizationId}),/Invalid audience report scope/);
  }
 });
 
 test('matched invalid organization identifiers never become valid audience or CSV data',()=>{
- for(const organizationId of ['synthetic','11111111-1111-1111-8111-111111111111', '11111111-1111-4111-7111-111111111111']){
+ for(const organizationId of ['synthetic','11111111-1111-0111-8111-111111111111', '11111111-1111-4111-7111-111111111111']){
   assert.throws(()=>buildAudienceReport([fact({organization_id:organizationId})],{...scope,organizationId}),/Invalid audience report scope/);
  }
  const report=build([fact({spend:0,impressions:0,clicks:0,leads:0})]);
