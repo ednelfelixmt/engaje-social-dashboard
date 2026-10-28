@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import type {Row} from '../src/types/database.types';
 import {buildPerformanceReport, performanceDelta, comparableAttribution, type PerformanceScope} from '../src/lib/reports/performance-report';
 
-export const scope: PerformanceScope = {organizationId: 'synthetic-a', organizationName: 'Synthetic A', organizationSlug: 'synthetic-a', timezone: 'America/Cuiaba', currency: 'BRL', from: '2026-10-20', to: '2026-10-21', compare: 'previous_period', generatedAt: '2026-10-26T12:00:00.000Z'};
+export const scope: PerformanceScope = {organizationId:'11111111-1111-4111-8111-111111111111', organizationName: 'Synthetic A', organizationSlug: 'synthetic-a', timezone: 'America/Cuiaba', currency: 'BRL', from: '2026-10-20', to: '2026-10-21', compare: 'previous_period', generatedAt: '2026-10-26T12:00:00.000Z'};
 export const fact = (patch: Partial<Row<'metrics_ads'>> = {}) => ({id: 'synthetic-current', organization_id: scope.organizationId, metric_date: scope.from, platform: 'meta_ads', account_id: 'act_123', campaign_id: 'synthetic-campaign', campaign_name: 'Synthetic campaign', ad_id: 'synthetic-ad', currency: 'BRL', spend: 100, impressions: 1000, clicks: 10, leads: 2, attribution_window: '7d_click', ...patch} as Row<'metrics_ads'>);
 const prior = (patch: Partial<Row<'metrics_ads'>> = {}) => fact({id: 'synthetic-prior', metric_date: '2026-10-18', spend: 50, ...patch});
 
@@ -74,4 +74,24 @@ test('comparison none never accepts prior facts and leap-year endpoints use cano
 
 test('invalid scope timestamps, timezone, date and currency cannot label a report', () => {
  for (const patch of [{generatedAt: '2026-10-26'}, {generatedAt: 'invalid'}, {timezone: 'Invalid/zone'}, {currency: 'brl'}, {from: '2026-02-30'}]) assert.throws(() => buildPerformanceReport([], [], {...scope, ...patch}));
+});
+
+test('SEC-PERF-SCOPE-001: rejects malformed authenticated organization scope even with empty reports', () => {
+ const invalid = ['', 'synthetic-a', ' 11111111-1111-4111-8111-111111111111', '11111111-1111-4111-8111-111111111111x',
+  '11111111-1111-4111-1111-111111111111', '11111111-1111-9111-8111-111111111111'];
+ for (const organizationId of invalid) {
+  assert.throws(() => buildPerformanceReport([], [], {...scope, organizationId}), /Invalid performance report scope/, organizationId);
+  assert.throws(() => buildPerformanceReport(
+   [fact({organization_id: organizationId})], [], {...scope, organizationId, compare:'none'},
+  ), /Invalid performance report scope/, organizationId);
+ }
+});
+
+test('SEC-PERF-SCOPE-001: valid tenant preserves empty, observed-zero and comparison semantics', () => {
+ const empty = buildPerformanceReport([], [], scope);
+ assert.equal(empty.current.totals.spend, null);
+ const zero = buildPerformanceReport([fact({spend: 0, clicks: 0, impressions: 0, leads: 0})], [prior()], scope);
+ assert.equal(zero.current.totals.spend, 0);
+ assert.equal(zero.current.totals.leads, 0);
+ assert.equal(zero.previous?.totals.spend, 50);
 });

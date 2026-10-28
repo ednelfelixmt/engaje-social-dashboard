@@ -4,7 +4,7 @@ import type {Row} from '../src/types/database.types';
 import {campaignSelection,campaignHref,type CampaignSelection} from '../src/lib/metrics/campaign-selection';
 import {buildCampaignReport,campaignDelta} from '../src/lib/reports/campaign-report';
 import type {PerformanceScope} from '../src/lib/reports/performance-report';
-const scope:PerformanceScope={organizationId:'synthetic-a',organizationName:'Synthetic A',organizationSlug:'synthetic-a',timezone:'America/Cuiaba',currency:'BRL',from:'2026-10-20',to:'2026-10-21',compare:'previous_period',generatedAt:'2026-10-26T12:00:00.000Z'};
+const scope:PerformanceScope={organizationId:'11111111-1111-4111-8111-111111111111',organizationName:'Synthetic A',organizationSlug:'synthetic-a',timezone:'America/Cuiaba',currency:'BRL',from:'2026-10-20',to:'2026-10-21',compare:'previous_period',generatedAt:'2026-10-26T12:00:00.000Z'};
 const selected:CampaignSelection={platform:'meta_ads',account:'123',campaign:'synthetic-campaign'};
 const fact=(patch:Partial<Row<'metrics_ads'>>={})=>({id:'one',organization_id:scope.organizationId,platform:'meta_ads',account_id:'act_123',campaign_id:selected.campaign,campaign_name:'Synthetic campaign',ad_id:'synthetic-ad',metric_date:scope.from,currency:'BRL',spend:100,impressions:1000,clicks:20,leads:5,attribution_window:'7d_click',...patch} as Row<'metrics_ads'>);
 const current=()=>[fact(),fact({id:'two',metric_date:scope.to})];
@@ -64,4 +64,13 @@ test('none comparison and leap-year prior dates use existing calendar semantics'
 
 test('data order does not change the report and no input fact is mutated',()=>{
  const rows=current(),old=prior(),snapshot=structuredClone({rows,old});assert.deepEqual(buildCampaignReport(rows,old,scope,selected),buildCampaignReport([...rows].reverse(),[...old].reverse(),scope,selected));assert.deepEqual({rows,old},snapshot);
+});
+
+test('SEC-PERF-SCOPE-001: campaign detail shares the UUID guard before empty or matching facts', () => {
+ const invalidScope = {...scope, organizationId:'synthetic-a'};
+ assert.throws(() => buildCampaignReport([], [], invalidScope, selected), /Invalid performance report scope/);
+ assert.throws(() => buildCampaignReport(
+  [fact({organization_id:'synthetic-a'})], [], invalidScope, selected,
+ ), /Invalid performance report scope/);
+ assert.equal(buildCampaignReport([], [], scope, selected).current.totals.spend, null);
 });

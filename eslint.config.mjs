@@ -7,6 +7,13 @@ export default tseslint.config(
   {ignores:['node_modules/**','.next/**']},
   {
     files:[
+      'src/lib/metrics/catalog.ts',
+      'src/lib/metrics/methodology.ts',
+      'src/components/dashboard/metric-methodology.tsx',
+      'src/components/metric-selector.tsx',
+      'src/app/(tenant)/*/reports/methodology/page.tsx',
+      'tests/metric-methodology.test.ts',
+      'tests/metric-methodology-page.test.ts',
       'src/app/(tenant)/*/*/page.tsx',
       'src/components/dashboard/invalid-report-filters.tsx',
       'tests/strict-date-filters.test.ts',

@@ -72,6 +72,8 @@ O relatório privado de dados recebidos por conta em `reports/organic-accounts` 
 
 Os dois relatórios orgânicos oferecem impressão e salvamento local em PDF, preservando contexto e avisos e ocultando filtros/controles. Paginação e salvamento real ainda exigem homologação visual; contrato em `docs/engineering/organic-print.md`.
 
+O guia privado em reports/methodology permite consultar as79 definições do catálogo com busca, filtros, condições de cálculo e limites por contexto pago, orgânico e CRM. Acesso exige overview habilitado. Seleção no catálogo não comprova recebimento ou homologação. Veja docs/engineering/metric-methodology.md.
+
 ## Estágio dos integradores
 
 - Operacionais: Meta Ads, Facebook orgânico, Instagram orgânico e Google Ads via Windsor.

@@ -33,7 +33,7 @@ test('smoke only permits local builds and deployment roots without credentials',
 });
 
 test('smoke verifies login, recovery and private routes with anonymous GETs',async()=>{
-  assert.equal((await verifyReleaseHttp(base,base,responses())).length,15);
+  assert.equal((await verifyReleaseHttp(base,base,responses())).length,16);
 });
 
 test('smoke catches exposed admin pages and cross-origin login redirects',async()=>{
@@ -59,7 +59,7 @@ test('smoke requires the configured canonical callback and a referrer policy',as
     if(path.endsWith('/callback'))response.headers.set('location',callback+'/auth/reset-password?error=invalid_link');
     return response;
   });
-  assert.equal((await verifyReleaseHttp(base,callback,canonical)).length,15);
+  assert.equal((await verifyReleaseHttp(base,callback,canonical)).length,16);
   await assert.rejects(verifyReleaseHttp(base,base,responses((path,response)=>{if(path.endsWith('/callback'))response.headers.delete('referrer-policy');return response;})),/referrer/);
 });
 
@@ -70,4 +70,8 @@ test('smoke refuses a private audience report exposed to an anonymous visitor',a
 
 test('smoke refuses administrative diagnostics exposed to an anonymous visitor',async()=>{
  await assert.rejects(verifyReleaseHttp(base,base,responses((path,response)=>path.endsWith('/settings/data-quality')?new Response('Synthetic diagnostics',{headers:{'cache-control':'no-store'}}):response)),/anonymous private access/);
+});
+
+test('smoke refuses a methodology page exposed without authentication',async()=>{
+ await assert.rejects(verifyReleaseHttp(base,base,responses((path,response)=>path.endsWith('/reports/methodology')?new Response('Synthetic guide',{headers:{'cache-control':'no-store'}}):response)),/anonymous private access/);
 });

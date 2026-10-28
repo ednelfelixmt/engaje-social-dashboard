@@ -1,9 +1,13 @@
-import {parseAuthorizedPaidFact,type PaidIngestionFact} from '../integrations/paid-ingestion-contract';
+import {PaidIngestionFactSchema,parseAuthorizedPaidFact,type PaidIngestionFact} from '../integrations/paid-ingestion-contract';
 import {reconcilePaidFacts,type ReconciliationResult} from './reconciliation';
 
 /** Pure, tenant-scoped boundary: no inserts, live requests or implicit currency conversion. */
 export function reconcileAuthorizedIngestion(payloads:readonly unknown[],authorizedOrganizationId:string):ReconciliationResult{
- if(!authorizedOrganizationId)return {status:'invalid',reason:'Missing authenticated organization scope'};
+ // Apply the same UUID contract as provider facts before inspecting any payloads.
+ // An empty input must not turn an invalid authenticated tenant into a valid
+ // "no facts" result. This is a pure guard; actual authorization is upstream.
+ if(!PaidIngestionFactSchema.shape.organizationId.safeParse(authorizedOrganizationId).success)
+  return {status:'invalid',reason:'Missing or invalid authenticated organization scope'};
  const facts:PaidIngestionFact[]=[];
  try{
   for(const payload of payloads)facts.push(parseAuthorizedPaidFact(payload,authorizedOrganizationId));
