@@ -42,7 +42,7 @@ function period(rows: readonly Fact[], scope: RevenueScope, range: {from: string
   const values = Object.fromEntries(revenueMetrics.map(key => [key, reconciled ? sum(facts, key) : null])) as Values;
   const sync = facts.map(row => sourceTimestamp(row.synced_at));
   const syncedAt = sync.length > 0 && sync.every((value): value is number => value !== null)
-   ? new Date(Math.max(...sync)).toISOString() : null;
+   ? new Date(sync.reduce((latest, value) => Math.max(latest, value), -Infinity)).toISOString() : null;
   return {date, values, sourceIds: facts.map(row => row.id).sort(), reconciled, syncedAt};
  });
  return {...range, days, records: selected, otherSourceRecords: rows.length - selected,
