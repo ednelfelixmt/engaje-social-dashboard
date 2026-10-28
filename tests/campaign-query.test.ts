@@ -34,3 +34,17 @@ test('every paginated campaign request preserves the scope and deterministic ord
 test('malformed selection or unsupported dataset combinations fail before any read',async()=>{
  const c=client();for(const options of [{campaign:{account:'123',campaign:'one'},ads:true},{platform:'meta_ads',campaign:{account:'',campaign:'one'},ads:true},{platform:'meta_ads',campaign:{account:'123',campaign:'one'},crm:true},{platform:'meta_ads',campaign:{account:'123',campaign:'one'},breakdowns:true}])await assert.rejects(query.dashboardData(c.db,'synthetic-a',f,options));assert.equal(c.calls.length,0);
 });
+
+test('SEC-CAMPAIGN-SELECT-GRAIN-001: invalid campaign identity performs no SDK reads',async()=>{
+ const c=client();
+ for(const [account,campaign] of [
+  [' 123','one'],['123 ','one'],['act_ 123','one'],['act_\u00a0123','one'],
+  ['123',' one'],['123','one '],['123','one\u00a0'],
+ ]) {
+  await assert.rejects(
+   query.dashboardData(c.db,'synthetic-a',f,{platform:'meta_ads',campaign:{account,campaign},ads:true}),
+   /Invalid campaign query scope/,
+  );
+ }
+ assert.equal(c.calls.length,0);
+});
