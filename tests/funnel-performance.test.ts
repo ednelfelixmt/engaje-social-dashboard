@@ -115,7 +115,13 @@ test('one foreign-currency row invalidates the entire funnel before summing even
 });
 
 test('funnel rejects invalid tenant identity even for empty or equally malformed data', () => {
-  for (const organizationId of ['', 'bad-id', '11111111-1111']) {
+  for (const organizationId of [
+    '', 'bad-id', '11111111-1111',
+    '11111111-1111-0111-8111-111111111111', // version zero
+    '11111111-1111-9111-8111-111111111111', // unsupported version
+    '11111111-1111-4111-7111-111111111111', // invalid variant
+    '11111111-1111-4111-c111-111111111111', // invalid variant
+  ]) {
     const empty = summarizeFunnelMetric([], 'clicks', organizationId, scope.currency);
     assert.equal(empty.value, null);
     assert.match(empty.detail, /escopo de organização incompatível/);
@@ -126,6 +132,31 @@ test('funnel rejects invalid tenant identity even for empty or equally malformed
     assert.equal(result.cost, null);
     assert.match(result.detail, /escopo de organização incompatível/);
   }
+});
+
+
+
+test('funnel rejects an equally malformed tenant UUID in facts and both comparison periods', () => {
+  const invalidId = '11111111-1111-4111-7111-111111111111';
+  const invalidRows = rows(fact({organization_id: invalidId}));
+  const result = summarizeFunnelMetric(invalidRows, 'clicks', invalidId, 'BRL');
+  assert.equal(result.value, null);
+  assert.equal(result.cost, null);
+  assert.match(result.detail, /escopo de organização incompatível/);
+  const comparison = configuredFunnel(invalidRows, steps, {organizationId: invalidId, currency: 'BRL'}, invalidRows);
+  assert.equal(comparison[0].value, null);
+  assert.equal(comparison[0].previousValue, null);
+  assert.match(comparison[0].detail, /escopo de organização incompatível/);
+});
+
+test('funnel accepts an RFC version-7 tenant with valid measurements and observed zero', () => {
+  const organizationId = '11111111-1111-7111-8111-111111111111';
+  const data = rows(fact({organization_id: organizationId, spend: 0, clicks: 0}));
+  const result = summarizeFunnelMetric(data, 'clicks', organizationId, 'BRL');
+  assert.equal(result.value, 0);
+  assert.equal(result.cost, null);
+  assert.equal(result.observed, 1);
+  assert.equal(summarizeFunnelMetric([], 'clicks', organizationId, 'BRL').value, null);
 });
 
 test('currency conflict in the prior period cannot produce a comparison', () => {

@@ -1,5 +1,6 @@
 import type {CampaignPerformance} from '@/types/domain';
 import {finiteRatio} from './aggregation';
+import {isRfcOrganizationUuid} from './organization-scope';
 import {defaultFunnelIcons, funnelMetricDefinitions, parseFunnelSteps, type FunnelMetricKey} from './funnel-config';
 
 const validCount = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0;
@@ -20,7 +21,7 @@ export function summarizeFunnelMetric(rows: readonly CampaignPerformance[], metr
   const observed = rows.filter(hasFunnelMeasurements);
   // Reject a missing or malformed tenant identity even when there are no facts.
   // Counts, not only costs, must respect the selected-currency boundary.
-  const scopeValid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(organizationId)
+  const scopeValid = isRfcOrganizationUuid(organizationId)
     && rows.every(row => row.organizationId === organizationId);
   const currencyValid = /^[A-Z]{3}$/.test(currency) && observed.every(row => row.currency === currency);
   const known = observed.filter(row => validCount(measurement(row, metric)));

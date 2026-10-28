@@ -128,3 +128,32 @@ test('agency portfolio may still report nonmonetary observed counts across sourc
   assert.equal(portfolio.leads, 7);
   assert.equal(portfolio.impressions, 2000);
 });
+
+test('agency client card rejects non-RFC UUID versions and variants before checking any rows', () => {
+  const invalidIds = [
+    '11111111-1111-0111-8111-111111111111', // version 0
+    '11111111-1111-9111-8111-111111111111', // version 9
+    '11111111-1111-4111-7111-111111111111', // non-RFC variant
+    '11111111-1111-4111-c111-111111111111', // reserved variant
+  ];
+  for (const invalid of invalidIds) {
+    assert.throws(() => summarizeClientAds(invalid, 'BRL', []), /matching organization/, invalid);
+    assert.throws(() => summarizeClientAds(invalid, 'BRL', [fact({organization_id: invalid, spend: 0, leads: 0})]), /matching organization/, invalid);
+  }
+});
+
+test('agency client card accepts valid RFC v7 scope and preserves genuine observed zeros', () => {
+  const v7 = '11111111-1111-7111-8111-111111111111';
+  assert.deepEqual(summarizeClientAds(v7, 'BRL', []), {
+    spend: null, impressions: null, reach: null, leads: null, cpl: null, currency: null,
+  });
+  const summary = summarizeClientAds(v7, 'BRL', [
+    fact({organization_id: v7, spend: 0, impressions: 0, reach: 0, leads: 0, clicks: 0}),
+  ]);
+  assert.equal(summary.spend, 0);
+  assert.equal(summary.impressions, 0);
+  assert.equal(summary.leads, 0);
+  assert.equal(summary.reach, 0);
+  assert.equal(summary.cpl, null);
+  assert.throws(() => summarizeClientAds(v7, 'BRL', [fact()]), /matching organization/);
+});
