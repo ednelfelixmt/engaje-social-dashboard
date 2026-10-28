@@ -11,6 +11,10 @@ export type QualityJob=Pick<Row<'sync_jobs'>,'id'|'organization_id'|'status'|'cr
 export type QualityInput={integrations:QualityIntegration[];metrics:QualityMetric[];dimensions:QualityDimension[];jobs:QualityJob[]};
 export type QualityHealth={platform:QualityPlatform;campaigns:number;rows:number;days:number;first:string|null;latest:string|null;lastReceived:string|null;age:number|null;integrations:number;connected:number;expired:number;breakdowns:Record<string,number>;status:'recent'|'delayed'|'missing'|'invalid';invalidDates:number;futureDates:number;unknownCollections:number};
 export type QualityJobView={id:string;status:'queued'|'running'|'completed'|'failed'|'unknown';createdAt:string|null;startedAt:string|null;completedAt:string|null;recordedCount:number|null;durationMs:number|null;timelineInvalid:boolean};
+/** Reject padded identities before deduplication, without silently normalizing opaque IDs. */
+function validGrainIdentifier(value: unknown): value is string {
+ return typeof value === 'string' && value.trim().length > 0 && value === value.trim();
+}
 function validDate(value:unknown):value is string{if(typeof value!=='string')return false;try{calendarDays(value,value);return true;}catch{return false;}}
 function timestamp(value:unknown):bigint|null{
  if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?(?:Z|[+-](?:(?:0\d|1[0-3]):[0-5]\d|14:00))$/.test(value)||!validDate(value.slice(0,10)))return null;
@@ -23,13 +27,13 @@ export function validateQualityScope(scope:QualityScope){
 }
 export function buildDataQuality(input:QualityInput,scope:QualityScope){
  const generated=validateQualityScope(scope);
- for(const records of [input.integrations,input.metrics,input.dimensions,input.jobs]){const ids=new Set<string>();for(const row of records){if(row.organization_id!==scope.organizationId||typeof row.id!=='string'||!row.id.trim()||ids.has(row.id))throw new Error('Quality source scope or identity mismatch');ids.add(row.id);}}
+ for(const records of [input.integrations,input.metrics,input.dimensions,input.jobs]){const ids=new Set<string>();for(const row of records){if(row.organization_id!==scope.organizationId||!validGrainIdentifier(row.id)||ids.has(row.id))throw new Error('Quality source scope or identity mismatch');ids.add(row.id);}}
  if(input.jobs.length>12)throw new Error('Quality job window exceeded');
  const known=(value:unknown)=>{const ms=timestamp(value);return ms!==null&&ms<=generated?ms:null;};
  const iso=(instant:bigint|null)=>{if(instant===null)return null;let ms=instant/1000n,tail=instant%1000n;if(tail<0n){ms-=1n;tail+=1000n;}const base=new Date(Number(ms)).toISOString();return tail===0n?base:base.replace(/Z$/,tail.toString().padStart(3,'0')+'Z');};
  const items:QualityHealth[]=qualityPlatforms.map(platform=>{
   const records=input.metrics.filter(row=>row.platform===platform);
-  for(const row of records)if(typeof row.account_id!=='string'||!row.account_id.trim()||typeof row.campaign_id!=='string'||!row.campaign_id.trim())throw new Error('Quality campaign identity missing');
+  for(const row of records)if(!validGrainIdentifier(row.account_id)||!validGrainIdentifier(row.campaign_id))throw new Error('Quality campaign identity missing');
   const validDates=records.filter(row=>validDate(row.metric_date)&&row.metric_date<=scope.businessDate).map(row=>row.metric_date);
   const dates=[...new Set(validDates)].sort(),freshness=paidDataFreshness(validDates,scope.businessDate);
   // A recent valid day does not make a mixed invalid/future batch healthy.
@@ -38,7 +42,7 @@ export function buildDataQuality(input:QualityInput,scope:QualityScope){
   const collections=records.map(row=>known(row.synced_at));
   const received=collections.filter((ms):ms is bigint=>ms!==null);
   const integrations=input.integrations.filter(row=>row.provider===platform),breakdowns:Record<string,number>=Object.create(null);
-  for(const row of input.dimensions.filter(row=>row.platform===platform)){if(typeof row.dimension_type!=='string'||!row.dimension_type.trim())throw new Error('Quality dimension missing');breakdowns[row.dimension_type]=(breakdowns[row.dimension_type]??0)+1;}
+  for(const row of input.dimensions.filter(row=>row.platform===platform)){if(!validGrainIdentifier(row.dimension_type))throw new Error('Quality dimension missing');breakdowns[row.dimension_type]=(breakdowns[row.dimension_type]??0)+1;}
   return {platform,campaigns:new Set(records.map(row=>JSON.stringify([row.account_id,row.campaign_id]))).size,rows:records.length,days:dates.length,first:dates[0]??null,latest:freshness.latest,lastReceived:iso(received.length?received.reduce((latest,ms)=>ms>latest?ms:latest):null),age:freshness.daysOld,
    integrations:integrations.length,connected:integrations.filter(row=>row.status==='connected'&&row.is_enabled===true).length,expired:integrations.filter(row=>row.status==='expired'||row.status==='error').length,breakdowns,
    status:invalidDates>0||futureDates>0?'invalid':freshness.status==='empty'?(records.length?'invalid':'missing'):freshness.status,

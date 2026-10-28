@@ -102,3 +102,46 @@ test('DATAQUAL-MIXED-DATE-001: mixed valid and impossible/future dates do not cl
  const missing=buildDataQuality({...input(),metrics:[]},scope).items[0];
  assert.equal(missing.status,'missing');
 });
+
+
+test('DATAQUAL-SOURCE-GRAIN-001: reject padded or whitespace-only source IDs across all four collections',()=>{
+ const sources={
+  integrations:{id:'int',organization_id:scope.organizationId,provider:'meta_ads',status:'connected',is_enabled:true},
+  metrics:metric,
+  dimensions:{id:'dim',organization_id:scope.organizationId,platform:'meta_ads',dimension_type:'age'},
+  jobs:job,
+ };
+ for(const key of ['integrations','metrics','dimensions','jobs'] as const){
+  for(const id of [' synthetic','synthetic ','\\tsynthetic','synthetic\\n',' \\t ']){
+   const data=input();Object.assign(data,{[key]:[{...sources[key],id}]});
+   assert.throws(()=>buildDataQuality(data,scope),/Quality source scope or identity mismatch/,` ${key} ${JSON.stringify(id)}`);
+  }
+ }
+ assert.throws(()=>buildDataQuality({...input(),metrics:[{...metric,id:'same'},{...metric,id:'same '}]},scope),/Quality source scope or identity mismatch/);
+});
+
+test('DATAQUAL-SOURCE-GRAIN-001: reject padded account, campaign and dimension identities without partial output',()=>{
+ for(const key of ['account_id','campaign_id'] as const){
+  for(const value of ['','  ',' opaque','opaque ','\\topaque','opaque\\n']){
+   const rows=[metric,{...metric,id:'metric-other',[key]:value}];
+   assert.throws(()=>buildDataQuality({...input(),metrics:rows},scope),/Quality campaign identity missing/,` ${key} ${JSON.stringify(value)}`);
+  }
+ }
+ for(const dimension_type of [' ',' age','age ','\\tage','age\\n']){
+  const dimensions=[{id:'dim',organization_id:scope.organizationId,platform:'meta_ads' as const,dimension_type}];
+  assert.throws(()=>buildDataQuality({...input(),dimensions},scope),/Quality dimension missing/);
+ }
+});
+
+test('DATAQUAL-SOURCE-GRAIN-001: valid opaque provider identities and observed zeros remain intact',()=>{
+ const data=input();
+ data.integrations=[{id:'int:1',organization_id:scope.organizationId,provider:'meta_ads',status:'connected',is_enabled:true}];
+ data.metrics=[{...metric,id:'metric:1',account_id:'act_123',campaign_id:'campaign/one'},
+  {...metric,id:'metric:2',account_id:'act_123',campaign_id:'campaign/two'}];
+ data.dimensions=[{id:'dim:1',organization_id:scope.organizationId,platform:'meta_ads',dimension_type:'custom:age'}];
+ data.jobs=[{...job,id:'job:1',rows_processed:0}];
+ const result=buildDataQuality(data,scope);
+ assert.equal(result.items[0].rows,2);assert.equal(result.items[0].campaigns,2);
+ assert.equal(result.items[0].connected,1);assert.equal(result.items[0].breakdowns['custom:age'],1);
+ assert.equal(result.jobs[0].recordedCount,0);
+});
