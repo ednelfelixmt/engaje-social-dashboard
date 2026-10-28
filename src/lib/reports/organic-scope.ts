@@ -24,5 +24,8 @@ export function validateOrganicScope(scope:OrganicScope){
  if(generated===null)throw new Error('Invalid report generation timestamp');
  return {from:Date.parse(scope.from+'T00:00:00Z'),until:Date.parse(scope.to+'T00:00:00Z')+86400000,generated};
 }
-export function organicIdentifier(value:unknown):value is string{return typeof value==='string'&&value.trim().length>0;}
+/** Source IDs are opaque; do not normalize them into a different record identity. */
+export function organicIdentifier(value:unknown):value is string{
+ return typeof value==='string'&&value.length>0&&value.trim()===value;
+}
 export function organicCounter(value:unknown):number|null{return typeof value==='number'&&Number.isSafeInteger(value)&&value>=0?value:null;}
