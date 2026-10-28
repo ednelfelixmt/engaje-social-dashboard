@@ -242,3 +242,32 @@ test('SEC-CAMP-UUID-001: matching invalid organization in source rows still fail
   const invalid='11111111-1111-0111-8111-111111111111';
   assert.throws(()=>scopedRankings([campaign({organizationId:invalid})],[],[],[],invalid,'BRL'),/single organization/);
 });
+
+
+test('RANK-DIM-LABEL-001: conflicting dimension labels resolve to the stable source value',()=>{
+  const rows=[
+    breakdown({dimension_value:'female',dimension_label:'Mulheres',spend:10}),
+    breakdown({account_id:'account-2',dimension_value:'female',dimension_label:'Women',spend:20}),
+  ];
+  const normal=preparePerformanceRankings([],[],rows,[]).gender;
+  const reversed=preparePerformanceRankings([],[],[...rows].reverse(),[]).gender;
+  assert.equal(normal.length,1);
+  assert.equal(normal[0].label,'female');
+  assert.equal(normal[0].spend,30);
+  assert.equal(normal[0].leads,4);
+  assert.deepEqual(normal,reversed);
+});
+
+test('RANK-DIM-LABEL-001: consistent labels are retained and absent labels fall back to source value',()=>{
+  const rows=[
+    breakdown({dimension_value:'female',dimension_label:' Mulheres ',spend:5}),
+    breakdown({dimension_value:'female',dimension_label:'Mulheres',spend:7}),
+    breakdown({dimension_value:'male',dimension_label:' ',spend:8}),
+  ];
+  const result=preparePerformanceRankings([],[],rows,[]).gender;
+  assert.equal(result.length,2);
+  assert.equal(result.find(item=>item.label==='Mulheres')?.spend,12);
+  assert.equal(result.find(item=>item.label==='male')?.spend,8);
+  const reversed=preparePerformanceRankings([],[],[...rows].reverse(),[]).gender;
+  assert.deepEqual(new Map(result.map(item=>[item.key,item])),new Map(reversed.map(item=>[item.key,item])));
+});
