@@ -1,5 +1,7 @@
 # Homologação final — execução e dependências verificadas
 
+Atualização de28/10/2026: consulta Claude concluída com CLI2.1.302. O contrato HOM-RUN-001 em27-homologation-runner-evidence.md passa a exigir dados positivos nas11tabelas scoped e negação explícita da tabela administrativa integrations, além de arquivos privados e ambiente protegido. O relato de401 abaixo é histórico, não o estado atual da consulta.
+
 Registro de 27/10/2026, America/Cuiaba. Não representa aceite comercial. Referência funcional: main8ffcfa541638c999cb0ee8962c66b0cf69366a15, lote #218 publicado;681 testes,140SQL sintéticos, Quality Gate40608829541, preview READY no head75cf107, CI main40609173529 e produção dpl_FkdLbU5bnBdAFJV5EdMeh2Y4rDa3 READY/alias/16HTTP aprovados.
 
 ## Situação real

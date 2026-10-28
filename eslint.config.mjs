@@ -7,6 +7,12 @@ export default tseslint.config(
   {ignores:['node_modules/**','.next/**']},
   {
     files:[
+      'scripts/supabase-public-key.ts',
+      'scripts/verify-production-isolation.ts',
+      'scripts/verify-phase02-auth-preflight.ts',
+      'scripts/verify-staging-isolation.ts',
+      'tests/production-isolation-runtime.test.ts',
+      'tests/production-isolation-config.test.ts',
       'src/lib/metrics/catalog.ts',
       'src/lib/metrics/methodology.ts',
       'src/components/dashboard/metric-methodology.tsx',
