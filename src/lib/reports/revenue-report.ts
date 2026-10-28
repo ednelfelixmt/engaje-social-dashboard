@@ -12,9 +12,16 @@ export type RevenueScope = {organizationId: string; organizationName: string; or
 export type RevenueDay = {date: string; values: Values; sourceIds: string[]; reconciled: boolean; syncedAt: string | null};
 export type RevenuePeriod = {from: string; to: string; days: RevenueDay[]; totals: Values; knownDays: Record<RevenueMetric, number>; records: number; otherSourceRecords: number; reconciledDays: number};
 export type RevenueReport = {scope: RevenueScope; current: RevenuePeriod; previous: RevenuePeriod | null};
-const organizationUuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+const organizationUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const channels = ['meta_ads', 'google_ads', 'tiktok_ads', 'organic', 'direct', 'unattributed'];
 const account = (row: Fact) => row.channel === 'meta_ads' ? row.account_id.replace(/^act_/, '') : row.account_id;
+/** Supabase provenance is an instant, never a normalized impossible local time. */
+function sourceTimestamp(value: unknown): number | null {
+ if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?(?:Z|[+-](?:(?:0\d|1[0-3]):[0-5]\d|14:00))$/.test(value)) return null;
+ try {calendarDays(value.slice(0, 10), value.slice(0, 10));} catch {return null;}
+ const timestamp = Date.parse(value);
+ return Number.isFinite(timestamp) ? timestamp : null;
+}
 function period(rows: readonly Fact[], scope: RevenueScope, range: {from: string; to: string}): RevenuePeriod {
  const dates = calendarDays(range.from, range.to), allowed = new Set(dates), ids = new Set<string>(), grains = new Set<string>();
  const byDate = new Map<string, Fact[]>();
@@ -33,8 +40,9 @@ function period(rows: readonly Fact[], scope: RevenueScope, range: {from: string
   const facts = byDate.get(date) ?? [];
   const reconciled = facts.length > 0 && facts.every(row => row.is_complete === true);
   const values = Object.fromEntries(revenueMetrics.map(key => [key, reconciled ? sum(facts, key) : null])) as Values;
-  const sync = facts.map(row => Date.parse(row.synced_at));
-  const syncedAt = sync.length && sync.every(Number.isFinite) ? new Date(sync.reduce((latest, value) => Math.max(latest, value), -Infinity)).toISOString() : null;
+  const sync = facts.map(row => sourceTimestamp(row.synced_at));
+  const syncedAt = sync.length > 0 && sync.every((value): value is number => value !== null)
+   ? new Date(Math.max(...sync)).toISOString() : null;
   return {date, values, sourceIds: facts.map(row => row.id).sort(), reconciled, syncedAt};
  });
  return {...range, days, records: selected, otherSourceRecords: rows.length - selected,
