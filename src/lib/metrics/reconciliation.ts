@@ -11,6 +11,11 @@ function validCalendarDate(value:string):boolean {
  return Number.isFinite(parsed.getTime())&&parsed.toISOString().slice(0,10)===value;
 }
 
+/** A padded or whitespace-only provider identity is not a distinct campaign grain. */
+function validGrainIdentifier(value: string): boolean {
+ return typeof value === 'string' && value.trim().length > 0 && value === value.trim();
+}
+
 /** Fail closed: do not silently de-duplicate conflicting campaign-day facts or convert currencies. */
 export function reconcilePaidFacts(rows:readonly ReconciliationRow[]):ReconciliationResult {
  if(!rows.length)return {status:'empty',reason:'No source facts available'};
@@ -21,7 +26,7 @@ export function reconcilePaidFacts(rows:readonly ReconciliationRow[]):Reconcilia
   // Evaluate the canonical identifier before validating the grain to reject 'act_' alone.
   const accountId = row.platform === 'meta_ads' && row.accountId
     ? row.accountId.replace(/^act_/, '') : row.accountId;
-  if(!row.platform||!accountId||!row.campaignId||!validCalendarDate(row.date)||!/^[A-Z]{3}$/.test(row.currency))
+  if(!validGrainIdentifier(row.platform)||!validGrainIdentifier(accountId)||!validGrainIdentifier(row.campaignId)||!validCalendarDate(row.date)||!/^[A-Z]{3}$/.test(row.currency))
    return {status:'invalid',reason:'Malformed fact grain'};
   if(row.currency!==currency)return {status:'mixed_currency',reason:'Currency conversion is required upstream'};
   if(!Number.isFinite(row.spend)||row.spend<0||[row.impressions,row.clicks,row.leads].some(v=>v!==null&&(!Number.isFinite(v)||v<0)))
