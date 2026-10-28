@@ -8,6 +8,8 @@ export default tseslint.config(
   {
     files:[
       'scripts/supabase-public-key.ts',
+      'scripts/upload-phase02-branding-fixtures.ts',
+      'tests/phase02-storage-absence.test.ts',
       'scripts/verify-production-isolation.ts',
       'scripts/verify-phase02-auth-preflight.ts',
       'scripts/verify-staging-isolation.ts',

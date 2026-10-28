@@ -10,7 +10,7 @@ import type {verifyAuthPreflight} from '../scripts/verify-phase02-auth-preflight
 
 const root='https://ityidnsfhgotucgvcifq.supabase.co';
 const canary='SYNTHETIC_PASSWORD_TOKEN_DO_NOT_LOG';
-type Options={existing?:boolean;staging?:boolean;authThrowIndex?:number;badOrganization?:boolean;ownCount?:number|null;visibleCount?:number|null;foreignCount?:number|null;countError?:boolean;countThrow?:boolean;foreignRow?:boolean;authThrow?:boolean;logoutThrow?:boolean;url?:string;httpStatus?:number;emptyBody?:boolean;fetchThrow?:boolean;administrativeReadable?:boolean;readThrow?:boolean;filename?:string;sharedAssets?:boolean;assetCount?:number|null};
+type Options={existing?:boolean;staging?:boolean;authThrowIndex?:number;badOrganization?:boolean;ownCount?:number|null;visibleCount?:number|null;foreignCount?:number|null;countError?:boolean;countThrow?:boolean;foreignRow?:boolean;authThrow?:boolean;logoutThrow?:boolean;url?:string;httpStatus?:number;emptyBody?:boolean;fetchThrow?:boolean;credentialReadable?:boolean;credentialCodeMissing?:boolean;credentialStatus?:number;integrationDenied?:boolean;integrationForeignCount?:number;readThrow?:boolean;filename?:string;sharedAssets?:boolean;assetCount?:number|null};
 function fixture(options:Options={}){
  const orgs=options.existing?existingIsolationFixtures.map(x=>x.organizationId):['11111111-1111-4111-8111-111111111111','22222222-2222-4222-8222-222222222222'];
  const users=options.existing?existingIsolationFixtures.map(x=>x.userId):['33333333-3333-4333-8333-333333333333','44444444-4444-4444-8444-444444444444'];
@@ -50,12 +50,13 @@ function fixture(options:Options={}){
      single(){query.single=true;return builder;},
      then(resolve:(value:unknown)=>unknown,reject:(reason:unknown)=>unknown){
       queries.push({...query,filters:{...query.filters}});
-      if(table==='integrations'&&!options.administrativeReadable)return Promise.resolve({data:null,error:query.head?{message:''}:{code:'42501',message:canary},count:null,status:403}).then(resolve,reject);
+      if(table==='integrations'&&query.field==='credential_secret_id'&&!options.credentialReadable)return Promise.resolve({data:null,error:{code:options.credentialCodeMissing?undefined:'42501',message:canary},count:null,status:options.credentialStatus??403}).then(resolve,reject);
+      if(table==='integrations'&&options.integrationDenied)return Promise.resolve({data:null,error:{code:'42501'},count:null,status:403}).then(resolve,reject);
       if(query.head){
        if(options.countThrow)return Promise.reject(new Error(canary)).then(resolve,reject);
        const outside=Object.keys(query.filters).some(k=>k.startsWith('not_'));
        const own=Object.keys(query.filters).length>0;
-       const count=outside?(options.foreignCount===undefined?0:options.foreignCount):own?(options.ownCount===undefined?1:options.ownCount):(options.visibleCount===undefined?1:options.visibleCount);
+       const count=outside&&table==='integrations'&&options.integrationForeignCount!==undefined?options.integrationForeignCount:outside?(options.foreignCount===undefined?0:options.foreignCount):own?(options.ownCount===undefined?1:options.ownCount):(options.visibleCount===undefined?1:options.visibleCount);
        return Promise.resolve({data:null,count,error:options.countError?{code:'42501',message:canary}:null,status:options.countError?403:200}).then(resolve,reject);
       }
       if(options.readThrow&&table==='metrics_ads')return Promise.reject(new Error(canary)).then(resolve,reject);
@@ -109,9 +110,9 @@ function fixture(options:Options={}){
 test('real isolation runner requires scoped positives and administrative denial and checks full visible scope without returning rows',async()=>{
  assert.equal(isolationTables.length,12);assert.equal(new Set(isolationTables.map(x=>x[0])).size,12);
  const f=fixture();await f.run();
- assert.equal(f.queries.filter(q=>q.head).length,66);
- for(const [table,field,access] of isolationTables){
-  const head=f.queries.filter(q=>q.head&&q.table===table);assert.equal(head.length,access==='denied'?0:6);assert.ok(head.every(q=>q.field===field));
+ assert.equal(f.queries.filter(q=>q.head).length,72);
+ for(const [table,field] of isolationTables){
+  const head=f.queries.filter(q=>q.head&&q.table===table);assert.equal(head.length,6);assert.ok(head.every(q=>q.field===field));
  }
  assert.equal(f.requests.length,2);assert.equal(f.cancelled(),2);
  assert.deepEqual(f.logouts,[{index:0,scope:{scope:'local'}},{index:1,scope:{scope:'local'}}]);
@@ -179,13 +180,25 @@ test('real staging login cleans up locally even when either fixture fails before
  }
 });
 
-test('administrative integrations must deny SELECT instead of requiring viewer access or fake rows',async()=>{
- const f=fixture({administrativeReadable:true});
- await assert.rejects(f.run(),/FAIL: administrative table unexpectedly readable for integrations/);
- assert.equal(f.output(),'');assert.equal(f.logouts.length,2);
- const modes=new Map(isolationTables.map(([table,,access])=>[table,access]));
- assert.equal(modes.get('integrations'),'denied');
- assert.ok([...modes.entries()].every(([table,access])=>table==='integrations'||access==='scoped'));
+test('integration metadata is scoped while credential references must deny SELECT in every scope',async()=>{
+ for(const staging of [false,true]){
+  const readable=fixture({staging,credentialReadable:true});
+  await assert.rejects(readable.run(),/FAIL: protected credential column unexpectedly readable for integrations/);
+  const missingCode=fixture({staging,credentialCodeMissing:true});
+  await assert.rejects(missingCode.run(),/NOT PROVEN: administrative denial unavailable/);
+  for(const credentialStatus of [400,401,503]){const wrong=fixture({staging,credentialStatus});await assert.rejects(wrong.run(),/NOT PROVEN: administrative denial unavailable/);assert.equal(wrong.output(),'');assert.equal(wrong.logouts.length,2);}
+  const denied=fixture({staging,integrationDenied:true});
+  await assert.rejects(denied.run(),/NOT PROVEN: positive own fixture.*required for integrations/);
+  const foreign=fixture({staging,integrationForeignCount:1});
+  await assert.rejects(foreign.run(),/FAIL: foreign rows observed for integrations/);
+  for(const f of [readable,missingCode,denied,foreign]){assert.equal(f.output(),'');assert.equal(f.logouts.length,2);}
+ }
+ const success=fixture();await success.run();
+ const protectedQueries=success.queries.filter(q=>q.table==='integrations'&&q.field==='credential_secret_id');
+ assert.equal(protectedQueries.length,6);assert.ok(protectedQueries.every(q=>!q.head));
+ for(const prefix of ['organization_id','not_organization_id'])assert.equal(protectedQueries.filter(q=>Object.hasOwn(q.filters,prefix)).length,2);
+ assert.equal(protectedQueries.filter(q=>Object.keys(q.filters).length===0).length,2);
+ assert.ok(isolationTables.every(([,,access])=>access==='scoped'));
 });
 
 test('read errors after login remain unproven and staging unexpected errors remain sanitized',async()=>{
@@ -205,9 +218,9 @@ test('installed PostgREST SDK cannot expose SQLSTATE from bodyless HEAD but pres
   methods.push(String(init?.method));
   return new Response(init?.method==='HEAD'?null:JSON.stringify({code:'42501',message:'permission denied'}),{status:403,headers:{'Content-Type':'application/json'}});
  }}});
- const head=await db.from('integrations').select('organization_id',{head:true,count:'exact'});
+ const head=await db.from('integrations').select('credential_secret_id',{head:true,count:'exact'});
  assert.equal(head.error?.code,undefined);
- const get=await db.from('integrations').select('organization_id').limit(0);
+ const get=await db.from('integrations').select('credential_secret_id').limit(0);
  assert.equal(get.error?.code,'42501');assert.equal(get.data,null);
  assert.deepEqual(methods,['HEAD','GET']);
 });

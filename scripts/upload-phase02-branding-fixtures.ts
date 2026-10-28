@@ -1,5 +1,29 @@
 import {createClient} from '@supabase/supabase-js';
 
+/** Recognize an absent object, never a generic failure or a missing bucket. */
+export async function isMissingFixture(error:unknown,expectedUrl:string):Promise<boolean>{
+ if(!error||typeof error!=='object')return false;
+ const value=error as {statusCode?:unknown;code?:unknown;message?:unknown;originalError?:unknown};
+ const isObjectMissing=(body:{statusCode?:unknown;code?:unknown;message?:unknown})=>
+  (body.statusCode===404||body.statusCode==='404')&&body.code==='NoSuchKey'&&body.message==='Object not found';
+ if(isObjectMissing(value))return true;
+ // Older storage-js wraps a modern JSON error in StorageUnknownError/Response.
+ const response=value.originalError;
+ if(!(response instanceof Response)||![400,404].includes(response.status))return false;
+ let reader:ReadableStreamDefaultReader<Uint8Array>|undefined;
+ try{
+  const actual=new URL(response.url),expected=new URL(expectedUrl);
+  if(actual.origin!==expected.origin||actual.pathname!==expected.pathname||actual.username||actual.password
+   ||!response.headers.get('content-type')?.toLowerCase().startsWith('application/json'))return false;
+  reader=response.clone().body?.getReader();
+  if(!reader)return false;
+  const chunks:Uint8Array[]=[];let size=0;
+  while(true){const chunk=await reader.read();if(chunk.done)break;size+=chunk.value.byteLength;if(size>2048)return false;chunks.push(chunk.value);}
+  const body:unknown=JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  return !!body&&typeof body==='object'&&isObjectMissing(body);
+ }catch{return false;}finally{void reader?.cancel().catch(()=>{});}
+}
+
 /** One-time synthetic-only Storage upload. Credentials must be sourced from a secure runner. */
 export function validateStorageFixtures(env:NodeJS.ProcessEnv){
  if(env.MEDIAHUB_FIXTURE_UPLOAD_ACK!=='UPLOAD_ONLY_SYNTHETIC_BRANDING')throw new Error('Explicit fixture-only acknowledgement required');
@@ -14,7 +38,11 @@ export function validateStorageFixtures(env:NodeJS.ProcessEnv){
 }
 export async function uploadSyntheticBranding(env:NodeJS.ProcessEnv){
  const cfg=validateStorageFixtures(env);
- const db=createClient(cfg.url,cfg.key,{auth:{persistSession:false,autoRefreshToken:false}});
+ const db=createClient(cfg.url,cfg.key,{auth:{persistSession:false,autoRefreshToken:false},global:{fetch:(request,options)=>{
+  const target=new URL(typeof request==='string'?request:request instanceof URL?request.href:request.url);
+  if(target.origin!==cfg.url)throw new Error('Unexpected fixture backend');
+  return fetch(request,{...options,redirect:'error',signal:AbortSignal.timeout(15000)});
+ }}});
  const payload=Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGPIy8sDAAKYAUtMZgaRAAAAAElFTkSuQmCC', 'base64'));
  for(const fixture of cfg.ids){
   const {data:org,error:orgError}=await db.from('organizations').select('id,is_agency').eq('id',fixture.id).eq('slug',fixture.slug).single();
@@ -33,10 +61,10 @@ export async function uploadSyntheticBranding(env:NodeJS.ProcessEnv){
    continue;
   }
   // Only an actual object-not-found response permits provisioning a new fixture.
-  if(!downloadError||!['404','not_found','NoSuchKey'].some(code=>String(downloadError.message).includes(code)||String((downloadError as {statusCode?:string}).statusCode)===code))
-   throw new Error('Cannot verify fixture status for '+fixture.slug+': '+(downloadError?.message??'unknown error'));
+  if(!await isMissingFixture(downloadError,cfg.url+'/storage/v1/object/branding/'+path))
+   throw new Error('Cannot verify private fixture absence');
   const {error}=await db.storage.from('branding').upload(path,payload,{contentType:'image/png',upsert:false});
-  if(error)throw new Error('Storage fixture upload failed for '+fixture.slug+': '+error.message);
+  if(error)throw new Error('Storage fixture upload failed');
   process.stdout.write('CREATED '+fixture.slug+' '+path+'\n');
  }
 }

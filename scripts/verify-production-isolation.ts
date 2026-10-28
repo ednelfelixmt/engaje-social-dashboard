@@ -6,7 +6,7 @@ export const existingIsolationFixtures=[
 ] as const;
 export const isolationTables=[
  ['organizations','id','scoped'],['organization_members','organization_id','scoped'],['dashboard_configs','organization_id','scoped'],
- ['integrations','organization_id','denied'],['metrics_ads','organization_id','scoped'],['metrics_ads_breakdowns','organization_id','scoped'],
+ ['integrations','organization_id','scoped'],['metrics_ads','organization_id','scoped'],['metrics_ads_breakdowns','organization_id','scoped'],
  ['metrics_organic','organization_id','scoped'],['metrics_crm','organization_id','scoped'],['creatives','organization_id','scoped'],
  ['client_asset_assignments','organization_id','scoped'],['sync_jobs','organization_id','scoped'],['integration_alerts','organization_id','scoped'],
 ] as const;
@@ -42,9 +42,9 @@ export class IsolationEvidenceError extends Error{
 function assert(value:unknown,message:string,status:'FAIL'|'NOT PROVEN'='FAIL'):asserts value{
  if(!value)throw new IsolationEvidenceError(status,message);
 }
-function requireDenied(result:{data:unknown;error:{code?:string}|null;count?:number|null},table:string){
- assert(!!result.error,'administrative table unexpectedly readable for '+table);
- assert(result.error.code==='42501'&&result.data===null&&(result.count===null||result.count===undefined),'administrative denial unavailable for '+table,'NOT PROVEN');
+function requireDenied(result:{data:unknown;error:{code?:string}|null;count?:number|null;status?:number},table:string){
+ assert(!!result.error,'protected credential column unexpectedly readable for '+table);
+ assert(result.status===403&&result.error.code==='42501'&&result.data===null&&(result.count===null||result.count===undefined),'administrative denial unavailable for '+table,'NOT PROVEN');
 }
 async function verifyPrivateFile(url:string,backend:string,path:string){
  try{
@@ -68,16 +68,8 @@ async function verifyPrivateFile(url:string,backend:string,path:string){
 export async function verifyTenantReadEvidence(clients:readonly SupabaseClient[],ids:readonly string[]){
  assert(clients.length===2&&ids.length===2&&ids[0]!==ids[1],'two distinct fixture contexts');
   // Empty datasets or denied own reads do not prove cross-tenant isolation.
-  for(let i=0;i<2;i++)for(const [table,field,access] of isolationTables){
-   const own=access==='denied'
-    ?await clients[i].from(table).select(field).eq(field,ids[i]).limit(0)
-    :await clients[i].from(table).select(field,{head:true,count:'exact'}).eq(field,ids[i]);
-   if(access==='denied'){
-    requireDenied(own,table);
-    requireDenied(await clients[i].from(table).select(field).neq(field,ids[i]).limit(0),table);
-    requireDenied(await clients[i].from(table).select(field).limit(0),table);
-    continue;
-   }
+  for(let i=0;i<2;i++)for(const [table,field] of isolationTables){
+   const own=await clients[i].from(table).select(field,{head:true,count:'exact'}).eq(field,ids[i]);
    assert(!own.error&&typeof own.count==='number'&&Number.isSafeInteger(own.count)&&own.count>0,'positive own fixture/read required for '+table,'NOT PROVEN');
    const foreign=await clients[i].from(table).select(field,{head:true,count:'exact'}).neq(field,ids[i]);
    assert(!foreign.error&&typeof foreign.count==='number'&&Number.isSafeInteger(foreign.count)&&foreign.count>=0,'foreign count unavailable for '+table,'NOT PROVEN');
@@ -85,6 +77,13 @@ export async function verifyTenantReadEvidence(clients:readonly SupabaseClient[]
    const visible=await clients[i].from(table).select(field,{head:true,count:'exact'});
    assert(!visible.error&&typeof visible.count==='number'&&Number.isSafeInteger(visible.count)&&visible.count>=0,'visible count unavailable for '+table,'NOT PROVEN');
    assert(visible.count===own.count,'visible count differs from own scope for '+table,'NOT PROVEN');
+   // Safe integration metadata is readable under tenant RLS; the Vault reference is not.
+   // GET limit(0) preserves SQLSTATE without retrieving any credential references.
+   if(table==='integrations'){
+    requireDenied(await clients[i].from(table).select('credential_secret_id').eq(field,ids[i]).limit(0),table);
+    requireDenied(await clients[i].from(table).select('credential_secret_id').neq(field,ids[i]).limit(0),table);
+    requireDenied(await clients[i].from(table).select('credential_secret_id').limit(0),table);
+   }
   }
 }
 export async function verifyProductionIsolation(env:NodeJS.ProcessEnv){
@@ -124,13 +123,10 @@ export async function verifyProductionIsolation(env:NodeJS.ProcessEnv){
   await verifyTenantReadEvidence(clients,ids);
   for(let i=0;i<2;i++){
    const client=clients[i],foreign=ids[1-i];
-   for(const [table,field,access] of isolationTables){
-    const {data,error}=await client.from(table).select(field).eq(field,foreign).limit(access==='denied'?0:1);
-    if(access==='denied')requireDenied({data,error},table);
-    else{
+   for(const [table,field] of isolationTables){
+    const {data,error}=await client.from(table).select(field).eq(field,foreign).limit(1);
      assert(!error&&Array.isArray(data),'foreign read unavailable for '+table,'NOT PROVEN');
      assert(data.length===0,'foreign table '+table);
-    }
    }
    const {data:connections,error:connectionError}=await client.from('platform_connections').select('id').eq('target_organization_id',foreign).limit(1);
    assert(!connectionError&&Array.isArray(connections),'foreign platform connections unavailable','NOT PROVEN');
