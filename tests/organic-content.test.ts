@@ -71,3 +71,18 @@ test('captions are capped without broken surrogate characters, input remains unc
  const file=organicContentFilename({...report,scope:{...scope,organizationSlug:'../../evil/name',from:'../../2026-10-20',to:'../../2026-10-21'}});
  assert.ok(!file.includes('/'));assert.ok(!file.includes('..'));
 });
+
+test('DATA-ORG-TZ-001: invalid UTC offsets cannot validate organic publication or collection evidence',()=>{
+ for(const published_at of ['2026-10-20T12:00:00+14:01','2026-10-20T12:00:00-15:00','2026-10-20T12:00:00+23:59']){
+  assert.throws(()=>buildOrganicContentReport([post({published_at})],scope),undefined,published_at);
+ }
+ for(const synced_at of ['2026-10-21T12:00:00+14:01','2026-10-21T12:00:00-15:00']){
+  const row=buildOrganicContentReport([post({synced_at})],scope).rows[0];
+  assert.equal(row.snapshotValid,false,synced_at);
+  assert.equal(row.collectedAt,null);
+  assert.equal(row.likes,null);
+ }
+ const boundary=buildOrganicContentReport([post({published_at:'2026-10-20T14:00:00+14:00'})],scope).rows[0];
+ assert.equal(boundary.publishedAt,'2026-10-20T00:00:00.000Z');
+ assert.equal(boundary.likes,0);
+});
