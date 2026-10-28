@@ -1,6 +1,6 @@
 import type {CampaignPerformance} from '@/types/domain';
+import {isRfcOrganizationUuid} from './organization-scope';
 
-const uuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const currencyCode = /^[A-Z]{3}$/;
 
 /**
@@ -29,7 +29,7 @@ export function scopedWorkspaceMeasurements(
   authorizedOrganizationId: string,
   selectedCurrency: string,
 ): CampaignPerformance[] {
-  if (!uuid.test(authorizedOrganizationId) || !currencyCode.test(selectedCurrency)
+  if (!isRfcOrganizationUuid(authorizedOrganizationId) || !currencyCode.test(selectedCurrency)
     || rows.some(row => row.organizationId !== authorizedOrganizationId
       || (hasWorkspaceMeasurements(row)
         ? row.currency !== selectedCurrency

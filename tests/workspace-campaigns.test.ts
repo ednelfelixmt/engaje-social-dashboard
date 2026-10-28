@@ -116,3 +116,18 @@ test('executive KPIs, platform KPIs and rankings consume scoped measured rows', 
   assert.match(executive, /const campaigns=\[\.\.\.rows\]\.sort\(/);
   assert.doesNotMatch(executive, /const campaigns=\[\.\.\.rows\]\.filter\(/);
 });
+
+test('SEC-CAMP-UUID-001: workspace rejects malformed RFC UUIDs even with no measurements',()=>{
+  for(const invalidId of [
+    '11111111-1111-0111-8111-111111111111',
+    '11111111-1111-9111-8111-111111111111',
+    '11111111-1111-4111-7111-111111111111',
+    '11111111-1111-4111-8111-111111111111x',
+  ]){
+    assert.throws(()=>scopedWorkspaceMeasurements([],invalidId,'BRL'),/authorized organization and currency/,invalidId);
+    assert.throws(()=>scopedWorkspaceMeasurements([observed({organizationId:invalidId})],invalidId,'BRL'),/authorized organization and currency/);
+  }
+  const validV7='01933a7b-4f88-7a12-8d29-111111111111';
+  assert.deepEqual(scopedWorkspaceMeasurements([],validV7,'BRL'),[]);
+  assert.equal(scopedWorkspaceMeasurements([observed({organizationId:validV7})],validV7,'BRL').length,1);
+});
