@@ -15,6 +15,9 @@ export type RevenueReport = {scope: RevenueScope; current: RevenuePeriod; previo
 const organizationUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const channels = ['meta_ads', 'google_ads', 'tiktok_ads', 'organic', 'direct', 'unattributed'];
 const account = (row: Fact) => row.channel === 'meta_ads' ? row.account_id.replace(/^act_/, '') : row.account_id;
+/** Opaque source IDs may contain internal spaces, but never silent edge padding. */
+const validOpaqueId = (value: unknown, allowEmpty = false): value is string =>
+ typeof value === 'string' && (allowEmpty || value.length > 0) && value.trim() === value;
 /** Supabase provenance is an instant, never a normalized impossible local time. */
 function sourceTimestamp(value: unknown): number | null {
  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?(?:Z|[+-](?:(?:0\d|1[0-3]):[0-5]\d|14:00))$/.test(value)) return null;
@@ -28,7 +31,7 @@ function period(rows: readonly Fact[], scope: RevenueScope, range: {from: string
  let selected = 0;
  for (const row of rows) {
   if (row.organization_id !== scope.organizationId || row.currency !== scope.currency || !allowed.has(row.metric_date) || !['crm', 'spreadsheet'].includes(row.source)) throw new Error('Revenue report scope mismatch');
-  if (!row.id || !channels.includes(row.channel) || typeof row.account_id !== 'string' || typeof row.campaign_id !== 'string' || (row.account_id && !account(row)) || (row.campaign_id && (!account(row) || !['meta_ads', 'google_ads', 'tiktok_ads'].includes(row.channel)))) throw new Error('Invalid revenue report grain');
+  if (!validOpaqueId(row.id) || !channels.includes(row.channel) || !validOpaqueId(row.account_id, true) || !validOpaqueId(row.campaign_id, true) || (row.account_id && !account(row)) || (row.campaign_id && (!account(row) || !['meta_ads', 'google_ads', 'tiktok_ads'].includes(row.channel)))) throw new Error('Invalid revenue report grain');
   const grain = JSON.stringify([row.source, row.metric_date, row.channel, account(row), row.campaign_id]);
   if (ids.has(row.id) || grains.has(grain)) throw new Error('Duplicate revenue report grain');
   ids.add(row.id); grains.add(grain);

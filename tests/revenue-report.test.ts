@@ -100,3 +100,30 @@ test('comparison none and calendar leap-year behavior remain explicit; malformed
  const leap=buildRevenueReport([],[],{...scope,from:'2024-02-29',to:'2024-02-29',compare:'previous_year'});assert.equal(leap.previous?.from,'2023-02-28');
  for(const patch of [{from:'2026-02-30'},{currency:'brl'},{source:'all'},{timezone:'Invalid/zone'}])assert.throws(()=>buildRevenueReport([],[],{...scope,...patch} as RevenueScope));
 });
+
+test('revenue grain rejects padded and blank opaque record IDs without silently normalizing them', () => {
+ for (const id of ['', ' ', '\trow', 'row\n', '\u00a0row', 'row\u00a0']) {
+  assert.throws(() => buildRevenueReport([fact({id})], [], {...scope, compare:'none'}), /Invalid revenue report grain/, JSON.stringify(id));
+ }
+ // Even unselected financial sources are validated before filtering or totaling.
+ assert.throws(() => buildRevenueReport([fact({source:'spreadsheet', id:'sheet '})], [], {...scope, compare:'none'}), /Invalid revenue report grain/);
+ assert.throws(() => buildRevenueReport([], [fact({id:' prior ', metric_date:'2026-10-18'})], scope), /Invalid revenue report grain/);
+});
+
+test('revenue grain rejects padded provider accounts and campaigns while preserving valid opaque IDs and recorded zeros', () => {
+ const accepted = buildRevenueReport([fact({
+  id:'synthetic-opaque', channel:'google_ads', account_id:'account region 01',
+  campaign_id:'campaign segment 02', revenue:0, purchases:0, leads:0, checkouts:0,
+ })], [], {...scope, to:scope.from, compare:'none'});
+ assert.equal(accepted.current.totals.revenue, 0);
+ assert.equal(accepted.current.totals.purchases, 0);
+ assert.equal(accepted.current.records, 1);
+ for (const account_id of [' account', 'account ', '\taccount', 'act_ ', '\u00a0account']) {
+  assert.throws(() => buildRevenueReport([fact({channel:'meta_ads', account_id, campaign_id:'campaign'})], [], {...scope, compare:'none'}), /Invalid revenue report grain/, JSON.stringify(account_id));
+ }
+ for (const campaign_id of [' campaign', 'campaign ', '\tcampaign', 'campaign\n', '  ']) {
+  assert.throws(() => buildRevenueReport([fact({channel:'google_ads', account_id:'account', campaign_id})], [], {...scope, compare:'none'}), /Invalid revenue report grain/, JSON.stringify(campaign_id));
+ }
+ // Empty optional IDs stay valid for unattributed revenue; they are not padding.
+ assert.equal(buildRevenueReport([fact({revenue:0})], [], {...scope,to:scope.from,compare:'none'}).current.totals.revenue, 0);
+});
