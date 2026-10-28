@@ -1,4 +1,5 @@
 import type {Row} from '@/types/database.types';
+import {z} from 'zod';
 import {calendarDays} from '@/lib/metrics/calendar';
 import {finiteRatio, sum} from '@/lib/metrics/aggregation';
 
@@ -19,12 +20,13 @@ export function breakdownMetricValue(row: BreakdownPoint, metric: BreakdownMetri
 export type AudienceReportScope = {organizationId: string; organizationName: string; organizationSlug: string; timezone: string; platform: 'meta_ads' | 'google_ads'; currency: string; from: string; to: string; generatedAt: string};
 export type AudienceReportRow = BreakdownPoint & {value: string; sourceIds: string[]; coverage: Record<typeof metrics[number], number>};
 export type AudienceReport = {scope: AudienceReportScope; groups: Record<AudienceDimension, AudienceReportRow[]>; sourceRecords: number; omittedRecords: number; attributionWindow: string | null};
+const organizationUuid = z.string().uuid();
 const labels: Record<string, string> = {male: 'Masculino', female: 'Feminino', unknown: 'Não informado', desktop: 'Desktop', mobile_app: 'Mobile — aplicativo', mobile_web: 'Mobile — navegador', mobile: 'Mobile', tablet: 'Tablet'};
 
 /** Only one authenticated scope and one reported attribution window may be consolidated. */
 export function buildAudienceReport(rows: readonly Row<'metrics_ads_breakdowns'>[], scope: AudienceReportScope): AudienceReport {
  const days = new Set(calendarDays(scope.from, scope.to));
- if (!scope.organizationId || !scope.organizationSlug || !['meta_ads', 'google_ads'].includes(scope.platform) || !/^[A-Z]{3}$/.test(scope.currency) || !Number.isFinite(Date.parse(scope.generatedAt))) throw new Error('Invalid audience report scope');
+ if (!organizationUuid.safeParse(scope.organizationId).success || !scope.organizationSlug || !['meta_ads', 'google_ads'].includes(scope.platform) || !/^[A-Z]{3}$/.test(scope.currency) || !Number.isFinite(Date.parse(scope.generatedAt))) throw new Error('Invalid audience report scope');
  if (new Date(scope.generatedAt).toISOString() !== scope.generatedAt) throw new Error('Report timestamp must be canonical UTC');
  new Intl.DateTimeFormat('pt-BR', {timeZone: scope.timezone});
  const seenIds = new Set<string>(), seenGrains = new Set<string>();
