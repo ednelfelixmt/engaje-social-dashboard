@@ -27,3 +27,17 @@ test('actual tenant dashboard uses selected end date and handles unavailable sou
  assert.match(source,/currentPeriodFreshness\(ads\.map\(r=>r\.metric_date\),f\.to,today\)/);
  assert.match(source,/freshness\?\.status==='empty'/);
 });
+
+test('DATA-FRESH-MIXED-001: fresh and delayed periods expose mixed impossible or future source dates',()=>{
+ assert.deepEqual(currentPeriodFreshness(['2026-10-26','2026-02-30','2026-10-27'],'2026-10-26','2026-10-26'),{status:'invalid',latest:'2026-10-26',daysOld:0});
+ assert.deepEqual(currentPeriodFreshness(['2026-10-22','2026-10-27'],'2026-10-26','2026-10-26'),{status:'invalid',latest:'2026-10-22',daysOld:4});
+ assert.deepEqual(currentPeriodFreshness(['2026-10-26','2026-10-25'],'2026-10-26','2026-10-26'),null);
+});
+
+test('DATA-FRESH-MIXED-001: invalid-only sources remain unavailable and historical dates receive no warning',()=>{
+ assert.deepEqual(currentPeriodFreshness(['2026-02-30','2026-10-27'],'2026-10-26','2026-10-26'),{status:'empty',latest:null,daysOld:null});
+ assert.equal(currentPeriodFreshness(['2026-10-25','2026-02-30'],'2026-10-25','2026-10-26'),null);
+ const page=readFileSync(new URL('../src/app/(tenant)/[organizationSlug]/[section]/page.tsx',import.meta.url),'utf8');
+ assert.match(page,/freshness\?\.status==='invalid'/);
+ assert.match(page,/Datas de anúncios inconsistentes/);
+});

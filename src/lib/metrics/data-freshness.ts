@@ -1,4 +1,4 @@
-export type Freshness = {status:'empty'|'recent'|'delayed';latest:string|null;daysOld:number|null};
+export type Freshness = {status:'empty'|'recent'|'delayed'|'invalid';latest:string|null;daysOld:number|null};
 /** Data age is measured against the tenant's business date, never the browser time zone. */
 export function paidDataFreshness(dates:readonly string[],businessDate:string):Freshness{
  const valid=(value:string)=>/^\d{4}-\d{2}-\d{2}$/.test(value)&&Number.isFinite(Date.parse(value+'T00:00:00Z'))&&new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value;
@@ -17,5 +17,10 @@ export function paidDataFreshness(dates:readonly string[],businessDate:string):F
 export function currentPeriodFreshness(dates:readonly string[],selectedTo:string,businessDate:string):Freshness|null{
  if(selectedTo!==businessDate||dates.length===0)return null;
  const result=paidDataFreshness(dates,businessDate);
+ // When no historical date is valid, retain the existing unavailable warning.
+ if(result.status==='empty')return result;
+ // A fresh valid day must not conceal impossible or future source dates.
+ if(dates.some(day=>!/^\d{4}-\d{2}-\d{2}$/.test(day)||!Number.isFinite(Date.parse(day+'T00:00:00Z'))||new Date(day+'T00:00:00Z').toISOString().slice(0,10)!==day||day>businessDate))
+  return {...result,status:'invalid'};
  return result.status==='recent'?null:result;
 }
