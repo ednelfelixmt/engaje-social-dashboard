@@ -76,6 +76,8 @@ export default tseslint.config(
       'tests/dashboard-daily.test.ts',
       'src/lib/metrics/delta.ts',
       'tests/delta.test.ts',
+      'src/lib/metrics/strategic-comparison.ts',
+      'tests/strategic-comparison.test.ts',
       'src/lib/export/target-references.ts',
       'src/components/dashboard/target-references-export.tsx',
       'tests/target-references-export.test.ts',
