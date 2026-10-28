@@ -107,7 +107,7 @@ test('revenue grain rejects padded and blank opaque record IDs without silently 
  }
  // Even unselected financial sources are validated before filtering or totaling.
  assert.throws(() => buildRevenueReport([fact({source:'spreadsheet', id:'sheet '})], [], {...scope, compare:'none'}), /Invalid revenue report grain/);
- assert.throws(() => buildRevenueReport([], [fact({id:' prior '})], scope), /Invalid revenue report grain/);
+ assert.throws(() => buildRevenueReport([], [fact({id:' prior ', metric_date:'2026-10-18'})], scope), /Invalid revenue report grain/);
 });
 
 test('revenue grain rejects padded provider accounts and campaigns while preserving valid opaque IDs and recorded zeros', () => {
