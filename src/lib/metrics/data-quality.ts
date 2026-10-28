@@ -13,7 +13,7 @@ export type QualityHealth={platform:QualityPlatform;campaigns:number;rows:number
 export type QualityJobView={id:string;status:'queued'|'running'|'completed'|'failed'|'unknown';createdAt:string|null;startedAt:string|null;completedAt:string|null;recordedCount:number|null;durationMs:number|null;timelineInvalid:boolean};
 function validDate(value:unknown):value is string{if(typeof value!=='string')return false;try{calendarDays(value,value);return true;}catch{return false;}}
 function timestamp(value:unknown):bigint|null{
- if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/.test(value)||!validDate(value.slice(0,10)))return null;
+ if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?(?:Z|[+-](?:(?:0\d|1[0-3]):[0-5]\d|14:00))$/.test(value)||!validDate(value.slice(0,10)))return null;
  const ms=Date.parse(value);if(!Number.isFinite(ms))return null;
  const fractional=value.match(/\.(\d{1,6})/)?.[1]??'';return BigInt(ms)*1000n+BigInt(fractional.padEnd(6,'0').slice(3));
 }
