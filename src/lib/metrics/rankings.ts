@@ -75,17 +75,34 @@ function add(current:RankedPerformance|undefined,row:RankedPerformance):RankedPe
 
 function aggregateBreakdowns(rows:Row<'metrics_ads_breakdowns'>[],type:RankingDimension){
   const grouped=new Map<string,RankedPerformance>();
+  const labels=new Map<string,Set<string>>();
+  const dimensionValues=new Map<string,string>();
   for(const row of rows){
     if(row.dimension_type!==type)continue;
     // The same demographic value may aggregate across accounts only within a tenant/currency.
     const key=JSON.stringify([row.organization_id,row.platform,row.currency,row.dimension_value]);
+    // Provider labels can differ across accounts or syncs. The first row must
+    // not arbitrarily determine what the user sees for a combined dimension.
+    const displayLabel=row.dimension_label?.trim();
+    if(displayLabel){
+      const candidates=labels.get(key)??new Set<string>();
+      candidates.add(displayLabel);
+      labels.set(key,candidates);
+    }
+    dimensionValues.set(key,row.dimension_value);
     grouped.set(key,add(grouped.get(key),{
       key,label:row.dimension_label,spend:checkedSpend(row.spend),
       revenue:known(row.revenue),impressions:knownCount(row.impressions),
       clicks:knownCount(row.clicks),leads:knownCount(row.leads),purchases:knownCount(row.purchases),
     }));
   }
-  return [...grouped.values()];
+  return [...grouped].map(([key,result])=>{
+    const candidates=labels.get(key);
+    // A single label is trustworthy; conflicts or absent labels fall back to
+    // the actual dimension value, never a row-order-dependent translation.
+    const label=candidates?.size===1?[...candidates][0]:dimensionValues.get(key);
+    return {...result,label:label??result.label};
+  });
 }
 
 /** Only Meta's act_ prefix aliases its numeric account ID; other providers stay literal. */
