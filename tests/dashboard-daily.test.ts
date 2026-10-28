@@ -87,3 +87,19 @@ test('production dashboard feeds all three read-only chart surfaces from the gua
   assert.match(executive, /export type ExecutiveDay=\{date:string;spend:number\|null;/);
   assert.match(platform, /export type PlatformDay=\{date:string;spend:number\|null;/);
 });
+
+test('dashboard daily guard rejects UUIDs with invalid version/variant even with no measurements', () => {
+ for (const invalid of ['11111111-1111-0111-8111-111111111111','11111111-1111-4111-7111-111111111111','11111111-1111-9111-8111-111111111111']) {
+  assert.throws(() => scopedDashboardPaidDays([], invalid, 'BRL'), /authorized organization and currency/);
+  assert.throws(() => scopedDashboardPaidDays([row('2026-10-26', {spend: 0})], invalid, 'BRL'), /authorized organization and currency/);
+ }
+ assert.deepEqual(scopedDashboardPaidDays([], '11111111-1111-7111-8111-111111111111', 'BRL'), []);
+});
+
+test('dashboard daily guard rejects impossible dates before producing a partial timeline', () => {
+ for (const invalid of ['2026-02-29','2026-02-30','2026-04-31','2026-13-01','2026-2-01','2026-10-26T00:00:00Z']) {
+  assert.throws(() => dashboardPaidDays([row('2026-10-25'), row(invalid, {spend: 0})], 'BRL'), /valid ISO calendar days/, invalid);
+  assert.throws(() => dashboardPaidDays([row(invalid)], 'BRL'), /valid ISO calendar days/, invalid);
+ }
+ assert.equal(dashboardPaidDays([row('2024-02-29')], 'BRL')[0].date, '2024-02-29');
+});
