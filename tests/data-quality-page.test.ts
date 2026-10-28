@@ -39,3 +39,16 @@ test('paginated metric reads keep the tenant filter and reject a foreign row aft
 test('future-only data stays visibly invalid and job default counters are unavailable rather than processed zero',async()=>{
  reset();sources.metrics_ads=[{...metric,metric_date:'2099-01-01',synced_at:'2099-01-02T00:00:00Z'}];sources.sync_jobs=[{id:'job-1',organization_id:org.id,status:'queued',created_at:'2026-10-20T12:00:00Z',started_at:null,completed_at:null,rows_processed:0}];const html=renderToStaticMarkup(await Page(props()));for(const text of ['Sem data histórica válida','Existem registros','Datas futuras: 1','Coletas desconhecidas ou futuras: 1','Na fila','Contador final registrado','Indisponível'])assert.ok(html.includes(text),text);assert.ok(!html.includes('0 registros'));assert.ok(!html.includes('Invalid Date'));assert.ok(!html.includes('NaN'));assert.ok(!html.includes('Última data recente'));
 });
+
+
+test('DATAQUAL-MIXED-DATE-001: admin UI labels mixed dates as inconsistent rather than healthy or missing',async()=>{
+ reset();sources.metrics_ads=[metric,{...metric,id:'future',metric_date:'2099-01-01'}];
+ const html=renderToStaticMarkup(await Page(props()));
+ assert.ok(html.includes('Datas inconsistentes'));
+ assert.ok(html.includes('Datas futuras: 1'));
+ assert.ok(html.includes('20/10/2026'));
+ assert.ok(!html.includes('Última data recente'));
+ assert.ok(!html.includes('Última data antiga'));
+ assert.ok(!html.includes('Sem data histórica válida'));
+ assert.ok(!html.includes('Nenhum indicador parcial'));
+});
