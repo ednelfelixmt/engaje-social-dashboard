@@ -5,7 +5,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {loadTypescript} from './helpers/load-typescript';
 import {buildPerformanceReport} from '../src/lib/reports/performance-report';
 import type {Row} from '../src/types/database.types';
-const scope={organizationId:'synthetic',organizationName:'Synthetic organization',organizationSlug:'synthetic',timezone:'America/Cuiaba',currency:'BRL',from:'2026-10-20',to:'2026-10-20',compare:'previous_period' as const,generatedAt:'2026-10-26T12:00:00.000Z'};
+const scope={organizationId:'11111111-1111-4111-8111-111111111111',organizationName:'Synthetic organization',organizationSlug:'synthetic',timezone:'America/Cuiaba',currency:'BRL',from:'2026-10-20',to:'2026-10-20',compare:'previous_period' as const,generatedAt:'2026-10-26T12:00:00.000Z'};
 const fact={id:'synthetic-fact',organization_id:scope.organizationId,platform:'meta_ads',account_id:'act_123',campaign_id:'synthetic',campaign_name:'Synthetic campaign <script>private</script>',ad_id:'synthetic-ad',metric_date:scope.from,currency:'BRL',spend:100,impressions:1000,clicks:20,leads:null,attribution_window:'7d_click'} as Row<'metrics_ads'>;
 let error='',effects:(()=>void|(()=>void))[]=[],prints=0,failed=false;
 const {PerformanceReportPrint}=loadTypescript<{PerformanceReportPrint:(p:{disabled?:boolean})=>React.ReactElement}>(new URL('../src/components/dashboard/performance-report-print.tsx',import.meta.url),(id,native)=>{

@@ -7,7 +7,7 @@ import {buildCampaignReport} from '../src/lib/reports/campaign-report';
 import {buildPerformanceReport,type PerformanceScope} from '../src/lib/reports/performance-report';
 import {CampaignReportView} from '../src/components/dashboard/campaign-report';
 import {loadTypescript} from './helpers/load-typescript';
-const scope:PerformanceScope={organizationId:'synthetic-a',organizationName:'Synthetic A',organizationSlug:'synthetic-a',timezone:'America/Cuiaba',currency:'BRL',from:'2026-10-20',to:'2026-10-21',compare:'previous_period',generatedAt:'2026-10-26T12:00:00.000Z'};
+const scope:PerformanceScope={organizationId:'11111111-1111-4111-8111-111111111111',organizationName:'Synthetic A',organizationSlug:'synthetic-a',timezone:'America/Cuiaba',currency:'BRL',from:'2026-10-20',to:'2026-10-21',compare:'previous_period',generatedAt:'2026-10-26T12:00:00.000Z'};
 const selection={platform:'meta_ads' as const,account:'123',campaign:'synthetic'};
 const fact={id:'synthetic',organization_id:scope.organizationId,metric_date:scope.from,platform:'meta_ads',account_id:'act_123',campaign_id:'synthetic',campaign_name:'Campaign <script>unsafe</script>',ad_id:'synthetic-ad',currency:'BRL',spend:0,impressions:0,clicks:0,leads:0,attribution_window:'7d_click'} as Row<'metrics_ads'>;
 
