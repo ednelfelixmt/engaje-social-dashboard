@@ -107,11 +107,11 @@ test('SEC-DECISION-GRAIN-001: malformed provider, account or campaign identities
     {accountId: ' act_123'},
     {accountId: 'act_123 '},
     {accountId: 'act_ '},
-    {accountId: '\\t123'},
+    {accountId: '\t123'},
     {campaignId: ' '},
     {campaignId: ' shared-campaign-id'},
     {campaignId: 'shared-campaign-id '},
-    {campaignId: '\\t'},
+    {campaignId: '\t'},
   ];
   for (const override of malformed) {
     const source = campaign(override);
