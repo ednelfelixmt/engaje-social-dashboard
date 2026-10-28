@@ -1,3 +1,5 @@
+import {isValidCalendarDay} from './calendar';
+import {isRfcOrganizationUuid} from './organization-scope';
 import type {Row} from '@/types/database.types';
 import {paidTotals} from './paid-metrics';
 
@@ -24,10 +26,14 @@ export function buildIntelligenceTimeline(
 ): IntelligenceDailyPoint[] {
   // Even an empty result must be associated with a valid authenticated scope.
   // Reject the entire result before aggregating: never produce a partial cross-tenant chart.
-  if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(authorizedOrganizationId)
+  if (!isRfcOrganizationUuid(authorizedOrganizationId)
     || !/^[A-Z]{3}$/.test(selectedCurrency)
     || rows.some(row => row.organization_id !== authorizedOrganizationId || row.currency !== selectedCurrency)) {
     throw new Error('Intelligence timeline requires authorized organization and currency');
+  }
+  // Fail closed for the entire timeline, not only the malformed daily row.
+  if (rows.some(row => !isValidCalendarDay(row.metric_date))) {
+    throw new Error('Intelligence timeline requires valid ISO calendar days');
   }
   const byDate = new Map<string, IntelligenceDailyFact[]>();
   for (const row of rows) {

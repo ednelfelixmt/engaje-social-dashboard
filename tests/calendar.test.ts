@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {alignCalendarPeriods,calendarDays,comparisonPeriod} from '../src/lib/metrics/calendar';
+import {alignCalendarPeriods,calendarDays,comparisonPeriod,isValidCalendarDay} from '../src/lib/metrics/calendar';
 
 test('calendar includes each day and validates leap day and dates',()=>{
  assert.deepEqual(calendarDays('2024-02-28','2024-03-01'),['2024-02-28','2024-02-29','2024-03-01']);
@@ -54,4 +54,13 @@ test('two calendar years include a leap day and the shifted comparison remains r
  const period = comparisonPeriod('2024-03-01', '2026-03-01', 'previous_year');
  assert.equal(calendarDays(period.from, period.to).length, 732);
  assert.throws(() => calendarDays('2024-02-29', '2026-03-01'));
+});
+
+test('calendar day predicate refuses impossible, rolled-over and noncanonical dates', () => {
+ for (const invalid of ['2026-02-29','2026-02-30','2026-04-31','2026-13-01','2026-2-01','2026-10-01T00:00:00Z','not-a-date']) {
+  assert.equal(isValidCalendarDay(invalid),false,invalid);
+ }
+ for (const valid of ['2024-02-29','2026-02-28','2026-12-31']) {
+  assert.equal(isValidCalendarDay(valid),true,valid);
+ }
 });
