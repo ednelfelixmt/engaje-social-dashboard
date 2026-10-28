@@ -97,3 +97,34 @@ test('decision comparison accepts legitimate v7 identity but not a different ten
   assert.equal(findComparableCampaign(current, [previous]), previous);
   assert.equal(findComparableCampaign(current, [campaign({organizationId: orgA})]), null);
 });
+
+test('SEC-DECISION-GRAIN-001: malformed provider, account or campaign identities never match themselves', () => {
+  const malformed: Partial<CampaignPerformance>[] = [
+    {platform: ' ' as CampaignPerformance['platform']},
+    {platform: ' meta_ads' as CampaignPerformance['platform']},
+    {platform: 'meta_ads ' as CampaignPerformance['platform']},
+    {accountId: ' '},
+    {accountId: ' act_123'},
+    {accountId: 'act_123 '},
+    {accountId: 'act_ '},
+    {accountId: '\\t123'},
+    {campaignId: ' '},
+    {campaignId: ' shared-campaign-id'},
+    {campaignId: 'shared-campaign-id '},
+    {campaignId: '\\t'},
+  ];
+  for (const override of malformed) {
+    const source = campaign(override);
+    assert.equal(findComparableCampaign(source, [source]), null, JSON.stringify(override));
+    assert.equal(findComparableCampaign(campaign(), [source]), null, JSON.stringify(override));
+  }
+});
+
+test('SEC-DECISION-GRAIN-001: clean identities, Meta aliases and measured zero remain comparable', () => {
+  const current = campaign({accountId: 'act_123', spend: 0, leads: 0});
+  const previous = campaign({accountId: '123', spend: 40, leads: 5});
+  assert.equal(findComparableCampaign(current, [previous]), previous);
+  assert.equal(findComparableCampaign(previous, [current]), current);
+  assert.equal(findComparableCampaign(current, [campaign({campaignId: 'shared-campaign-id '})]), null);
+  assert.equal(findComparableCampaign(current, [campaign({platform: 'google_ads'})]), null);
+});
