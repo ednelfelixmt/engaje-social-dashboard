@@ -89,3 +89,28 @@ test('Meta canonical account identity still distinguishes campaigns, dates and p
     assert.equal(result.totals.spend, 350);
   }
 });
+
+
+test('RECON-GRAIN-IDENTITY-001: whitespace-only or padded source identities do not become reconciled facts',()=>{
+ for(const platform of ['', ' ', '\t', 'meta_ads ', ' meta_ads']){
+  assert.equal(reconcilePaidFacts([{...a,platform}]).status,'invalid',JSON.stringify(platform));
+ }
+ for(const accountId of ['', ' ', ' 123', '123 ', '\n123', 'act_', 'act_ ', 'act_ 123', 'act_123 ']){
+  assert.equal(reconcilePaidFacts([{...a,platform:'meta_ads',accountId}]).status,'invalid',JSON.stringify(accountId));
+ }
+ for(const campaignId of ['', ' ', ' c1', 'c1 ', '\tc1']){
+  assert.equal(reconcilePaidFacts([{...a,campaignId}]).status,'invalid',JSON.stringify(campaignId));
+ }
+ // A malformed row cannot inflate a otherwise valid total or masquerade as a second grain.
+ assert.equal(reconcilePaidFacts([a,{...a,accountId:' 1',spend:900}]).status,'invalid');
+ assert.equal(reconcilePaidFacts([a,{...a,campaignId:'10 ',spend:900}]).status,'invalid');
+});
+
+test('RECON-GRAIN-IDENTITY-001: valid identifiers, measured zero and provider-specific Meta aliases remain stable',()=>{
+ const meta={...a,platform:'meta_ads',accountId:'act_123',spend:0};
+ const ready=reconcilePaidFacts([meta]);
+ assert.equal(ready.status,'ready');
+ if(ready.status==='ready')assert.equal(ready.totals.spend,0);
+ assert.equal(reconcilePaidFacts([meta,{...meta,accountId:'123'}]).status,'duplicate_grain');
+ assert.equal(reconcilePaidFacts([{...a,accountId:'internal space',campaignId:'campaign v2'}]).status,'ready');
+});
