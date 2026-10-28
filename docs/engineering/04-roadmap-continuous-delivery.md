@@ -1334,3 +1334,15 @@ Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamen
 - Testes locais na base e1d2fb5:739 aprovados (incluindo140 verificações SQL sintéticas), tipos e arquitetura aprovados; build Next16.4.3 Windows concluído. Lint ampliado aos novos arquivos e 16 sondas HTTP do build aprovadas. Revisão Claude Code oficial somente estática, conferida pelo Codex; CI/Vercel exigem recibos independentes no PR.
 - Seguem pendentes: DELETE em banco descartável, RPC/Storage/UX/agência/OAuth/fontes reais/PDF, SMTP adiado, workflow protegido GitHub e #211. A revisão registrou diferenças de classificação de erro e escopo das signed URLs no runner staging, que não foi executado; corrigir e homologar essa trilha separadamente.
 - Detalhes e limites em `27-homologation-runner-evidence.md`. Integração exige Quality Gate e Vercel aprovados no mesmo head; não contornar cota ou proteção da main.
+
+
+## Atualização 28/10/2026 — INGEST-OPAQUE-ID-001: preservar identidade original no contrato de ingestão
+
+- **Achado em inspeção estática, sem incidente em produção comprovado:** `PaidIngestionFactSchema` usava `z.string().trim()` em `accountId` e `campaignId`. Isso corrigia silenciosamente texto vindo de provedores antes da conciliação, permitindo que identidades distintas ou malformadas fossem tratadas como uma única identidade. A conciliação de fatos já rejeita identificadores externos com espaços nas extremidades.
+- **Correção proposta, independente e reversível:** exigir valor não vazio com `trim()` idêntico ao original, **sem transformar** o ID. Preservar IDs opacos válidos com espaços internos, zeros observados e comportamento atual de alias Meta. A autorização de tenant permanece separada e a ingestão de lote misto continua falhando integralmente.
+- **Testes sintéticos adicionados, ainda sujeitos ao CI:** recusa de campos vazios, whitespace ASCII/Unicode, quebras de linha e IDs prefixados/sufixados; preservação de IDs opacos legítimos e sucesso de conciliação com gasto zero; lote com fato malformado não vira outro grão. Incluídos contrato e suítes no lint incremental.
+- **Gate obrigatório para integrar:** Quality Gate integral e Vercel Preview `success/READY` no SHA final exato, diff inspecionado e PR mergeável. Quality Gate da `main` e produção são verificações posteriores, independentes. Se a Vercel continuar em `build-rate-limit`, **não** fazer merge nem marcar publicação.
+- **Risco/rollback:** um payload antigo anteriormente normalizado poderá passar a ser rejeitado e exigir saneamento na fonte. Reverter somente esta validação se uma regressão real justificar, sem alterar segurança de tenant ou voltar a mesclar fatos de origem incerta.
+- **Dependências fora do escopo:** PRs #239–#242 pendentes de Vercel, #149 conflitado e #157 draft; #211 migrações Supabase, #220 cota Vercel. HOM-REAL-002 possui evidência A/B parcial de leitura, não homologação total de DELETE, RPC, Storage escrita, sessão, UX, OAuth, PDFs ou release comercial.
+- **Preservação:** nenhuma migração, SQL, dado de cliente, credencial, sessão, RLS, Storage, Auth, permissão, Edge Function ou fluxo de escrita é modificado por este pacote.
+

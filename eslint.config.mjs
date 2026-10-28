@@ -7,6 +7,10 @@ export default tseslint.config(
   {ignores:['node_modules/**','.next/**']},
   {
     files:[
+      'src/lib/integrations/paid-ingestion-contract.ts',
+      'tests/paid-ingestion-contract.test.ts',
+      'src/lib/metrics/ingestion-reconciliation.ts',
+      'tests/ingestion-reconciliation.test.ts',
       'scripts/supabase-public-key.ts',
       'scripts/upload-phase02-branding-fixtures.ts',
       'tests/phase02-storage-absence.test.ts',
