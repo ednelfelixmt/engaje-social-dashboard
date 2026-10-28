@@ -16,6 +16,34 @@ test('revenue scope rejects non-UUID organizations before any source or period a
  assert.equal(buildRevenueReport([],[],{...scope,organizationId:scope.organizationId.toUpperCase(),compare:'none'}).current.records,0);
 });
 
+test('revenue scope rejects invalid UUID version or variant even with an empty input',()=>{
+ for (const organizationId of ['00000000-0000-0000-0000-000000000000','11111111-1111-0111-8111-111111111111','11111111-1111-4111-7111-111111111111']) {
+  assert.throws(()=>buildRevenueReport([],[],{...scope,organizationId,compare:'none'}),/Invalid revenue report scope/);
+  assert.throws(()=>buildRevenueReport([fact({organization_id:organizationId})],[],{...scope,organizationId,compare:'none'}),/Invalid revenue report scope/);
+ }
+});
+
+test('invalid CRM synchronization offsets and calendar dates never become verified provenance',()=>{
+ const invalid=['2026-10-22T12:00:00+23:59','2026-10-22T12:00:00-15:00','2026-10-22T12:00:00+14:01','2026-10-22T12:00:00-14:01','2026-02-30T12:00:00Z','2026-10-22T24:00:00Z','2026-10-22T12:00:60Z'];
+ for (const synced_at of invalid) {
+  const report=buildRevenueReport([fact({revenue:0,synced_at})],[],{...scope,to:scope.from,compare:'none'});
+  assert.equal(report.current.days[0].syncedAt,null,synced_at);
+  assert.equal(report.current.days[0].values.revenue,0,'Observed zero must not be hidden by malformed collection provenance');
+ }
+});
+
+test('valid CRM UTC boundaries and microsecond timestamps preserve deterministic latest synchronization',()=>{
+ const timestamps=['2026-10-22T12:00:00+14:00','2026-10-22T12:00:00-14:00','2026-10-22T12:00:00.123456Z'];
+ for (const synced_at of timestamps) {
+  const report=buildRevenueReport([fact({synced_at})],[],{...scope,to:scope.from,compare:'none'});
+  assert.equal(report.current.days[0].syncedAt,new Date(Date.parse(synced_at)).toISOString());
+ }
+ const facts=[fact({synced_at:'2026-10-22T12:00:00Z'}),fact({id:'second',channel:'direct',synced_at:'2026-10-22T12:00:00+14:01'})];
+ const report=buildRevenueReport(facts,[],{...scope,to:scope.from,compare:'none'});
+ assert.equal(report.current.days[0].syncedAt,null,'Any invalid source suppresses unverified provenance');
+ assert.equal(report.current.days[0].values.revenue,200,'Provenance rejection does not silently change valid monetary facts');
+});
+
 test('revenue report uses one explicit source, signed net revenue and actual calendar comparison',()=>{
  const report=buildRevenueReport([...current(),fact({id:'sheet',source:'spreadsheet',revenue:999})],previous(),scope);
  assert.equal(report.current.totals.revenue,80);assert.equal(report.current.totals.purchases,4);assert.equal(report.current.otherSourceRecords,1);assert.equal(report.current.records,2);assert.equal(report.current.knownDays.revenue,2);assert.equal(report.previous?.from,'2026-10-18');assert.equal(revenueDelta(report,'revenue'),100);
