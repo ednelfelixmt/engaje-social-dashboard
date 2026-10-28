@@ -52,3 +52,30 @@ test('microsecond precision preserves positive sub-millisecond duration and reje
  const html=renderToStaticMarkup(React.createElement(SyncJobHistory,{jobs:report.jobs}));assert.ok(html.includes('0,000001 s'));assert.ok(!html.includes('>0 s<'));
  for(const patch of [{created_at:'2026-10-27T12:00:00.000003Z'},{completed_at:'2026-10-27T12:00:00.000001Z'}]){const invalid=buildDataQuality({...input(),jobs:[{...precise,...patch}]},scope).jobs[0];assert.equal(invalid.timelineInvalid,true);assert.equal(invalid.durationMs,null);assert.equal(invalid.recordedCount,null);}
 });
+
+test('DATAQUAL-TZ-001: impossible UTC offsets cannot become known collections or valid synchronization jobs',()=>{
+ for(const offset of ['+23:59','-15:00','+14:01','-14:01']){
+  const checked=buildDataQuality({...input(),metrics:[{...metric,synced_at:'2026-10-27T12:00:00'+offset}]},scope);
+  assert.equal(checked.items[0].unknownCollections,1,offset);
+  assert.equal(checked.items[0].lastReceived,null,offset);
+  const invalidJob={...job,created_at:'2026-10-26T00:00:00Z',started_at:'2026-10-26T00:01:00Z',completed_at:'2026-10-27T01:00:00'+offset};
+  const view=buildDataQuality({...input(),jobs:[invalidJob]},scope).jobs[0];
+  assert.equal(view.completedAt,null,offset);
+  assert.equal(view.timelineInvalid,true,offset);
+  assert.equal(view.durationMs,null,offset);
+  assert.equal(view.recordedCount,null,offset);
+  assert.throws(()=>buildDataQuality(input(),{...scope,generatedAt:'2026-10-27T12:00:00'+offset}),offset);
+ }
+});
+
+test('DATAQUAL-TZ-001: UTC offset boundaries preserve legitimate collection times and microsecond job durations',()=>{
+ const observed=buildDataQuality({...input(),metrics:[{...metric,synced_at:'2026-10-27T23:00:00+14:00'}]},scope);
+ assert.equal(observed.items[0].lastReceived,'2026-10-27T09:00:00.000Z');
+ assert.equal(observed.items[0].unknownCollections,0);
+ const boundaryJob={...job,created_at:'2026-10-27T12:00:00Z',started_at:'2026-10-27T12:00:00.000001Z',completed_at:'2026-10-26T22:00:01.000002-14:00'};
+ const view=buildDataQuality({...input(),jobs:[boundaryJob]},scope).jobs[0];
+ assert.equal(view.timelineInvalid,false);
+ assert.equal(view.durationMs,1000.001);
+ assert.equal(view.recordedCount,0);
+ assert.equal(view.completedAt,'2026-10-27T12:00:01.000002Z');
+});
