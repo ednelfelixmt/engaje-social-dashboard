@@ -9,7 +9,7 @@ import type {PerformanceScope} from '../src/lib/reports/performance-report';
 import {campaignReportCsv,campaignReportFilename} from '../src/lib/export/campaign-report';
 import {loadTypescript} from './helpers/load-typescript';
 
-const scope:PerformanceScope={organizationId:'synthetic-a',organizationName:'Synthetic A',organizationSlug:'synthetic-a',timezone:'America/Cuiaba',currency:'BRL',from:'2026-10-20',to:'2026-10-21',compare:'previous_period',generatedAt:'2026-10-26T12:00:00.000Z'};
+const scope:PerformanceScope={organizationId:'11111111-1111-4111-8111-111111111111',organizationName:'Synthetic A',organizationSlug:'synthetic-a',timezone:'America/Cuiaba',currency:'BRL',from:'2026-10-20',to:'2026-10-21',compare:'previous_period',generatedAt:'2026-10-26T12:00:00.000Z'};
 const selection={platform:'meta_ads' as const,account:'123',campaign:'synthetic-campaign'};
 const fact=(patch:Partial<Row<'metrics_ads'>>={})=>({id:'PRIVATE-SOURCE-ID',organization_id:scope.organizationId,platform:'meta_ads',account_id:'act_123',campaign_id:selection.campaign,campaign_name:'Synthetic campaign',ad_id:'PRIVATE-AD-ID',metric_date:scope.from,currency:'BRL',spend:100,impressions:1000,clicks:20,leads:5,attribution_window:'7d_click',...patch} as Row<'metrics_ads'>);
 const parse=(csv:string)=>{const result=Papa.parse<Record<string,string>>(csv,{header:true,delimiter:';'});assert.deepEqual(result.errors,[]);return result.data;};
