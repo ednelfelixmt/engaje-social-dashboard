@@ -1,3 +1,6 @@
+import {isValidCalendarDay} from './calendar';
+import {isRfcOrganizationUuid} from './organization-scope';
+
 /**
  * A daily chart must not display a partial sum as a complete observation.
  * Count metrics and media costs are nonnegative; revenue may be signed for refunds.
@@ -37,10 +40,15 @@ function combine(total: number | null, next: number | null): number | null {
 export function dashboardPaidDays(rows: readonly PaidDailyRecord[], authorizedOrganizationId: string, selectedCurrency: string): PaidDashboardDay[] {
   // The SQL query is already tenant/currency scoped. Verify the scope again before
   // aggregating, including on an empty result; never render partial foreign data.
-  if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(authorizedOrganizationId)
+  if (!isRfcOrganizationUuid(authorizedOrganizationId)
     || !/^[A-Z]{3}$/.test(selectedCurrency)
     || rows.some(row => row.organization_id !== authorizedOrganizationId || row.currency !== selectedCurrency)) {
     throw new Error('Dashboard timeline requires authorized organization and currency');
+  }
+  // Validate every source day before grouping: an impossible date must not
+  // enter charts, comparisons or exports, even beside valid observations.
+  if (rows.some(row => !isValidCalendarDay(row.metric_date))) {
+    throw new Error('Dashboard timeline requires valid ISO calendar days');
   }
   if (!rows.length) return [];
   const days = new Map<string, PaidDashboardDay>();
