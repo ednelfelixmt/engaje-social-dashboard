@@ -9,6 +9,12 @@ function dateMs(day:string):number {
  if(!Number.isFinite(ms)||new Date(ms).toISOString().slice(0,10)!==day)throw new Error('Invalid calendar date');
  return ms;
 }
+
+/** Validate an actual UTC calendar day, without Date.parse's day rollover. */
+export function isValidCalendarDay(day: string): boolean {
+  try { dateMs(day); return true; } catch { return false; }
+}
+
 function shiftedYearDate(date: Date, years: number) {
  const month = date.getUTCMonth();
  date.setUTCFullYear(date.getUTCFullYear() + years);
