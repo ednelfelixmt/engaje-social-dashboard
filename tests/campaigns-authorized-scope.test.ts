@@ -40,7 +40,13 @@ test('authorized scope preserves observed zero and catalog placeholders', () => 
 });
 
 test('invalid authorized tenant or currency fails even with empty sources', () => {
-  for (const id of ['', 'not-a-uuid', '11111111', ' ']) {
+  for (const id of [
+    '', 'not-a-uuid', '11111111', ' ',
+    '11111111-1111-0111-8111-111111111111',
+    '11111111-1111-9111-8111-111111111111',
+    '11111111-1111-4111-7111-111111111111',
+    '11111111-1111-4111-c111-111111111111',
+  ]) {
     assert.throws(() => scopedCampaigns([], [], 'crm', [], id, 'BRL'), /authorized organization and currency/);
   }
   for (const currency of ['', 'brl', 'BRLUSD', ' B ']) {
@@ -75,4 +81,25 @@ test('both private dashboards scope current and historical campaign sources', ()
   assert.match(section, /scopedCampaigns\(previousAds, data\.crmComparison, config\.preferred_revenue_source, catalog, org\.id, f\.currency\)/);
   assert.match(intelligence, /scopedCampaigns\(data\.ads,data\.crm,config\.preferred_revenue_source,data\.adCampaigns,org\.id,f\.currency\)/);
   assert.match(intelligence, /scopedCampaigns\(data\.adsComparison,data\.crmComparison,config\.preferred_revenue_source,data\.adCampaigns,org\.id,f\.currency\)/);
+});
+
+
+test('RFC-invalid authenticated tenant fails closed even when all sources match it', () => {
+  const invalid = '11111111-1111-0111-8111-111111111111';
+  assert.throws(() => scopedCampaigns(
+    [ad({organization_id: invalid})], [crm({organization_id: invalid})], 'crm',
+    [catalog({organization_id: invalid})], invalid, 'BRL',
+  ), /authorized organization and currency/);
+});
+
+test('valid RFC v7 tenant preserves observed zero and authenticated source matching', () => {
+  const uuidV7 = '123e4567-e89b-7d3a-a456-426614174000';
+  const rows = scopedCampaigns(
+    [ad({organization_id: uuidV7})], [crm({organization_id: uuidV7})], 'crm',
+    [catalog({organization_id: uuidV7})], uuidV7, 'BRL',
+  );
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0]?.organizationId, uuidV7);
+  assert.equal(rows[0]?.spend, 0);
+  assert.equal(rows[0]?.revenue, 100);
 });

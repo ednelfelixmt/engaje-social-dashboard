@@ -1,4 +1,5 @@
 import type {CampaignPerformance} from '@/types/domain';
+import {isRfcOrganizationUuid} from './organization-scope';
 
 /**
  * Campaign IDs are not globally unique: the same external ID may exist in
@@ -8,7 +9,7 @@ function comparisonKey(row: CampaignPerformance): string | null {
   const {organizationId, platform, accountId, campaignId, currency} = row;
   // The act_ alias belongs to Meta. Other providers may use that prefix literally.
   const normalizedAccount = platform === 'meta_ads' ? accountId?.replace(/^act_/, '') : accountId;
-  if (!organizationId || !platform || !normalizedAccount || !campaignId || !/^[A-Z]{3}$/.test(currency)) return null;
+  if (!isRfcOrganizationUuid(organizationId) || !platform || !normalizedAccount || !campaignId || !/^[A-Z]{3}$/.test(currency)) return null;
   return JSON.stringify([organizationId, platform, normalizedAccount, campaignId, currency]);
 }
 

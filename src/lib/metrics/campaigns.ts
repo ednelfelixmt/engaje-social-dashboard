@@ -1,6 +1,7 @@
 import type {Row} from '@/types/database.types';
 import type {CampaignPerformance} from '@/types/domain';
 import {finiteRatio,sum} from './aggregation';
+import {isRfcOrganizationUuid} from './organization-scope';
 import {summarizeWeightedMetric, weightedMetricKeys, providerWeightedMetricBounds, type WeightedMetricSummaries} from './weighted-metrics';
 
 /** Only Meta defines act_ as an alias for the same advertising account. */
@@ -185,7 +186,7 @@ export function scopedCampaigns(
   authorizedOrganizationId: string,
   selectedCurrency: string,
 ): CampaignPerformance[] {
-  if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(authorizedOrganizationId)
+  if (!isRfcOrganizationUuid(authorizedOrganizationId)
     || !/^[A-Z]{3}$/.test(selectedCurrency)
     || ads.some(row => row.organization_id !== authorizedOrganizationId || row.currency !== selectedCurrency)
     || crm.some(row => row.organization_id !== authorizedOrganizationId || row.currency !== selectedCurrency)
