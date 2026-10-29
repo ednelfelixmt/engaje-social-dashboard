@@ -274,7 +274,7 @@ test('RANK-DIM-LABEL-001: consistent labels are retained and absent labels fall 
 
 test('RANK-SOURCE-GRAIN-001: invalid identities in any ranking source fail closed before aggregation',()=>{
   const bad: Array<() => unknown> = [
-    () => preparePerformanceRankings([campaign({campaignId:'campaign-1 '}],[],[],[]),
+    () => preparePerformanceRankings([campaign({campaignId:'campaign-1 '})],[],[],[]),
     () => preparePerformanceRankings([campaign({accountId:' account-1'})],[],[],[]),
     () => preparePerformanceRankings([campaign({platform:'meta_ads ' as CampaignPerformance['platform']})],[],[],[]),
     () => preparePerformanceRankings([],[ad({account_id:'act_'})],[],[]),
