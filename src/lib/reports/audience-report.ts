@@ -21,6 +21,16 @@ export type AudienceReportScope = {organizationId: string; organizationName: str
 export type AudienceReportRow = BreakdownPoint & {value: string; sourceIds: string[]; coverage: Record<typeof metrics[number], number>};
 export type AudienceReport = {scope: AudienceReportScope; groups: Record<AudienceDimension, AudienceReportRow[]>; sourceRecords: number; omittedRecords: number; attributionWindow: string | null};
 const organizationUuid = z.string().uuid();
+
+/** Source identifiers are opaque: never trim a malformed ID into a different grain. */
+function intactAudienceIdentifier(value: unknown): value is string {
+ return typeof value === 'string' && value.trim().length > 0 && value === value.trim();
+}
+
+/** An empty breakdown value is an existing unclassified bucket, not a padded ID. */
+function intactAudienceValue(value: unknown): value is string {
+ return value === '' || intactAudienceIdentifier(value);
+}
 const labelsByDimension: Partial<Record<AudienceDimension, Record<string, string>>> = {
  gender: {male: 'Masculino', female: 'Feminino', unknown: 'Não informado'},
  device: {desktop: 'Desktop', mobile_app: 'Mobile — aplicativo', mobile_web: 'Mobile — navegador', mobile: 'Mobile', tablet: 'Tablet'},
@@ -44,12 +54,20 @@ export function buildAudienceReport(rows: readonly Row<'metrics_ads_breakdowns'>
  const relevant: Row<'metrics_ads_breakdowns'>[] = [];
  for (const row of rows) {
   if (row.organization_id !== scope.organizationId || row.platform !== scope.platform || row.currency !== scope.currency || !days.has(row.metric_date)) throw new Error('Audience report scope mismatch');
+  const account = typeof row.account_id === 'string'
+   ? (row.platform === 'meta_ads' ? row.account_id.replace(/^act_/, '') : row.account_id) : '';
+  if (!intactAudienceIdentifier(row.id) || !intactAudienceIdentifier(row.account_id)
+   || !intactAudienceIdentifier(account) || !intactAudienceIdentifier(row.campaign_id)
+   || !intactAudienceIdentifier(row.dimension_type) || !intactAudienceValue(row.dimension_value)) {
+    throw new Error('Invalid audience report grain');
+  }
+  // Unknown dimensions can be omitted, but their malformed or duplicate source IDs cannot.
+  if (seenIds.has(row.id)) throw new Error('Duplicate audience report grain');
+  seenIds.add(row.id);
   if (!audienceDimensions.includes(row.dimension_type as AudienceDimension)) continue;
-  const account = row.platform === 'meta_ads' ? row.account_id.replace(/^act_/, '') : row.account_id;
-  if (!row.id || !account || !row.campaign_id) throw new Error('Invalid audience report grain');
   const grain = JSON.stringify([account, row.campaign_id, row.dimension_type, row.dimension_value, row.metric_date]);
-  if (seenIds.has(row.id) || seenGrains.has(grain)) throw new Error('Duplicate audience report grain');
-  seenIds.add(row.id); seenGrains.add(grain); relevant.push(row);
+  if (seenGrains.has(grain)) throw new Error('Duplicate audience report grain');
+  seenGrains.add(grain); relevant.push(row);
  }
  const windows = new Set(relevant.map(row => row.attribution_window.trim()));
  if (windows.size > 1) throw new Error('Conflicting audience report attribution windows');
