@@ -185,7 +185,11 @@ function validScopedAccountId(value: unknown, provider: unknown, optional = fals
   if (!validScopedSourceId(value, optional)) return false;
   if (value === '') return optional;
   // A syntactically valid act_ prefix must not conceal an empty/padded Meta ID.
-  return validScopedSourceId(provider === 'meta_ads' ? value.replace(/^act_/, '') : value);
+  if (provider !== 'meta_ads') return true;
+  const canonical = value.replace(/^act_/, '');
+  // Only one leading Meta act_ prefix is a valid account alias.
+  // A doubled prefix would produce an inconsistent campaign/revenue grain.
+  return validScopedSourceId(canonical) && !canonical.startsWith('act_');
 }
 
 // Fail closed if an API query returns a row outside the tenant/currency selected
