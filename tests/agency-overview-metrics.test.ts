@@ -157,3 +157,36 @@ test('agency client card accepts valid RFC v7 scope and preserves genuine observ
   assert.equal(summary.cpl, null);
   assert.throws(() => summarizeClientAds(v7, 'BRL', [fact()]), /matching organization/);
 });
+
+test('agency portfolio rejects unscoped or malformed tenant identities before aggregation', () => {
+  const unavailable = {spend: null, impressions: null, reach: null, leads: null, cpl: null, currency: null};
+  const invalidIds = [
+    '', 'synthetic-tenant', ' 11111111-1111-4111-8111-111111111111 ',
+    '11111111-1111-0111-8111-111111111111', // invalid RFC version
+    '11111111-1111-4111-7111-111111111111', // invalid RFC variant
+    null as unknown as string, 123 as unknown as string,
+  ];
+  for (const organization_id of invalidIds) {
+    const malformed = fact({organization_id, spend: 0, leads: 0});
+    assert.deepEqual(summarizeAgencyAds([malformed]), unavailable);
+    assert.deepEqual(summarizeAgencyAds([fact(), malformed]), unavailable);
+    assert.deepEqual(summarizeAgencyAds([malformed, fact()]), unavailable);
+  }
+});
+
+test('agency portfolio still aggregates valid RFC tenants and preserves measured zero', () => {
+  const v7 = '123e4567-e89b-7d3a-a456-426614174000';
+  const measured = [
+    fact({organization_id: orgA, spend: 0, impressions: 0, leads: 0, reach: 0}),
+    fact({organization_id: v7, spend: 0, impressions: 0, leads: 0, reach: 0}),
+  ];
+  const before = structuredClone(measured);
+  const summary = summarizeAgencyAds(measured, 'BRL');
+  assert.equal(summary.spend, 0);
+  assert.equal(summary.impressions, 0);
+  assert.equal(summary.leads, 0);
+  assert.equal(summary.reach, null); // Non-additive across tenants.
+  assert.equal(summary.cpl, null);   // Zero leads is not a ratio.
+  assert.equal(summary.currency, 'BRL');
+  assert.deepEqual(measured, before);
+});
