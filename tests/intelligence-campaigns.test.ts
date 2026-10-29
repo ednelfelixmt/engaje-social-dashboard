@@ -28,7 +28,7 @@ function campaign(overrides: Partial<CampaignPerformance> = {}): CampaignPerform
 test('Intelligence preserves an observed zero campaign instead of displaying no campaigns', () => {
   const result = intelligenceCampaignShape([campaign()], organizationId, currency);
   assert.deepEqual(result, [{
-    id: 'meta_ads:act_synthetic:campaign-zero',
+    id: JSON.stringify([organizationId, 'meta_ads', 'act_synthetic', 'campaign-zero']),
     name: 'Synthetic campaign',
     platform: 'meta_ads',
     spend: 0,
@@ -55,7 +55,7 @@ test('catalog-only placeholders are excluded, including when mixed with measured
   const measured = campaign({campaignId: 'observed'});
   assert.deepEqual(intelligenceCampaignShape([catalog], organizationId, currency), []);
   assert.deepEqual(intelligenceCampaignShape([catalog, measured], organizationId, currency).map(row => row.id),
-    ['meta_ads:act_synthetic:observed']);
+    [JSON.stringify([organizationId, 'meta_ads', 'act_synthetic', 'observed'])]);
 });
 
 test('missing authorization or a cross-tenant campaign fails closed even for catalog-only rows', () => {
@@ -109,7 +109,7 @@ test('SEC-INT-CAMP-001: currency-less catalog placeholders remain excluded and o
     campaign({campaignId: 'zero', currency, spend: 0, leads: null}),
   ], organizationId, currency);
   assert.equal(result.length, 1);
-  assert.equal(result[0].id, 'meta_ads:act_synthetic:zero');
+  assert.equal(result[0].id, JSON.stringify([organizationId, 'meta_ads', 'act_synthetic', 'zero']));
   assert.equal(result[0].spend, 0);
   assert.equal(result[0].leads, null);
 });
@@ -127,4 +127,37 @@ test('SEC-CAMP-UUID-001: intelligence rejects invalid RFC organization variants 
   const validV7='01933a7b-4f88-7a12-8d29-111111111111';
   assert.deepEqual(intelligenceCampaignShape([],validV7,currency),[]);
   assert.equal(intelligenceCampaignShape([campaign({organizationId:validV7})],validV7,currency).length,1);
+});
+
+test('INTELLIGENCE-OPAQUE-ID-001: malformed source IDs fail closed even on catalog placeholders', () => {
+  const invalid: Partial<CampaignPerformance>[] = [
+    {platform: ' meta_ads' as CampaignPerformance['platform']},
+    {accountId: ''}, {accountId: '  '}, {accountId: 'act_synthetic '},
+    {campaignId: '\tcampaign-zero'}, {campaignId: 'campaign-zero\n'},
+    {campaignId: '\u00a0'}, {accountId: 42 as unknown as string},
+  ];
+  for (const patch of invalid) {
+    assert.throws(
+      () => intelligenceCampaignShape([campaign(), campaign(patch)], organizationId, currency),
+      /valid source identifiers/,
+    );
+    assert.throws(
+      () => intelligenceCampaignShape([campaign(), campaign({...patch, currency: '', metricValues: {}})], organizationId, currency),
+      /valid source identifiers/,
+    );
+  }
+  assert.deepEqual(intelligenceCampaignShape([], organizationId, currency), []);
+});
+
+test('INTELLIGENCE-OPAQUE-ID-001: UI keys distinguish IDs containing delimiters and preserve observed zeros', () => {
+  const a = campaign({accountId: 'acct:east', campaignId: 'item'});
+  const b = campaign({accountId: 'acct', campaignId: 'east:item'});
+  const c = campaign({accountId: 'acct internal', campaignId: 'item internal'});
+  const result = intelligenceCampaignShape([a, b, c], organizationId, currency);
+  assert.equal(result.length, 3);
+  assert.equal(new Set(result.map(row => row.id)).size, 3);
+  assert.equal(result[0].id, JSON.stringify([organizationId, 'meta_ads', 'acct:east', 'item']));
+  assert.equal(result[1].id, JSON.stringify([organizationId, 'meta_ads', 'acct', 'east:item']));
+  assert.equal(result[2].spend, 0);
+  assert.equal(result[2].leads, 0);
 });

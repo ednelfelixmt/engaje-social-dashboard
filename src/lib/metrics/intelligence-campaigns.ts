@@ -1,6 +1,11 @@
 import type {CampaignPerformance} from '@/types/domain';
 import {isRfcOrganizationUuid} from './organization-scope';
 
+/** Provider identifiers are opaque. Never trim or rewrite them during projection. */
+function validSourceId(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0 && value.trim() === value;
+}
+
 /**
  * Catalog-only campaigns are placeholders without an observed ad fact.
  * A recorded zero spend is still a measured fact and must not be discarded.
@@ -27,10 +32,18 @@ export function intelligenceCampaignShape(
       : row.currency !== '' && row.currency !== selectedCurrency))) {
     throw new Error('Intelligence campaigns require authorized organization and currency');
   }
+  // Validate catalog placeholders too: a malformed row must not disappear
+  // silently while the rest of the tenant's campaign table is shown.
+  if (rows.some(row => !validSourceId(row.platform)
+    || !validSourceId(row.accountId) || !validSourceId(row.campaignId))) {
+    throw new Error('Intelligence campaigns require valid source identifiers');
+  }
   return rows
     .filter(observed)
     .map(row => ({
-      id: `${row.platform}:${row.accountId}:${row.campaignId}`,
+      // A delimited string collides when provider IDs themselves contain ':'.
+      // The key is UI-only, never an external ID or persisted identifier.
+      id: JSON.stringify([row.organizationId, row.platform, row.accountId, row.campaignId]),
       name: row.campaignName,
       platform: row.platform,
       spend: row.spend,
