@@ -11,7 +11,7 @@ const env={MEDIAHUB_HTTP_READONLY_ACK:'YES_AUTHENTICATED_READS',MEDIAHUB_APP_ORI
  MEDIAHUB_A_EMAIL:'a@example.test',MEDIAHUB_A_PASSWORD:canary,MEDIAHUB_B_EMAIL:'b@example.test',MEDIAHUB_B_PASSWORD:canary};
 type Options={loginIndex?:number;wrongUser?:boolean;agency?:boolean;role?:string;extraMembership?:boolean;admin?:boolean;noCookies?:boolean;
  status?:number;adminLocation?:string;noCache?:boolean;cacheControl?:string;noOwnLink?:boolean;foreignLink?:boolean;foreignName?:boolean;adminLink?:boolean;htmlError?:boolean;escapedError?:boolean;
- wrongName?:boolean;nonHtml?:boolean;largeBody?:boolean;fetchThrow?:boolean;logoutThrow?:boolean;escapedName?:boolean};
+ wrongName?:boolean;nonHtml?:boolean;largeBody?:boolean;fetchThrow?:boolean;logoutThrow?:boolean;escapedName?:boolean;missingReport?:boolean};
 function fixture(options:Options={}){
  let created=0,appRequests=0,verified=0;
  const logouts:number[]=[],cookieJars:{getAll:()=>{name:string;value:string}[]}[]=[];
@@ -22,7 +22,7 @@ function fixture(options:Options={}){
   return {
    auth:{async signInWithPassword(input:{password:string}){assert.equal(input.password,canary);
     if(options.loginIndex===index)throw new Error(canary);
-    if(!options.noCookies)config.cookies.setAll([{name:'sb-test-auth-token',value:canary}]);
+    if(!options.noCookies)config.cookies.setAll([{name:'sb-test-auth-token',value:canary+index}]);
     return {data:{user:{id:options.wrongUser?'wrong-id':f.userId}},error:null};},
     async signOut(input:{scope:string}){assert.equal(input.scope,'local');logouts.push(index);if(options.logoutThrow)throw new Error(canary);return {error:null};}},
    from(table:string){
@@ -39,13 +39,14 @@ function fixture(options:Options={}){
  const fetcher:typeof fetch=async(input,init)=>{
   appRequests++;assert.equal(verified,2,'both viewers must be verified before app requests');
   assert.equal(init?.method,'GET');assert.equal(init?.redirect,'manual');assert.equal(init?.credentials,'omit');assert.ok(init?.signal);
-  assert.equal(new Headers(init?.headers).get('Cookie'),'sb-test-auth-token='+canary);
+  const cookie=new Headers(init?.headers).get('Cookie')??'';assert.ok(cookie.startsWith('sb-test-auth-token='+canary));
   if(options.fetchThrow)throw new Error(canary);
   const u=new URL(String(input));assert.equal(u.origin,origin);
-  const actor=appRequests<=8?0:1,f=existingIsolationFixtures[actor],peer=existingIsolationFixtures[1-actor];
-  const own=u.pathname==='/'+f.slug+'/overview',admin=u.pathname==='/admin';
+  const actor=cookie.endsWith('0')?0:1,f=existingIsolationFixtures[actor],peer=existingIsolationFixtures[1-actor];
+  const own=['overview','reports','reports/funnel'].some(path=>u.pathname==='/'+f.slug+'/'+path),admin=u.pathname==='/admin';
   const name=options.escapedName?'Fixture &amp; &lt;'+actor+'&gt;':'Fixture '+actor;
   let html=own?'<h1>'+(options.wrongName?'other fixture':name)+'</h1>'+(options.noOwnLink?'':'<a href="/'+f.slug+'/overview">Own</a>'):'not found';
+  if(own&&!options.missingReport)html+='<h2>Central de relatórios</h2><h2>Etapas do funil</h2>';
   if(options.foreignLink)html+='<a href="/'+peer.slug+'/overview">Other</a>';
   if(options.foreignName)html+='Fixture '+(1-actor);
   if(options.adminLink)html+='<a href="/admin/users">Admin</a>';
@@ -79,8 +80,8 @@ test('authenticated HTTP preflight rejects unknown origins and private credentia
 
 test('HTTP acceptance proves own HTML, cross-tenant and administrator denials for two identity-bound viewers',async()=>{
  for(const escapedName of [false,true]){
-  const f=fixture({escapedName});const r=await f.run();assert.equal(r.status,'PASS');assert.equal(r.checks.length,16);
-  assert.equal(r.checks.filter(x=>x.status===200).length,2);assert.equal(r.checks.filter(x=>x.status===404).length,12);
+  const f=fixture({escapedName});const r=await f.run();assert.equal(r.status,'PASS');assert.equal(r.checks.length,24);
+  assert.equal(r.checks.filter(x=>x.status===200).length,6);assert.equal(r.checks.filter(x=>x.status===404).length,16);
   assert.equal(r.checks.filter(x=>x.status===307).length,2);assert.ok(!JSON.stringify(r).includes(canary));
   assert.deepEqual(f.logouts,[0,1]);assert.ok(f.jars.every(j=>j.getAll().length===0));
  }
@@ -96,7 +97,7 @@ test('login, agency, role or membership mismatch cannot produce app probes or a 
 test('redirect, cache, rendered errors, missing positives and foreign/admin links never pass',async()=>{
  for(const options of [{status:401},{status:500},{status:200},{adminLocation:'https://evil.test/'},{noCache:true},
   {cacheControl:'public, no-store'},{cacheControl:'private, max-age=3600'},
-  {noOwnLink:true},{wrongName:true},{foreignLink:true},{foreignName:true},{adminLink:true},{htmlError:true},{escapedError:true},{nonHtml:true},{largeBody:true},{fetchThrow:true}]){
+  {missingReport:true},{noOwnLink:true},{wrongName:true},{foreignLink:true},{foreignName:true},{adminLink:true},{htmlError:true},{escapedError:true},{nonHtml:true},{largeBody:true},{fetchThrow:true}]){
   const f=fixture(options);await assert.rejects(f.run(),e=>e instanceof Error&&!e.message.includes(canary));
   assert.deepEqual(f.logouts,[0,1]);assert.ok(f.jars.every(j=>j.getAll().length===0));
  }

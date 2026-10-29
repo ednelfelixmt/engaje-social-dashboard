@@ -81,9 +81,13 @@ export async function verifyAuthenticatedHttp(env:NodeJS.ProcessEnv){
   requireEvidence(names[0]!==names[1],'DISTINCT_ORGANIZATION_NAMES_REQUIRED');
   for(let i=0;i<2;i++){
    const own=cfg.fixtures[i],peer=cfg.fixtures[1-i];
-   const cases=[
+   const cases:{kind:string;path:string;status:number;content?:string}[]=[
     {kind:'own-dashboard',path:'/'+own.slug+'/overview',status:200},
     {kind:'foreign-dashboard',path:'/'+peer.slug+'/overview',status:404},
+    {kind:'own-report-center',path:'/'+own.slug+'/reports',status:200,content:'Central de relatórios'},
+    {kind:'foreign-report-center',path:'/'+peer.slug+'/reports',status:404},
+    {kind:'own-funnel-report',path:'/'+own.slug+'/reports/funnel',status:200,content:'Etapas do funil'},
+    {kind:'foreign-funnel-report',path:'/'+peer.slug+'/reports/funnel',status:404},
     {kind:'agency-denied',path:'/admin',status:307},
     ...['settings/dashboard','settings/integrations','settings/data-quality','settings/branding','sharing']
      .map(path=>({kind:'admin-only-'+path,path:'/'+own.slug+'/'+path,status:404})),
@@ -104,6 +108,7 @@ export async function verifyAuthenticatedHttp(env:NodeJS.ProcessEnv){
       if(probe.status===200){
        requireEvidence(!html.includes('NEXT_HTTP_ERROR_FALLBACK')&&!html.includes('data-next-error')&&!/\\?"digest\\?"\s*:/.test(html),'RENDERED_ERROR_OBSERVED');
        requireEvidence(html.includes('href="/'+own.slug+'/overview"')&&html.includes(htmlEscape(names[i])),'OWN_DASHBOARD_NOT_PROVEN');
+       if(probe.content)requireEvidence(html.includes(probe.content),'REPORT_CONTENT_NOT_PROVEN');
        requireEvidence(!/href=["']\/admin(?:[\/"'])/.test(html)
         &&!html.includes('href="/'+own.slug+'/settings/')&&!html.includes('href="/'+own.slug+'/sharing"'),'ADMIN_NAVIGATION_OBSERVED');
       }

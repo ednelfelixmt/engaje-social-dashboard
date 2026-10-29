@@ -1,0 +1,5 @@
+import type {Row} from '../../src/types/database.types';
+import type {FunnelReportScope} from '../../src/lib/reports/funnel-report';
+export const scope:FunnelReportScope={organizationId:'11111111-1111-4111-8111-111111111111',organizationName:'Synthetic agency fixture',organizationSlug:'synthetic-fixture',timezone:'America/Cuiaba',currency:'BRL',from:'2026-10-20',to:'2026-10-21',compare:'previous_period',generatedAt:'2026-10-29T12:00:00.000Z',platform:null};
+export const fact=(patch:Partial<Row<'metrics_ads'>>={})=>({id:'synthetic-fact',organization_id:scope.organizationId,platform:'meta_ads',account_id:'act_123',campaign_id:'synthetic-campaign',campaign_name:'Synthetic campaign',ad_id:'synthetic-ad',metric_date:'2026-10-20',currency:'BRL',spend:100,impressions:1000,reach:500,clicks:20,leads:5,purchases:2,attribution_window:'7d_click',...patch} as Row<'metrics_ads'>);
+export const steps=[{metric:'impressions',label:'Impressões'},{metric:'clicks',label:'Cliques',target:25},{metric:'leads',label:'Leads atribuídos'},{metric:'qualified_leads',label:'Leads qualificados'},{metric:'purchases',label:'Compras atribuídas'}];

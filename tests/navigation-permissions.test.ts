@@ -57,3 +57,9 @@ test('metric guide is a read-only overview option for viewers and respects overv
  const hidden=renderToStaticMarkup(createElement(Navigation,{slug:'fixture-a',canShare:false,enabled:['paid','external']}));
  assert.ok(shown.includes('/fixture-a/reports/methodology'));assert.ok(!hidden.includes('/fixture-a/reports/methodology'));assert.ok(!shown.includes('/fixture-a/settings/'));
 });
+
+test('report center is always read-only and funnel report follows its own enabled-page setting',()=>{
+ const shown=renderToStaticMarkup(createElement(Navigation,{slug:'fixture-a',canShare:false,enabled:['funnel']}));
+ const hidden=renderToStaticMarkup(createElement(Navigation,{slug:'fixture-a',canShare:false,enabled:[]}));
+ assert.ok(shown.includes('/fixture-a/reports/funnel'));assert.ok(hidden.includes('href="/fixture-a/reports"'));assert.ok(!hidden.includes('/fixture-a/reports/funnel'));assert.ok(!shown.includes('/fixture-a/settings/'));
+});
