@@ -101,3 +101,19 @@ test('DATA-ORG-TZ-001: report generation timestamps reject impossible offsets an
  assert.equal(organicTimestamp('2026-10-27T14:00:00+14:00'),Date.parse('2026-10-27T00:00:00Z'));
  assert.equal(organicTimestamp('2026-10-27T00:00:00-14:00'),Date.parse('2026-10-27T14:00:00Z'));
 });
+
+test('ORG-GRAIN-001: account reports reject padded record/account identities and preserve valid opaque keys',()=>{
+ for(const patch of [
+  {id:' row-1'}, {id:'row-1\n'}, {id:' \t '},
+  {account_id:' synthetic-account'}, {account_id:'synthetic-account\t'},
+  {account_id:'\u00a0synthetic-account'}
+ ]){
+  assert.throws(()=>buildOrganicAccountsReport([record(patch)],scope),/Organic account identity is missing/);
+ }
+ assert.throws(()=>buildOrganicAccountsReport([
+  record(),record({id:'row-2',metric_date:'2026-10-21',account_id:'synthetic-account '})
+ ],scope));
+ const accepted=buildOrganicAccountsReport([record({id:'row:alpha/1',account_id:'provider:account-1'})],scope);
+ assert.equal(accepted.rows[0].id,'row:alpha/1');
+ assert.equal(accepted.accounts[0].account,'provider:account-1');
+});
