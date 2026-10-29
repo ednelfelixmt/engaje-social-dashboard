@@ -189,3 +189,32 @@ test('DATAQUAL-ALL-SOURCES-001: intact future provider identities remain explici
  assert.equal(report.items[0].campaigns,1);
  assert.equal(report.items[0].connected,0);
 });
+
+// No production identifiers or API access: the examples are intentionally synthetic.
+test('DATAQUAL-META-ACCOUNT-001: reject empty, repeated or padded Meta account aliases',()=>{
+ for(const account_id of ['act_','act_ 123','act_act_123','act_  ',' act_123','act_123 ']){
+  const data=input();
+  data.metrics=[metric,{...metric,id:'malformed-alias',account_id}];
+  assert.throws(()=>buildDataQuality(data,scope),/Quality campaign identity missing/,JSON.stringify(account_id));
+ }
+});
+
+test('DATAQUAL-META-ACCOUNT-001: one Meta campaign across account aliases; other providers stay opaque',()=>{
+ const rows:QualityMetric[]=[
+  {...metric,id:'meta-plain',account_id:'123',campaign_id:'same-campaign'},
+  {...metric,id:'meta-alias',account_id:'act_123',campaign_id:'same-campaign'},
+  {...metric,id:'meta-second',account_id:'act_456',campaign_id:'same-campaign'},
+  {...metric,id:'google-plain',platform:'google_ads',account_id:'123',campaign_id:'same-campaign'},
+  {...metric,id:'google-literal',platform:'google_ads',account_id:'act_123',campaign_id:'same-campaign'},
+  {...metric,id:'google-prefix',platform:'google_ads',account_id:'act_',campaign_id:'same-campaign'},
+ ];
+ const snapshot=structuredClone(rows);
+ const report=buildDataQuality({...input(),metrics:rows},scope);
+ assert.equal(report.items[0].platform,'meta_ads');
+ assert.equal(report.items[0].campaigns,2); // act_123 and 123 describe the same Meta account.
+ assert.equal(report.items[0].rows,3); // Preserve all source rows and their provenance.
+ assert.equal(report.items[1].platform,'google_ads');
+ assert.equal(report.items[1].campaigns,3); // Never normalize literal Google account IDs.
+ assert.equal(report.items[1].rows,3);
+ assert.deepEqual(rows,snapshot); // A read-only projection must not rewrite source data.
+});
