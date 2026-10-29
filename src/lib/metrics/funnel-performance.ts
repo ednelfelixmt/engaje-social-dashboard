@@ -5,6 +5,19 @@ import {defaultFunnelIcons, funnelMetricDefinitions, parseFunnelSteps, type Funn
 
 const validCount = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0;
 
+/** Provider IDs are opaque: retain internal spaces/delimiters but never accept empty or padded identities. */
+function validFunnelSourceId(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0 && value.trim() === value;
+}
+
+function validFunnelIdentity(row: CampaignPerformance): boolean {
+  return validFunnelSourceId(row.platform)
+    && validFunnelSourceId(row.accountId)
+    && validFunnelSourceId(row.campaignId)
+    // Meta act_ is an alias prefix, never a complete account identifier by itself.
+    && (row.platform !== 'meta_ads' || validFunnelSourceId(row.accountId.replace(/^act_/, '')));
+}
+
 /** Catalog-only campaigns have no measurements; an observed zero is still a fact. */
 export function hasFunnelMeasurements(row: CampaignPerformance) {
   return row.currency !== '' || row.spend !== 0 || Object.keys(row.metricValues).length > 0
@@ -24,24 +37,27 @@ export function summarizeFunnelMetric(rows: readonly CampaignPerformance[], metr
   const scopeValid = isRfcOrganizationUuid(organizationId)
     && rows.every(row => row.organizationId === organizationId);
   const currencyValid = /^[A-Z]{3}$/.test(currency) && observed.every(row => row.currency === currency);
+  // Check catalog-only placeholders as well: they cannot silently disappear before integrity validation.
+  const sourceValid = rows.every(validFunnelIdentity);
   const known = observed.filter(row => validCount(measurement(row, metric)));
   // Unique people are not additive between campaigns without provider-level deduplication.
   // Campaign-level reach is available only when its own daily source grain was validated.
   const reachNeedsDeduplication = metric === 'reach' && observed.length > 1;
-  let value: number | null = scopeValid && currencyValid && !reachNeedsDeduplication && observed.length > 0 && known.length === observed.length
+  let value: number | null = scopeValid && currencyValid && sourceValid && !reachNeedsDeduplication && observed.length > 0 && known.length === observed.length
     ? known.reduce((total, row) => total + (measurement(row, metric) as number), 0) : null;
   if (value != null && !Number.isFinite(value)) value = null;
   const spend = observed.reduce((total, row) => validCount(row.spend) ? total + row.spend : Number.NaN, 0);
   const definition = funnelMetricDefinitions.find(item => item.key === metric)!;
   const multiplier = 'costMultiplier' in definition ? definition.costMultiplier : 1;
-  const cost = scopeValid && currencyValid && Number.isFinite(spend) ? finiteRatio(spend, value, multiplier) : null;
+  const cost = scopeValid && currencyValid && sourceValid && Number.isFinite(spend) ? finiteRatio(spend, value, multiplier) : null;
   const detail = !scopeValid ? 'Indicador indisponível: escopo de organização incompatível.'
     : !currencyValid ? 'Indicador indisponível: moeda diferente da exibida ou seleção inválida.'
+    : !sourceValid ? 'Indicador indisponível: identificador de origem inválido em campanha ou catálogo.'
     : !observed.length ? 'Sem campanhas com medições no período.'
     : reachNeedsDeduplication ? 'Alcance indisponível: pessoas únicas entre campanhas exigem deduplicação comprovada na origem.'
     : value == null ? 'Total indisponível: ' + known.length + ' de ' + observed.length + ' campanhas com valor válido; ' + (known.length < observed.length ? 'cobertura incompleta.' : 'limite numérico excedido.')
     : 'Cobertura: ' + known.length + ' de ' + observed.length + ' campanhas com medições.';
-  const costDetail = !Number.isFinite(spend) && scopeValid && currencyValid ? ' Custo indisponível: investimento inválido ou limite numérico.' : '';
+  const costDetail = !Number.isFinite(spend) && scopeValid && currencyValid && sourceValid ? ' Custo indisponível: investimento inválido ou limite numérico.' : '';
   return {value, cost, detail: detail + costDetail, observed: observed.length, known: known.length};
 }
 
