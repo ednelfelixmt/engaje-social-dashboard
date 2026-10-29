@@ -114,3 +114,26 @@ test('RECON-GRAIN-IDENTITY-001: valid identifiers, measured zero and provider-sp
  assert.equal(reconcilePaidFacts([meta,{...meta,accountId:'123'}]).status,'duplicate_grain');
  assert.equal(reconcilePaidFacts([{...a,accountId:'internal space',campaignId:'campaign v2'}]).status,'ready');
 });
+
+test('RECON-META-ALIAS-002: rejects nested act_ prefixes before reconciliation',()=>{
+  const valid={...a,platform:'meta_ads',accountId:'123',spend:0};
+  for(const accountId of ['act_act_123','act_act_','act_act_act_123']){
+    const malformed={...a,platform:'meta_ads',accountId,spend:900};
+    assert.deepEqual(reconcilePaidFacts([malformed]),{status:'invalid',reason:'Malformed fact grain'});
+    assert.equal(reconcilePaidFacts([valid,malformed]).status,'invalid');
+  }
+});
+
+test('RECON-META-ALIAS-002: valid Meta aliases, measured zero and non-Meta IDs remain intact',()=>{
+  const meta={...a,platform:'meta_ads',accountId:'act_123',spend:0,leads:0};
+  const result=reconcilePaidFacts([meta]);
+  assert.equal(result.status,'ready');
+  if(result.status==='ready'){
+    assert.equal(result.totals.spend,0);
+    assert.equal(result.totals.leads,0);
+  }
+  assert.equal(reconcilePaidFacts([meta,{...meta,accountId:'123'}]).status,'duplicate_grain');
+  for(const platform of ['google_ads','tiktok_ads','microsoft_ads']){
+    assert.equal(reconcilePaidFacts([{...a,platform,accountId:'act_act_123'}]).status,'ready',platform);
+  }
+});

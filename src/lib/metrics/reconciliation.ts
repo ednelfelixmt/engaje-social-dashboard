@@ -26,7 +26,9 @@ export function reconcilePaidFacts(rows:readonly ReconciliationRow[]):Reconcilia
   // Evaluate the canonical identifier before validating the grain to reject 'act_' alone.
   const accountId = row.platform === 'meta_ads' && row.accountId
     ? row.accountId.replace(/^act_/, '') : row.accountId;
-  if(!validGrainIdentifier(row.platform)||!validGrainIdentifier(accountId)||!validGrainIdentifier(row.campaignId)||!validCalendarDate(row.date)||!/^[A-Z]{3}$/.test(row.currency))
+  if(!validGrainIdentifier(row.platform)||!validGrainIdentifier(row.accountId)||!validGrainIdentifier(accountId)
+    ||(row.platform==='meta_ads'&&accountId.startsWith('act_'))
+    ||!validGrainIdentifier(row.campaignId)||!validCalendarDate(row.date)||!/^[A-Z]{3}$/.test(row.currency))
    return {status:'invalid',reason:'Malformed fact grain'};
   if(row.currency!==currency)return {status:'mixed_currency',reason:'Currency conversion is required upstream'};
   if(!Number.isFinite(row.spend)||row.spend<0||[row.impressions,row.clicks,row.leads].some(v=>v!==null&&(!Number.isFinite(v)||v<0)))
