@@ -12,6 +12,11 @@ export type AgencyAdRow = Pick<Row<'metrics_ads'>,
 >;
 
 export function summarizeAgencyAds(rows: readonly AgencyAdRow[], expectedCurrency?: string) {
+  // A portfolio may aggregate authorized tenants, never facts with an unknown
+  // tenant identity. Reject the whole projection rather than summing a subset.
+  if (rows.some(row => !isRfcOrganizationUuid(row.organization_id))) {
+    return {spend: null, impressions: null, reach: null, leads: null, cpl: null, currency: null};
+  }
   const currencies = new Set(rows.map(row => row.currency));
   const candidate = currencies.size === 1 ? rows[0].currency : null;
   const currency = candidate && /^[A-Z]{3}$/.test(candidate) &&

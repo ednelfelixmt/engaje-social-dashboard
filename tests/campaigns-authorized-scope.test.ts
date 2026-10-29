@@ -103,3 +103,82 @@ test('valid RFC v7 tenant preserves observed zero and authenticated source match
   assert.equal(rows[0]?.spend, 0);
   assert.equal(rows[0]?.revenue, 100);
 });
+
+
+test('CAMPAIGN-SOURCE-ID-001: paid facts reject malformed identities without returning a partial aggregate', () => {
+  const malformed = [
+    ad({account_id: ''}),
+    ad({account_id: 'act_'}),
+    ad({account_id: 'act_ padded'}),
+    ad({account_id: 'account '}),
+    ad({campaign_id: ' campaign'}),
+    ad({campaign_id: String.fromCharCode(9) + 'campaign'}),
+    ad({platform: ' meta_ads' as Row<'metrics_ads'>['platform']}),
+  ];
+  for (const row of malformed) {
+    assert.throws(
+      () => scopedCampaigns([ad(), row], [crm()], 'crm', [catalog()], orgA, 'BRL'),
+      /valid source identifiers/,
+    );
+  }
+});
+
+test('CAMPAIGN-SOURCE-ID-001: unmatched CRM and catalog placeholders cannot hide malformed identities', () => {
+  const badCrm = [
+    crm({account_id: '  '}),
+    crm({account_id: 'act_'}),
+    crm({campaign_id: 'unmatched '}),
+    crm({campaign_id: String.fromCharCode(160)}),
+    crm({channel: ' meta_ads'}),
+    crm({account_id: null as unknown as string}),
+  ];
+  for (const row of badCrm) {
+    assert.throws(
+      () => scopedCampaigns([ad()], [crm(), row], 'crm', [], orgA, 'BRL'),
+      /valid source identifiers/,
+    );
+    assert.throws(
+      () => scopedCampaigns([], [row], 'crm', [], orgA, 'BRL'),
+      /valid source identifiers/,
+    );
+  }
+  const badCatalog = [
+    catalog({account_id: ''}),
+    catalog({account_id: 'act_'}),
+    catalog({external_id: ' catalog'}),
+    catalog({external_id: '   '}),
+    catalog({platform: 'meta_ads ' as Row<'ad_campaigns'>['platform']}),
+  ];
+  for (const row of badCatalog) {
+    assert.throws(
+      () => scopedCampaigns([ad()], [], 'crm', [catalog(), row], orgA, 'BRL'),
+      /valid source identifiers/,
+    );
+    assert.throws(
+      () => scopedCampaigns([], [], 'crm', [row], orgA, 'BRL'),
+      /valid source identifiers/,
+    );
+  }
+});
+
+test('CAMPAIGN-SOURCE-ID-001: preserve opaque internal spaces, Meta aliases, zero and unattributed CRM', () => {
+  const opaqueAccount = 'act_synthetic account:1';
+  const opaqueCampaign = 'campaign internal:1';
+  const results = scopedCampaigns(
+    [ad({account_id: opaqueAccount, campaign_id: opaqueCampaign, spend: 0, leads: 0})],
+    [crm({account_id: opaqueAccount, campaign_id: opaqueCampaign, revenue: 100, purchases: 1}),
+      crm({channel: '', account_id: '', campaign_id: '', revenue: 5})],
+    'crm',
+    [catalog({account_id: opaqueAccount, external_id: 'catalog internal:2'})],
+    orgA,
+    'BRL',
+  );
+  assert.equal(results.length, 2);
+  const measured = results.find(row => row.campaignId === opaqueCampaign);
+  assert.equal(measured?.accountId, opaqueAccount);
+  assert.equal(measured?.spend, 0);
+  assert.equal(measured?.leads, 0);
+  assert.equal(measured?.revenue, 100);
+  assert.equal(results.find(row => row.campaignId === 'catalog internal:2')?.currency, '');
+  assert.deepEqual(scopedCampaigns([], [crm({channel: '', account_id: '', campaign_id: ''})], 'crm', [], orgA, 'BRL'), []);
+});

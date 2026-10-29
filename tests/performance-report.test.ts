@@ -95,3 +95,37 @@ test('SEC-PERF-SCOPE-001: valid tenant preserves empty, observed-zero and compar
  assert.equal(zero.current.totals.leads, 0);
  assert.equal(zero.previous?.totals.spend, 50);
 });
+
+
+test('PERF-GRAIN-OPAQUE-ID-001: rejects malformed source identities in either report period', () => {
+ const fields = ['id', 'account_id', 'campaign_id', 'ad_id'] as const;
+ for (const field of fields) {
+  for (const invalid of ['', ' ', ' synthetic', 'synthetic\\t', '\\u00a0synthetic', 'synthetic\\n']) {
+   const value = invalid.replace('\\t', '\t').replace('\\u00a0', '\u00a0').replace('\\n', '\n');
+   const patch = {[field]: value} as Partial<Row<'metrics_ads'>>;
+   assert.throws(() => buildPerformanceReport([fact(patch)], [], scope), /Invalid performance report grain/, field + ': current ' + JSON.stringify(value));
+   assert.throws(() => buildPerformanceReport([], [prior(patch)], scope), /Invalid performance report grain/, field + ': previous ' + JSON.stringify(value));
+  }
+ }
+ for (const account_id of ['act_', 'act_ ', 'act_\\t']) {
+  const value = account_id.replace('\\t', '\t');
+  assert.throws(() => buildPerformanceReport([fact({account_id:value})], [], scope), /Invalid performance report grain/);
+  assert.throws(() => buildPerformanceReport([], [prior({account_id:value})], scope), /Invalid performance report grain/);
+ }
+});
+
+test('PERF-GRAIN-OPAQUE-ID-001: valid opaque IDs, Meta alias and observed zero are preserved', () => {
+ const record = fact({
+  id: 'source: \"with spaces\"', account_id: 'act_12: alpha',
+  campaign_id: 'source: a b', ad_id: 'ad: alpha beta',
+  spend: 0, impressions: 0, clicks: 0, leads: 0,
+ });
+ const report = buildPerformanceReport([record], [], {...scope, compare:'none'});
+ assert.deepEqual(report.current.sourceIds, ['source: \"with spaces\"']);
+ assert.equal(report.campaigns[0].account, '12: alpha');
+ assert.equal(report.campaigns[0].campaignId, 'source: a b');
+ assert.equal(report.current.totals.spend, 0);
+ assert.equal(report.current.totals.leads, 0);
+ const other = buildPerformanceReport([fact({platform:'google_ads',account_id:'act_12: alpha'})], [], {...scope, compare:'none'});
+ assert.equal(other.campaigns[0].account, 'act_12: alpha');
+});

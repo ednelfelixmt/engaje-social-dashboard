@@ -175,6 +175,19 @@ export function campaigns(
   return performance;
 }
 
+/** Provider identifiers are opaque: validate them without normalizing or trimming them. */
+function validScopedSourceId(value: unknown, optional = false): value is string {
+  return typeof value === 'string' && (optional && value === '' || value.length > 0 && value.trim() === value);
+}
+
+/** CRM can be unattributed; paid facts and campaign catalog entries cannot. */
+function validScopedAccountId(value: unknown, provider: unknown, optional = false): boolean {
+  if (!validScopedSourceId(value, optional)) return false;
+  if (value === '') return optional;
+  // A syntactically valid act_ prefix must not conceal an empty/padded Meta ID.
+  return validScopedSourceId(provider === 'meta_ads' ? value.replace(/^act_/, '') : value);
+}
+
 // Fail closed if an API query returns a row outside the tenant/currency selected
 // by the authenticated route. Validate *all* sources, including unused CRM facts
 // and catalog-only campaigns, before projecting any figures.
@@ -192,6 +205,19 @@ export function scopedCampaigns(
     || crm.some(row => row.organization_id !== authorizedOrganizationId || row.currency !== selectedCurrency)
     || catalog.some(row => row.organization_id !== authorizedOrganizationId)) {
     throw new Error('Campaign aggregation requires authorized organization and currency');
+  }
+  // Validate every source, including CRM rows that do not match a paid campaign
+  // and catalog-only entries, before grouping or excluding any data.
+  if (ads.some(row => !validScopedSourceId(row.platform)
+      || !validScopedAccountId(row.account_id, row.platform)
+      || !validScopedSourceId(row.campaign_id))
+    || crm.some(row => !validScopedSourceId(row.channel, true)
+      || !validScopedAccountId(row.account_id, row.channel, true)
+      || !validScopedSourceId(row.campaign_id, true))
+    || catalog.some(row => !validScopedSourceId(row.platform)
+      || !validScopedAccountId(row.account_id, row.platform)
+      || !validScopedSourceId(row.external_id))) {
+    throw new Error('Campaign aggregation requires valid source identifiers');
   }
   return campaigns(ads, crm, preferred, catalog);
 }

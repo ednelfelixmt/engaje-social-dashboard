@@ -18,7 +18,7 @@ test('current period warns only when its valid measurements are delayed',()=>{
 });
 
 test('invalid or future-only dates in the current period are never described as fresh',()=>{
- assert.deepEqual(currentPeriodFreshness(['2026-10-27','2026-02-30'],'2026-10-26','2026-10-26'),{status:'empty',latest:null,daysOld:null});
+ assert.deepEqual(currentPeriodFreshness(['2026-10-27','2026-02-30'],'2026-10-26','2026-10-26'),{status:'invalid',latest:null,daysOld:null});
  assert.equal(currentPeriodFreshness([],'2026-10-26','2026-10-26'),null);
 });
 
@@ -35,9 +35,25 @@ test('DATA-FRESH-MIXED-001: fresh and delayed periods expose mixed impossible or
 });
 
 test('DATA-FRESH-MIXED-001: invalid-only sources remain unavailable and historical dates receive no warning',()=>{
- assert.deepEqual(currentPeriodFreshness(['2026-02-30','2026-10-27'],'2026-10-26','2026-10-26'),{status:'empty',latest:null,daysOld:null});
+ assert.deepEqual(currentPeriodFreshness(['2026-02-30','2026-10-27'],'2026-10-26','2026-10-26'),{status:'invalid',latest:null,daysOld:null});
  assert.equal(currentPeriodFreshness(['2026-10-25','2026-02-30'],'2026-10-25','2026-10-26'),null);
  const page=readFileSync(new URL('../src/app/(tenant)/[organizationSlug]/[section]/page.tsx',import.meta.url),'utf8');
  assert.match(page,/freshness\?\.status==='invalid'/);
  assert.match(page,/Datas de anúncios inconsistentes/);
+});
+
+test('DATA-FRESH-INVALID-ONLY-001: invalid-only observations are inconsistent, never simply missing',()=>{
+ const expected={status:'invalid',latest:null,daysOld:null};
+ for(const dates of [
+  ['2026-02-30'], // impossible calendar day
+  ['2026-10-27'], // future source day
+  ['not-a-date','2026-10-28'], // mixed malformed and future sources
+  ['2026-02-30','2026-10-27'],
+ ]) assert.deepEqual(currentPeriodFreshness(dates,'2026-10-26','2026-10-26'),expected);
+ assert.equal(currentPeriodFreshness([],'2026-10-26','2026-10-26'),null);
+ assert.equal(currentPeriodFreshness(['2026-02-30'],'2026-10-25','2026-10-26'),null);
+ assert.equal(paidDataFreshness(['2026-02-30'],'2026-10-26').status,'empty');
+ const dashboard=readFileSync(new URL('../src/app/(tenant)/[organizationSlug]/[section]/page.tsx',import.meta.url),'utf8');
+ assert.match(dashboard,/freshness\?\.status==='invalid'/);
+ assert.match(dashboard,/Datas de anúncios inconsistentes/);
 });

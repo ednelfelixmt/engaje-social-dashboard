@@ -145,3 +145,47 @@ test('DATAQUAL-SOURCE-GRAIN-001: valid opaque provider identities and observed z
  assert.equal(result.items[0].connected,1);assert.equal(result.items[0].breakdowns['custom:age'],1);
  assert.equal(result.jobs[0].recordedCount,0);
 });
+
+test('DATAQUAL-ALL-SOURCES-001: malformed identifiers on unsupported paid sources fail closed',()=>{
+ const futurePlatform='future_ads' as QualityMetric['platform'];
+ const base={...metric,id:'future-metric',platform:futurePlatform,account_id:'account:future',campaign_id:'campaign/future'};
+ for(const [key,value] of [
+  ['platform',' future_ads'],['platform','future_ads '],['platform',' \t '],
+  ['account_id',' future-account'],['account_id','future-account '],['account_id','\t'],
+  ['campaign_id',' future-campaign'],['campaign_id','future-campaign '],['campaign_id',''],
+ ] as const){
+  const invalid={...base,[key]:value} as QualityMetric;
+  assert.throws(()=>buildDataQuality({...input(),metrics:[metric,invalid]},scope),/Quality campaign identity missing/,key+':'+JSON.stringify(value));
+ }
+});
+
+test('DATAQUAL-ALL-SOURCES-001: invalid dimensions and integration providers cannot hide outside dashboard cards',()=>{
+ const futurePlatform='future_ads' as QualityInput['dimensions'][number]['platform'];
+ const dimension:QualityInput['dimensions'][number]={id:'future-dimension',organization_id:scope.organizationId,platform:futurePlatform,dimension_type:'custom:age'};
+ for(const invalid of [
+  {...dimension,platform:' future_ads' as typeof dimension.platform},
+  {...dimension,dimension_type:'custom:age '},
+  {...dimension,dimension_type:'\n'},
+ ]){
+  assert.throws(()=>buildDataQuality({...input(),dimensions:[invalid]},scope),/Quality dimension missing/);
+ }
+ const connection:QualityInput['integrations'][number]={id:'future-integration',organization_id:scope.organizationId,provider:'meta_ads',status:'connected',is_enabled:true};
+ for(const provider of [' future_ads','future_ads ','\n']){
+  assert.throws(()=>buildDataQuality({...input(),integrations:[{...connection,provider:provider as typeof connection.provider}]},scope),/Quality integration provider missing/);
+ }
+});
+
+test('DATAQUAL-ALL-SOURCES-001: intact future provider identities remain explicitly unsupported',()=>{
+ const futurePlatform='future_ads' as QualityMetric['platform'];
+ const dimension:QualityInput['dimensions'][number]={id:'future-dimension',organization_id:scope.organizationId,platform:futurePlatform as QualityInput['dimensions'][number]['platform'],dimension_type:'custom:age'};
+ const connection:QualityInput['integrations'][number]={id:'future-integration',organization_id:scope.organizationId,provider:futurePlatform as QualityInput['integrations'][number]['provider'],status:'connected',is_enabled:true};
+ const report=buildDataQuality({...input(),metrics:[
+  metric,{...metric,id:'future-metric',platform:futurePlatform,account_id:'opaque account',campaign_id:'future:campaign'},
+ ],dimensions:[dimension],integrations:[connection]},scope);
+ assert.equal(report.rows,2);
+ assert.equal(report.unsupportedMetricRows,1);
+ assert.equal(report.dimensions,1);
+ assert.equal(report.items[0].rows,1);
+ assert.equal(report.items[0].campaigns,1);
+ assert.equal(report.items[0].connected,0);
+});
