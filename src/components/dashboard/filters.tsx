@@ -24,13 +24,13 @@ export function Filters({value,organizations,slug,actions,allowComparison=true}:
    <label className={label+' w-full sm:w-auto sm:min-w-40 sm:max-w-52'}>Cliente
     <select aria-label="Cliente" className={field+' w-full'} value={slug} onChange={e=>changeClient(e.target.value)}>{organizations.map(o=><option value={o.slug} key={o.slug}>{o.name}</option>)}</select>
    </label>
-   <form onSubmit={submit} className="flex min-w-0 flex-1 flex-wrap items-end gap-x-2 gap-y-2">
+   <form key={JSON.stringify([path,slug,value.from,value.to,value.compare,value.currency,allowComparison])} onSubmit={submit} className="flex min-w-0 flex-1 flex-wrap items-end gap-x-2 gap-y-2">
     <label className={label}>De<input aria-label="Data inicial" className={field+' w-[132px]'} type="date" name="from" defaultValue={value.from} required/></label>
     <label className={label}>Até<input aria-label="Data final" className={field+' w-[132px]'} type="date" name="to" defaultValue={value.to} required/></label>
     {allowComparison?<label className={label}>Comparar
      <select aria-label="Comparação" className={field+' w-[147px]'} name="compare" defaultValue={value.compare}><option value="previous_period">Período anterior</option><option value="previous_year">Ano anterior</option><option value="none">Sem comparação</option></select>
     </label>:<input type="hidden" name="compare" value="none"/>}
-    <label className={label+' hidden xl:flex'}>Moeda<input aria-label="Moeda" className={field+' w-[68px]'} name="currency" defaultValue={value.currency} pattern="[A-Z]{3}" maxLength={3} required/></label>
+    <label className={label}>Moeda<input aria-label="Moeda" className={field+' w-[68px]'} name="currency" defaultValue={value.currency} pattern="[A-Z]{3}" maxLength={3} required/></label>
     <button type="submit" className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-primary/90 px-3 text-xs font-semibold text-black transition hover:bg-primary">Aplicar <ArrowRight size={13}/></button>
    </form>
    {actions?<div className="flex min-h-9 min-w-0 items-center lg:ml-auto [&_[data-personalize-bar]]:gap-1 [&_[data-personalize-bar]_button]:!min-h-9">{actions}</div>:null}
