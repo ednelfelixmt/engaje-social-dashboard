@@ -28,6 +28,6 @@ test('executive campaign drill-down links retain exact platform/account/campaign
  for(const link of links){assert.equal(link.pathname,'/synthetic-a/reports/campaign');assert.equal(link.searchParams.get('platform'),'meta_ads');assert.equal(link.searchParams.get('account'),'123');assert.equal(link.searchParams.get('campaign'),'synthetic');assert.equal(link.searchParams.get('from'),scope.from);assert.equal(link.searchParams.get('compare'),'previous_period');}
 });
 
-test('ambiguous already-canonical Meta prefixes cannot generate a link to a different account',()=>{
- const report=buildPerformanceReport([{...fact,account_id:'act_act_123'}],[],scope);const html=renderToStaticMarkup(React.createElement(PerformanceReportView,{report}));assert.ok(!html.includes('/reports/campaign?'));
+test('ambiguous already-canonical Meta prefixes are rejected before any report or drill-down is rendered',()=>{
+ assert.throws(() => buildPerformanceReport([{...fact,account_id:'act_act_123'}],[],scope), /Invalid performance report grain/);
 });
