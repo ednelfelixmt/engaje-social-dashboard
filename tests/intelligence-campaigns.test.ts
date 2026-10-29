@@ -28,7 +28,7 @@ function campaign(overrides: Partial<CampaignPerformance> = {}): CampaignPerform
 test('Intelligence preserves an observed zero campaign instead of displaying no campaigns', () => {
   const result = intelligenceCampaignShape([campaign()], organizationId, currency);
   assert.deepEqual(result, [{
-    id: JSON.stringify([organizationId, 'meta_ads', 'act_synthetic', 'campaign-zero']),
+    id: JSON.stringify([organizationId, 'meta_ads', 'synthetic', 'campaign-zero']),
     name: 'Synthetic campaign',
     platform: 'meta_ads',
     spend: 0,
@@ -55,7 +55,7 @@ test('catalog-only placeholders are excluded, including when mixed with measured
   const measured = campaign({campaignId: 'observed'});
   assert.deepEqual(intelligenceCampaignShape([catalog], organizationId, currency), []);
   assert.deepEqual(intelligenceCampaignShape([catalog, measured], organizationId, currency).map(row => row.id),
-    [JSON.stringify([organizationId, 'meta_ads', 'act_synthetic', 'observed'])]);
+    [JSON.stringify([organizationId, 'meta_ads', 'synthetic', 'observed'])]);
 });
 
 test('missing authorization or a cross-tenant campaign fails closed even for catalog-only rows', () => {
@@ -109,7 +109,7 @@ test('SEC-INT-CAMP-001: currency-less catalog placeholders remain excluded and o
     campaign({campaignId: 'zero', currency, spend: 0, leads: null}),
   ], organizationId, currency);
   assert.equal(result.length, 1);
-  assert.equal(result[0].id, JSON.stringify([organizationId, 'meta_ads', 'act_synthetic', 'zero']));
+  assert.equal(result[0].id, JSON.stringify([organizationId, 'meta_ads', 'synthetic', 'zero']));
   assert.equal(result[0].spend, 0);
   assert.equal(result[0].leads, null);
 });
@@ -160,4 +160,31 @@ test('INTELLIGENCE-OPAQUE-ID-001: UI keys distinguish IDs containing delimiters 
   assert.equal(result[1].id, JSON.stringify([organizationId, 'meta_ads', 'acct', 'east:item']));
   assert.equal(result[2].spend, 0);
   assert.equal(result[2].leads, 0);
+});
+
+test('INTEL-META-IDENTITY-001: invalid Meta aliases fail closed before excluding catalog rows', () => {
+  for (const invalidAccount of ['act_', 'act_act_123', 'act_ 123', 'act_\u00a0123', 'act_\u0000id']) {
+    assert.throws(() => intelligenceCampaignShape([
+      campaign(), campaign({accountId: invalidAccount, campaignId: 'invalid'}),
+    ], organizationId, currency), /valid source identifiers/, invalidAccount);
+    assert.throws(() => intelligenceCampaignShape([
+      campaign(), campaign({accountId: invalidAccount, metricValues: {}, currency: ''}),
+    ], organizationId, currency), /valid source identifiers/, invalidAccount);
+  }
+  assert.equal(intelligenceCampaignShape([campaign({accountId: 'act_123'})], organizationId, currency).length, 1);
+});
+
+test('INTEL-META-IDENTITY-001: Meta aliases share stable UI identity while other platform IDs stay literal', () => {
+  const metaRaw = intelligenceCampaignShape([campaign({accountId: '123'})], organizationId, currency);
+  const metaAlias = intelligenceCampaignShape([campaign({accountId: 'act_123'})], organizationId, currency);
+  assert.equal(metaRaw[0].id, metaAlias[0].id);
+  assert.equal(metaRaw[0].id, JSON.stringify([organizationId, 'meta_ads', '123', 'campaign-zero']));
+  const google = intelligenceCampaignShape([
+    campaign({platform: 'google_ads', accountId: 'act_act_123', campaignId: 'literal'}),
+  ], organizationId, currency);
+  assert.equal(google[0].id, JSON.stringify([organizationId, 'google_ads', 'act_act_123', 'literal']));
+  assert.equal(google[0].spend, 0);
+  assert.throws(() => intelligenceCampaignShape([
+    campaign({accountId: '123'}), campaign({accountId: 'act_123'}),
+  ], organizationId, currency), /unique source identities/);
 });
