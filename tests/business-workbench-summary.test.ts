@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {compareWorkbenchPeriods, getWorkbenchSummary, getWorkbenchDayMetric, type WorkbenchSummaryRow} from '../src/lib/metrics/business-workbench-summary';
+import {compareWorkbenchPeriods, getWorkbenchSummary, getWorkbenchDayMetric, selectWorkbenchTimeline, type WorkbenchSummaryRow} from '../src/lib/metrics/business-workbench-summary';
 
 const campaign = (overrides: Partial<WorkbenchSummaryRow> = {}): WorkbenchSummaryRow =>
   ({spend: 100, impressions: 1000, clicks: 50, leads: 10, ...overrides});
@@ -89,4 +89,17 @@ test('neutral classification still rejects a missing or invalid comparison basel
   assert.equal(compareWorkbenchPeriods(10, 0, false, true), null);
   assert.equal(compareWorkbenchPeriods(null, 10, false, true), null);
   assert.equal(compareWorkbenchPeriods(Number.POSITIVE_INFINITY, 10, false, true), null);
+});
+
+test('channel chart selection never silently reuses portfolio totals or the wrong comparison', () => {
+  const overall = Object.freeze([{date: '2026-10-25', spend: 900}]);
+  const meta = Object.freeze([{date: '2026-10-25', spend: 100}]);
+  const google = Object.freeze([{date: '2026-10-25', spend: 800}]);
+  const byChannel = Object.freeze({meta_ads: meta, google_ads: google});
+  assert.equal(selectWorkbenchTimeline('all', overall, byChannel), overall);
+  assert.equal(selectWorkbenchTimeline('meta_ads', overall, byChannel), meta);
+  assert.equal(selectWorkbenchTimeline('google_ads', overall, byChannel), google);
+  assert.deepEqual(selectWorkbenchTimeline('tiktok_ads', overall, byChannel), []);
+  assert.deepEqual(selectWorkbenchTimeline('invalid', overall, byChannel), []);
+  assert.deepEqual(overall, [{date: '2026-10-25', spend: 900}]);
 });
