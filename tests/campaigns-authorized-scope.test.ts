@@ -182,3 +182,41 @@ test('CAMPAIGN-SOURCE-ID-001: preserve opaque internal spaces, Meta aliases, zer
   assert.equal(results.find(row => row.campaignId === 'catalog internal:2')?.currency, '');
   assert.deepEqual(scopedCampaigns([], [crm({channel: '', account_id: '', campaign_id: ''})], 'crm', [], orgA, 'BRL'), []);
 });
+
+test('CAMPAIGN-META-ALIAS-002: malformed doubled Meta aliases fail closed across all sources', () => {
+  for (const account_id of ['act_act_123', 'act_act_', 'act_act_ 123']) {
+    assert.throws(
+      () => scopedCampaigns([ad(), ad({account_id})], [crm()], 'crm', [catalog()], orgA, 'BRL'),
+      /valid source identifiers/, 'paid ' + account_id,
+    );
+    // Unmatched and unselected CRM facts still participate in integrity validation.
+    assert.throws(
+      () => scopedCampaigns([ad()], [crm(), crm({account_id, campaign_id:'unmatched'})], 'crm', [catalog()], orgA, 'BRL'),
+      /valid source identifiers/, 'CRM ' + account_id,
+    );
+    assert.throws(
+      () => scopedCampaigns([ad()], [crm()], 'crm', [catalog(), catalog({account_id})], orgA, 'BRL'),
+      /valid source identifiers/, 'catalog ' + account_id,
+    );
+  }
+});
+
+test('CAMPAIGN-META-ALIAS-002: one Meta alias remains valid; other providers keep literal opaque IDs', () => {
+  const validMeta = scopedCampaigns(
+    [ad({account_id:'act_123', spend:0})],
+    [crm({account_id:'123', revenue:150})], 'crm', [], orgA, 'BRL',
+  );
+  assert.equal(validMeta[0].accountId, 'act_123');
+  assert.equal(validMeta[0].revenue, 150);
+  assert.equal(validMeta[0].spend, 0);
+  for (const platform of ['google_ads', 'tiktok_ads', 'microsoft_ads'] as const) {
+    const literal = scopedCampaigns(
+      [ad({platform, account_id:'act_act_123'})],
+      [crm({channel:platform, account_id:'act_act_123', revenue:75})],
+      'crm', [catalog({platform, account_id:'act_act_123'})], orgA, 'BRL',
+    );
+    assert.equal(literal.length, 2);
+    assert.equal(literal[0].accountId, 'act_act_123');
+    assert.equal(literal[0].revenue, 75);
+  }
+});
