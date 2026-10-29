@@ -3,10 +3,10 @@ on:
   workflow_dispatch:
     inputs:
       provision_private_fixtures:
-        description: 'Upload two synthetic-only branding files (never real client files)'
+        description: 'Optional privileged fixture upload; requires PHASE02_SERVICE_ROLE_KEY'
         type: boolean
         required: true
-        default: true
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -15,12 +15,14 @@ concurrency:
 jobs:
   final-isolation:
     name: Synthetic A/B authenticated gate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment: phase02-homologation
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
           cache: npm
