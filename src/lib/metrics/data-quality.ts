@@ -15,6 +15,13 @@ export type QualityJobView={id:string;status:'queued'|'running'|'completed'|'fai
 function validGrainIdentifier(value: unknown): value is string {
  return typeof value === 'string' && value.trim().length > 0 && value === value.trim();
 }
+/** Meta 'act_' is an alias prefix, not an account identity by itself. */
+function validQualityAccount(platform:string,account:unknown):account is string{
+ if(!validGrainIdentifier(account))return false;
+ if(platform!=='meta_ads')return true;
+ const normalized=account.replace(/^act_/,'');
+ return validGrainIdentifier(normalized)&&!normalized.startsWith('act_');
+}
 function validDate(value:unknown):value is string{if(typeof value!=='string')return false;try{calendarDays(value,value);return true;}catch{return false;}}
 function timestamp(value:unknown):bigint|null{
  if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?(?:Z|[+-](?:(?:0\d|1[0-3]):[0-5]\d|14:00))$/.test(value)||!validDate(value.slice(0,10)))return null;
@@ -33,7 +40,7 @@ export function buildDataQuality(input:QualityInput,scope:QualityScope){
  // bypass validation merely because their provider has no health card.
  if(input.integrations.some(row=>!validGrainIdentifier(row.provider)))
   throw new Error('Quality integration provider missing');
- if(input.metrics.some(row=>!validGrainIdentifier(row.platform)||!validGrainIdentifier(row.account_id)||!validGrainIdentifier(row.campaign_id)))
+ if(input.metrics.some(row=>!validGrainIdentifier(row.platform)||!validQualityAccount(row.platform,row.account_id)||!validGrainIdentifier(row.campaign_id)))
   throw new Error('Quality campaign identity missing');
  if(input.dimensions.some(row=>!validGrainIdentifier(row.platform)||!validGrainIdentifier(row.dimension_type)))
   throw new Error('Quality dimension missing');
@@ -51,7 +58,7 @@ export function buildDataQuality(input:QualityInput,scope:QualityScope){
   const received=collections.filter((ms):ms is bigint=>ms!==null);
   const integrations=input.integrations.filter(row=>row.provider===platform),breakdowns:Record<string,number>=Object.create(null);
   for(const row of input.dimensions.filter(row=>row.platform===platform)){breakdowns[row.dimension_type]=(breakdowns[row.dimension_type]??0)+1;}
-  return {platform,campaigns:new Set(records.map(row=>JSON.stringify([row.account_id,row.campaign_id]))).size,rows:records.length,days:dates.length,first:dates[0]??null,latest:freshness.latest,lastReceived:iso(received.length?received.reduce((latest,ms)=>ms>latest?ms:latest):null),age:freshness.daysOld,
+  return {platform,campaigns:new Set(records.map(row=>JSON.stringify([platform==='meta_ads'?row.account_id.replace(/^act_/,''):row.account_id,row.campaign_id]))).size,rows:records.length,days:dates.length,first:dates[0]??null,latest:freshness.latest,lastReceived:iso(received.length?received.reduce((latest,ms)=>ms>latest?ms:latest):null),age:freshness.daysOld,
    integrations:integrations.length,connected:integrations.filter(row=>row.status==='connected'&&row.is_enabled===true).length,expired:integrations.filter(row=>row.status==='expired'||row.status==='error').length,breakdowns,
    status:invalidDates>0||futureDates>0?'invalid':freshness.status==='empty'?(records.length?'invalid':'missing'):freshness.status,
    invalidDates,futureDates,unknownCollections:collections.filter(ms=>ms===null).length};
