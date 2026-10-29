@@ -129,3 +129,30 @@ test('PERF-GRAIN-OPAQUE-ID-001: valid opaque IDs, Meta alias and observed zero a
  const other = buildPerformanceReport([fact({platform:'google_ads',account_id:'act_12: alpha'})], [], {...scope, compare:'none'});
  assert.equal(other.campaigns[0].account, 'act_12: alpha');
 });
+
+
+test('PERF-META-ALIAS-001: nested Meta account aliases reject the whole report in either period', () => {
+ for (const account_id of ['act_act_123', 'act_act_', 'act_act_12: alpha']) {
+  assert.throws(() => buildPerformanceReport([
+   fact(), fact({id: 'synthetic-invalid', ad_id: 'other-ad', account_id, spend: 0}),
+  ], [], scope), /Invalid performance report grain/, 'current: ' + account_id);
+  assert.throws(() => buildPerformanceReport([], [prior({account_id, spend: 0})], scope),
+   /Invalid performance report grain/, 'previous: ' + account_id);
+ }
+});
+
+test('PERF-META-ALIAS-001: valid Meta aliases remain one grain and non-Meta IDs stay literal', () => {
+ const report = buildPerformanceReport([
+  fact({account_id: '123', spend: 0, clicks: 0, leads: 0}),
+  fact({id: 'synthetic-second', ad_id: 'other-ad', account_id: 'act_123', spend: 25}),
+ ], [prior({account_id: '123'})], scope);
+ assert.equal(report.current.totals.spend, 25);
+ assert.equal(report.campaigns.length, 1);
+ assert.equal(report.campaigns[0].account, '123');
+ assert.equal(comparableAttribution(report.current, report.previous!), true);
+ const google = buildPerformanceReport([
+  fact({platform: 'google_ads', account_id: 'act_act_123', spend: 0}),
+ ], [], {...scope, compare: 'none'});
+ assert.equal(google.campaigns[0].account, 'act_act_123');
+ assert.equal(google.current.totals.spend, 0);
+});

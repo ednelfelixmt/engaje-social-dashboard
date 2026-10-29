@@ -36,7 +36,10 @@ function validate(rows: readonly Fact[], scope: PerformanceScope, range: {from: 
   // value must not become an apparently valid ad/day grain after normalization.
   if (!validSourceIdentity(row.id) || !validSourceIdentity(row.account_id)
    || !validSourceIdentity(row.campaign_id) || !validSourceIdentity(row.ad_id)
-   || !validSourceIdentity(accountOf(row))) throw new Error('Invalid performance report grain');
+   || !validSourceIdentity(accountOf(row))
+   // A second Meta act_ marker is not an account alias. It would make the
+   // report aggregate a different account than the authenticated dashboards.
+   || (row.platform === 'meta_ads' && accountOf(row).startsWith('act_'))) throw new Error('Invalid performance report grain');
   const grain = JSON.stringify([row.platform, accountOf(row), row.campaign_id, row.ad_id, row.metric_date, row.currency]);
   if (ids.has(row.id) || grains.has(grain)) throw new Error('Duplicate performance report grain');
   ids.add(row.id); grains.add(grain);
