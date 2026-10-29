@@ -112,7 +112,7 @@ test('CAMPAIGN-SOURCE-ID-001: paid facts reject malformed identities without ret
     ad({account_id: 'act_ padded'}),
     ad({account_id: 'account '}),
     ad({campaign_id: ' campaign'}),
-    ad({campaign_id: '\\tcampaign'}),
+    ad({campaign_id: String.fromCharCode(9) + 'campaign'}),
     ad({platform: ' meta_ads' as Row<'metrics_ads'>['platform']}),
   ];
   for (const row of malformed) {
@@ -128,7 +128,7 @@ test('CAMPAIGN-SOURCE-ID-001: unmatched CRM and catalog placeholders cannot hide
     crm({account_id: '  '}),
     crm({account_id: 'act_'}),
     crm({campaign_id: 'unmatched '}),
-    crm({campaign_id: '\\u00a0'}),
+    crm({campaign_id: String.fromCharCode(160)}),
     crm({channel: ' meta_ads'}),
     crm({account_id: null as unknown as string}),
   ];
