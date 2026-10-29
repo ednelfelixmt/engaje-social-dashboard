@@ -8,15 +8,19 @@ import {campaignCpl} from './efficiency';
  */
 /** Keep direct campaign comparison consistent with the strict reconciliation grain. */
 function validGrainIdentifier(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0 && value === value.trim();
+  return typeof value === 'string' && value.trim().length > 0 && value === value.trim()
+    && !/[\u0000-\u001f\u007f-\u009f]/.test(value);
 }
 
 function comparisonKey(row: CampaignPerformance): string | null {
   const {organizationId, platform, accountId, campaignId, currency} = row;
-  // The act_ alias belongs to Meta. Other providers may use that prefix literally.
-  const normalizedAccount = platform === 'meta_ads' ? accountId?.replace(/^act_/, '') : accountId;
-  if (!isRfcOrganizationUuid(organizationId) || !validGrainIdentifier(platform) || !validGrainIdentifier(normalizedAccount)
-    || !validGrainIdentifier(campaignId) || !/^[A-Z]{3}$/.test(currency)) return null;
+  // Validate the raw source ID before applying Meta's single allowed act_ alias.
+  // Otherwise a doubled marker can be mistaken for a valid opaque account.
+  if (!isRfcOrganizationUuid(organizationId) || !validGrainIdentifier(platform)
+    || !validGrainIdentifier(accountId) || !validGrainIdentifier(campaignId)
+    || !/^[A-Z]{3}$/.test(currency)) return null;
+  const normalizedAccount = platform === 'meta_ads' ? accountId.replace(/^act_/, '') : accountId;
+  if (!validGrainIdentifier(normalizedAccount) || (platform === 'meta_ads' && normalizedAccount.startsWith('act_'))) return null;
   return JSON.stringify([organizationId, platform, normalizedAccount, campaignId, currency]);
 }
 
@@ -59,7 +63,17 @@ export function rankCampaignDecisionImpacts(
   comparing: boolean,
 ): CampaignDecisionImpact[] {
   const order: Record<DecisionRecommendation, number> = {scale: 0, evaluate: 1, review: 2};
-  return current.filter(row => Number.isFinite(row.spend) && row.spend > 0).map(row => {
+  // Catalog-only records without spend are not decision candidates; keep that
+  // established behavior, but validate every actionable row before ranking.
+  const active = current.filter(row => Number.isFinite(row.spend) && row.spend > 0);
+  const keys = active.map(comparisonKey);
+  if (keys.some(key => key === null)) throw new Error('Invalid decision campaign grain');
+  const first = active[0];
+  if (first && active.some(row => row.organizationId !== first.organizationId || row.currency !== first.currency)) {
+    throw new Error('Mixed decision campaign scope');
+  }
+  if (new Set(keys).size !== keys.length) throw new Error('Duplicate decision campaign grain');
+  return active.map((row, index) => {
     const cpl = campaignCpl(row.spend, row.leads);
     const historical = comparing ? findComparableCampaign(row, previous) : null;
     const historicalCpl = historical ? campaignCpl(historical.spend, historical.leads) : null;
@@ -68,7 +82,8 @@ export function rankCampaignDecisionImpacts(
       : cpl < historicalCpl ? 'scale' : 'review';
     return {
       ...row, cpl, recommendation,
-      decisionKey: JSON.stringify([row.organizationId, row.platform, row.accountId, row.campaignId, row.currency]),
+      // Canonical Meta identity makes the UI key stable across valid act_ aliases.
+      decisionKey: keys[index]!,
     };
   }).sort((a, b) => order[a.recommendation] - order[b.recommendation]
     || usableLeads(b.leads) - usableLeads(a.leads)

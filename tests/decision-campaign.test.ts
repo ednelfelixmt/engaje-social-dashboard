@@ -180,3 +180,50 @@ test('DECISION-CPL-001: decision dashboard displays valid CPL and an explicit ne
   assert.match(source, /key=\{row\.decisionKey\}/);
   assert.doesNotMatch(source, /row\.spend\/row\.leads|row\.positive|before\.spend\/before\.leads/);
 });
+
+test('DECISION-GRAIN-GUARD-002: invalid nested Meta aliases and embedded control characters cannot prove history', () => {
+  for (const accountId of ['act_act_123', 'act_act_', 'act_act_act_123', 'act_12\u00003', 'act_12\u00853']) {
+    assert.equal(findComparableCampaign(campaign({accountId}), [campaign({accountId})]), null, accountId);
+    assert.equal(findComparableCampaign(campaign(), [campaign({accountId})]), null, accountId);
+  }
+  const google = campaign({platform: 'google_ads', accountId: 'act_act_123'});
+  assert.equal(findComparableCampaign(google, [campaign({platform: 'google_ads', accountId: 'act_act_123', spend: 70})])?.spend, 70);
+});
+
+test('DECISION-GRAIN-GUARD-002: actionable invalid identities are rejected instead of ranked as opportunities', () => {
+  for (const override of [
+    {accountId: 'act_act_123'}, {accountId: 'act_123\u0000'}, {campaignId: 'campaign\n1'},
+    {organizationId: 'not-a-tenant'}, {currency: 'usd'},
+  ]) {
+    assert.throws(() => rankCampaignDecisionImpacts([campaign(override)], [campaign()], true), /Invalid decision campaign grain/);
+  }
+  assert.deepEqual(rankCampaignDecisionImpacts([campaign({spend: 0, currency: ''})], [], true), []);
+});
+
+test('DECISION-GRAIN-GUARD-002: current decision ranking rejects mixed tenants and currencies before top-six selection', () => {
+  const legitimate = Array.from({length: 8}, (_, index) => campaign({campaignId: 'legitimate-' + index, spend: 100 - index}));
+  assert.throws(
+    () => rankCampaignDecisionImpacts([...legitimate, campaign({organizationId: orgB, campaignId: 'foreign', spend: 1})], [], false),
+    /Mixed decision campaign scope/,
+  );
+  assert.throws(
+    () => rankCampaignDecisionImpacts([...legitimate, campaign({currency: 'USD', campaignId: 'another-currency', spend: 1})], [], false),
+    /Mixed decision campaign scope/,
+  );
+});
+
+test('DECISION-GRAIN-GUARD-002: duplicated actionable Meta aliases cannot produce two recommendations', () => {
+  assert.throws(() => rankCampaignDecisionImpacts([
+    campaign({accountId: 'act_123'}), campaign({accountId: '123', leads: 8}),
+  ], [], false), /Duplicate decision campaign grain/);
+  assert.equal(rankCampaignDecisionImpacts([campaign()], [campaign({accountId: 'act_act_123', spend: 100, leads: 1})], true)[0].recommendation, 'evaluate');
+});
+
+test('DECISION-GRAIN-GUARD-002: valid Meta aliases share a stable key without normalizing other providers', () => {
+  const withAlias = rankCampaignDecisionImpacts([campaign({accountId: 'act_123'})], [], false)[0];
+  const withoutAlias = rankCampaignDecisionImpacts([campaign({accountId: '123'})], [], false)[0];
+  assert.equal(withAlias.decisionKey, withoutAlias.decisionKey);
+  const google = rankCampaignDecisionImpacts([campaign({platform: 'google_ads', accountId: 'act_123'})], [], false)[0];
+  assert.notEqual(google.decisionKey, withAlias.decisionKey);
+  assert.equal(rankCampaignDecisionImpacts([campaign({spend: 0, currency: ''}), campaign()], [], false).length, 1);
+});
