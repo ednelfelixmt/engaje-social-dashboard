@@ -100,3 +100,44 @@ test('empty source has no fabricated data rows',()=>{
  const report=build([]);assert.equal(report.sourceRecords,0);assert.equal(report.groups.gender.length,0);
  assert.equal(Papa.parse(audienceReportCsv(report),{delimiter:';'}).data.length,1);
 });
+
+
+test('AUDIENCE-LABEL-001: canonical labels apply only to their own dimension',()=>{
+ const report=build([
+  fact({dimension_type:'city',dimension_value:'male',dimension_label:'Cidade Male'}),
+  fact({dimension_type:'age',dimension_value:'mobile',dimension_label:'Faixa Mobile'}),
+  fact({dimension_type:'gender',dimension_value:'female',dimension_label:'External Female'}),
+  fact({dimension_type:'device',dimension_value:'mobile_app',dimension_label:'External Device'}),
+ ]);
+ assert.equal(report.groups.city[0].label,'Cidade Male');
+ assert.equal(report.groups.age[0].label,'Faixa Mobile');
+ assert.equal(report.groups.gender[0].label,'Feminino');
+ assert.equal(report.groups.device[0].label,'Mobile — aplicativo');
+});
+
+test('AUDIENCE-LABEL-001: conflicting source labels use dimension value instead of arbitrary fact',()=>{
+ const first=fact({dimension_type:'city',dimension_value:'CUI',dimension_label:'Cuiabá'});
+ const second=fact({metric_date:scope.to,dimension_type:'city',dimension_value:'CUI',dimension_label:'Grande Cuiabá'});
+ const forward=build([first,second]).groups.city[0];
+ const reversed=build([second,first]).groups.city[0];
+ assert.equal(forward.label,'CUI');
+ assert.deepEqual(forward,reversed);
+ assert.equal(forward.spend,200);
+ assert.equal(forward.leads,10);
+ assert.deepEqual(forward.sourceIds,[first.id,second.id].sort((a,b)=>a.localeCompare(b)));
+});
+
+test('AUDIENCE-LABEL-001: consistent, blank and whitespace-only labels do not invent translations',()=>{
+ const records=[
+  fact({dimension_type:'state',dimension_value:'MT',dimension_label:' Mato Grosso '}),
+  fact({metric_date:scope.to,dimension_type:'state',dimension_value:'MT',dimension_label:'Mato Grosso'}),
+  fact({dimension_type:'city',dimension_value:'CUI',dimension_label:'  '}),
+  fact({dimension_type:'city',dimension_value:'UNKNOWN_CITY',dimension_label:''}),
+ ];
+ // Different city values are intentionally separate source grains.
+ const report=build(records);
+ assert.equal(report.groups.state[0].label,'Mato Grosso');
+ assert.equal(report.groups.city.find(row=>row.value==='CUI')?.label,'CUI');
+ assert.equal(report.groups.city.find(row=>row.value==='UNKNOWN_CITY')?.label,'UNKNOWN_CITY');
+ assert.equal(report.groups.state[0].impressions,2000);
+});
