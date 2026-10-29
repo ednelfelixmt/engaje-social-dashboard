@@ -12,7 +12,7 @@ const buildIntelligenceTimeline = (rows: readonly IntelligenceDailyFact[]) =>
 
 const fact = (overrides: Partial<IntelligenceDailyFact> = {}): IntelligenceDailyFact => ({
   organization_id: organizationId, currency,
-  metric_date: '2026-10-25', spend: 100, impressions: 1000, clicks: 50, leads: 10, ...overrides,
+  platform: 'meta_ads', metric_date: '2026-10-25', spend: 100, impressions: 1000, clicks: 50, leads: 10, ...overrides,
 });
 
 test('daily timeline remains empty when no ad facts are returned', () => {
@@ -62,8 +62,10 @@ test('missing or invalid measures on one date do not contaminate another date', 
 
 test('the authenticated intelligence page uses strict daily aggregation for both periods', () => {
   const source = readFileSync('src/app/(tenant)/[organizationSlug]/intelligence/page.tsx', 'utf8');
-  assert.match(source, /timeline=\{buildIntelligenceTimeline\(data\.ads,org\.id,f\.currency\)\}/);
-  assert.match(source, /priorTimeline=\{buildIntelligenceTimeline\(data\.adsComparison,org\.id,f\.currency\)\}/);
+  assert.match(source, /const timeline=buildIntelligenceTimeline\(data\.ads,org\.id,f\.currency\)/);
+  assert.match(source, /const priorTimeline=buildIntelligenceTimeline\(data\.adsComparison,org\.id,f\.currency\)/);
+  assert.match(source, /timelinesByChannel=\{channelTimelines\}/);
+  assert.match(source, /priorTimelinesByChannel=\{priorChannelTimelines\}/);
   assert.doesNotMatch(source, /function dayShape/);
   assert.match(source, /dashboardData\(db,org\.id,f,/);
 });
@@ -108,4 +110,41 @@ test('intelligence daily guard rejects impossible dates before grouping valid ca
   assert.throws(() => buildIntelligenceTimeline([fact({metric_date: invalid})]), /valid ISO calendar days/, invalid);
  }
  assert.equal(buildIntelligenceTimeline([fact({metric_date: '2024-02-29'})])[0].date, '2024-02-29');
+});
+
+test('channel timeline uses only that provider for both normal and zero-valued days', () => {
+  const rows = [
+    fact({platform: 'meta_ads', metric_date: '2026-10-26', spend: 0, leads: 0}),
+    fact({platform: 'google_ads', metric_date: '2026-10-25', spend: 900, leads: 90}),
+    fact({platform: 'meta_ads', metric_date: '2026-10-25', spend: 100, leads: 10}),
+  ];
+  assert.deepEqual(buildIntelligenceTimeline(rows).map(day => [day.date, day.spend, day.leads]), [
+    ['2026-10-25', 1000, 100], ['2026-10-26', 0, 0],
+  ]);
+  assert.deepEqual(buildScopedIntelligenceTimeline(rows, organizationId, currency, 'meta_ads')
+    .map(day => [day.date, day.spend, day.leads]), [
+    ['2026-10-25', 100, 10], ['2026-10-26', 0, 0],
+  ]);
+  assert.deepEqual(buildScopedIntelligenceTimeline(rows, organizationId, currency, 'google_ads')
+    .map(day => [day.date, day.spend, day.leads]), [['2026-10-25', 900, 90]]);
+  assert.deepEqual(buildScopedIntelligenceTimeline(rows, organizationId, currency, 'tiktok_ads'), []);
+});
+
+test('channel filter rejects a foreign tenant, currency or impossible date even in a different provider', () => {
+  const valid = fact({platform: 'meta_ads'});
+  for (const offChannel of [
+    fact({platform: 'google_ads', organization_id: otherOrganizationId}),
+    fact({platform: 'google_ads', currency: 'USD'}),
+    fact({platform: 'google_ads', metric_date: '2026-02-30'}),
+  ]) {
+    assert.throws(() => buildScopedIntelligenceTimeline([valid, offChannel], organizationId, currency, 'meta_ads'));
+  }
+});
+
+test('channel projection rejects malformed provider identity instead of silently dropping that row', () => {
+  for (const malformed of ['', ' meta_ads', 'google_ads ']) {
+    assert.throws(() => buildScopedIntelligenceTimeline([fact({platform: malformed as IntelligenceDailyFact['platform']})],
+      organizationId, currency, 'google_ads'), /source platforms/);
+    assert.throws(() => buildScopedIntelligenceTimeline([], organizationId, currency, malformed), /selected platform/);
+  }
 });

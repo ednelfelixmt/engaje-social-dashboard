@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {loadTypescript} from './helpers/load-typescript';
@@ -51,4 +52,13 @@ test('Intelligence UI does not fabricate a comparison when prior measurements ar
   }));
   assert.match(html, /Comparação indisponível/);
   assert.doesNotMatch(html, /title="Variação favorável"|title="Variação desfavorável"/);
+});
+
+test('Intelligence trend chart uses selected current and historical series rather than all-channel data', () => {
+  const source = readFileSync('src/components/dashboard/business-analytics-workbench.tsx', 'utf8');
+  assert.match(source, /selectWorkbenchTimeline\(channel,timeline,timelinesByChannel\)/);
+  assert.match(source, /selectWorkbenchTimeline\(channel,priorTimeline,priorTimelinesByChannel\)/);
+  assert.match(source, /getWorkbenchDayMetric\(selectedTimeline\[i\],metric\)/);
+  assert.match(source, /getWorkbenchDayMetric\(selectedPriorTimeline\[i\],metric\)/);
+  assert.match(source, /\[selectedTimeline,selectedPriorTimeline,metric\]/);
 });

@@ -4,7 +4,7 @@ import type {Row} from '@/types/database.types';
 import {paidTotals} from './paid-metrics';
 
 /** Read-only projection of the already tenant/currency/period-scoped ads query. */
-export type IntelligenceDailyFact = Readonly<Pick<Row<'metrics_ads'>, 'organization_id' | 'currency' | 'metric_date' | 'spend' | 'impressions' | 'clicks' | 'leads'>>;
+export type IntelligenceDailyFact = Readonly<Pick<Row<'metrics_ads'>, 'organization_id' | 'currency' | 'platform' | 'metric_date' | 'spend' | 'impressions' | 'clicks' | 'leads'>>;
 export type IntelligenceDailyPoint = Readonly<{
   date: string;
   spend: number | null;
@@ -23,6 +23,7 @@ export function buildIntelligenceTimeline(
   rows: readonly IntelligenceDailyFact[],
   authorizedOrganizationId: string,
   selectedCurrency: string,
+  selectedPlatform?: string,
 ): IntelligenceDailyPoint[] {
   // Even an empty result must be associated with a valid authenticated scope.
   // Reject the entire result before aggregating: never produce a partial cross-tenant chart.
@@ -35,8 +36,19 @@ export function buildIntelligenceTimeline(
   if (rows.some(row => !isValidCalendarDay(row.metric_date))) {
     throw new Error('Intelligence timeline requires valid ISO calendar days');
   }
+  // Validate the whole scoped batch before selecting a channel. Invalid facts
+  // in another channel must never disappear behind a filter.
+  if (selectedPlatform !== undefined && (typeof selectedPlatform !== 'string'
+    || selectedPlatform.length === 0 || selectedPlatform.trim() !== selectedPlatform)) {
+    throw new Error('Intelligence timeline requires a valid selected platform');
+  }
+  if (rows.some(row => typeof row.platform !== 'string' || row.platform.length === 0
+    || row.platform.trim() !== row.platform)) {
+    throw new Error('Intelligence timeline requires valid source platforms');
+  }
   const byDate = new Map<string, IntelligenceDailyFact[]>();
   for (const row of rows) {
+    if (selectedPlatform !== undefined && row.platform !== selectedPlatform) continue;
     const group = byDate.get(row.metric_date);
     if (group) group.push(row);
     else byDate.set(row.metric_date, [row]);

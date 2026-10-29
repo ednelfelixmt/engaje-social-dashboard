@@ -58,3 +58,17 @@ export function compareWorkbenchPeriods(current: number | null, previous: number
   if (!delta) return null;
   return {delta: delta.change, positive: neutral || delta.change === 0 ? null : lowerBetter ? delta.change < 0 : delta.change > 0};
 }
+
+/**
+ * Dashboard timeline facts are aggregated across every platform by default.
+ * A channel filter must use its own daily series, never portfolio-wide totals.
+ * Unknown channels fail closed rather than falling back to the all-channel chart.
+ */
+export function selectWorkbenchTimeline<T>(
+  channel: string,
+  overall: readonly T[],
+  byChannel: Readonly<Record<string, readonly T[]>>,
+): readonly T[] {
+  if (channel === 'all') return overall;
+  return Object.hasOwn(byChannel, channel) ? byChannel[channel] : [];
+}

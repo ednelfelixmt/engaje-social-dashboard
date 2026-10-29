@@ -22,10 +22,19 @@ export default async function Page({params:pending,searchParams:pendingSearch}:{
  ]);
  const current=scopedCampaigns(data.ads,data.crm,config.preferred_revenue_source,data.adCampaigns,org.id,f.currency);
  const previous=scopedCampaigns(data.adsComparison,data.crmComparison,config.preferred_revenue_source,data.adCampaigns,org.id,f.currency);
+ const timeline=buildIntelligenceTimeline(data.ads,org.id,f.currency);
+ const priorTimeline=buildIntelligenceTimeline(data.adsComparison,org.id,f.currency);
+ const channels=['meta_ads','google_ads','tiktok_ads'] as const;
+ const channelTimelines=Object.fromEntries(channels.map(channel=>[
+   channel,buildIntelligenceTimeline(data.ads,org.id,f.currency,channel),
+ ]));
+ const priorChannelTimelines=Object.fromEntries(channels.map(channel=>[
+   channel,buildIntelligenceTimeline(data.adsComparison,org.id,f.currency,channel),
+ ]));
  return <main className="mx-auto max-w-[1700px] space-y-4">
  <header className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[.02] px-4 py-3"><div><p className="text-xs text-zinc-500">{org.name} / Relatório estratégico</p><h1 className="text-xl font-semibold text-white">Engaje Intelligence</h1></div><span className="text-xs text-zinc-500">BI · Performance · Decisão</span></header>
  <Filters value={f} organizations={orgs??[]} slug={org.slug}/>
- <BusinessAnalyticsWorkbench company={org.name} period={f.from+' a '+f.to} current={intelligenceCampaignShape(current,org.id,f.currency)} previous={intelligenceCampaignShape(previous,org.id,f.currency)} timeline={buildIntelligenceTimeline(data.ads,org.id,f.currency)} priorTimeline={buildIntelligenceTimeline(data.adsComparison,org.id,f.currency)} currency={f.currency}/>
+ <BusinessAnalyticsWorkbench company={org.name} period={f.from+' a '+f.to} current={intelligenceCampaignShape(current,org.id,f.currency)} previous={intelligenceCampaignShape(previous,org.id,f.currency)} timeline={timeline} priorTimeline={priorTimeline} timelinesByChannel={channelTimelines} priorTimelinesByChannel={priorChannelTimelines} currency={f.currency}/>
  <Card className="!p-4"><h2 className="text-sm font-semibold">Recomendações e próximos passos</h2><p className="mt-2 text-xs leading-6 text-zinc-400">Use a matriz de investimento e CPL para priorizar a investigação das campanhas. As recomendações são hipóteses operacionais: confirme qualidade dos leads, vendas, receita e capacidade de atendimento antes de ampliar ou suspender orçamento.</p></Card>
  </main>;
 }
