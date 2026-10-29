@@ -215,3 +215,51 @@ test('ANA-025: a comparison never invents deduplicated reach for prior campaigns
   assert.match(output[0].detail, /Comparação indisponível/);
   assert.equal(output[1].previousValue, 40);
 });
+
+test('FUNNEL-SOURCE-GRAIN-001: malformed provider identities never produce funnel totals or costs', () => {
+  const observed = rows(fact())[0];
+  const invalid: Partial<CampaignPerformance>[] = [
+    {platform: ' meta_ads' as CampaignPerformance['platform']},
+    {accountId: ''}, {accountId: ' account'}, {accountId: 'account '},
+    {accountId: 'act_'}, {accountId: 'act_  '},
+    {campaignId: ''}, {campaignId: ' campaign'}, {campaignId: 'campaign '},
+    {accountId: null as unknown as string},
+  ];
+  for (const overrides of invalid) {
+    const result = summary([{...observed, ...overrides}]);
+    assert.equal(result.value, null, JSON.stringify(overrides));
+    assert.equal(result.cost, null, JSON.stringify(overrides));
+    assert.match(result.detail, /identificador de origem inválido/);
+  }
+});
+
+test('FUNNEL-SOURCE-GRAIN-001: malformed catalog-only rows invalidate observed results too', () => {
+  const observed = rows(fact())[0];
+  const catalog = campaigns([], [], 'crm', [{
+    organization_id: scope.organizationId, platform: 'meta_ads',
+    account_id: 'synthetic-account', external_id: 'synthetic-catalog', name: 'Catalog', status: 'active',
+  } as Row<'ad_campaigns'>])[0];
+  assert.equal(hasFunnelMeasurements(catalog), false);
+  for (const broken of [{accountId: 'act_'}, {campaignId: ' bad'}, {platform: '' as CampaignPerformance['platform']}]) {
+    const invalidCatalog = {...catalog, ...broken};
+    assert.equal(hasFunnelMeasurements(invalidCatalog), false);
+    const result = summary([observed, invalidCatalog]);
+    assert.equal(result.value, null);
+    assert.equal(result.cost, null);
+    assert.match(result.detail, /identificador de origem inválido/);
+  }
+});
+
+test('FUNNEL-SOURCE-GRAIN-001: opaque valid IDs and zero remain untouched; invalid prior IDs never compare', () => {
+  const valid = rows(fact({spend: 0, clicks: 0}))[0];
+  valid.accountId = 'act_opaque id:/with|delimiters';
+  valid.campaignId = 'campaign with internal spaces|and:colons';
+  assert.equal(summary([valid]).value, 0);
+  assert.equal(summary([valid]).cost, null);
+  const previous = rows(fact());
+  previous[0].campaignId = 'bad ';
+  const result = configuredFunnel(rows(fact()), steps, scope, previous);
+  assert.equal(result[0].value, 20);
+  assert.equal(result[0].previousValue, null);
+  assert.match(result[0].detail, /Comparação indisponível/);
+});
