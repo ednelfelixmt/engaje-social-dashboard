@@ -2,6 +2,8 @@
 
 Next.js 16 App Router, TypeScript, Tailwind, componentes shadcn/ui, Recharts e Supabase. Tema escuro com destaque amarelo. Sem métricas fictícias.
 
+Aceitação autenticada das páginas: `npm run verify:authenticated-http`, somente com configuração protegida dos dois usuários sintéticos conhecidos. Procedimento e limites em [authenticated-http-acceptance.md](docs/engineering/authenticated-http-acceptance.md). Não colocar senhas em comandos ou logs.
+
 ## Executar
 
 ```sh

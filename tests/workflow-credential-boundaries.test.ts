@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
 const workflow = (name: string) =>
-  readFileSync(new URL('../.github/workflows/' + name, import.meta.url), 'utf8');
+  readFileSync(new URL('../.github/workflows/' + name, import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 
 const names = [
   'quality.yml',
