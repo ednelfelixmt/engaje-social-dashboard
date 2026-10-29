@@ -1,4 +1,4 @@
-import {isValidCalendarDay} from './calendar';
+import {calendarDays,isValidCalendarDay} from './calendar';
 import {isRfcOrganizationUuid} from './organization-scope';
 import type {Row} from '@/types/database.types';
 import {paidTotals} from './paid-metrics';
@@ -17,13 +17,15 @@ export type IntelligenceDailyPoint = Readonly<{
  * A day is complete for a metric only when every fact that day reports a
  * finite, nonnegative value. A missing/invalid item cannot be offset or
  * represented as zero by a different ad. Other metrics remain independent.
- * Dates are kept in chronological order for ordinal period comparison.
+ * Explicit calendar periods retain every day, including dates with no facts,
+ * to preserve ordinal comparisons without inventing zero observations.
  */
 export function buildIntelligenceTimeline(
   rows: readonly IntelligenceDailyFact[],
   authorizedOrganizationId: string,
   selectedCurrency: string,
   selectedPlatform?: string,
+  period?: Readonly<{from: string; to: string}>,
 ): IntelligenceDailyPoint[] {
   // Even an empty result must be associated with a valid authenticated scope.
   // Reject the entire result before aggregating: never produce a partial cross-tenant chart.
@@ -58,7 +60,14 @@ export function buildIntelligenceTimeline(
       byDate.set(row.metric_date, selected ? [row] : []);
     }
   }
-  return [...byDate].sort(([dateA], [dateB]) => dateA.localeCompare(dateB)).map(([date, facts]) => {
+  // A requested range is the axis of truth, not the dates returned by the
+  // provider. The provider might be silent on one or all dates of the range.
+  const days = period ? calendarDays(period.from, period.to) : [...byDate.keys()].sort();
+  if (period && [...byDate.keys()].some(date => date < period.from || date > period.to)) {
+    throw new Error('Intelligence timeline facts outside selected period');
+  }
+  return days.map(date => {
+    const facts = byDate.get(date) ?? [];
     if (!facts.length) return {date, spend: null, impressions: null, clicks: null, leads: null};
     const {spend, impressions, clicks, leads} = paidTotals(facts);
     return {date, spend, impressions, clicks, leads};
