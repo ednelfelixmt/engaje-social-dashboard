@@ -12,7 +12,7 @@ export function paidDataFreshness(dates:readonly string[],businessDate:string):F
 /**
  * A deliberately selected historical interval is not evidence of delayed ingestion.
  * Diagnose freshness only when that interval ends on the tenant's current business date.
- * Returning an empty status for invalid/future-only measurements avoids false "up to date" claims.
+ * Invalid or future-only source batches are inconsistent, not a merely empty history.
  */
 export function currentPeriodFreshness(dates:readonly string[],selectedTo:string,businessDate:string):Freshness|null{
  if(selectedTo!==businessDate||dates.length===0)return null;
