@@ -309,3 +309,45 @@ test('RANK-SOURCE-GRAIN-001: valid opaque IDs, Meta aliases, absent fallback IDs
   assert.equal(result.gender[0].label,'Mulheres');
   assert.equal(preparePerformanceRankings([],[ad({ad_id:null,adset_id:null})],[],[]).creative.length,0);
 });
+
+test('RANK-META-ALIAS-002: nested Meta account aliases fail closed in every ranking source',()=>{
+  for(const accountId of ['act_act_123','act_act_','act_act_act_123']){
+    const invalidSources: Array<() => unknown> = [
+      () => preparePerformanceRankings([campaign({accountId})],[],[],[]),
+      () => preparePerformanceRankings([],[ad({account_id:accountId})],[],[]),
+      () => preparePerformanceRankings([],[],[breakdown({account_id:accountId})],[]),
+      () => preparePerformanceRankings([],[],[],[{
+        organization_id:'11111111-1111-4111-8111-111111111111',
+        platform:'meta_ads',account_id:accountId,ad_id:'ad-1',
+      } as Row<'creatives'>]),
+    ];
+    for(const attempt of invalidSources){
+      assert.throws(attempt,/intact source identifiers/,accountId);
+    }
+    // A valid row in the batch cannot conceal a malformed identity.
+    assert.throws(()=>preparePerformanceRankings([campaign()],[],[breakdown({account_id:accountId})],[]),/intact source identifiers/);
+  }
+});
+
+test('RANK-META-ALIAS-002: valid Meta aliases and literal non-Meta prefixes remain available',()=>{
+  const creative={organization_id:'11111111-1111-4111-8111-111111111111',
+    platform:'meta_ads',account_id:'act_123',ad_id:'ad-1',caption:'Legenda sintética'} as Row<'creatives'>;
+  const meta=preparePerformanceRankings(
+    [campaign({accountId:'123',spend:0,leads:0})],
+    [ad({account_id:'act_123',spend:0,leads:0})],
+    [breakdown({account_id:'123',spend:0,leads:0})],
+    [creative],
+  );
+  assert.equal(meta.campaign[0].spend,0);
+  assert.equal(meta.gender[0].leads,0);
+  assert.equal(meta.creative[0].label,'Legenda sintética');
+
+  const google=preparePerformanceRankings(
+    [campaign({platform:'google_ads',accountId:'act_act_123',spend:0})],
+    [ad({platform:'google_ads',account_id:'act_act_123',spend:0})],
+    [],
+    [{...creative,platform:'google_ads',account_id:'act_act_123'}],
+  );
+  assert.equal(google.campaign.length,1);
+  assert.equal(google.creative[0].label,'Legenda sintética');
+});

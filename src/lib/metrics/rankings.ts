@@ -14,7 +14,11 @@ function validOpaqueIdentifier(value: unknown): value is string {
 /** Only Meta has an account alias; the bare act_ marker is not an account. */
 function validRankingAccount(platform: unknown, account: unknown): boolean {
   if (!validOpaqueIdentifier(platform) || !validOpaqueIdentifier(account)) return false;
-  return validOpaqueIdentifier(platform === 'meta_ads' ? account.replace(/^act_/, '') : account);
+  if (platform !== 'meta_ads') return true;
+  const canonicalAccount = account.replace(/^act_/, '');
+  // A second act_ marker is not an opaque Meta account ID. Other providers
+  // retain the literal prefix, without normalizing their account identities.
+  return validOpaqueIdentifier(canonicalAccount) && !canonicalAccount.startsWith('act_');
 }
 
 /** Ad/ad-set identifiers can be absent for rows with no fallback entity. */
