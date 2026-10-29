@@ -3,14 +3,12 @@ import {ArrowDownRight, ArrowUpRight, BadgeAlert, CircleHelp, Layers3, Target, T
 import {Card} from '@/components/ui/card';
 import {money, number} from '@/lib/utils';
 import {paidSummary} from '@/lib/metrics/paid-summary';
+import {strategicPeriodComparison} from '@/lib/metrics/strategic-comparison';
 import type {CampaignPerformance} from '@/types/domain';
 
 type BriefItem={title:string;detail:string;next:string;severity:'risk'|'watch'|'opportunity'};
 const style={risk:'border-rose-400/25 bg-rose-400/[.06]',watch:'border-amber-400/25 bg-amber-400/[.06]',opportunity:'border-emerald-400/25 bg-emerald-400/[.06]'};
 const label={risk:'Atenção',watch:'Investigar',opportunity:'Oportunidade'};
-function relative(current:number|null,previous:number|null){
-  return current!=null&&previous!=null&&previous>0?(current/previous-1)*100:null;
-}
 function metric(value:number|null,format:'money'|'percent'|'integer',currency:string){
   if(value==null)return 'Indisponível';
   if(format==='money')return money(value,currency);
@@ -24,11 +22,11 @@ function Trend({value,lowerBetter=false}:{value:number|null;lowerBetter?:boolean
 }
 export function StrategicDecisionBrief({rows,previousRows,currency,slug,comparing}:{rows:CampaignPerformance[];previousRows:CampaignPerformance[];currency:string;slug:string;comparing:boolean}){
   const current=paidSummary(rows),previous=paidSummary(previousRows);
-  const hasPrevious=comparing&&previousRows.length>0;
   const spend=current.spend,leads=current.leads,cpl=current.cpl;
-  const spendChange=hasPrevious?relative(spend,previous.spend):null;
-  const leadChange=hasPrevious?relative(leads,previous.leads):null;
-  const cplChange=hasPrevious?relative(cpl,previous.cpl):null;
+  const {spendChange,leadChange,cplChange,hasComparableMetric,demandGrowthOutpacesSpend}=strategicPeriodComparison({
+    currentRows:rows,previousRows,requestedCurrency:currency,comparing,
+    current:{spend,leads,cpl},previous:{spend:previous.spend,leads:previous.leads,cpl:previous.cpl},
+  });
   const leading=[...rows].filter(row=>row.spend>0).sort((a,b)=>b.spend-a.spend)[0];
   const concentration=leading&&spend!=null&&spend>0?leading.spend/spend*100:null;
   const notes:BriefItem[]=[];
@@ -38,7 +36,7 @@ export function StrategicDecisionBrief({rows,previousRows,currency,slug,comparin
     if(spend!=null&&spend>0&&leads===0)notes.push({severity:'risk',title:'Investimento sem leads registrados',detail:`${money(spend,currency)} em mídia e nenhum lead contabilizado neste recorte.`,next:'Verifique o objetivo das campanhas e a mensuração; campanhas de alcance podem não buscar leads.'});
     if(cplChange!=null&&cplChange>15)notes.push({severity:'risk',title:'Custo por lead em deterioração',detail:`CPL aumentou ${number(cplChange,1)}% contra o período selecionado para comparação.`,next:'Investigue alterações em CPC, taxa de conversão e mix de campanhas antes de realocar orçamento.'});
     if(concentration!=null&&concentration>=60)notes.push({severity:'watch',title:'Investimento concentrado',detail:`${number(concentration,1)}% da verba está em ${leading?.campaignName??'uma campanha'}.`,next:'Avalie dependência operacional, incrementalidade e alternativas de escala antes de diversificar.'});
-    if(leadChange!=null&&spendChange!=null&&leadChange>spendChange+10)notes.push({severity:'opportunity',title:'Demanda crescendo acima da verba',detail:`Leads ${leadChange>=0?'+':''}${number(leadChange,1)}%; investimento ${spendChange>=0?'+':''}${number(spendChange,1)}%.`,next:'Verifique qualidade dos leads, capacidade comercial e estabilidade da conversão antes de ampliar investimento.'});
+    if(demandGrowthOutpacesSpend&&leadChange!=null&&spendChange!=null)notes.push({severity:'opportunity',title:'Demanda crescendo acima da verba',detail:`Leads ${leadChange>=0?'+':''}${number(leadChange,1)}%; investimento ${spendChange>=0?'+':''}${number(spendChange,1)}%.`,next:'Verifique qualidade dos leads, capacidade comercial e estabilidade da conversão antes de ampliar investimento.'});
     if(!notes.length)notes.push({severity:'watch',title:'Monitorar eficiência e qualidade',detail:'Os critérios automáticos não identificaram um desvio prioritário com os dados disponíveis.',next:'Compare resultado com metas e valide leads qualificados e vendas no CRM.'});
   }
   const tiles=[
@@ -63,7 +61,7 @@ export function StrategicDecisionBrief({rows,previousRows,currency,slug,comparin
       <Card><div className="flex items-center gap-2"><BadgeAlert className="text-primary" size={18}/><h3 className="font-semibold text-white">Confiabilidade da análise</h3></div>
         <div className="mt-5 space-y-4 text-sm text-zinc-300">
           <div className="flex items-center justify-between gap-3"><span>Atividade no período</span><strong className={rows.length?'text-emerald-300':'text-amber-300'}>{rows.length?'Disponível':'Ausente'}</strong></div>
-          <div className="flex items-center justify-between gap-3"><span>Comparação histórica</span><strong className={hasPrevious?'text-emerald-300':'text-amber-300'}>{hasPrevious?'Disponível':'Sem base'}</strong></div>
+          <div className="flex items-center justify-between gap-3"><span>Comparação histórica</span><strong className={hasComparableMetric?'text-emerald-300':'text-amber-300'}>{hasComparableMetric?'Disponível':'Sem base'}</strong></div>
           <div className="flex items-center justify-between gap-3"><span>Leads mensurados</span><strong className={leads!=null?'text-emerald-300':'text-amber-300'}>{leads!=null?'Disponível':'Indisponível'}</strong></div>
         </div>
         <div className="mt-5 rounded-xl border border-white/[.08] bg-black/20 p-4 text-xs leading-5 text-zinc-400"><CircleHelp size={15} className="mb-2 text-primary"/>Leads são eventos atribuídos pelas fontes conectadas. Sem conciliação de CRM, este painel não confirma vendas, CAC real, lucro nem rentabilidade incremental.</div>
