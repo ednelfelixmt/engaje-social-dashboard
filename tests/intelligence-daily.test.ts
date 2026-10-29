@@ -62,8 +62,8 @@ test('missing or invalid measures on one date do not contaminate another date', 
 
 test('the authenticated intelligence page uses strict daily aggregation for both periods', () => {
   const source = readFileSync('src/app/(tenant)/[organizationSlug]/intelligence/page.tsx', 'utf8');
-  assert.match(source, /const timeline=buildIntelligenceTimeline\(data\.ads,org\.id,f\.currency\)/);
-  assert.match(source, /const priorTimeline=buildIntelligenceTimeline\(data\.adsComparison,org\.id,f\.currency\)/);
+  assert.match(source, /const timeline=buildIntelligenceTimeline\(data\.ads,org\.id,f\.currency,undefined,range\)/);
+  assert.match(source, /const priorTimeline=priorRange\?buildIntelligenceTimeline\(data\.adsComparison,org\.id,f\.currency,undefined,priorRange\):\[\]/);
   assert.match(source, /timelinesByChannel=\{channelTimelines\}/);
   assert.match(source, /priorTimelinesByChannel=\{priorChannelTimelines\}/);
   assert.doesNotMatch(source, /function dayShape/);
@@ -176,4 +176,65 @@ test('channel filter preserves calendar positions and breaks a missing mid-perio
   assert.equal(now.length, before.length);
   assert.equal(getWorkbenchDayMetric(now[1], 'cpl'), null);
   assert.equal(getWorkbenchDayMetric(now[2], 'cpl'), 10);
+});
+
+test('calendar interval preserves dates with no facts before, between and after observations', () => {
+  const data = [
+    fact({metric_date: '2026-10-02', spend: 0, leads: 0}),
+    fact({metric_date: '2026-10-04', spend: 40, leads: 4}),
+  ];
+  const days = buildScopedIntelligenceTimeline(data, organizationId, currency, undefined,
+    {from: '2026-10-01', to: '2026-10-05'});
+  assert.deepEqual(days.map(day => [day.date, day.spend, day.leads]), [
+    ['2026-10-01', null, null],
+    ['2026-10-02', 0, 0],
+    ['2026-10-03', null, null],
+    ['2026-10-04', 40, 4],
+    ['2026-10-05', null, null],
+  ]);
+  assert.equal(getWorkbenchDayMetric(days[2], 'cpl'), null);
+  assert.deepEqual(buildScopedIntelligenceTimeline([], organizationId, currency, 'google_ads',
+    {from: '2026-10-01', to: '2026-10-02'}).map(day => day.spend), [null, null]);
+});
+
+test('calendar interval rejects any out-of-range fact before selecting a channel', () => {
+  const range = {from: '2026-10-01', to: '2026-10-03'};
+  for (const outside of ['2026-09-30', '2026-10-04']) {
+    assert.throws(() => buildScopedIntelligenceTimeline([
+      fact({metric_date: '2026-10-02'}),
+      fact({platform: 'google_ads', metric_date: outside, spend: 0}),
+    ], organizationId, currency, 'meta_ads', range), /outside selected period/);
+  }
+  assert.throws(() => buildScopedIntelligenceTimeline([], organizationId, currency, undefined,
+    {from: '2026-10-03', to: '2026-10-01'}), /ascending/);
+  assert.throws(() => buildScopedIntelligenceTimeline([], organizationId, currency, undefined,
+    {from: '2026-02-29', to: '2026-03-01'}), /calendar/);
+  assert.throws(() => buildScopedIntelligenceTimeline([], organizationId, currency, undefined,
+    {from: '2026-01-01', to: '2028-01-02'}), /two years/);
+});
+
+test('all and selected-channel series use identical calendar positions across both periods', () => {
+  const current = [
+    fact({platform: 'google_ads', metric_date: '2026-10-01', spend: 500, leads: 50}),
+    fact({platform: 'meta_ads', metric_date: '2026-10-03', spend: 30, leads: 3}),
+  ];
+  const previous = [fact({metric_date: '2026-09-02', spend: 20, leads: 2})];
+  const a = {from: '2026-10-01', to: '2026-10-03'};
+  const b = {from: '2026-09-01', to: '2026-09-03'};
+  const all = buildScopedIntelligenceTimeline(current, organizationId, currency, undefined, a);
+  const meta = buildScopedIntelligenceTimeline(current, organizationId, currency, 'meta_ads', a);
+  const prior = buildScopedIntelligenceTimeline(previous, organizationId, currency, 'meta_ads', b);
+  assert.deepEqual(all.map(point => point.spend), [500, null, 30]);
+  assert.deepEqual(meta.map(point => point.spend), [null, null, 30]);
+  assert.deepEqual(prior.map(point => point.spend), [null, 20, null]);
+  assert.deepEqual([all.length, meta.length, prior.length], [3, 3, 3]);
+  assert.equal(getWorkbenchDayMetric(meta[0], 'leads'), null);
+});
+
+test('authenticated Intelligence page supplies exact ranges to all channel and comparison series', () => {
+  const source = readFileSync('src/app/(tenant)/[organizationSlug]/intelligence/page.tsx', 'utf8');
+  assert.match(source, /const range=\{from:f\.from,to:f\.to\}/);
+  assert.match(source, /priorRange=f\.compare==='none'\?null:comparisonPeriod\(f\.from,f\.to,f\.compare\)/);
+  assert.match(source, /buildIntelligenceTimeline\(data\.ads,org\.id,f\.currency,channel,range\)/);
+  assert.match(source, /buildIntelligenceTimeline\(data\.adsComparison,org\.id,f\.currency,channel,priorRange\)/);
 });
