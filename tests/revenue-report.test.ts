@@ -127,3 +127,29 @@ test('revenue grain rejects padded provider accounts and campaigns while preserv
  // Empty optional IDs stay valid for unattributed revenue; they are not padding.
  assert.equal(buildRevenueReport([fact({revenue:0})], [], {...scope,to:scope.from,compare:'none'}).current.totals.revenue, 0);
 });
+
+
+test('REVENUE-META-GRAIN-001: malformed Meta aliases fail closed across current, prior and unselected source', () => {
+ const invalid=['act_ 123', 'act_\u00a0123', 'act_\t123', 'act_act_123', 'act_act_', 'act_act_act_123'];
+ for (const account_id of invalid) {
+  const row=fact({channel:'meta_ads', account_id, campaign_id:'synthetic-campaign'});
+  assert.throws(()=>buildRevenueReport([row],[],{...scope, compare:'none'}),/Invalid revenue report grain/,account_id);
+  assert.throws(()=>buildRevenueReport([fact({...row,source:'spreadsheet'})],[],{...scope, compare:'none'}),/Invalid revenue report grain/,'unselected '+account_id);
+  assert.throws(()=>buildRevenueReport([], [fact({...row,metric_date:'2026-10-18'})],scope),/Invalid revenue report grain/,'prior '+account_id);
+ }
+});
+
+test('REVENUE-META-GRAIN-001: valid Meta alias and opaque Google account IDs preserve zero and dedup behavior', () => {
+ const zero=fact({channel:'meta_ads',account_id:'act_123',campaign_id:'opaque account:01',revenue:0,purchases:0,leads:0,checkouts:0});
+ const result=buildRevenueReport([zero],[],{...scope,to:scope.from,compare:'none'});
+ assert.equal(result.current.records,1);
+ assert.equal(result.current.totals.revenue,0);
+ assert.equal(result.current.totals.purchases,0);
+ assert.throws(()=>buildRevenueReport([zero,{...zero,id:'alias',account_id:'123'}],[],{...scope,to:scope.from,compare:'none'}),/Duplicate revenue report grain/);
+ const google=[fact({channel:'google_ads',account_id:'act_act_123',campaign_id:'a',revenue:0}),fact({id:'google-space',channel:'google_ads',account_id:'act_ 123',campaign_id:'a',revenue:0})];
+ const googleReport=buildRevenueReport(google,[],{...scope,to:scope.from,compare:'none'});
+ assert.equal(googleReport.current.records,2);
+ assert.equal(googleReport.current.totals.revenue,0);
+ const unattributedMeta=buildRevenueReport([fact({channel:'meta_ads',account_id:'',campaign_id:'',revenue:0})],[],{...scope,to:scope.from,compare:'none'});
+ assert.equal(unattributedMeta.current.totals.revenue,0);
+});
