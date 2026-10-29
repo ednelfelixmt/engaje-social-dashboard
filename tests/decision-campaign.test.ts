@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {findComparableCampaign} from '../src/lib/metrics/decision-campaign';
+import {findComparableCampaign, rankCampaignDecisionImpacts} from '../src/lib/metrics/decision-campaign';
 import type {CampaignPerformance} from '../src/types/domain';
 
 const orgA = '11111111-1111-4111-8111-111111111111';
@@ -61,7 +61,9 @@ test('unknown or malformed campaign grain never matches historical results', () 
 
 test('decision-analysis uses the scoped historical matcher instead of campaignId alone', () => {
   const source = readFileSync('src/components/dashboard/decision-analysis.tsx', 'utf8');
-  assert.match(source, /findComparableCampaign\(row,previousCampaigns\)/);
+  assert.match(source, /rankCampaignDecisionImpacts\(campaigns,previousCampaigns,comparing\)/);
+  const helper = readFileSync('src/lib/metrics/decision-campaign.ts', 'utf8');
+  assert.match(helper, /findComparableCampaign\(row, previous\)/);
   assert.doesNotMatch(source, /previousCampaigns\.find\(\(item\)=>item\.campaignId===row\.campaignId\)/);
 });
 
@@ -127,4 +129,54 @@ test('SEC-DECISION-GRAIN-001: clean identities, Meta aliases and measured zero r
   assert.equal(findComparableCampaign(previous, [current]), current);
   assert.equal(findComparableCampaign(current, [campaign({campaignId: 'shared-campaign-id '})]), null);
   assert.equal(findComparableCampaign(current, [campaign({platform: 'google_ads'})]), null);
+});
+
+test('DECISION-CPL-001: scale requires a comparable prior period with strictly improved validated CPL', () => {
+  const current = campaign({spend: 80, leads: 8});
+  const prior = campaign({spend: 100, leads: 4});
+  const improving = rankCampaignDecisionImpacts([current], [prior], true)[0];
+  assert.equal(improving.cpl, 10);
+  assert.equal(improving.recommendation, 'scale');
+  const equal = rankCampaignDecisionImpacts([current], [campaign({spend: 40, leads: 4})], true)[0];
+  assert.equal(equal.recommendation, 'evaluate', 'unchanged CPL is not independent proof of improvement');
+  assert.equal(rankCampaignDecisionImpacts([current], [prior], false)[0].recommendation, 'evaluate');
+  assert.equal(rankCampaignDecisionImpacts([current], [], true)[0].recommendation, 'evaluate');
+  assert.equal(rankCampaignDecisionImpacts([current], [campaign({organizationId: orgB, spend: 200, leads: 1})], true)[0].recommendation, 'evaluate');
+  assert.equal(rankCampaignDecisionImpacts([current], [campaign({currency: 'USD', spend: 200, leads: 1})], true)[0].recommendation, 'evaluate');
+  assert.equal(rankCampaignDecisionImpacts([current], [prior, {...prior}], true)[0].recommendation, 'evaluate');
+  assert.equal(rankCampaignDecisionImpacts([campaign({spend: 100, leads: 4})], [prior], true)[0].recommendation, 'evaluate');
+  assert.equal(rankCampaignDecisionImpacts([campaign({spend: 200, leads: 4})], [prior], true)[0].recommendation, 'review');
+});
+
+test('DECISION-CPL-001: invalid leads, zero denominator and arithmetic overflow never qualify for scaling', () => {
+  for (const leads of [null, 0, -2, Number.NaN, Number.POSITIVE_INFINITY, 1e-308]) {
+    const candidate = campaign({spend: leads === 1e-308 ? 1e308 : 100, leads});
+    const ranked = rankCampaignDecisionImpacts([candidate], [campaign({spend: 100, leads: 5})], true);
+    assert.equal(ranked.length, 1);
+    assert.equal(ranked[0].cpl, null);
+    assert.equal(ranked[0].recommendation, 'review');
+  }
+  assert.deepEqual(rankCampaignDecisionImpacts([campaign({spend: 0}), campaign({spend: -1}), campaign({spend: Infinity})], [], true), []);
+  const genuineZero = rankCampaignDecisionImpacts([campaign({spend: Number.MIN_VALUE, leads: 1})], [], true)[0];
+  assert.equal(genuineZero.cpl, Number.MIN_VALUE);
+  assert.equal(genuineZero.recommendation, 'evaluate');
+});
+
+test('DECISION-CPL-001: identical campaign IDs in distinct accounts retain distinct stable presentation keys', () => {
+  const first = campaign({accountId: 'act_123', leads: 5});
+  const second = campaign({accountId: 'act_456', leads: 10});
+  const ranked = rankCampaignDecisionImpacts([first, second], [], false);
+  assert.equal(ranked.length, 2);
+  assert.notEqual(ranked[0].decisionKey, ranked[1].decisionKey);
+  assert.equal(ranked[0].accountId, 'act_456');
+  assert.deepEqual(rankCampaignDecisionImpacts([second, first], [], false).map(item => item.decisionKey), ranked.map(item => item.decisionKey));
+});
+
+test('DECISION-CPL-001: decision dashboard displays valid CPL and an explicit neutral evaluation state', () => {
+  const source = readFileSync('src/components/dashboard/decision-analysis.tsx', 'utf8');
+  assert.match(source, /rankCampaignDecisionImpacts\(campaigns,previousCampaigns,comparing\)/);
+  assert.match(source, /campaignCpl\(row\.spend,row\.leads\)/);
+  assert.match(source, /Avaliar/);
+  assert.match(source, /key=\{row\.decisionKey\}/);
+  assert.doesNotMatch(source, /row\.spend\/row\.leads|row\.positive|before\.spend\/before\.leads/);
 });

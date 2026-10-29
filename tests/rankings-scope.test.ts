@@ -193,11 +193,10 @@ test('conflicting creative names across Meta aliases use a neutral label regardl
   assert.deepEqual(first.creative,reversed.creative);
 });
 
-test('incomplete Meta act_ marker is not converted into an empty account identity',()=>{
-  const result=preparePerformanceRankings([],[
-    ad({account_id:'act_'}),ad({account_id:''}),
-  ],[],[]);
-  assert.equal(result.creative.length,2);
+test('RANK-SOURCE-GRAIN-001: incomplete Meta account markers cannot appear as ranking identities',()=>{
+  for (const account_id of ['act_', '', 'act_ ', 'act_ 123', ' 123', '123 ']) {
+    assert.throws(() => preparePerformanceRankings([], [ad({account_id})], [], []), /intact source identifiers/, account_id);
+  }
 });
 
 
@@ -241,4 +240,72 @@ test('SEC-CAMP-UUID-001: ranking rejects non-RFC tenant scope on empty sources',
 test('SEC-CAMP-UUID-001: matching invalid organization in source rows still fails closed',()=>{
   const invalid='11111111-1111-0111-8111-111111111111';
   assert.throws(()=>scopedRankings([campaign({organizationId:invalid})],[],[],[],invalid,'BRL'),/single organization/);
+});
+
+
+test('RANK-DIM-LABEL-001: conflicting dimension labels resolve to the stable source value',()=>{
+  const rows=[
+    breakdown({dimension_value:'female',dimension_label:'Mulheres',spend:10}),
+    breakdown({account_id:'account-2',dimension_value:'female',dimension_label:'Women',spend:20}),
+  ];
+  const normal=preparePerformanceRankings([],[],rows,[]).gender;
+  const reversed=preparePerformanceRankings([],[],[...rows].reverse(),[]).gender;
+  assert.equal(normal.length,1);
+  assert.equal(normal[0].label,'female');
+  assert.equal(normal[0].spend,30);
+  assert.equal(normal[0].leads,4);
+  assert.deepEqual(normal,reversed);
+});
+
+test('RANK-DIM-LABEL-001: consistent labels are retained and absent labels fall back to source value',()=>{
+  const rows=[
+    breakdown({dimension_value:'female',dimension_label:' Mulheres ',spend:5}),
+    breakdown({dimension_value:'female',dimension_label:'Mulheres',spend:7}),
+    breakdown({dimension_value:'male',dimension_label:' ',spend:8}),
+  ];
+  const result=preparePerformanceRankings([],[],rows,[]).gender;
+  assert.equal(result.length,2);
+  assert.equal(result.find(item=>item.label==='Mulheres')?.spend,12);
+  assert.equal(result.find(item=>item.label==='male')?.spend,8);
+  const reversed=preparePerformanceRankings([],[],[...rows].reverse(),[]).gender;
+  assert.deepEqual(new Map(result.map(item=>[item.key,item])),new Map(reversed.map(item=>[item.key,item])));
+});
+
+
+test('RANK-SOURCE-GRAIN-001: invalid identities in any ranking source fail closed before aggregation',()=>{
+  const bad: Array<() => unknown> = [
+    () => preparePerformanceRankings([campaign({campaignId:'campaign-1 '})],[],[],[]),
+    () => preparePerformanceRankings([campaign({accountId:' account-1'})],[],[],[]),
+    () => preparePerformanceRankings([campaign({platform:'meta_ads ' as CampaignPerformance['platform']})],[],[],[]),
+    () => preparePerformanceRankings([],[ad({account_id:'act_'})],[],[]),
+    () => preparePerformanceRankings([],[ad({ad_id:' ad-1'})],[],[]),
+    () => preparePerformanceRankings([],[ad({adset_id:'set-1\n'})],[],[]),
+    () => preparePerformanceRankings([],[],[breakdown({dimension_value:'female '})],[]),
+    () => preparePerformanceRankings([],[],[breakdown({account_id:'\t'})],[]),
+    () => preparePerformanceRankings([],[],[],[{
+      organization_id:'11111111-1111-4111-8111-111111111111', platform:'meta_ads', account_id:'act_', ad_id:'ad-1',
+    } as Row<'creatives'>]),
+    () => preparePerformanceRankings([],[],[],[{
+      organization_id:'11111111-1111-4111-8111-111111111111', platform:'meta_ads', account_id:'123', ad_id:'ad-1 ',
+    } as Row<'creatives'>]),
+  ];
+  for (const attempt of bad) assert.throws(attempt, /intact source identifiers/);
+  // Even an otherwise valid campaign cannot excuse malformed source metadata.
+  assert.throws(() => preparePerformanceRankings([campaign()],[],[breakdown({dimension_value:' '})],[]), /intact source identifiers/);
+});
+
+test('RANK-SOURCE-GRAIN-001: valid opaque IDs, Meta aliases, absent fallback IDs and zero remain supported',()=>{
+  const creative = {organization_id:'11111111-1111-4111-8111-111111111111',platform:'meta_ads',
+    account_id:'123',ad_id:'ad:part 2',caption:'Peça válida'} as Row<'creatives'>;
+  const result=preparePerformanceRankings(
+    [campaign({accountId:'act_123',campaignId:'campaign internal space',spend:0,leads:0})],
+    [ad({account_id:'act_123',ad_id:'ad:part 2',adset_id:null})],
+    [breakdown({account_id:'act_123',dimension_value:'female: segment'})],
+    [creative],
+  );
+  assert.equal(result.campaign[0].spend,0);
+  assert.equal(result.campaign[0].leads,0);
+  assert.equal(result.creative[0].label,'Peça válida');
+  assert.equal(result.gender[0].label,'Mulheres');
+  assert.equal(preparePerformanceRankings([],[ad({ad_id:null,adset_id:null})],[],[]).creative.length,0);
 });

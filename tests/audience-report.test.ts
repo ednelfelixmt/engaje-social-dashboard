@@ -100,3 +100,72 @@ test('empty source has no fabricated data rows',()=>{
  const report=build([]);assert.equal(report.sourceRecords,0);assert.equal(report.groups.gender.length,0);
  assert.equal(Papa.parse(audienceReportCsv(report),{delimiter:';'}).data.length,1);
 });
+
+
+test('AUDIENCE-LABEL-001: canonical labels apply only to their own dimension',()=>{
+ const report=build([
+  fact({dimension_type:'city',dimension_value:'male',dimension_label:'Cidade Male'}),
+  fact({dimension_type:'age',dimension_value:'mobile',dimension_label:'Faixa Mobile'}),
+  fact({dimension_type:'gender',dimension_value:'female',dimension_label:'External Female'}),
+  fact({dimension_type:'device',dimension_value:'mobile_app',dimension_label:'External Device'}),
+ ]);
+ assert.equal(report.groups.city[0].label,'Cidade Male');
+ assert.equal(report.groups.age[0].label,'Faixa Mobile');
+ assert.equal(report.groups.gender[0].label,'Feminino');
+ assert.equal(report.groups.device[0].label,'Mobile — aplicativo');
+});
+
+test('AUDIENCE-LABEL-001: conflicting source labels use dimension value instead of arbitrary fact',()=>{
+ const first=fact({dimension_type:'city',dimension_value:'CUI',dimension_label:'Cuiabá'});
+ const second=fact({metric_date:scope.to,dimension_type:'city',dimension_value:'CUI',dimension_label:'Grande Cuiabá'});
+ const forward=build([first,second]).groups.city[0];
+ const reversed=build([second,first]).groups.city[0];
+ assert.equal(forward.label,'CUI');
+ assert.deepEqual(forward,reversed);
+ assert.equal(forward.spend,200);
+ assert.equal(forward.leads,10);
+ assert.deepEqual(forward.sourceIds,[first.id,second.id].sort((a,b)=>a.localeCompare(b)));
+});
+
+test('AUDIENCE-LABEL-001: consistent, blank and whitespace-only labels do not invent translations',()=>{
+ const records=[
+  fact({dimension_type:'state',dimension_value:'MT',dimension_label:' Mato Grosso '}),
+  fact({metric_date:scope.to,dimension_type:'state',dimension_value:'MT',dimension_label:'Mato Grosso'}),
+  fact({dimension_type:'city',dimension_value:'CUI',dimension_label:'  '}),
+  fact({dimension_type:'city',dimension_value:'UNKNOWN_CITY',dimension_label:''}),
+ ];
+ // Different city values are intentionally separate source grains.
+ const report=build(records);
+ assert.equal(report.groups.state[0].label,'Mato Grosso');
+ assert.equal(report.groups.city.find(row=>row.value==='CUI')?.label,'CUI');
+ assert.equal(report.groups.city.find(row=>row.value==='UNKNOWN_CITY')?.label,'UNKNOWN_CITY');
+ assert.equal(report.groups.state[0].impressions,2000);
+});
+
+
+test('AUDIENCE-SOURCE-GRAIN-001: padded and blank source identities reject the complete demographic report',()=>{
+ const malformed: Partial<Row<'metrics_ads_breakdowns'>>[] = [
+  {id:'  '},{id:'source-id '},{account_id:' act_123'},{account_id:'act_'},{account_id:'act_ '},
+  {campaign_id:' synthetic-campaign'},{campaign_id:'\t'},{dimension_type:' gender'},
+  {dimension_type:'  '},{dimension_value:' male'},{dimension_value:'\u00a0'}
+ ];
+ for(const patch of malformed){
+  assert.throws(()=>build([fact(),fact(patch)]),/Invalid audience report grain/);
+ }
+ // A future/omitted dimension must not conceal an invalid originating source.
+ for(const patch of [{id:'padded '},{account_id:'act_ '},{campaign_id:'bad\n'},{dimension_value:' city '}]){
+  assert.throws(()=>build([fact(),fact({...patch,dimension_type:'creative'})]),/Invalid audience report grain/);
+ }
+ assert.throws(()=>build([fact({id:'duplicate-source'}),fact({id:'duplicate-source',dimension_type:'creative'})]),/Duplicate audience report grain/);
+});
+
+test('AUDIENCE-SOURCE-GRAIN-001: opaque internal spaces and unclassified empty dimension remain valid',()=>{
+ const first=fact({id:'origin:A B',account_id:'act_vendor 12',campaign_id:'segment:A B',dimension_type:'city',dimension_value:'New York',dimension_label:'Nova York',spend:0,leads:0});
+ const second=fact({id:'origin:unknown',account_id:'act_vendor 12',campaign_id:'segment:A B',dimension_type:'city',dimension_value:'',dimension_label:'',spend:0,leads:0});
+ const report=build([first,second,fact({dimension_type:'creative'})]);
+ assert.equal(report.sourceRecords,2);
+ assert.equal(report.omittedRecords,1);
+ assert.equal(report.groups.city.find(row=>row.value==='New York')?.spend,0);
+ assert.equal(report.groups.city.find(row=>row.value==='')?.label,'Não informado');
+ assert.equal(report.groups.city.find(row=>row.value==='New York')?.sourceIds[0],'origin:A B');
+});

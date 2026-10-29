@@ -6,6 +6,22 @@ export type RankingDimension = Row<'metrics_ads_breakdowns'>['dimension_type'];
 export type RankedPerformance = {key:string;label:string;spend:number;revenue:number|null;impressions:number|null;clicks:number|null;leads:number|null;purchases:number|null};
 export type PerformanceRankingGroups = Record<'campaign'|RankingDimension,RankedPerformance[]>;
 
+/** Keep opaque source IDs intact. Whitespace padding is not a distinct identity. */
+function validOpaqueIdentifier(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0 && value === value.trim();
+}
+
+/** Only Meta has an account alias; the bare act_ marker is not an account. */
+function validRankingAccount(platform: unknown, account: unknown): boolean {
+  if (!validOpaqueIdentifier(platform) || !validOpaqueIdentifier(account)) return false;
+  return validOpaqueIdentifier(platform === 'meta_ads' ? account.replace(/^act_/, '') : account);
+}
+
+/** Ad/ad-set identifiers can be absent for rows with no fallback entity. */
+function validOptionalIdentifier(value: unknown): boolean {
+  return value == null || value === '' || validOpaqueIdentifier(value);
+}
+
 /**
  * Ranking values are displayed with one currency and one tenant context.
  * Never display a source that differs from the authenticated client and selected currency.
@@ -39,6 +55,19 @@ function assertSingleScope(
   if (!/^[A-Z]{3}$/.test(expectedCurrency) || currencies.size > 1 ||
     [...currencies].some(currency => currency !== expectedCurrency)) {
     throw new Error('Rankings require one known source currency');
+  }
+
+  // Validate every source, even when its details will not appear in a ranking.
+  // Never normalize malformed identities into a legitimate grouped result.
+  if (campaigns.some(row => !validRankingAccount(row.platform, row.accountId)
+      || !validOpaqueIdentifier(row.campaignId))
+    || ads.some(row => !validRankingAccount(row.platform, row.account_id)
+      || !validOptionalIdentifier(row.adset_id) || !validOptionalIdentifier(row.ad_id))
+    || breakdowns.some(row => !validRankingAccount(row.platform, row.account_id)
+      || !validOpaqueIdentifier(row.dimension_type) || !validOpaqueIdentifier(row.dimension_value))
+    || creatives.some(row => !validRankingAccount(row.platform, row.account_id)
+      || !validOptionalIdentifier(row.ad_id))) {
+    throw new Error('Rankings require intact source identifiers');
   }
 }
 
@@ -75,23 +104,40 @@ function add(current:RankedPerformance|undefined,row:RankedPerformance):RankedPe
 
 function aggregateBreakdowns(rows:Row<'metrics_ads_breakdowns'>[],type:RankingDimension){
   const grouped=new Map<string,RankedPerformance>();
+  const labels=new Map<string,Set<string>>();
+  const dimensionValues=new Map<string,string>();
   for(const row of rows){
     if(row.dimension_type!==type)continue;
     // The same demographic value may aggregate across accounts only within a tenant/currency.
     const key=JSON.stringify([row.organization_id,row.platform,row.currency,row.dimension_value]);
+    // Provider labels can differ across accounts or syncs. The first row must
+    // not arbitrarily determine what the user sees for a combined dimension.
+    const displayLabel=row.dimension_label?.trim();
+    if(displayLabel){
+      const candidates=labels.get(key)??new Set<string>();
+      candidates.add(displayLabel);
+      labels.set(key,candidates);
+    }
+    dimensionValues.set(key,row.dimension_value);
     grouped.set(key,add(grouped.get(key),{
       key,label:row.dimension_label,spend:checkedSpend(row.spend),
       revenue:known(row.revenue),impressions:knownCount(row.impressions),
       clicks:knownCount(row.clicks),leads:knownCount(row.leads),purchases:knownCount(row.purchases),
     }));
   }
-  return [...grouped.values()];
+  return [...grouped].map(([key,result])=>{
+    const candidates=labels.get(key);
+    // A single label is trustworthy; conflicts or absent labels fall back to
+    // the actual dimension value, never a row-order-dependent translation.
+    const label=candidates?.size===1?[...candidates][0]:dimensionValues.get(key);
+    return {...result,label:label??result.label};
+  });
 }
 
 /** Only Meta's act_ prefix aliases its numeric account ID; other providers stay literal. */
 function rankingAccount(platform:string,accountId:string):string {
   const normalized=platform==='meta_ads'?accountId.replace(/^act_/, ''):accountId;
-  return normalized || accountId;
+  return normalized;
 }
 
 function fallbackAds(rows:Row<'metrics_ads'>[],type:'audience'|'creative',creativeNames:Map<string,string|null>){

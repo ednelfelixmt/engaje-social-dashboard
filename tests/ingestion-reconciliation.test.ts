@@ -32,3 +32,15 @@ test('SEC-INGEST-SCOPE-001: invalid caller scope never validates an otherwise le
  assert.equal(reconcileAuthorizedIngestion([fact],'invalid-tenant').status,'invalid');
  assert.equal(reconcileAuthorizedIngestion([fact],org).status,'ready');
 });
+
+test('INGEST-OPAQUE-ID-001: mixed batches fail closed on malformed identities rather than normalize them',()=>{
+ for(const bad of [{accountId:'act_1 '},{accountId:' act_1'},{campaignId:' c2'},{campaignId:'c2\n'}]){
+  assert.equal(reconcileAuthorizedIngestion([fact,{...fact,...bad}],org).status,'invalid',JSON.stringify(bad));
+ }
+ assert.equal(reconcileAuthorizedIngestion([{...fact,campaignId:'c1 '}],org).status,'invalid');
+ assert.equal(reconcileAuthorizedIngestion([{...fact,accountId:'act_1 '}],org).status,'invalid');
+ // Unpadded opaque IDs and measured zero preserve the valid reconciliation path.
+ const valid=reconcileAuthorizedIngestion([{...fact,accountId:'internal space',campaignId:'part:2',spend:0}],org);
+ assert.equal(valid.status,'ready');
+ if(valid.status==='ready')assert.equal(valid.totals.spend,0);
+});

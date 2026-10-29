@@ -11,3 +11,19 @@ test('rejects incomplete, invented or invalid provider facts',()=>{
  }
 });
 test('null means unavailable, never silently zero',()=>{assert.equal(PaidIngestionFactSchema.parse(payload).leads,null)});
+
+test('INGEST-OPAQUE-ID-001: reject padded or blank opaque IDs instead of silently trimming them',()=>{
+ const invalid=['', ' ', '\t', ' act_1', 'act_1 ', '\tact_1', 'act_1\n', '\u00a0act_1', 'act_1\u00a0'];
+ for(const field of ['accountId','campaignId'] as const){
+  for(const id of invalid){
+   assert.equal(PaidIngestionFactSchema.safeParse({...payload,[field]:id}).success,false,
+    field+'='+JSON.stringify(id));
+  }
+ }
+ // Provider IDs remain exact opaque strings; internal spaces are legitimate.
+ for(const id of ['act_1','opaque:part','internal space']){
+  const parsed=PaidIngestionFactSchema.parse({...payload,accountId:id,campaignId:id});
+  assert.equal(parsed.accountId,id);
+  assert.equal(parsed.campaignId,id);
+ }
+});

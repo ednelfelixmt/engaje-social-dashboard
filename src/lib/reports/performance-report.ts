@@ -23,11 +23,20 @@ const organizationUuid = z.string().uuid();
 const accountOf = (row: Fact) => row.platform === 'meta_ads' ? row.account_id.replace(/^act_/, '') : row.account_id;
 const observed = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value >= 0;
 
+/** External IDs are opaque: never trim them into a different source identity. */
+function validSourceIdentity(value: unknown): value is string {
+ return typeof value === 'string' && value.length > 0 && value.trim() === value;
+}
+
 function validate(rows: readonly Fact[], scope: PerformanceScope, range: {from: string; to: string}) {
  const days = new Set(calendarDays(range.from, range.to)), ids = new Set<string>(), grains = new Set<string>();
  for (const row of rows) {
   if (row.organization_id !== scope.organizationId || row.currency !== scope.currency || !days.has(row.metric_date) || !platforms.includes(row.platform)) throw new Error('Performance report scope mismatch');
-  if (!row.id || !accountOf(row) || !row.campaign_id || !row.ad_id) throw new Error('Invalid performance report grain');
+  // Verify the raw identifiers as well as the Meta account alias; a malformed
+  // value must not become an apparently valid ad/day grain after normalization.
+  if (!validSourceIdentity(row.id) || !validSourceIdentity(row.account_id)
+   || !validSourceIdentity(row.campaign_id) || !validSourceIdentity(row.ad_id)
+   || !validSourceIdentity(accountOf(row))) throw new Error('Invalid performance report grain');
   const grain = JSON.stringify([row.platform, accountOf(row), row.campaign_id, row.ad_id, row.metric_date, row.currency]);
   if (ids.has(row.id) || grains.has(grain)) throw new Error('Duplicate performance report grain');
   ids.add(row.id); grains.add(grain);
