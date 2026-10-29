@@ -141,3 +141,31 @@ test('AUDIENCE-LABEL-001: consistent, blank and whitespace-only labels do not in
  assert.equal(report.groups.city.find(row=>row.value==='UNKNOWN_CITY')?.label,'UNKNOWN_CITY');
  assert.equal(report.groups.state[0].impressions,2000);
 });
+
+
+test('AUDIENCE-SOURCE-GRAIN-001: padded and blank source identities reject the complete demographic report',()=>{
+ const malformed: Partial<Row<'metrics_ads_breakdowns'>>[] = [
+  {id:'  '},{id:'source-id '},{account_id:' act_123'},{account_id:'act_'},{account_id:'act_ '},
+  {campaign_id:' synthetic-campaign'},{campaign_id:'\t'},{dimension_type:' gender'},
+  {dimension_type:'  '},{dimension_value:' male'},{dimension_value:'\u00a0'}
+ ];
+ for(const patch of malformed){
+  assert.throws(()=>build([fact(),fact(patch)]),/Invalid audience report grain/);
+ }
+ // A future/omitted dimension must not conceal an invalid originating source.
+ for(const patch of [{id:'padded '},{account_id:'act_ '},{campaign_id:'bad\n'},{dimension_value:' city '}]){
+  assert.throws(()=>build([fact(),fact({...patch,dimension_type:'creative'})]),/Invalid audience report grain/);
+ }
+ assert.throws(()=>build([fact({id:'duplicate-source'}),fact({id:'duplicate-source',dimension_type:'creative'})]),/Duplicate audience report grain/);
+});
+
+test('AUDIENCE-SOURCE-GRAIN-001: opaque internal spaces and unclassified empty dimension remain valid',()=>{
+ const first=fact({id:'origin:A B',account_id:'act_vendor 12',campaign_id:'segment:A B',dimension_type:'city',dimension_value:'New York',dimension_label:'Nova York',spend:0,leads:0});
+ const second=fact({id:'origin:unknown',account_id:'act_vendor 12',campaign_id:'segment:A B',dimension_type:'city',dimension_value:'',dimension_label:'',spend:0,leads:0});
+ const report=build([first,second,fact({dimension_type:'creative'})]);
+ assert.equal(report.sourceRecords,2);
+ assert.equal(report.omittedRecords,1);
+ assert.equal(report.groups.city.find(row=>row.value==='New York')?.spend,0);
+ assert.equal(report.groups.city.find(row=>row.value==='')?.label,'Não informado');
+ assert.equal(report.groups.city.find(row=>row.value==='New York')?.sourceIds[0],'origin:A B');
+});
