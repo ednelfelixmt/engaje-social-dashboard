@@ -126,8 +126,13 @@ test('channel timeline uses only that provider for both normal and zero-valued d
     ['2026-10-25', 100, 10], ['2026-10-26', 0, 0],
   ]);
   assert.deepEqual(buildScopedIntelligenceTimeline(rows, organizationId, currency, 'google_ads')
-    .map(day => [day.date, day.spend, day.leads]), [['2026-10-25', 900, 90]]);
-  assert.deepEqual(buildScopedIntelligenceTimeline(rows, organizationId, currency, 'tiktok_ads'), []);
+    .map(day => [day.date, day.spend, day.leads]), [
+    ['2026-10-25', 900, 90], ['2026-10-26', null, null],
+  ]);
+  assert.deepEqual(buildScopedIntelligenceTimeline(rows, organizationId, currency, 'tiktok_ads')
+    .map(day => [day.date, day.spend, day.leads]), [
+    ['2026-10-25', null, null], ['2026-10-26', null, null],
+  ]);
 });
 
 test('channel filter rejects a foreign tenant, currency or impossible date even in a different provider', () => {
@@ -147,4 +152,28 @@ test('channel projection rejects malformed provider identity instead of silently
       organizationId, currency, 'google_ads'), /source platforms/);
     assert.throws(() => buildScopedIntelligenceTimeline([], organizationId, currency, malformed), /selected platform/);
   }
+});
+
+test('channel filter preserves calendar positions and breaks a missing mid-period observation', () => {
+  const current = [
+    fact({platform: 'meta_ads', metric_date: '2026-10-01', spend: 100, leads: 10}),
+    fact({platform: 'google_ads', metric_date: '2026-10-02', spend: 200, leads: 20}),
+    fact({platform: 'meta_ads', metric_date: '2026-10-03', spend: 300, leads: 30}),
+  ];
+  const previous = [
+    fact({platform: 'meta_ads', metric_date: '2026-09-01', spend: 90, leads: 9}),
+    fact({platform: 'meta_ads', metric_date: '2026-09-02', spend: 90, leads: 9}),
+    fact({platform: 'meta_ads', metric_date: '2026-09-03', spend: 90, leads: 9}),
+  ];
+  const now = buildScopedIntelligenceTimeline(current, organizationId, currency, 'meta_ads');
+  const before = buildScopedIntelligenceTimeline(previous, organizationId, currency, 'meta_ads');
+  assert.deepEqual(now.map(day => [day.date, day.spend, day.leads]), [
+    ['2026-10-01', 100, 10], ['2026-10-02', null, null], ['2026-10-03', 300, 30],
+  ]);
+  assert.deepEqual(before.map(day => [day.date, day.spend]), [
+    ['2026-09-01', 90], ['2026-09-02', 90], ['2026-09-03', 90],
+  ]);
+  assert.equal(now.length, before.length);
+  assert.equal(getWorkbenchDayMetric(now[1], 'cpl'), null);
+  assert.equal(getWorkbenchDayMetric(now[2], 'cpl'), 10);
 });

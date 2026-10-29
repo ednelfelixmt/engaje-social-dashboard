@@ -48,12 +48,18 @@ export function buildIntelligenceTimeline(
   }
   const byDate = new Map<string, IntelligenceDailyFact[]>();
   for (const row of rows) {
-    if (selectedPlatform !== undefined && row.platform !== selectedPlatform) continue;
+    // Keep each date's ordinal position in the full period, even when only
+    // another platform reported on that day. Missing is null, never zero.
+    const selected = selectedPlatform === undefined || row.platform === selectedPlatform;
     const group = byDate.get(row.metric_date);
-    if (group) group.push(row);
-    else byDate.set(row.metric_date, [row]);
+    if (group) {
+      if (selected) group.push(row);
+    } else {
+      byDate.set(row.metric_date, selected ? [row] : []);
+    }
   }
   return [...byDate].sort(([dateA], [dateB]) => dateA.localeCompare(dateB)).map(([date, facts]) => {
+    if (!facts.length) return {date, spend: null, impressions: null, clicks: null, leads: null};
     const {spend, impressions, clicks, leads} = paidTotals(facts);
     return {date, spend, impressions, clicks, leads};
   });
