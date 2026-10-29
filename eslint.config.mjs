@@ -7,6 +7,17 @@ export default tseslint.config(
   {ignores:['node_modules/**','.next/**']},
   {
     files:[
+      'src/lib/reports/report-catalog.ts',
+      'src/lib/reports/funnel-report.ts',
+      'src/lib/export/funnel-report.ts',
+      'src/components/dashboard/report-center.tsx',
+      'src/components/dashboard/funnel-report-view.tsx',
+      'tests/helpers/funnel-report-fixture.ts',
+      'tests/funnel-report.test.ts',
+      'tests/funnel-report-page.test.ts',
+      'tests/funnel-report-ui.test.ts',
+      'tests/funnel-report-export.test.ts',
+      'tests/report-center.test.ts',
       'src/lib/integrations/paid-ingestion-contract.ts',
       'tests/paid-ingestion-contract.test.ts',
       'src/lib/metrics/ingestion-reconciliation.ts',

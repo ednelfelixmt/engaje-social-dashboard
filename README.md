@@ -115,3 +115,5 @@ Consulte [docs/engineering/02-architecture-and-gates.md](docs/engineering/02-arc
 ## Tipos de RPCs
 
 Use `npm run types:generate:functions` para atualizar RPCs por introspecção do banco descartável sem apagar contratos existentes de tabelas e views. O gerador integral ainda depende de reconciliar todas as migrações históricas e refinamentos de tipos; não substituir os tipos atuais por uma geração incompleta.
+
+A central privada em `/[organizationSlug]/reports` reúne os relatórios habilitados. O novo `reports/funnel` usa as etapas cadastradas pela agência, filtros de plataforma/período, CSV e impressão local, com cobertura e limites explícitos. Veja [o contrato e as evidências](docs/engineering/report-center-and-funnel.md). O lint incremental pode ser executado no Windows/Linux com `npm run lint`; os alvos revisados estão em `scripts/lint-files.json`.

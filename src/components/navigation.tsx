@@ -10,7 +10,7 @@ type NavGroup={id:string;label:string;icon:LucideIcon;items:NavItem[];/** Grupos
 
 const workspaceGroups:NavGroup[]=[
   {id:'overview',label:'Visão geral',icon:LayoutDashboard,items:[{key:'overview',label:'Visão geral',icon:LayoutDashboard,requires:'overview'}]},
-  {id:'intelligence',label:'Inteligência estratégica',icon:ChartNoAxesCombined,items:[{key:'intelligence',label:'Análises e relatórios',icon:ChartNoAxesCombined,requires:'overview'},{key:'reports/methodology',label:'Guia de métricas',icon:Database,requires:'overview'}]},
+  {id:'intelligence',label:'Inteligência estratégica',icon:ChartNoAxesCombined,items:[{key:'reports',label:'Central de relatórios',icon:Database},{key:'intelligence',label:'Análises e relatórios',icon:ChartNoAxesCombined,requires:'overview'},{key:'reports/methodology',label:'Guia de métricas',icon:Database,requires:'overview'}]},
   {id:'meta',label:'Meta Ads',icon:Megaphone,collapsible:true,defaultOpen:true,items:[
     {key:'meta_ads',label:'Campanhas Meta Ads',icon:ChartNoAxesCombined,requires:'paid'},
     {key:'reports/meta-audience',label:'Público e dispositivos',icon:Users,requires:'paid'},
@@ -27,6 +27,7 @@ const workspaceGroups:NavGroup[]=[
     {key:'paid',label:'Mídia paga consolidada',icon:ChartNoAxesCombined,requires:'paid'},
     {key:'reports/performance',label:'Relatório executivo',icon:ChartNoAxesCombined,requires:'paid'},
     {key:'reports/targets',label:'Metas e referências',icon:ChartNoAxesCombined,requires:'paid'},
+    {key:'reports/funnel',label:'Relatório de funil',icon:Filter,requires:'funnel'},
     {key:'funnel',label:'Funil de conversão',icon:Filter,requires:'funnel'},
     {key:'paid-creatives',label:'Criativos dos anúncios',icon:Images,requires:'creatives'},
   ]},
