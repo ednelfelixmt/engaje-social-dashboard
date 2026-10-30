@@ -101,7 +101,7 @@
 .report-studio-frame .analytics-kpi>strong { color: var(--studio-text); font-size: clamp(24px,2vw,36px); font-weight: 750; }
 .studio-kpi-bottom { display: flex; gap: 8px; align-items: center; justify-content: space-between; min-height: 40px; margin-top: 3px; }
 .studio-kpi-bottom .analytics-delta { margin-top: 0; }
-.studio-kpi-bottom .analytics-delta small { display: none; }
+.studio-kpi-bottom .analytics-delta small { display: block; position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .studio-sparkline { width: 100px; height: 34px; flex: none; }
 .studio-sparkline-empty { font-size: 10px; color: var(--studio-muted); }
 .report-studio-frame .analytics-kpi>small { margin-top: 0; font-size: 11px; }
@@ -245,3 +245,14 @@
 .tv-mode .report-studio-frame .studio-stage-detail{display:block}.studio-chart-window-note{color:var(--studio-muted,#a1aec1);font-size:11px;margin-bottom:8px}
 
 .report-studio-frame .performance-report section[aria-label="Etapas configuradas"] h3{color:var(--studio-text)!important}.report-studio-frame .performance-report .text-amber-200{color:var(--studio-muted)}
+
+@media print {
+  .report-studio-frame[data-studio-theme] {
+    --studio-bg: #fff !important;
+    --studio-surface: #fff !important;
+    --studio-text: #000 !important;
+    --studio-muted: #333 !important;
+    --studio-accent: #333 !important;
+    --studio-border: #ccc !important;
+  }
+}
