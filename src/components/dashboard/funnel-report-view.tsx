@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import {Card} from '@/components/ui/card';
+import {FunnelExplorer} from './funnel-explorer';
 import {PerformanceReportPrint} from './performance-report-print';
 import {PerformanceReportExport} from './performance-report-export';
 import {funnelPlatforms,funnelReportHref,type FunnelReport} from '@/lib/reports/funnel-report';
@@ -18,6 +19,7 @@ export function FunnelReportView({report}:{report:FunnelReport}) {
    <div className="mt-4 flex flex-wrap items-start gap-4"><PerformanceReportPrint disabled={empty}/><PerformanceReportExport content={empty?'':funnelReportCsv(report)} filename={funnelReportFilename(report)} disabled={empty} note="Exportação local: cada etapa e período em linha separada. As etapas podem se sobrepor e não devem ser somadas. Campos vazios indicam indicadores indisponíveis; zero é uma medição recebida."/></div>
   </Card>
   {empty?<Card>Sem registros de mídia paga nos períodos selecionados. Nenhum zero foi presumido.</Card>:null}
+  <section data-print-hide className="studio-funnel-report"><FunnelExplorer stages={stages.map(stage=>({metric:stage.metric,label:stage.label,value:stage.current.value,previousValue:stage.previous?.value??null,cost:stage.current.cost,costLabel:stage.costLabel,detail:stage.current.detail,target:stage.target}))} currency={scope.currency} comparing={previous!==null}/></section>
   <section aria-label="Etapas configuradas" className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{stages.map((stage,index)=><Card key={stage.metric}>
    <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">Etapa {index+1}</p><h3 className="mt-2 text-lg font-semibold" style={{color:stage.color}}>{stage.label}</h3>
    <strong className="mt-3 block text-3xl tabular-nums">{number(stage.current.value)}</strong><p className="mt-1 text-sm text-zinc-400">{stage.costLabel}: {money(stage.current.cost,scope.currency)}</p>
