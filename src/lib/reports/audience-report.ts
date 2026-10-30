@@ -57,7 +57,8 @@ export function buildAudienceReport(rows: readonly Row<'metrics_ads_breakdowns'>
   const account = typeof row.account_id === 'string'
    ? (row.platform === 'meta_ads' ? row.account_id.replace(/^act_/, '') : row.account_id) : '';
   if (!intactAudienceIdentifier(row.id) || !intactAudienceIdentifier(row.account_id)
-   || !intactAudienceIdentifier(account) || !intactAudienceIdentifier(row.campaign_id)
+   || !intactAudienceIdentifier(account) || (row.platform === 'meta_ads' && account.startsWith('act_'))
+   || !intactAudienceIdentifier(row.campaign_id)
    || !intactAudienceIdentifier(row.dimension_type) || !intactAudienceValue(row.dimension_value)) {
     throw new Error('Invalid audience report grain');
   }

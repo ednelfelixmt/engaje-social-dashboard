@@ -78,3 +78,13 @@ test('failed database reads for both private reports render a redacted error wit
   assert.deepEqual(calls.map(call=>call.table),['metrics_ads_breakdowns']);
  }
 });
+
+test('malformed Meta account aliases fail closed in the private report page without partial CSV',async()=>{
+ reset();
+ rows=[fact({account_id:'act_act_123',dimension_label:'SYNTHETIC_PRIVATE_ALIAS_ROW'})];
+ const html=renderToStaticMarkup(await Page(props()));
+ assert.ok(html.includes('role="alert"'));
+ assert.ok(html.includes('Nenhum total ou arquivo foi produzido'));
+ assert.ok(!html.includes('Exportar relatório CSV'));
+ assert.ok(!html.includes('SYNTHETIC_PRIVATE_ALIAS_ROW'));
+});
