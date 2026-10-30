@@ -61,3 +61,17 @@ test('interactive KPI buttons describe the measured total, delta and prior perio
  assert.ok(renderToStaticMarkup(elements[2]).includes('Anterior: 40'),'the baseline must remain available');
  assert.equal(button.props['aria-pressed'],false,'accessibility does not change KPI selection state');
 });
+
+test('KPI buttons without a comparison do not reference absent baseline descriptions',()=>{
+ const {input}=loadTypescript<typeof import('./helpers/analytics-fixture')>(new URL('./helpers/analytics-fixture.ts',import.meta.url),(id,native)=>native(id));
+ const {buildAnalyticsWorkspace}=loadTypescript<typeof import('../src/lib/reports/analytics-workspace')>(new URL('../src/lib/reports/analytics-workspace.ts',import.meta.url),(id,native)=>native(id));
+ const data=input();data.scope={...data.scope,compare:'none'};data.priorAds=[];data.priorBreakdowns=[];data.priorCrm=[];
+ const f=harness<typeof import('../src/components/dashboard/analytics-workspace')>(new URL('../src/components/dashboard/analytics-workspace.tsx',import.meta.url));
+ const tree=f.render(()=>f.module.AnalyticsWorkspace({model:buildAnalyticsWorkspace(data),canManage:false}));
+ const button=nodes(tree).find(el=>el.props['aria-label']==='Analisar Cliques');
+ assert.ok(button);
+ const ids=String(button.props['aria-describedby']).split(' ');
+ assert.equal(ids.length,2,'only current total and an unavailable comparison state can be referenced');
+ for(const id of ids)assert.ok(nodes(button).some(el=>el.props.id===id));
+ assert.ok(!renderToStaticMarkup(button).includes('Anterior:'),'no historical value is fabricated');
+});
