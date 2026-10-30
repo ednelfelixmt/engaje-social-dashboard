@@ -9,7 +9,7 @@ const storageKey = 'engaje:report-studio:appearance:v1';
 export function ReportStudioFrame({children}: {children: React.ReactNode}) {
   const pathname = usePathname();
   const route = pathname.split('/').slice(2).join('/');
-  const active = ['reports', 'reports/analytics', 'reports/funnel'].includes(route);
+  const active = ['reports', 'reports/analytics', 'reports/funnel', 'settings/integrations', 'settings/data-quality'].includes(route);
   const [night, setNight] = useState(false);
 
   useEffect(() => {

@@ -5,6 +5,7 @@ import {useRouter} from 'next/navigation';
 import {Unplug} from 'lucide-react';
 import {browserClient} from '@/lib/supabase/browser';
 import {Button} from '@/components/ui/button';
+import {oauthDestination} from '@/lib/integrations/oauth-destination';
 
 type IntegrationControlsProps = {
   organizationId: string;
@@ -42,9 +43,7 @@ export function IntegrationControls({organizationId, provider, integrationId, en
         throw new Error(body?.message || body?.error || error.message);
       }
       if (data.url) {
-        const url = new URL(data.url);
-        if (!['www.facebook.com', 'accounts.google.com', 'business-api.tiktok.com', 'www.tiktok.com'].includes(url.hostname)) throw new Error('Destino inválido');
-        window.location.assign(url.href);
+        window.location.assign(oauthDestination(data.url));
       } else {
         setMessage(data.message || 'Solicitação concluída.');
         router.refresh();

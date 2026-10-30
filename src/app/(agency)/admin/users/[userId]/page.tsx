@@ -3,6 +3,7 @@ import {notFound} from 'next/navigation';
 import {ShieldCheck,ArrowLeft} from 'lucide-react';
 import {createClient} from '@supabase/supabase-js';
 import {requireAdmin} from '@/lib/auth/session';
+import {administrationKey} from '@/lib/auth/administration-key';
 import {supabaseUrl} from '@/lib/supabase/config';
 import {Card} from '@/components/ui/card';
 import {ActionForm} from '@/components/action-form';
@@ -12,7 +13,7 @@ export default async function UserAccessSettings({params}: {params:Promise<{user
  const {userId}=await params;
  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/.test(userId))notFound();
  const {db}=await requireAdmin();
- const secret=process.env.SUPABASE_SERVICE_ROLE_KEY;
+ const secret=administrationKey(process.env);
  if(!secret)return <Card>Serviço de gestão de acessos indisponível.</Card>;
  const admin=createClient(supabaseUrl,secret,{auth:{persistSession:false,autoRefreshToken:false}});
  const {data:authInfo,error:authError}=await admin.auth.admin.getUserById(userId);

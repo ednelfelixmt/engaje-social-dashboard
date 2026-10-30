@@ -52,7 +52,7 @@ test('BI waterfall rejects nonfinite aggregate reconciliation',()=>{
 test('reference BI renders observed sources, account/campaign controls and no imported client branding or fabricated CRM',()=>{
  const {MarketingBIBoard}=loadTypescript<typeof import('../src/components/dashboard/marketing-bi-board')>(new URL('../src/components/dashboard/marketing-bi-board.tsx',import.meta.url),(id,native)=>native(id));
  const html=renderToStaticMarkup(React.createElement(MarketingBIBoard,{model:buildAnalyticsWorkspace(input())}));
- for(const text of ['Visão geral','Meta Ads','Google Ads','Comparativo','Ofensores','Conta do BI','Campanha do BI','Campanhas e resultados','Consolidado do recorte','CSV'])assert.ok(html.includes(text),text);
+ for(const text of ['Visão geral','Meta Ads','Google Ads','Comparativo','Ofensores','Conta do BI','Campanha do BI','Campanhas e resultados','Valores recebidos','Coleta integral não confirmada','CSV'])assert.ok(html.includes(text),text);
  for(const forbidden of ['RegisteredResources','Report/StaticResources','NaN','Infinity','Conectado ao RD','pessoas únicas convertidas'])assert.ok(!html.includes(forbidden),forbidden);
  assert.ok(!html.includes('<form'));assert.ok(html.includes('TikTok'));assert.ok(html.includes('2026-10-20 a 2026-10-21'));assert.ok(html.includes('· comparativo'),'historical series legend');
 });
@@ -68,6 +68,14 @@ test('BI page navigation preserves canonical account/campaign scope for comparis
  assert.equal(nodes(tree).find(el=>el.props['aria-label']==='Plataforma do BI')?.props.value,'meta_ads');assert.equal(nodes(tree).find(el=>el.props['aria-label']==='Conta do BI')?.props.value,biAccountKey('meta_ads','123'));
  const snapshot=nodes(tree).find(el=>typeof el.type==='function'&&el.type.name==='PeriodSnapshot');assert.equal((snapshot?.props.totals as {spend:number}).spend,100);
  click('Google Ads');assert.equal(nodes(tree).find(el=>el.props['aria-label']==='Conta do BI')?.props.value,'all');assert.equal(nodes(tree).find(el=>el.props['aria-label']==='Campanha do BI')?.props.value,'all');
+});
+
+test('BI overview distinguishes a received zero from missing calendar days and withholds incompatible historical lead baselines',()=>{
+ const data=input();data.ads[0].spend=0;data.priorAds[0].leads=987654321;data.priorAds[0].attribution_window='1d_click';
+ const model=buildAnalyticsWorkspace(data),before=JSON.stringify(model);
+ const {MarketingBIBoard}=loadTypescript<typeof import('../src/components/dashboard/marketing-bi-board')>(new URL('../src/components/dashboard/marketing-bi-board.tsx',import.meta.url),(id,native)=>native(id));
+ const html=renderToStaticMarkup(React.createElement(MarketingBIBoard,{model}));
+ assert.match(html,/1 de 2 dia\(s\) com registros/);assert.ok(html.includes('R$ 0,00'));assert.ok(html.includes('atribuição não comparável'));assert.ok(!html.includes('987.654.321'));assert.equal(JSON.stringify(model),before);
 });
 
 test('BI trend compares calendar positions, keeps missing values null and preserves observed zero',()=>{

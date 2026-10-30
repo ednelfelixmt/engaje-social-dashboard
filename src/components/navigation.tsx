@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {useEffect, useState} from 'react';
-import {Building2, ChartNoAxesCombined, ChevronDown, Crown, Database, Filter, Images, LayoutDashboard, LogOut, Megaphone, Palette, Plug, Settings, Share2, Users, type LucideIcon} from 'lucide-react';
+import {Building2, ChartNoAxesCombined, ChevronDown, Crown, Database, Filter, Images, LayoutDashboard, LogOut, Megaphone, Menu, PanelLeftClose, PanelLeftOpen, Palette, Plug, Settings, Share2, Users, type LucideIcon} from 'lucide-react';
 
 type NavItem={key:string;label:string;icon:LucideIcon;requires?:string};
 type NavGroup={id:string;label:string;icon:LucideIcon;items:NavItem[];/** Grupos recolhíveis começam abertos só se contiverem a página atual (ou se defaultOpen). */collapsible?:boolean;defaultOpen?:boolean};
@@ -52,7 +52,7 @@ const agencyGroups:NavGroup[]=[
 
 const storagePrefix='engaje:nav:v1:';
 
-export function Navigation({slug,admin=false,enabled=[],canShare=false}:{slug?:string;admin?:boolean;enabled?:string[];canShare?:boolean}){
+export function Navigation({slug,admin=false,enabled=[],canShare=false,organizationName,logoUrl}:{slug?:string;admin?:boolean;enabled?:string[];canShare?:boolean;organizationName?:string;logoUrl?:string|null}){
   const path=usePathname();
   const scope=admin?'admin':slug??'workspace';
   const groups=(admin?agencyGroups:workspaceGroups).filter((group)=>admin||canShare||group.id!=='settings').map((group)=>({...group,items:group.items.filter((item)=>(!['sharing','settings/data-quality'].includes(item.key)||canShare)&&(!item.requires||enabled.includes(item.requires)))})).filter((group)=>group.items.length);
@@ -61,6 +61,12 @@ export function Navigation({slug,admin=false,enabled=[],canShare=false}:{slug?:s
 
   // Escolhas manuais do usuário (abrir/recolher) ficam só neste navegador; o grupo da página atual sempre aparece aberto.
   const [manual,setManual]=useState<Record<string,boolean>>({});
+  const [collapsed,setCollapsed]=useState(false);
+  const [mobileOpen,setMobileOpen]=useState(false);
+  const [logoFailed,setLogoFailed]=useState(false);
+  useEffect(()=>{try{setCollapsed(localStorage.getItem(storagePrefix+'collapsed')==='true');}catch{/* optional preference */}},[]);
+  useEffect(()=>{setMobileOpen(false);},[path]);
+  const collapse=()=>setCollapsed(current=>{try{localStorage.setItem(storagePrefix+'collapsed',String(!current));}catch{/* optional preference */}return !current;});
   useEffect(()=>{
     try{const stored=JSON.parse(localStorage.getItem(storagePrefix+scope)||'{}');if(stored&&typeof stored==='object'&&!Array.isArray(stored))setManual(stored as Record<string,boolean>);}catch{/* sem armazenamento local */}
   },[scope]);
@@ -70,14 +76,15 @@ export function Navigation({slug,admin=false,enabled=[],canShare=false}:{slug?:s
     return next;
   });
 
-  return <aside data-report-navigation className="sticky top-0 z-40 flex w-full flex-col border-b border-white/[.08] bg-[#090d15] lg:fixed lg:inset-y-0 lg:w-[272px] lg:border-b-0 lg:border-r">
-    <Link prefetch href="/" className="flex items-center gap-3 px-5 py-4 lg:px-6 lg:py-7"><span className="grid size-10 place-items-center rounded-2xl border border-primary/25 bg-primary/10 shadow-[0_0_30px_rgb(var(--primary-rgb)/.08)]"><Crown className="text-primary" size={21}/></span><div><strong className="block tracking-[-.025em]">Engaje Mídia Hub</strong><p className="muted mt-0.5 text-[8px] font-bold tracking-[.16em]">MARKETING INTELLIGENCE</p></div></Link>
+  return <aside data-report-navigation data-collapsed={collapsed} data-mobile-open={mobileOpen} className="sticky top-0 z-40 flex w-full flex-col border-b border-white/[.08] bg-[#090d15] lg:fixed lg:inset-y-0 lg:w-[272px] lg:border-b-0 lg:border-r">
+    <div className="navigation-brand"><Link prefetch href={slug?`/${encodeURIComponent(slug)}/reports/analytics`:'/admin'} title={organizationName??'Engaje Mídia Hub'}><span className="navigation-logo">{logoUrl&&!logoFailed?<img src={logoUrl} alt="" onError={()=>setLogoFailed(true)}/>:organizationName?<b>{organizationName.split(/\s+/).map(s=>s[0]).slice(0,2).join('')}</b>:<Crown className="text-primary" size={21}/>}</span><div className="navigation-label"><strong>{organizationName??'Engaje Mídia Hub'}</strong><small>MARKETING INTELLIGENCE</small></div></Link><button type="button" className="navigation-mobile-toggle" aria-label="Abrir navegação" aria-expanded={mobileOpen} onClick={()=>setMobileOpen(!mobileOpen)}><Menu size={21}/></button></div>
+    <button type="button" className="navigation-collapse" aria-label={collapsed?'Expandir menu lateral':'Recolher menu lateral'} aria-expanded={!collapsed} onClick={collapse}>{collapsed?<PanelLeftOpen size={19}/>:<PanelLeftClose size={19}/>}<span className="navigation-label">Recolher menu</span></button>
     <div className="hidden px-6 lg:block"><div className="h-px bg-gradient-to-r from-primary/40 via-white/10 to-transparent"/></div>
     <nav aria-label={admin?'Navegação da agência':'Navegação do workspace'} className="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-1 lg:flex-col lg:gap-1.5 lg:overflow-y-auto lg:px-4 lg:pb-5 lg:pt-5">
       {groups.map((group)=>{
         const single=group.items.length===1&&!group.collapsible;
         const hasActive=group.items.some((item)=>isActive(item.key));
-        const open=!group.collapsible||hasActive||(manual[group.id]??group.defaultOpen??false);
+        const open=collapsed||!group.collapsible||hasActive||(manual[group.id]??group.defaultOpen??false);
         const GroupIcon=group.icon;
         return <div className="contents lg:block" key={group.id}>
           {group.collapsible?<button type="button" aria-expanded={open} aria-controls={`nav-${group.id}`} onClick={()=>toggle(group.id,open)} disabled={hasActive} className="group mt-2 hidden w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[11px] font-bold uppercase tracking-[.14em] text-zinc-500 transition hover:text-zinc-200 disabled:cursor-default lg:flex">
@@ -90,12 +97,12 @@ export function Navigation({slug,admin=false,enabled=[],canShare=false}:{slug?:s
           <div id={`nav-${group.id}`} className={`contents lg:block lg:space-y-0.5 ${group.collapsible?'lg:ml-3 lg:border-l lg:border-white/[.07] lg:pl-2':''} ${open?'':'lg:hidden'}`}>
             {group.items.map(({key,label,icon:Icon})=>{
               const active=isActive(key);
-              return <Link prefetch aria-current={active?'page':undefined} key={key} href={hrefOf(key)} className={`group relative flex items-center gap-3 whitespace-nowrap rounded-xl border px-4 py-2.5 text-xs font-medium transition lg:text-sm ${single?'lg:mt-1':''} ${active?'border-primary/20 bg-primary/[.09] text-primary shadow-[inset_3px_0_var(--primary)]':'border-transparent text-zinc-400 hover:border-white/[.06] hover:bg-white/[.035] hover:text-white'}`}><Icon className={active?'text-primary':'text-zinc-600 transition group-hover:text-zinc-300'} size={17}/>{label}</Link>;
+              return <Link prefetch aria-label={label} title={label} aria-current={active?'page':undefined} key={key} href={hrefOf(key)} className={`group relative flex items-center gap-3 whitespace-nowrap rounded-xl border px-4 py-2.5 text-xs font-medium transition lg:text-sm ${single?'lg:mt-1':''} ${active?'border-primary/20 bg-primary/[.09] text-primary shadow-[inset_3px_0_var(--primary)]':'border-transparent text-zinc-400 hover:border-white/[.06] hover:bg-white/[.035] hover:text-white'}`}><Icon className={active?'text-primary':'text-zinc-600 transition group-hover:text-zinc-300'} size={17}/><span className="navigation-label">{label}</span></Link>;
             })}
           </div>
         </div>;
       })}
     </nav>
-    <form action="/auth/signout" method="post" className="mt-auto hidden border-t border-white/[.07] lg:block"><button type="submit" className="flex w-full items-center gap-3 p-6 text-sm text-zinc-500 transition hover:bg-white/[.025] hover:text-white"><LogOut size={16}/>Sair da plataforma</button></form>
+    <form action="/auth/signout" method="post" className="navigation-signout mt-auto border-t border-white/[.07]"><button type="submit" aria-label="Sair da plataforma" title="Sair da plataforma" className="flex w-full items-center gap-3 p-6 text-sm text-zinc-500 transition hover:bg-white/[.025] hover:text-white"><LogOut size={16}/><span className="navigation-label">Sair da plataforma</span></button></form>
   </aside>;
 }
