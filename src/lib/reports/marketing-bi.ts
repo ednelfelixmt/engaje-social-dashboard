@@ -1,6 +1,6 @@
 import type {CampaignPerformance} from '@/types/domain';
 import {analyticsCampaignKey, selectAnalytics, type AnalyticsWorkspaceModel} from './analytics-workspace';
-import {paidMetric, paidTotals} from '@/lib/metrics/paid-metrics';
+import {paidMetric, paidTotals, type PaidMetricKey} from '@/lib/metrics/paid-metrics';
 
 export type BISelection = ReturnType<typeof selectAnalytics>;
 export const biAdditiveMetrics = ['spend', 'impressions', 'clicks', 'leads'] as const;
@@ -27,12 +27,35 @@ export function selectMarketingBI(model:AnalyticsWorkspaceModel, filters:{platfo
   return selectAnalytics(scoped,{platform:filters.platform,campaign:filters.campaign});
 }
 
+/** Align historical paid-media observations by calendar position, not by matching calendar dates.
+ * Missing observations remain null. Historical dates travel with their own values.
+ */
+export function marketingTrendPoints(selection:BISelection, metric:PaidMetricKey, secondary?:PaidMetricKey) {
+  // An attribution window mismatch forbids a historical lead/CPL comparison.
+  // Other measurements and the observed current period are still available.
+  const priorComparable = selection.compatible || (metric !== 'leads' && metric !== 'cpl');
+  return selection.timeline.map(day=>({
+    date:day.currentDate??day.previousDate,
+    currentDate:day.currentDate,
+    previousDate:day.previousDate,
+    primary:day.current?paidMetric(day.current,metric):null,
+    previous:priorComparable&&day.previous?paidMetric(day.previous,metric):null,
+    secondary:secondary&&day.current?paidMetric(day.current,secondary):null,
+  }));
+}
+
 /** Reconcile only campaigns with observations in BOTH periods. Absence is never zero. */
 export function marketingDrivers(selection:BISelection, metric:BIAdditiveMetric) {
   if (!biAdditiveMetrics.includes(metric)) throw new Error('Non-additive BI driver metric');
-  const current = new Map(selection.current.map(row=>[analyticsCampaignKey(row.platform,row.accountId,row.campaignId),row]));
-  const previous = new Map(selection.previous.map(row=>[analyticsCampaignKey(row.platform,row.accountId,row.campaignId),row]));
+  const currentEntries = selection.current.map(row=>[analyticsCampaignKey(row.platform,row.accountId,row.campaignId),row] as const);
+  const previousEntries = selection.previous.map(row=>[analyticsCampaignKey(row.platform,row.accountId,row.campaignId),row] as const);
+  const current = new Map(currentEntries), previous = new Map(previousEntries);
   const keys = [...new Set([...current.keys(),...previous.keys()])];
+  // A canonical campaign appearing twice would otherwise be overwritten by Map.
+  // Fail closed rather than claim a reconciled waterfall with a lost observation.
+  if (current.size !== currentEntries.length || previous.size !== previousEntries.length) {
+    return {available:false,start:null,end:null,rows:[],excluded:keys.length,metric};
+  }
   const rows:{key:string;name:string;current:number;previous:number;change:number}[] = [];
   if (metric !== 'leads' || selection.compatible) {
     for (const key of keys) {
