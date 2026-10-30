@@ -69,3 +69,21 @@ test('agency trend keeps prior dates without disclosing incompatible historical 
  assert.ok(all.some(node=>node.type==='p'&&node.props.children==='Comparativo de leads/CPL indisponível: atribuição histórica não comparável.'));
  assert.ok(!all.some(node=>node.props.dataKey==='previous'));
 });
+
+test('agency platform mix does not coerce an unavailable campaign spend to zero',()=>{
+ const f=harness(),data=fixture();
+ data.model.datasets[0].current[0].spend=null as unknown as number;
+ const tree=f.render(()=>f.module.AgencyIntelligenceWorkbench({...data,selectedClient:'all',onSelectClient:()=>{}}));
+ const chart=named(tree,'AgencyPlatformChart');assert.ok(chart);
+ const meta=(chart.props.rows as {platform:string;value:number|null;campaigns:number}[]).find(row=>row.platform==='meta_ads');
+ assert.ok(meta);assert.equal(meta.campaigns,2);assert.equal(meta.value,null);
+ const {AgencyPlatformChart}=loadTypescript<typeof import('../src/components/agency/agency-intelligence-charts')>(new URL('../src/components/agency/agency-intelligence-charts.tsx',import.meta.url),(name,native)=>native(name));
+ assert.ok(renderToStaticMarkup(AgencyPlatformChart({rows:chart.props.rows as {platform:string;value:number|null;campaigns:number}[],currency:'BRL',selected:'all',onSelect:()=>{}})).includes('Distribuição indisponível'));
+});
+test('agency platform doughnut with individually finite but overflowing total fails closed',()=>{
+ const {AgencyPlatformChart}=loadTypescript<typeof import('../src/components/agency/agency-intelligence-charts')>(new URL('../src/components/agency/agency-intelligence-charts.tsx',import.meta.url),(name,native)=>native(name));
+ const tree=AgencyPlatformChart({rows:[{platform:'meta_ads',value:1e308,campaigns:1},{platform:'google_ads',value:1e308,campaigns:1},{platform:'tiktok_ads',value:null,campaigns:0}],currency:'BRL',selected:'all',onSelect:()=>{}});
+ const pie=nodes(tree).find(node=>node.props.dataKey==='value');
+ assert.ok(pie);assert.deepEqual(pie.props.data,[],'do not render Infinity as a pie');
+ assert.ok(renderToStaticMarkup(tree).includes('Distribuição indisponível'));
+});

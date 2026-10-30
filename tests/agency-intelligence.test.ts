@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildAgencyIntelligence,selectAgencyIntelligence,agencyIntelligenceDelta,type AgencySourceClient} from '../src/lib/reports/agency-intelligence';
+import {buildAgencyIntelligence,selectAgencyIntelligence,agencyIntelligenceDelta,agencyPlatformInvestmentRows,type AgencySourceClient} from '../src/lib/reports/agency-intelligence';
 import {fact} from './helpers/analytics-fixture';
 const a='11111111-1111-4111-8111-111111111111',b='22222222-2222-4222-8222-222222222222';
 const client=(id=a,currency='BRL'):AgencySourceClient=>({id,name:'Cliente sintético '+id.slice(0,1),slug:'synthetic-'+id.slice(0,1),currency,timezone:'America/Cuiaba'});
@@ -27,4 +27,19 @@ test('weekly/monthly buckets sum only observations and align each period by its 
 test('agency suppresses incompatible historical lead/CPL deltas but preserves current observations and neutral budget variation',()=>{
  const selection=choose(make({previous:[row({id:'prior',metric_date:'2026-09-28',spend:80,attribution_window:'1d_click'})]}));assert.equal(selection.compatible,false);assert.equal(selection.totals.leads,2);assert.equal(agencyIntelligenceDelta(selection,'leads',true),null);assert.equal(agencyIntelligenceDelta(selection,'cpl',true),null);assert.deepEqual(agencyIntelligenceDelta(selection,'spend',true),{change:25,good:null});
  const withEmpty=make({clients:[client(),client(b)]});assert.equal(choose(withEmpty).compatible,true,'a client without facts in either period does not invalidate observed attribution');
+});
+
+test('agency investment mix preserves observed zero, refuses missing source spend and numeric overflow',()=>{
+ const base=choose(make()).current[0];
+ const valid=[{...base,spend:0},{...base,platform:'google_ads' as const,spend:30}];
+ const zero=agencyPlatformInvestmentRows(valid),before=structuredClone(valid);
+ assert.deepEqual(zero.map(row=>[row.platform,row.value,row.campaigns]),[['meta_ads',0,1],['google_ads',30,1],['tiktok_ads',null,0]]);
+ assert.deepEqual(valid,before,'source campaign rows must remain untouched');
+ const missing=agencyPlatformInvestmentRows([...valid,{...base,campaignId:'missing-source',spend:null as unknown as number}]);
+ assert.equal(missing[0].campaigns,2);assert.equal(missing[0].value,null,'null is not a measured zero');
+ assert.equal(missing[1].value,30,'other platforms retain their valid spend');
+ const negative=agencyPlatformInvestmentRows([{...base,spend:-10}]);
+ assert.equal(negative[0].value,null);
+ const overflow=agencyPlatformInvestmentRows([{...base,spend:1e308},{...base,campaignId:'overflow',spend:1e308}]);
+ assert.equal(overflow[0].value,null,'finite input can overflow when aggregated');
 });
