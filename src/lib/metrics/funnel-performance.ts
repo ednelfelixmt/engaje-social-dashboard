@@ -14,8 +14,11 @@ function validFunnelIdentity(row: CampaignPerformance): boolean {
   return validFunnelSourceId(row.platform)
     && validFunnelSourceId(row.accountId)
     && validFunnelSourceId(row.campaignId)
-    // Meta act_ is an alias prefix, never a complete account identifier by itself.
-    && (row.platform !== 'meta_ads' || validFunnelSourceId(row.accountId.replace(/^act_/, '')));
+    // A single Meta act_ is an alias. A second act_ would create a false account grain.
+    && (row.platform !== 'meta_ads' || (() => {
+      const accountId = row.accountId.replace(/^act_/, '');
+      return validFunnelSourceId(accountId) && !accountId.startsWith('act_');
+    })());
 }
 
 /** Catalog-only campaigns have no measurements; an observed zero is still a fact. */
