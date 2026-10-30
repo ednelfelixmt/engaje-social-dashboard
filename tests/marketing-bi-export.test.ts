@@ -78,6 +78,25 @@ test('BI CSV respects canonical selected campaign scope and free-text search',()
   assert.equal(parse(marketingBICsv(model,selection,'not there')).length,0);
 });
 
+test('BI CSV marks search-only campaigns and renamed observations as unpaired, not equivalent',()=>{
+  const withUnmatched=input();
+  withUnmatched.ads.push(fact({id:'current-b',ad_id:'current-b-ad',campaign_id:'campaign-b',campaign_name:'Only B',spend:25}));
+  const first=choose(withUnmatched);
+  assert.equal(first.selection.compatible,true);
+  const onlyB=parse(marketingBICsv(first.model,first.selection,'ONLY B'));
+  assert.equal(onlyB.length,1);
+  assert.equal(onlyB[0].periodo,'atual');
+  assert.equal(onlyB[0].comparacao_leads_cpl,'sem_par_observado');
+
+  const renamed=input();
+  renamed.ads[0].campaign_name='Renamed only current';
+  const second=choose(renamed);
+  assert.equal(second.selection.compatible,true);
+  const currentOnly=parse(marketingBICsv(second.model,second.selection,'renamed only current'));
+  assert.equal(currentOnly.length,1);
+  assert.equal(currentOnly[0].comparacao_leads_cpl,'sem_par_observado');
+});
+
 test('BI CSV fails closed on selection crossing tenant, currency or a disabled comparison',()=>{
   const {model,selection}=choose();
   for (const patch of [{organizationId:'22222222-2222-4222-8222-222222222222'},{currency:'USD'}]) {

@@ -19,9 +19,16 @@ export function marketingBICsv(model: AnalyticsWorkspaceModel, selection: BISele
     throw new Error('Marketing BI CSV scope mismatch');
   }
 
-  const previousKeys = new Set(selection.previous.map(row =>
+  // Pairing must be determined from what the CSV actually contains: a search
+  // may exclude the prior campaign or match only a renamed current campaign.
+  const term = search.trim().toLocaleLowerCase('pt-BR');
+  const matches = (row: BISelection['current'][number]) =>
+    row.campaignName.toLocaleLowerCase('pt-BR').includes(term);
+  const current = selection.current.filter(matches);
+  const previousFacts = selection.previous.filter(matches);
+  const previousKeys = new Set(previousFacts.map(row =>
     analyticsCampaignKey(row.platform, row.accountId, row.campaignId)));
-  const hasPairedCampaign = selection.current.some(row =>
+  const hasPairedCampaign = current.some(row =>
     previousKeys.has(analyticsCampaignKey(row.platform, row.accountId, row.campaignId)));
   const attribution = !comparing ? 'desativado'
     : !selection.compatible ? 'nao_equivalente'
@@ -33,17 +40,15 @@ export function marketingBICsv(model: AnalyticsWorkspaceModel, selection: BISele
     'campanha_id','campanha',...marketingBIMetrics,
   ]];
   const periods: {label: 'atual' | 'comparativo'; from: string; to: string; facts: BISelection['current']}[] = [
-    {label: 'atual', from: scope.from, to: scope.to, facts: selection.current},
+    {label: 'atual', from: scope.from, to: scope.to, facts: current},
   ];
   if (comparing) {
     const previous = model.commercial.previous;
     if (!previous) throw new Error('Marketing BI CSV comparison range unavailable');
-    periods.push({label: 'comparativo', from: previous.from, to: previous.to, facts: selection.previous});
+    periods.push({label: 'comparativo', from: previous.from, to: previous.to, facts: previousFacts});
   }
-  const term = search.trim().toLocaleLowerCase('pt-BR');
   for (const period of periods) {
     for (const row of period.facts) {
-      if (!row.campaignName.toLocaleLowerCase('pt-BR').includes(term)) continue;
       rows.push([
         '1',scope.organizationName,'metrics_ads',scope.currency,scope.timezone,
         scope.compare,attribution,period.label,period.from,period.to,
