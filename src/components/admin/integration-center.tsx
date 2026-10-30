@@ -11,6 +11,12 @@ const icons={meta_ads:Facebook,tiktok_ads:Activity,windsor:Database,stract:Datab
 const platformKey:Record<string,string>={meta_ads:'meta',rd_station:'rd-station',generic_crm:'crm',tiktok_ads:'tiktok_ads'};
 type Workspace={id:string;name:string;slug:string};
 const empty=(organizationId:string):ClientConnectionSummary=>({organizationId,connected:0,attention:0,pending:0,inactive:0,lastSyncedAt:null});
+/** Match Brazilian client names without making users enter accent marks. */
+const foldedClientName=(value:string)=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').trim();
+export function matchesIntegrationClientQuery(name:string,query:string):boolean {
+  return foldedClientName(name).includes(foldedClientName(query));
+}
+
 
 export function IntegrationCenter({summary,workspaces}:{summary:ClientConnectionSummary[];workspaces:Workspace[]}) {
   const [client,setClient]=useState('all'), [status,setStatus]=useState('all'), [query,setQuery]=useState('');
@@ -20,7 +26,7 @@ export function IntegrationCenter({summary,workspaces}:{summary:ClientConnection
   const connected=scoped.reduce((count,row)=>count+row.health.connected,0);
   const attention=scoped.reduce((count,row)=>count+row.health.attention,0);
   const key=status as 'connected'|'attention'|'pending'|'inactive';
-  const filtered=scoped.filter(row=>(status==='all'||row.health[key]>0)&&row.name.toLowerCase().includes(query.toLowerCase().trim()));
+  const filtered=scoped.filter(row=>(status==='all'||row.health[key]>0)&&matchesIntegrationClientQuery(row.name,query));
   return <div className="integration-center">
     <div className="admin-summary-grid"><div><span>Conexões habilitadas</span><strong>{connected}</strong><small>Não comprova coleta completa</small></div><div><span>Precisam de atenção</span><strong>{attention}</strong><small>Erro ou autorização expirada</small></div><div><span>Clientes no recorte</span><strong>{selection.length}</strong><small>Somente clientes ativos</small></div></div>
     <div className="admin-collection-toolbar"><label>Cliente<select aria-label="Cliente das integrações" value={client} onChange={e=>setClient(e.target.value)}><option value="all">Todos os clientes ativos</option>{workspaces.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label><label>Situação<select aria-label="Situação das integrações" value={status} onChange={e=>setStatus(e.target.value)}><option value="all">Todas as situações</option><option value="connected">Conexão habilitada</option><option value="attention">Precisam de atenção</option><option value="pending">Pendentes</option><option value="inactive">Desconectadas</option></select></label><label className="admin-search"><Search size={17}/><input aria-label="Buscar cliente" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar cliente"/></label></div>

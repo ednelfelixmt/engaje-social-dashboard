@@ -42,3 +42,42 @@ test('agency integrations surface links to client without listing linked assets'
   assert.ok(!html.includes(value),value);
  assert.ok(!html.includes('Cliente / conta'));
 });
+
+test('client search in the agency integration center ignores diacritics without exposing account identifiers',()=>{
+ const {matchesIntegrationClientQuery}=loadTypescript<{matchesIntegrationClientQuery:(name:string,query:string)=>boolean}>(
+   new URL('../src/components/admin/integration-center.tsx',import.meta.url),(id,native)=>{
+    if(id==='next/link')return ({children,...props}:{children:React.ReactNode})=>createElement('a',props,children);
+    if(id==='@/lib/integrations/catalog')return {connectorCatalog:[]};
+    if(id==='@/components/admin-integration-start-button')return {AdminIntegrationStartButton:()=>createElement('button',null,'Conectar')};
+    return native(id);
+   });
+ for(const [name,query] of [['São João Mídia','sao joao'],['CUIABÁ Marketing','cuiaba'],['Água Viva','  AGUA  '],['Cliente sintético','CLIENTE']]){
+  assert.equal(matchesIntegrationClientQuery(name,query),true,name);
+ }
+ assert.equal(matchesIntegrationClientQuery('São João Mídia','rio'),false);
+ assert.equal(matchesIntegrationClientQuery('São João Mídia','sao paulo'),false);
+});
+
+test('accent-insensitive search filters only authorized client rows in the global center',()=>{
+ let call=0;
+ const {IntegrationCenter:FilteredCenter}=loadTypescript<{IntegrationCenter:typeof IntegrationCenter}>(
+  new URL('../src/components/admin/integration-center.tsx',import.meta.url),(id,native)=>{
+   if(id==='react')return {...native(id),useState:(initial:unknown)=>{const index=call++;return [index===2?'  SAO JOAO  ':initial,()=>{}];}};
+   if(id==='next/link')return ({children,...props}:{children:React.ReactNode})=>createElement('a',props,children);
+   if(id==='@/lib/integrations/catalog')return {connectorCatalog:[]};
+   if(id==='@/components/admin-integration-start-button')return {AdminIntegrationStartButton:()=>createElement('button',null,'Conectar')};
+   return native(id);
+  });
+ const summary=summarizeClientConnectionHealth(['synthetic-sao','synthetic-rio'],[
+  {organization_id:'synthetic-sao',status:'connected',is_enabled:true,external_account_id:'private_sao_account',last_synced_at:null,config:{}},
+  {organization_id:'synthetic-outside',status:'connected',is_enabled:true,external_account_id:'private_other_tenant',last_synced_at:null,config:{}},
+ ]);
+ const html=renderToStaticMarkup(FilteredCenter({summary,workspaces:[
+  {id:'synthetic-sao',name:'São João Mídia',slug:'sao-joao-sintetico'},
+  {id:'synthetic-rio',name:'Rio Serviços',slug:'rio-sintetico'},
+ ]}));
+ assert.ok(html.includes('href="/sao-joao-sintetico/settings/integrations"'));
+ assert.ok(!html.includes('href="/rio-sintetico/settings/integrations"'));
+ assert.ok(html.includes('1 cliente(s)'));
+ for(const identifier of ['private_sao_account','private_other_tenant'])assert.equal(html.includes(identifier),false);
+});
