@@ -1,6 +1,6 @@
 import type {CampaignPerformance} from '@/types/domain';
 import {analyticsCampaignKey, selectAnalytics, type AnalyticsWorkspaceModel} from './analytics-workspace';
-import {paidMetric, paidTotals} from '@/lib/metrics/paid-metrics';
+import {paidMetric, paidTotals, type PaidMetricKey} from '@/lib/metrics/paid-metrics';
 
 export type BISelection = ReturnType<typeof selectAnalytics>;
 export const biAdditiveMetrics = ['spend', 'impressions', 'clicks', 'leads'] as const;
@@ -25,6 +25,20 @@ export function selectMarketingBI(model:AnalyticsWorkspaceModel, filters:{platfo
     lineage:model.lineage.filter(row=>accountMatches(row.key)),
   };
   return selectAnalytics(scoped,{platform:filters.platform,campaign:filters.campaign});
+}
+
+/** Align historical paid-media observations by calendar position, not by matching calendar dates.
+ * Missing observations remain null. Historical dates travel with their own values.
+ */
+export function marketingTrendPoints(selection:BISelection, metric:PaidMetricKey, secondary?:PaidMetricKey) {
+  return selection.timeline.map(day=>({
+    date:day.currentDate??day.previousDate,
+    currentDate:day.currentDate,
+    previousDate:day.previousDate,
+    primary:day.current?paidMetric(day.current,metric):null,
+    previous:day.previous?paidMetric(day.previous,metric):null,
+    secondary:secondary&&day.current?paidMetric(day.current,secondary):null,
+  }));
 }
 
 /** Reconcile only campaigns with observations in BOTH periods. Absence is never zero. */

@@ -1,26 +1,26 @@
 'use client';
 
 import {Bar,BarChart,CartesianGrid,Cell,ComposedChart,Line,ResponsiveContainer,Tooltip,XAxis,YAxis} from 'recharts';
-import {paidMetric,type PaidMetricKey} from '@/lib/metrics/paid-metrics';
-import {type BISelection,marketingDrivers,type BIAdditiveMetric} from '@/lib/reports/marketing-bi';
+import {type PaidMetricKey} from '@/lib/metrics/paid-metrics';
+import {type BISelection,marketingDrivers,marketingTrendPoints,type BIAdditiveMetric} from '@/lib/reports/marketing-bi';
 import {analyticsFormat,analyticsMetricLabels} from './analytics-charts';
 
 const compact=(value:number)=>new Intl.NumberFormat('pt-BR',{notation:'compact',maximumFractionDigits:1}).format(value);
 export function MarketingBITrend({selection,metric,secondary,currency}:{selection:BISelection;metric:PaidMetricKey;secondary?:PaidMetricKey;currency:string}) {
-  const points=selection.timeline.map(row=>({date:row.currentDate??row.previousDate,
-    primary:row.current?paidMetric(row.current,metric):null,
-    secondary:secondary&&row.current?paidMetric(row.current,secondary):null}));
-  if(!points.some(p=>p.primary!==null||p.secondary!==null))return <p className="bi-empty">Sem medições diárias no recorte.</p>;
+  const points=marketingTrendPoints(selection,metric,secondary);
+  const hasPrior=points.some(p=>p.previous!==null);
+  if(!points.some(p=>p.primary!==null||p.secondary!==null||p.previous!==null))return <p className="bi-empty">Sem medições diárias no recorte.</p>;
   return <div className="bi-trend" aria-label={'Evolução de '+analyticsMetricLabels[metric]}>
-    <div className="bi-chart-legend"><span>● {analyticsMetricLabels[metric]}</span>{secondary?<span>● {analyticsMetricLabels[secondary]} · eixo direito</span>:null}</div>
+    <div className="bi-chart-legend"><span>● {analyticsMetricLabels[metric]} · atual</span>{hasPrior?<span>┄ {analyticsMetricLabels[metric]} · comparativo</span>:null}{secondary?<span>● {analyticsMetricLabels[secondary]} · eixo direito</span>:null}</div>
     <ResponsiveContainer width="100%" height="86%"><ComposedChart data={points} margin={{left:0,right:0,top:8,bottom:0}}>
       <CartesianGrid vertical={false} stroke="var(--studio-grid,#e7e9ed)" strokeDasharray="3 4"/>
       <XAxis dataKey="date" tickFormatter={value=>String(value).slice(5).split('-').reverse().join('/')} minTickGap={30} tick={{fontSize:10,fill:'var(--studio-muted,#63728a)'}} axisLine={false} tickLine={false}/>
       <YAxis yAxisId="primary" width={45} tickFormatter={compact} tick={{fontSize:10,fill:'var(--studio-muted,#63728a)'}} axisLine={false} tickLine={false}/>
       {secondary?<YAxis yAxisId="secondary" orientation="right" width={45} tickFormatter={compact} tick={{fontSize:10,fill:'var(--studio-muted,#63728a)'}} axisLine={false} tickLine={false}/>:null}
-      <Tooltip content={({active,payload})=>{const p=payload?.[0]?.payload as typeof points[number]|undefined;return active&&p?<div className="analytics-tooltip"><strong>{p.date}</strong><p>{analyticsMetricLabels[metric]}: {analyticsFormat(p.primary,metric,currency)}</p>{secondary?<p>{analyticsMetricLabels[secondary]}: {analyticsFormat(p.secondary,secondary,currency)}</p>:null}</div>:null;}}/>
-      <Line yAxisId="primary" dataKey="primary" stroke="#df1728" strokeWidth={2.5} dot={false} connectNulls={false} isAnimationActive={false}/>
-      {secondary?<Line yAxisId="secondary" dataKey="secondary" stroke="#64748b" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false}/>:null}
+      <Tooltip content={({active,payload})=>{const p=payload?.[0]?.payload as typeof points[number]|undefined;return active&&p?<div className="analytics-tooltip"><strong>{p.currentDate??p.previousDate}</strong><p>{analyticsMetricLabels[metric]} · atual: {analyticsFormat(p.primary,metric,currency)}</p>{hasPrior&&p.previousDate?<p>{analyticsMetricLabels[metric]} · comparativo ({p.previousDate}): {analyticsFormat(p.previous,metric,currency)}</p>:null}{secondary?<p>{analyticsMetricLabels[secondary]} · atual: {analyticsFormat(p.secondary,secondary,currency)}</p>:null}</div>:null;}}/>
+      <Line yAxisId="primary" dataKey="primary" stroke="#df1728" strokeWidth={2.5} dot={{r:2}} connectNulls={false} isAnimationActive={false}/>
+      {hasPrior?<Line yAxisId="primary" dataKey="previous" stroke="#7b879e" strokeDasharray="5 4" strokeWidth={2} dot={{r:2.5}} connectNulls={false} isAnimationActive={false}/>:null}
+      {secondary?<Line yAxisId="secondary" dataKey="secondary" stroke="#64748b" strokeWidth={2} dot={{r:2}} connectNulls={false} isAnimationActive={false}/>:null}
     </ComposedChart></ResponsiveContainer>
   </div>;
 }
