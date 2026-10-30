@@ -69,3 +69,22 @@ test('agency trend keeps prior dates without disclosing incompatible historical 
  assert.ok(all.some(node=>node.type==='p'&&node.props.children==='Comparativo de leads/CPL indisponível: atribuição histórica não comparável.'));
  assert.ok(!all.some(node=>node.props.dataKey==='previous'));
 });
+
+test('agency scatter exposes keyboard-operable selection for every visible client without changing source data',()=>{
+ const {AgencyEfficiencyChart}=loadTypescript<typeof import('../src/components/agency/agency-intelligence-charts')>(new URL('../src/components/agency/agency-intelligence-charts.tsx',import.meta.url),(name,native)=>native(name));
+ const data=fixture(),before=JSON.stringify(data.model);
+ const selection=selectAgencyIntelligence(data.model,{clientIds:[a,b],currency:'BRL',platform:'all',granularity:'day'});
+ const rows=selection.clients.map(row=>({...row,name:metadata.find(client=>client.id===row.id)!.name}));
+ const picked:string[]=[];
+ const tree=AgencyEfficiencyChart({rows,currency:'BRL',onSelect:id=>picked.push(id)});
+ const details=nodes(tree).find(node=>node.type==='details'&&node.props.className==='agency-bi-scatter-navigation');
+ assert.ok(details,'a chart-only pointer action must have a keyboard alternative');
+ const buttons=nodes(details).filter(node=>node.type==='button');
+ assert.deepEqual(buttons.map(button=>button.props['aria-label']),['Analisar Aurora sintética na dispersão da agência','Analisar Horizonte sintético na dispersão da agência']);
+ (buttons[1].props.onClick as()=>void)();assert.deepEqual(picked,[b],'the alternative selects the exact tenant already in the authorized chart scope');
+ assert.ok(renderToStaticMarkup(details).includes('Selecionar cliente sem utilizar o gráfico (2)'));
+ const empty=AgencyEfficiencyChart({rows:rows.map(row=>({...row,current:{...row.current,spend:null}})),currency:'BRL',onSelect:()=>{}});
+ assert.ok(!nodes(empty).some(node=>node.type==='details'),'no selectable controls without plotted pairs of measures');
+ assert.ok(renderToStaticMarkup(empty).includes('Dispersão indisponível'));
+ assert.equal(JSON.stringify(data.model),before,'selection UI must never mutate campaign facts');
+});
