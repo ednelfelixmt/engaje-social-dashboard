@@ -7,6 +7,13 @@ export default tseslint.config(
   {ignores:['node_modules/**','.next/**']},
   {
     files:[
+      'src/components/agency/agency-overview.tsx',
+      'src/lib/reports/agency-portfolio.ts',
+      'src/app/(agency)/admin/page.tsx',
+      'src/app/(agency)/admin/layout.tsx',
+      'tests/agency-portfolio.test.ts',
+      'tests/agency-overview-page.test.ts',
+
       'src/lib/reports/marketing-bi.ts',
       'src/lib/export/marketing-bi.ts',
       'tests/marketing-bi-export.test.ts',

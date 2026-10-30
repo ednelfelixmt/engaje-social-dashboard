@@ -1713,6 +1713,20 @@ Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamen
 - **Aceite antes do merge:** revisar diff; exigir PR mergeável, Quality Gate integral e Vercel Preview `success/READY` no **exato SHA final**. Após merge, validar Quality Gate em `main` e Vercel produção no SHA integrado separadamente. Testes sintéticos não são homologação A/B, cliente viewer, OAuth ou PDFs.
 - **Bloqueios verificados neste início de ciclo:** `main` em `8fbd99347b6d808c830f5bedaf6a3c1d5c7ccd83`: Quality Gate pós-merge aprovado (#40990171491), mas Vercel `failure/build-rate-limit` e nenhum deployment de produção comprovado nesse SHA. Produção anterior READY em `0b5c51637c04b2b6bef1412da066d9f8b6bd786b`; incidentes #278 e #211 abertos. PR #276 sem merge (Vercel falhou por limite de builds), #149 conflitante e #157 draft/inativa. SEC-010/011, UX-002, OAuth/GA4/RD reais e GOAL-003 visual permanecem pendentes. Não alterar plano, proteções ou reexecutar deploys em série para contornar a cota.
 
+### Recibo pós-merge BI-PBIX-REFERENCE-001 — 29/10/2026 (recibo incorporado neste ciclo)
+
+- PR #276 integrado em `6d390fc8e88bad4d6b6f38330d6b7f464ebf47eb`, após Quality Gate integral (886 testes) e Preview Vercel READY/success no head exato `e295b06b83654b96bd4b7c25d05f9bae6cdc260e`.
+- Publicação de produção recusada no SHA integrado: status Vercel failure, “Deployment rate limited — retry in 24 hours.” e link de build-rate-limit. Nenhum deployment de produção desse SHA encontrado; domínio continua na versão anterior. Não executar redeploy repetido, upgrade, promoção de outro SHA ou bypass.
+- HTTP A/B e anônimo da nova versão ficam NÃO EXECUTADOS até confirmar produção READY, SHA e alias canônico. Fixture visual sintética e CI não comprovam UX autenticada, DAX original ou TV física. Reavaliar a cota no próximo ciclo; nenhum agendamento automático criado.
+- Quality Gate pós-merge da main #40996745349 também success. Alias canônico mediahub.engajeperformance.com.br confirmado READY no SHA anterior `ce35e2f8485cbd124b8be155fa77547c9c365f95`; a nova versão ainda não está publicada.
+
+## 29/10/2026 — UI-AGENCY-BI-001: aplicar o design à entrada da agência
+
+- **Problema confirmado:** screenshot do usuário em /admin ainda usa tema preto/amarelo. O ciclo BI-PBIX-REFERENCE-001 mudou a análise do cliente, sem cobrir essa rota; além disso, o domínio permanece no SHA ce35e2f por bloqueio de deployments. Não confundir código na main, fixture e publicação.
+- **Correção:** layout administrativo claro renderizado no servidor, reutilizando tokens do Studio e acentos vermelhos; indicadores compactos, período GET personalizado validado antes das consultas, busca/filtro de clientes, gráfico interativo de volumes e acesso direto ao Marketing BI com datas/moeda. Visão geral e mídia paga existentes preservadas.
+- **Dados e segurança:** requireAdmin mantido antes de leituras; sem mudanças em Auth/RLS/escritas/segredos. Agregadores de agência/cliente preservados. Clientes ativos sem registros continuam navegáveis com valores indisponíveis, nunca zeros inventados; alcance não é somado. Barras monetárias não comparam moedas diferentes. Busca/filtro afetam lista e gráfico, com KPIs globais explicitamente identificados. Sem novas consultas a dados anteriores ou comparações fabricadas.
+- **Verificação:** 893 testes locais passaram; tipos/Edge Auth, lint e arquitetura aprovados. Fixture com componentes reais e dados exclusivamente sintéticos: busca, cliente sem dados, alternância investimento/leads; viewport 390 px sem overflow da página (375/375 px úteis). Compilação inicial interrompida após ficar sem progresso antes da liberação de rede; compilação seguinte aprovada após a liberação; recibo final no PR. Claude CLI foi consultado, mas retornou saída vazia (exit 0); não há revisão independente confirmada neste ciclo.
+- **Release:** exigir Quality Gate e Vercel READY/success no mesmo head antes de merge. Confirmar depois main, produção, SHA e alias. Cota de builds permanece risco conhecido; sem downgrade de proteção, upgrade ou redeploy repetido. Homologação autenticada/TV/DAX e demais P0/P1 continuam abertas; SMTP adiado.
 
 ## 30/10/2026 — BI-TREND-COMPARISON-001: histórico na evolução diária (submetido a gates, sem aceite antecipado)
 
@@ -1778,3 +1792,17 @@ Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamen
 - **Risco e reversão:** a cascata fica indisponível em fonte com identidade duplicada até saneamento autorizado, em vez de exibir totais não confiáveis. Reverter apenas o pacote analítico se a regressão for comprovada, preservando controles de isolamento e viewer somente leitura.
 - **Aceite remoto obrigatório:** exigir novo Quality Gate integral e Vercel Preview READY/status success **no mesmo SHA atualizado da PR #281**, mais ausência de conflitos, antes de integrar à `main`. Após merge, verificar CI pós-merge e produção READY no exato SHA, separadamente. Nenhuma homologação A/B, UX viewer, OAuth ou visual é inferida.
 - **Pendências:** PR #280 ainda sem Preview READY no head antigo; PR #149 conflitante; PR #157 draft/inativo; issue #211 de divergência Supabase, SEC-010/011, UX-002, RD/GA4/OAuth reais, validação PDF e TV física seguem abertas. Não contornar limites de builds nem reparar banco nesta alteração.
+
+
+### UI-AGENCY-BI-001 — recibo final local, ainda não integrado
+
+- PR #280, head 0755d1f84e95d758b2b946a043985638ca70d245: Quality Gate #40999581434 success; 893 testes locais, tipos/Edge Auth, lint, arquitetura e build passaram.
+- Revisão automática P2 confirmou branco sobre branco nos KPIs de usuários e nos Button outline. Correção administrativa conferida no navegador: KPI #202b40 sobre branco, botão padrão branco sobre #d31932, outline escuro sobre claro. Conversa resolvida após verificação; Claude independente não confirmado.
+- Vercel final failure: “Deployment rate limited — retry in 24 hours.” e target upgradeToPro=build-rate-limit. Nenhum deployment do head final encontrado. Previews anteriores não valem para esse head. PR aberto sem merge; design NÃO aplicado ao domínio. Sem upgrade/bypass/redeploy repetido/agendamento.
+- Nova versão: HTTP A/B, UX autenticada e produção permanecem não executados/não homologados até READY, SHA e alias confirmados. A fixture sintética serve somente como prova de componente/layout.
+
+## 30/10/2026 — UI-AGENCY-BI-001: retomada da publicação solicitada
+
+- PR #280 atualizado sobre main 3377131, preservando históricos diários, proteções de atribuição/exportação CSV e rejeição de campanhas canônicas duplicadas. Conflito somente no roadmap, com ambos os históricos e recibo local anterior preservados.
+- Escopo: aplicar o design da agência já testado, sem recriar funcionalidades nem alterar Auth/RLS, dados, segredos, permissões ou schema. A main e a produção evoluíram desde o bloqueio anterior; o head antigo não autoriza este conjunto.
+- Aceite pendente: novo Quality Gate integral e Vercel READY/success no mesmo head; após merge, confirmar main, SHA de produção e alias canônico, além de HTTP anônimo/A-B. Sem considerar prova sintética como homologação visual autenticada. SMTP, DAX original, TV física e P0/P1 anteriormente registrados permanecem pendentes.
