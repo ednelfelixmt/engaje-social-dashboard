@@ -21,12 +21,12 @@ const icons: Record<string, ReactNode> = {
 };
 
 function StageBadge({stage}: Pick<ConnectorDefinition, 'stage'>) {
-  return <span className={`connector-badge connector-badge-${stage}`}>{stage === 'live' ? 'Operacional' : 'Base pronta'}</span>;
+  return <span className={`connector-badge connector-badge-${stage}`}>{stage === 'live' ? 'Conector implementado' : 'Sincronização pendente'}</span>;
 }
 
 function ConnectorCard({connector, organizationId, prepared}: {connector: ConnectorDefinition; organizationId: string; prepared: boolean}) {
   return (
-    <Card className="integration-card">
+    <Card className="integration-card" id={connector.provider}>
       <div>
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="integration-brand">{icons[connector.provider]}<div><h3>{connector.name}</h3><p>{connector.description}</p></div></div>
@@ -34,7 +34,7 @@ function ConnectorCard({connector, organizationId, prepared}: {connector: Connec
         </div>
         <div className="flex flex-wrap gap-2">{connector.capabilities.map((capability) => <span className="connector-capability" key={capability}>{capability}</span>)}</div>
       </div>
-      <p className="muted text-xs">A conta só será vinculada após você selecioná-la e confirmar o cliente.</p>
+      <p className="muted text-xs">{connector.stage==='live'?'A conta só será vinculada após você selecioná-la e confirmar o cliente.':'O cadastro inicial não autoriza nem sincroniza dados. O adaptador e a homologação desta plataforma ainda precisam ser concluídos.'}</p>
       {connector.stage === 'live'
         ? <IntegrationControls organizationId={organizationId} provider={connector.provider} />
         : <FoundationConnector organizationId={organizationId} provider={connector.provider} prepared={prepared} />}

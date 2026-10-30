@@ -72,10 +72,10 @@
 .tv-mode .reference-bi .bi-provider-layout .bi-trend { height:30vh; }
 .tv-mode .reference-bi .bi-heading h2 { font-size:28px; }
 @media(min-width:1024px) {
-  .report-studio-frame:has(.reference-bi) aside[data-report-navigation] { width:220px; background:#17191f; color:#fff; }
-  .report-studio-frame:has(.reference-bi) [data-report-navigation] a[href="/"] { color:white; }
-  .report-studio-frame:has(.reference-bi) [data-report-navigation] :is(a,.text-zinc-600,.text-zinc-500,button,.eyebrow) { color:#c1c5d0; }
-  .report-studio-frame:has(.reference-bi) [data-report-navigation] a[aria-current=page] { color:white; background:#b71021; box-shadow:none; }
+  .report-studio-frame:has(.reference-bi) aside[data-report-navigation] { width:220px; background:var(--studio-surface); color:var(--studio-text); }
+  .report-studio-frame:has(.reference-bi) [data-report-navigation] a[href="/"] { color:var(--studio-text); }
+  .report-studio-frame:has(.reference-bi) [data-report-navigation] :is(a,.text-zinc-600,.text-zinc-500,button,.eyebrow) { color:var(--studio-muted); }
+  .report-studio-frame:has(.reference-bi) [data-report-navigation] a[aria-current=page] { color:var(--studio-accent); background:var(--studio-tint); box-shadow:inset 3px 0 var(--studio-accent); }
   .report-studio-frame:has(.reference-bi) [data-report-navigation] a { padding-left:11px; padding-right:11px; font-size:12px; }
   .report-studio-frame:has(.reference-bi) .dashboard-shell { margin-left:220px; padding-left:22px; padding-right:22px; }
   .tv-mode .report-studio-frame:has(.reference-bi) .dashboard-shell { margin-left:0!important; }

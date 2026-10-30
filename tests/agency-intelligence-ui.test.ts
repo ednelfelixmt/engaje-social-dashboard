@@ -15,6 +15,52 @@ function harness(){const state:unknown[]=[];let cursor=0;const downloads:string[
 function nodes(node:React.ReactNode):React.ReactElement<Record<string,unknown>>[]{if(!React.isValidElement(node))return [];const element=node as React.ReactElement<Record<string,unknown>>;return[element,...React.Children.toArray(element.props.children as React.ReactNode).flatMap(nodes)];}
 const named=(tree:React.ReactNode,name:string)=>nodes(tree).find(node=>typeof node.type==='function'&&node.type.name===name);
 function change(tree:React.ReactNode,label:string,value:string){const select=nodes(tree).find(node=>node.props['aria-label']===label);assert.ok(select,label);(select.props.onChange as(e:unknown)=>void)({target:{value}});}
+
+test('executive chart starts with one unit and shares totals and coverage with the selected facts',()=>{
+ const f=harness(),data=fixture();const tree=f.render(()=>f.module.AgencyIntelligenceWorkbench({...data,selectedClient:'all',onSelectClient:()=>{}}));
+ const props=named(tree,'AgencyTrendChart')!.props;
+ assert.equal(props.secondary,'none','a second unit is an explicit choice');
+ const {AgencyTrendChart}=loadTypescript<typeof import('../src/components/agency/agency-intelligence-charts')>(new URL('../src/components/agency/agency-intelligence-charts.tsx',import.meta.url),(name,native)=>name==='react'?{...React,useId:()=> 'fixture',useState:(initial:unknown)=>[initial,()=>{}]}:native(name));
+ const chart=AgencyTrendChart(props as Parameters<typeof AgencyTrendChart>[0]);
+ const summary=nodes(chart).find(node=>node.props.className==='agency-chart-summary');
+ assert.ok(summary);const html=renderToStaticMarkup(summary);
+ assert.ok(html.includes('150,00'));assert.ok(html.includes(' / 3 dias'));assert.ok(html.includes('Cobertura recebida'));
+ const dataNode=nodes(chart).find(node=>Array.isArray(node.props.data))!;
+ const points=dataNode.props.data as {current:number|null}[];
+ assert.deepEqual(points.map(point=>point.current),[150,null,null],'missing collection days remain absent');
+ assert.ok(nodes(chart).some(node=>node.props.dataKey==='current'&&node.props.maxBarSize===28),'observed daily values start as columns');
+});
+
+test('client ranking uses one scale for current and historical amounts, preserves names and selects exact client',()=>{
+ const {AgencyClientRanking}=loadTypescript<typeof import('../src/components/agency/agency-intelligence-charts')>(new URL('../src/components/agency/agency-intelligence-charts.tsx',import.meta.url),(name,native)=>native(name));
+ const data=fixture(),selection=selectAgencyIntelligence(data.model,{clientIds:[a,b],currency:'BRL',platform:'all',granularity:'day'});
+ const rows=selection.clients.map((row,i)=>({...row,name:metadata[i].name,previous:{...row.previous,spend:i===0?200:null}}));
+ const before=JSON.stringify(rows),selected:string[]=[];
+ const tree=AgencyClientRanking({rows,metric:'spend',currency:'BRL',comparing:true,onSelect:id=>selected.push(id)});
+ const buttons=nodes(tree).filter(node=>node.type==='button');assert.equal(buttons.length,2);
+ const widths=nodes(buttons[0]).filter(node=>node.type==='i').map(node=>(node.props.style as {width:string}).width);
+ assert.deepEqual(widths,['50%','100%'],'100 current and 200 historical share the same maximum');
+ const html=renderToStaticMarkup(tree);assert.ok(html.includes(metadata[0].name));assert.ok(html.includes('100,00'));assert.ok(html.includes('200,00'));assert.ok(html.includes('mesma escala'));
+ (buttons[1].props.onClick as()=>void)();assert.deepEqual(selected,[b]);assert.equal(JSON.stringify(rows),before);
+});
+
+test('agency source shares withhold an overflowing sum instead of displaying invented percentages',()=>{
+ const {AgencyPlatformChart}=loadTypescript<typeof import('../src/components/agency/agency-intelligence-charts')>(new URL('../src/components/agency/agency-intelligence-charts.tsx',import.meta.url),(name,native)=>native(name));
+ const tree=AgencyPlatformChart({rows:[{platform:'meta_ads',value:Number.MAX_VALUE,campaigns:1},{platform:'google_ads',value:Number.MAX_VALUE,campaigns:1}],currency:'BRL',selected:'all',onSelect:()=>{}});
+ const pie=nodes(tree).find(node=>Array.isArray(node.props.data));assert.ok(pie);assert.deepEqual(pie.props.data,[]);
+ assert.ok(renderToStaticMarkup(tree).includes('Distribuição indisponível'));assert.ok(!renderToStaticMarkup(tree).includes('50%'));
+});
+
+test('a zero observation keeps a visible marker while missing dates remain null in default columns',()=>{
+ const model=buildAgencyIntelligence({clients:[metadata[0]],current:[fact({organization_id:a,metric_date:'2026-10-01',spend:0})],previous:[],from:'2026-10-01',to:'2026-10-03',compare:'none'});
+ const selection=selectAgencyIntelligence(model,{clientIds:[a],currency:'BRL',platform:'all',granularity:'day'});
+ const {AgencyTrendChart}=loadTypescript<typeof import('../src/components/agency/agency-intelligence-charts')>(new URL('../src/components/agency/agency-intelligence-charts.tsx',import.meta.url),(name,native)=>name==='react'?{...React,useId:()=> 'fixture',useState:(initial:unknown)=>[initial,()=>{}]}:native(name));
+ const tree=AgencyTrendChart({selection,metric:'spend',secondary:'none',currency:'BRL'}),all=nodes(tree);
+ const chart=all.find(node=>Array.isArray(node.props.data))!;
+ assert.deepEqual((chart.props.data as {current:number|null}[]).map(row=>row.current),[0,null,null]);
+ const markers=all.find(node=>node.props.dataKey==='current'&&node.props.stroke==='none');
+ assert.ok(markers);assert.ok(markers.props.dot);assert.equal(markers.props.connectNulls,false);
+});
 test('ranking cross-selection updates KPI, temporal series, funnel and campaign rows together without changing source facts',()=>{
  const f=harness(),data=fixture(),before=JSON.stringify(data.model);let selectedClient='all';const render=()=>f.render(()=>f.module.AgencyIntelligenceWorkbench({...data,selectedClient,onSelectClient:id=>{selectedClient=id;}}));let tree=render();assert.equal((named(tree,'AgencyTrendChart')?.props.selection as {totals:{spend:number}}).totals.spend,150);
  (named(tree,'AgencyClientRanking')?.props.onSelect as(id:string)=>void)(b);tree=render();assert.equal((named(tree,'AgencyTrendChart')?.props.selection as {totals:{spend:number}}).totals.spend,50);assert.equal((named(tree,'AgencyEfficiencyChart')?.props.rows as unknown[]).length,1);assert.ok(!renderToStaticMarkup(tree).includes('synthetic-a/reports/campaign'));assert.ok(renderToStaticMarkup(tree).includes('synthetic-b/reports/campaign'));

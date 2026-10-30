@@ -2,6 +2,7 @@
 import {z} from 'zod';
 import {revalidatePath} from 'next/cache';
 import {requireAdmin} from '@/lib/auth/session';
+import {administrationKey} from '@/lib/auth/administration-key';
 import {validateOrganizationUpdateRequest} from '@/lib/auth/organization-update-guards';
 import {adminMutationFailure} from '@/lib/auth/admin-mutation-feedback';
 import type {ActionState} from '@/components/action-form';
@@ -73,7 +74,7 @@ export async function inviteClientUser(_:ActionState,f:FormData):Promise<ActionS
  await requireAdmin();
  const parsed=z.object({email:z.string().trim().toLowerCase().email().max(254)}).safeParse({email:f.get('email')});
  if(!parsed.success)return {ok:false,message:'Informe um endereço de e-mail válido.'};
- const secret=process.env.SUPABASE_SERVICE_ROLE_KEY;
+ const secret=administrationKey(process.env);
  if(!secret)return {ok:false,message:'Serviço de convites não configurado no servidor.'};
  const {createClient}=await import('@supabase/supabase-js');
  const {supabaseUrl}=await import('@/lib/supabase/config');

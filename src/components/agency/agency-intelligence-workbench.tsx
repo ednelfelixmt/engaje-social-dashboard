@@ -19,7 +19,7 @@ const allMetrics:PaidMetricKey[]=['spend','leads','cpl','clicks','impressions','
 const metricColors:Record<PaidMetricKey,string>={spend:'#df2845',leads:'#128461',cpl:'#7c51d5',clicks:'#2563eb',impressions:'#b47a15',ctr:'#128894',cpc:'#6366d6',cpm:'#b47a15'};
 
 export function AgencyIntelligenceWorkbench({model,clients,selectedClient,onSelectClient}:{model:AgencyIntelligenceModel;clients:AgencyClientCard[];selectedClient:string;onSelectClient:(id:string)=>void}) {
- const [currency,setCurrency]=useState('BRL'),[platform,setPlatform]=useState('all'),[metric,setMetric]=useState<PaidMetricKey>('spend'),[secondary,setSecondary]=useState<PaidMetricKey|'none'>('leads'),[granularity,setGranularity]=useState<AgencyGranularity>('day');
+ const [currency,setCurrency]=useState('BRL'),[platform,setPlatform]=useState('all'),[metric,setMetric]=useState<PaidMetricKey>('spend'),[secondary,setSecondary]=useState<PaidMetricKey|'none'>('none'),[granularity,setGranularity]=useState<AgencyGranularity>('day');
  const [query,setQuery]=useState(''),[sort,setSort]=useState<PaidMetricKey>('spend'),[page,setPage]=useState(0),[exportError,setExportError]=useState('');
  const descriptions=useId();
  function chooseClient(id:string){const client=clients.find(client=>client.id===id);if(client)setCurrency(client.currency);onSelectClient(id);setPage(0);}

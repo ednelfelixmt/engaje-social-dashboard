@@ -24,5 +24,5 @@ test('viewer navigation excludes the entire settings and sharing group',()=>{
  const layout=source(root+'/layout.tsx');
  assert.match(nav,/\.filter\(\(group\)=>admin\|\|canShare\|\|group\.id!=='settings'\)/);
  assert.match(layout,/const canShare=superAdmin;/);
- assert.match(layout,/<Navigation slug=\{org\.slug\} enabled=\{config\?\.enabled_pages\} canShare=\{canShare\}\/>/);
+ assert.match(layout,/<Navigation slug=\{org\.slug\} enabled=\{config\?\.enabled_pages\} canShare=\{canShare\} organizationName=\{org\.name\} logoUrl=\{logoUrl\}\/>/);
 });
