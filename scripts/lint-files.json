@@ -215,5 +215,11 @@
   "tests/analytics-workspace.test.ts",
   "tests/analytics-workspace-ui.test.ts",
   "tests/analytics-workspace-page.test.ts",
-  "tests/display-mode-controller.test.ts"
+  "tests/display-mode-controller.test.ts",
+  "src/components/dashboard/report-studio-frame.tsx",
+  "src/components/dashboard/analytics-sparkline.tsx",
+  "src/components/dashboard/funnel-explorer.tsx",
+  "src/app/layout.tsx",
+  "src/app/(tenant)/[organizationSlug]/layout.tsx",
+  "tests/report-studio-interactions.test.ts"
 ]

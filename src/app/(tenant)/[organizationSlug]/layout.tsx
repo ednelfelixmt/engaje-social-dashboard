@@ -1,6 +1,7 @@
 import type {CSSProperties} from 'react';
 import {dashboardConfig, tenant} from '@/lib/auth/session';
 import {Navigation} from '@/components/navigation';
+import {ReportStudioFrame} from '@/components/dashboard/report-studio-frame';
 
 export default async function Layout({children, params: params_}: {children: React.ReactNode; params: Promise<{organizationSlug: string}>}) {
   const params = await params_;
@@ -15,7 +16,7 @@ export default async function Layout({children, params: params_}: {children: Rea
     : null;
 
   return <div style={{'--primary': branding?.primary_color, '--background': branding?.background_color} as CSSProperties}>
-    <Navigation slug={org.slug} enabled={config?.enabled_pages} canShare={canShare}/>
-    <main className="dashboard-shell min-h-screen px-4 py-6 sm:px-6 lg:ml-[272px] lg:px-8 lg:py-9 2xl:px-12" style={{background: image ? `linear-gradient(#080b12ed,#080b12ed),url("${image}") center/cover fixed` : undefined}}>{children}</main>
+    <ReportStudioFrame><Navigation slug={org.slug} enabled={config?.enabled_pages} canShare={canShare}/>
+    <main className="dashboard-shell min-h-screen px-4 py-6 sm:px-6 lg:ml-[272px] lg:px-8 lg:py-9 2xl:px-12" style={{background: image ? `linear-gradient(#080b12ed,#080b12ed),url("${image}") center/cover fixed` : undefined}}>{children}</main></ReportStudioFrame>
   </div>;
 }
