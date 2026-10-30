@@ -97,7 +97,7 @@ test('agency scatter excludes invalid coordinates but preserves observed zero an
  const zero={...original[0],current:{...original[0].current,spend:0,leads:0,clicks:0,cpl:null}};
  const invalid=(id:string,name:string,field:'spend'|'leads',value:number)=>({...original[0],id,name,current:{...original[0].current,[field]:value}});
  const rows=[zero,original[1],invalid('negative-spend','Inválido gasto negativo','spend',-1),invalid('infinite-spend','Inválido gasto infinito','spend',Infinity),invalid('nan-leads','Inválido leads NaN','leads',NaN),invalid('negative-leads','Inválido leads negativos','leads',-1)];
- const selected:string[],before=rows.map(row=>({...row,current:{...row.current}}));
+ const selected:string[]=[],before=rows.map(row=>({...row,current:{...row.current}}));
  const tree=AgencyEfficiencyChart({rows,currency:'BRL',onSelect:id=>selected.push(id)});
  const scatter=nodes(tree).find(node=>Array.isArray(node.props.data)&&node.props.fill==='#6366d6');
  assert.ok(scatter,'scatter series present for valid observations');
