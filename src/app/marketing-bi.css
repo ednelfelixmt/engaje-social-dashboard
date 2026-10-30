@@ -103,3 +103,6 @@
 
 .client-dashboard-actions{display:flex;align-items:center;gap:12px}.client-dashboard-actions>a{font-size:12px;color:var(--studio-accent,#f4d35e);padding:9px 5px;min-height:38px}.bi-top-kpis>button.bi-kpi-total .bi-kpi-delta span{color:var(--studio-muted)}
 .analytics-workspace[data-workspace-view=bi]>.analytics-context{display:none}.tv-mode .analytics-workspace[data-workspace-view=bi]>.analytics-context{display:flex}.analytics-shell:has(.reference-bi) .analytics-datebar{padding:0}.analytics-shell:has(.reference-bi) .analytics-datebar>section{padding-top:12px;padding-bottom:12px}.analytics-workspace:has(.reference-bi) .analytics-tabs{padding:4px;gap:3px}.analytics-workspace:has(.reference-bi) .analytics-tabs button{padding:8px 12px}.reference-bi .bi-pages{padding-bottom:7px}.reference-bi .bi-filterbar{padding:10px 14px}.reference-bi .bi-canvas{gap:12px}
+
+@media(max-width:640px){.client-dashboard-header{flex-wrap:wrap}.client-dashboard-actions{margin-left:auto}}
+@media print{.engaje-performance-print .client-dashboard-header{display:none!important}}

@@ -13,7 +13,7 @@ const {default:Layout}=loadTypescript<typeof import('../src/app/(tenant)/[organi
 });
 test('client dashboard omits the navigation tree on the server and uses a full-width canvas',async()=>{
  superAdmin=false;denied=false;const html=renderToStaticMarkup(await Layout({params:Promise.resolve({organizationSlug:'synthetic'}),children:'DASHBOARD'}));
- assert.ok(!html.includes('ADMIN_NAVIGATION'));assert.ok(!html.includes('data-report-navigation'));assert.ok(!html.includes('lg:ml-'));assert.ok(html.includes('data-client-dashboard=""'));assert.ok(html.includes('Organização sintética'));assert.ok(html.includes('action="/auth/signout"'));assert.ok(html.includes('DASHBOARD'));
+ assert.ok(!html.includes('ADMIN_NAVIGATION'));assert.ok(!html.includes('data-report-navigation'));assert.ok(!html.includes('lg:ml-'));assert.ok(html.includes('data-client-dashboard=""'));assert.ok(html.includes('Organização sintética'));assert.ok(html.includes('action="/auth/signout"'));assert.ok(html.includes('DASHBOARD'));assert.ok(html.includes('href="/"'));assert.ok(html.includes('Dashboards'));assert.ok(html.includes('href="/synthetic/reports"'));
 });
 test('verified agency administrators retain their navigation and tenant failures stop branding reads',async()=>{
  superAdmin=true;denied=false;const html=renderToStaticMarkup(await Layout({params:Promise.resolve({organizationSlug:'synthetic'}),children:'DASHBOARD'}));assert.ok(html.includes('ADMIN_NAVIGATION'));assert.ok(html.includes('lg:ml-[272px]'));assert.ok(!html.includes('data-client-dashboard=""'));

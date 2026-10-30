@@ -17,7 +17,7 @@ export default async function Layout({children, params: params_}: {children: Rea
     : null;
 
   return <div style={{'--primary': branding?.primary_color, '--background': branding?.background_color} as CSSProperties}>
-    <ReportStudioFrame>{superAdmin?<Navigation slug={org.slug} enabled={config?.enabled_pages} canShare={canShare}/>:<header className="client-dashboard-header tv-hide" data-client-dashboard-header><div><span>Engaje · Marketing intelligence</span><strong>{org.name}</strong></div><div className="client-dashboard-actions"><Link href={`/${org.slug}/reports`}>Relatórios</Link><form action="/auth/signout" method="post"><button type="submit">Sair</button></form></div></header>}
+    <ReportStudioFrame>{superAdmin?<Navigation slug={org.slug} enabled={config?.enabled_pages} canShare={canShare}/>:<header className="client-dashboard-header tv-hide" data-client-dashboard-header><div><span>Engaje · Marketing intelligence</span><strong>{org.name}</strong></div><div className="client-dashboard-actions"><Link href="/">Dashboards</Link><Link href={`/${org.slug}/reports`}>Relatórios</Link><form action="/auth/signout" method="post"><button type="submit">Sair</button></form></div></header>}
     <main data-client-dashboard={!superAdmin?'':undefined} className={`dashboard-shell min-h-screen px-4 py-6 sm:px-6 ${superAdmin?'lg:ml-[272px] ':''}lg:px-8 lg:py-9 2xl:px-12`} style={{background: image ? `linear-gradient(#080b12ed,#080b12ed),url("${image}") center/cover fixed` : undefined}}>{children}</main></ReportStudioFrame>
   </div>;
 }
