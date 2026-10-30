@@ -30,9 +30,16 @@ export function selectMarketingBI(model:AnalyticsWorkspaceModel, filters:{platfo
 /** Reconcile only campaigns with observations in BOTH periods. Absence is never zero. */
 export function marketingDrivers(selection:BISelection, metric:BIAdditiveMetric) {
   if (!biAdditiveMetrics.includes(metric)) throw new Error('Non-additive BI driver metric');
-  const current = new Map(selection.current.map(row=>[analyticsCampaignKey(row.platform,row.accountId,row.campaignId),row]));
-  const previous = new Map(selection.previous.map(row=>[analyticsCampaignKey(row.platform,row.accountId,row.campaignId),row]));
+  const currentEntries = selection.current.map(row=>[analyticsCampaignKey(row.platform,row.accountId,row.campaignId),row] as const);
+  const previousEntries = selection.previous.map(row=>[analyticsCampaignKey(row.platform,row.accountId,row.campaignId),row] as const);
+  const current = new Map(currentEntries), previous = new Map(previousEntries);
   const keys = [...new Set([...current.keys(),...previous.keys()])];
+  // A duplicate projected identity (including legitimate Meta aliases) must
+  // not silently overwrite one of the observations in Map. Reject the entire
+  // waterfall, rather than publish a reconciled-looking but incorrect driver.
+  if (current.size !== currentEntries.length || previous.size !== previousEntries.length) {
+    return {available:false,start:null,end:null,rows:[],excluded:keys.length,metric};
+  }
   const rows:{key:string;name:string;current:number;previous:number;change:number}[] = [];
   if (metric !== 'leads' || selection.compatible) {
     for (const key of keys) {

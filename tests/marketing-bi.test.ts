@@ -69,3 +69,20 @@ test('BI page navigation preserves canonical account/campaign scope for comparis
  const snapshot=nodes(tree).find(el=>typeof el.type==='function'&&el.type.name==='PeriodSnapshot');assert.equal((snapshot?.props.totals as {spend:number}).spend,100);
  click('Google Ads');assert.equal(nodes(tree).find(el=>el.props['aria-label']==='Conta do BI')?.props.value,'all');assert.equal(nodes(tree).find(el=>el.props['aria-label']==='Campanha do BI')?.props.value,'all');
 });
+ 
+test('BI drivers refuse duplicated canonical campaign identities in either period',()=>{
+ for (const period of ['current','previous'] as const) {
+  for (const duplicateAlias of [false,true]) {
+   const selection=selected(), original=selection[period][0];
+   const alias=original.accountId.startsWith('act_')?original.accountId.slice(4):'act_'+original.accountId;
+   selection[period]=[...selection[period],{...original,accountId:duplicateAlias?alias:original.accountId,spend:999}];
+   const result=marketingDrivers(selection,'spend');
+   assert.deepEqual(result,{available:false,start:null,end:null,rows:[],excluded:1,metric:'spend'});
+  }
+ }
+ const distinct=selected();
+ distinct.current.push({...distinct.current[0],accountId:'synthetic-other-account',campaignId:'synthetic-other-campaign'});
+ const safe=marketingDrivers(distinct,'spend');
+ assert.equal(safe.available,true);
+ assert.equal(safe.excluded,1);
+});
