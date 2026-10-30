@@ -8,10 +8,15 @@ export default tseslint.config(
   {
     files:[
       'src/components/agency/agency-overview.tsx',
+      'src/lib/reports/agency-intelligence.ts',
+      'src/components/agency/agency-intelligence-workbench.tsx',
+      'src/components/agency/agency-intelligence-charts.tsx',
       'src/lib/reports/agency-portfolio.ts',
       'src/app/(agency)/admin/page.tsx',
       'src/app/(agency)/admin/layout.tsx',
       'tests/agency-portfolio.test.ts',
+      'tests/agency-intelligence.test.ts',
+      'tests/agency-intelligence-ui.test.ts',
       'tests/agency-overview-page.test.ts',
 
       'src/lib/reports/marketing-bi.ts',
