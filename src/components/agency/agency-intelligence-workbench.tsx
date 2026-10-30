@@ -4,7 +4,7 @@ import {useId,useMemo,useState} from 'react';
 import Link from 'next/link';
 import {ArrowDownRight,ArrowUpRight,Download,Filter,Search,X} from 'lucide-react';
 import {analyticsPlatforms,analyticsCampaignKey} from '@/lib/reports/analytics-workspace';
-import {agencyIntelligenceDelta,selectAgencyIntelligence,type AgencyIntelligenceModel,type AgencyGranularity} from '@/lib/reports/agency-intelligence';
+import {agencyIntelligenceDelta,agencyPlatformInvestmentRows,selectAgencyIntelligence,type AgencyIntelligenceModel,type AgencyGranularity} from '@/lib/reports/agency-intelligence';
 import {paidMetric,type PaidMetricKey} from '@/lib/metrics/paid-metrics';
 import {campaignHref,campaignSelection} from '@/lib/metrics/campaign-selection';
 import {serializeCsv} from '@/lib/export/csv';
@@ -29,7 +29,7 @@ export function AgencyIntelligenceWorkbench({model,clients,selectedClient,onSele
  const selection=useMemo(()=>selectAgencyIntelligence(model,{clientIds,currency:activeCurrency,platform,granularity}),[model,scopeKey]);
  const allChannels=useMemo(()=>selectAgencyIntelligence(model,{clientIds,currency:activeCurrency,platform:'all',granularity}),[model,clientIds.join('|'),activeCurrency,granularity]);
  const names=new Map(clients.map(client=>[client.id,client])),clientRows=selection.clients.map(row=>({...row,name:names.get(row.id)?.name??row.id}));
- const sourceRows=analyticsPlatforms.map(provider=>{const rows=allChannels.current.filter(row=>row.platform===provider);const spend=rows.length?rows.reduce<number|null>((total,row)=>total===null||!Number.isFinite(row.spend)||row.spend<0?null:total+row.spend,0):null;return {platform:provider,value:spend!==null&&Number.isFinite(spend)?spend:null,campaigns:rows.length};});
+ const sourceRows=agencyPlatformInvestmentRows(allChannels.current);
  const comparing=model.compare!=='none';
  const tableRows=selection.current.filter(row=>(row.campaignName+' '+(names.get(row.organizationId)?.name??'')).toLocaleLowerCase('pt-BR').includes(query.trim().toLocaleLowerCase('pt-BR'))).sort((a,b)=>{const left=paidMetric(a,sort),right=paidMetric(b,sort);if(left===null)return right===null?0:1;if(right===null)return -1;return ['cpc','cpm','cpl'].includes(sort)?left-right:right-left;});
  const pages=Math.max(1,Math.ceil(tableRows.length/10)),shownPage=Math.min(page,pages-1),shown=tableRows.slice(shownPage*10,(shownPage+1)*10);
