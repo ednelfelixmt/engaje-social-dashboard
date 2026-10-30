@@ -15,3 +15,10 @@ test('only authorized agency administrators see integration management, without 
 });
 
 test('tiny real deltas retain direction without presenting a rounded negative zero as improvement',()=>{const data=model();data.previous[0].spend=100.000001;data.previous[0].impressions=1000;const html=renderToStaticMarkup(React.createElement(AnalyticsWorkspace,{model:data,canManage:false}));assert.ok(html.includes('&lt;0,1%'));assert.ok(!html.includes('>-0%'));});
+
+test('clicking a Recharts audience bar selects its original category rather than its composed numeric value',()=>{
+ const {AnalyticsAudienceChart}=loadTypescript<typeof import('../src/components/dashboard/analytics-charts')>(new URL('../src/components/dashboard/analytics-charts.tsx',import.meta.url),(id,native)=>native(id));
+ const selected:string[]=[],tree=AnalyticsAudienceChart({rows:[{value:'female',label:'Feminino',current:1000,previous:900}],color:'#64a5ff',currency:'BRL',metric:'impressions',comparing:true,onSelect:value=>selected.push(value)});
+ function find(node:React.ReactNode):React.ReactElement<{onClick:(entry:unknown)=>void}>|undefined{if(!React.isValidElement(node))return;const props=node.props as {dataKey?:string;onClick?:(entry:unknown)=>void;children?:React.ReactNode};if(props.dataKey==='current'&&props.onClick)return node as React.ReactElement<{onClick:(entry:unknown)=>void}>;for(const child of React.Children.toArray(props.children)){const result=find(child);if(result)return result;}}
+ const bar=find(tree);assert.ok(bar);bar.props.onClick({value:1000,payload:{value:'female'}});bar.props.onClick({value:1000,payload:{value:1000}});assert.deepEqual(selected,['female']);
+});
