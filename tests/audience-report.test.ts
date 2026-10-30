@@ -169,3 +169,24 @@ test('AUDIENCE-SOURCE-GRAIN-001: opaque internal spaces and unclassified empty d
  assert.equal(report.groups.city.find(row=>row.value==='')?.label,'Não informado');
  assert.equal(report.groups.city.find(row=>row.value==='New York')?.sourceIds[0],'origin:A B');
 });
+
+test('AUDIENCE-META-ALIAS-001: repeated Meta account prefixes invalidate the complete batch',()=>{
+ for(const account_id of ['act_act_123','act_act_','act_act_12: alpha']){
+  assert.throws(()=>build([fact({account_id})]),/Invalid audience report grain/,account_id);
+  // An omitted/unsupported dimension must not conceal a malformed Meta source.
+  assert.throws(()=>build([fact(),fact({account_id,dimension_type:'creative'})]),/Invalid audience report grain/,account_id);
+ }
+});
+
+test('AUDIENCE-META-ALIAS-001: valid Meta aliases consolidate and non-Meta IDs remain opaque',()=>{
+ const meta=build([fact({account_id:'act_123',spend:0,leads:0}),fact({metric_date:scope.to,account_id:'123',spend:20,leads:2})]);
+ assert.equal(meta.sourceRecords,2);
+ assert.equal(meta.groups.gender[0].spend,20);
+ assert.equal(meta.groups.gender[0].leads,2);
+ const google=buildAudienceReport([
+  fact({platform:'google_ads',account_id:'act_act_123',spend:0}),
+  fact({platform:'google_ads',account_id:'act_123',metric_date:scope.to,spend:20})
+ ],{...scope,platform:'google_ads'});
+ assert.equal(google.sourceRecords,2);
+ assert.equal(google.groups.gender[0].spend,20);
+});
