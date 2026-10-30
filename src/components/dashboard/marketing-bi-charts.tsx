@@ -1,7 +1,7 @@
 'use client';
 
 import {Bar,BarChart,CartesianGrid,Cell,ComposedChart,Line,ResponsiveContainer,Tooltip,XAxis,YAxis} from 'recharts';
-import {paidMetric,type PaidMetricKey} from '@/lib/metrics/paid-metrics';
+import {type PaidMetricKey} from '@/lib/metrics/paid-metrics';
 import {type BISelection,marketingDrivers,marketingTrendPoints,type BIAdditiveMetric} from '@/lib/reports/marketing-bi';
 import {analyticsFormat,analyticsMetricLabels} from './analytics-charts';
 
