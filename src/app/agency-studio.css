@@ -55,5 +55,6 @@
 @media(prefers-reduced-motion:reduce){.agency-studio-frame *{transition:none!important}}
 
 /* Existing shared Button variants keep readable text on the agency surface. */
-.agency-studio-frame .dashboard-shell :is(button,a)[class~="text-white"]{color:var(--studio-text);border-color:var(--studio-border)}
+.agency-studio-frame .dashboard-shell .text-white{color:var(--studio-text)}
+.agency-studio-frame .dashboard-shell :is(button,a)[class~="text-white"]{border-color:var(--studio-border)}
 .agency-studio-frame .dashboard-shell :is(button,a)[class~="bg-primary"]{color:#fff}
