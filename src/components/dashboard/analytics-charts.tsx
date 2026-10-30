@@ -33,7 +33,13 @@ export function AnalyticsMix({rows,currency,onSelect}:{rows:{platform:string;spe
 }
 export type AnalyticsAudienceChartRow={value:string;label:string;current:number|null;previous:number|null};
 export function AnalyticsAudienceChart({rows,color,currency,metric,comparing,onSelect}:{rows:AnalyticsAudienceChartRow[];color:string;currency:string;metric:PaidMetricKey;comparing:boolean;onSelect:(value:string)=>void}){
- const shown=[...rows].filter(row=>row.current!==null||row.previous!==null).sort((a,b)=>(b.current??-1)-(a.current??-1)||a.label.localeCompare(b.label)).slice(0,10);
+ // A historical-only observation must not appear when comparison is disabled.
+ // Invalid monetary/count values are never passed to the chart as coordinates.
+ const valid=(value:number|null)=>typeof value==='number'&&Number.isFinite(value)&&value>=0?value:null;
+ const shown=rows.map(row=>({...row,current:valid(row.current),previous:comparing?valid(row.previous):null}))
+  .filter(row=>row.current!==null||row.previous!==null)
+  .sort((a,b)=>a.current===null?(b.current===null?a.label.localeCompare(b.label):1):b.current===null?-1:b.current-a.current||a.label.localeCompare(b.label))
+  .slice(0,10);
  if(!shown.length)return <div className="analytics-empty">Nenhum valor válido recebido para esta dimensão e indicador.</div>;
  return <div className="analytics-chart analytics-audience-chart" aria-label="Distribuição do público com comparativo"><ResponsiveContainer width="100%" height="100%"><BarChart data={shown} layout="vertical" margin={{left:0,right:18,top:6,bottom:8}} barCategoryGap="24%"><CartesianGrid horizontal={false} stroke="var(--studio-grid, #273246)"/><XAxis type="number" tick={{fill:'var(--studio-muted, #a1aec1)',fontSize:12}} tickLine={false} axisLine={false}/><YAxis type="category" dataKey="label" width={100} tick={{fill:'var(--studio-muted, #bac4d4)',fontSize:12}} tickLine={false} axisLine={false} tickFormatter={value=>String(value).length>15?String(value).slice(0,14)+'…':String(value)}/><Tooltip contentStyle={tooltipStyle} formatter={value=>analyticsFormat(typeof value==='number'?value:null,metric,currency)}/><Bar name="Atual" dataKey="current" fill={color} radius={[0,5,5,0]} maxBarSize={19} isAnimationActive={false} onClick={entry=>{if(typeof entry.payload?.value==='string')onSelect(entry.payload.value);}}/>{comparing?<Bar name="Comparativo" dataKey="previous" fill="#6b778e" radius={[0,4,4,0]} maxBarSize={12} isAnimationActive={false}/>:null}</BarChart></ResponsiveContainer></div>;
 }
