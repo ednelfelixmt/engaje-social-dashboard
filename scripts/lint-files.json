@@ -236,5 +236,10 @@
   "tests/agency-overview-page.test.ts",
   "tests/client-dashboard-shell.test.ts",
   "tests/marketing-bi-interactions.test.ts",
-  "src/app/page.tsx"
+  "src/app/page.tsx",
+  "src/lib/reports/agency-intelligence.ts",
+  "src/components/agency/agency-intelligence-workbench.tsx",
+  "src/components/agency/agency-intelligence-charts.tsx",
+  "tests/agency-intelligence.test.ts",
+  "tests/agency-intelligence-ui.test.ts"
 ]
