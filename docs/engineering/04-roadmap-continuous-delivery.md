@@ -1927,3 +1927,13 @@ Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamen
 - Bloqueios funcionais preservados: credencial administrativa válida do servidor, reautorização Meta, carga histórica/reconciliação, conectores RD Station Marketing/CRM, SMTP e homologação A/B/UX autenticada. Não houve alteração de credenciais, plano, acesso, schema ou fatos de produção.
 
 - Revisão automática do PR #295 confirmou P2: branding do workspace havia removido o retorno visível à agência. Adicionado link explícito Voltar à agência para administradores, inclusive no menu recolhido; teste preserva sua ausência para visualizadores. Renovar os gates no novo head antes de integrar.
+
+
+## 30/10/2026 — ADMIN-INTEGRATION-SUMMARY-001: saúde agregada sem expor ativos na central global (PR #295)
+
+- **Achado de conformidade:** o primeiro head da PR #295 listava contas, nomes de ativos, plataformas e horários por linha na central administrativa geral, contrariando a regra do projeto de manter ativos vinculados apenas dentro de cada workspace. A rota é protegida por `requireAdmin`; isto não comprova exposição anônima ou quebra de RLS.
+- **Correção:** o servidor agrega exclusivamente contagens de conexões por situação para clientes ativos autorizados e a data válida da última sincronização; nomes/IDs de conta, provider e configurações não são enviados ao browser. A página global fornece acesso ao gerenciador de integrações do próprio cliente, mais catálogo de novas conexões. Não alterar permissões e não confundir status com coleta completa.
+- **Testes sintéticos:** conexão e autorização expirada de um cliente, registro foundation oculto, outro tenant não autorizado e cliente sem conexões; verificar contagem correta, exclusão de IDs privados no agregador e na renderização, link ao workspace e imutabilidade da fonte. Nenhum cliente real é fixture.
+- **Risco/rollback:** diagnóstico de conta individual removido do catálogo geral; permanece no workspace. Reverter agregador, UI, teste e nota em regressão comprovada. Sem SQL, migração, Auth, RLS, Storage, OAuth, tokens, segredo, dados de cliente ou escrita.
+- **Gates:** o head `8625d9a958f4a6d7bb237946bc238f48d7b65531` possuía Quality Gate e Vercel aprovados, mas uma nova revisão invalida esses recibos para merge. Exigir novos Quality Gate integral e Vercel Preview READY/success no **mesmo head final**, PR mergeável e revisão resolvida. Após merge validar `main`, novo Quality Gate, produção e alias; sem declarar homologação autenticada SEC-010/011 ou UX-002.
+- **Pendências independentes:** PR #292/#294 com Vercel previamente reprovada, PR #149 conflitante, #157 draft, issue #211 histórico Supabase, OAuth/GA4/RD Station reais, PDF e TV física. Não reparar banco nem contornar limites de builds.
