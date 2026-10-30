@@ -77,7 +77,8 @@ test('agency platform mix does not coerce an unavailable campaign spend to zero'
  const chart=named(tree,'AgencyPlatformChart');assert.ok(chart);
  const meta=(chart.props.rows as {platform:string;value:number|null;campaigns:number}[]).find(row=>row.platform==='meta_ads');
  assert.ok(meta);assert.equal(meta.campaigns,2);assert.equal(meta.value,null);
- assert.ok(renderToStaticMarkup(tree).includes('Distribuição indisponível')===false,'React component owns the explicit distribution warning');
+ const {AgencyPlatformChart}=loadTypescript<typeof import('../src/components/agency/agency-intelligence-charts')>(new URL('../src/components/agency/agency-intelligence-charts.tsx',import.meta.url),(name,native)=>native(name));
+ assert.ok(renderToStaticMarkup(AgencyPlatformChart({rows:chart.props.rows as {platform:string;value:number|null;campaigns:number}[],currency:'BRL',selected:'all',onSelect:()=>{}})).includes('Distribuição indisponível'));
 });
 test('agency platform doughnut with individually finite but overflowing total fails closed',()=>{
  const {AgencyPlatformChart}=loadTypescript<typeof import('../src/components/agency/agency-intelligence-charts')>(new URL('../src/components/agency/agency-intelligence-charts.tsx',import.meta.url),(name,native)=>native(name));
