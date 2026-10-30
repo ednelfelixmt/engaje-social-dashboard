@@ -263,3 +263,43 @@ test('FUNNEL-SOURCE-GRAIN-001: opaque valid IDs and zero remain untouched; inval
   assert.equal(result[0].previousValue, null);
   assert.match(result[0].detail, /Comparação indisponível/);
 });
+
+
+test('FUNNEL-META-ALIAS-001: nested Meta aliases fail closed in observed and catalog-only rows', () => {
+  const observed = rows(fact())[0];
+  const catalog = campaigns([], [], 'crm', [{
+    organization_id: scope.organizationId, platform: 'meta_ads',
+    account_id: 'synthetic-catalog-account', external_id: 'synthetic-catalog',
+    name: 'Synthetic catalog', status: 'active',
+  } as Row<'ad_campaigns'>])[0];
+  assert.equal(hasFunnelMeasurements(catalog), false);
+  for (const accountId of ['act_act_123', 'act_act_', 'act_act_12: alpha']) {
+    for (const input of [
+      [{...observed, accountId}],
+      [observed, {...observed, accountId}],
+      [observed, {...catalog, accountId}],
+    ]) {
+      const result = summary(input);
+      assert.equal(result.value, null, accountId);
+      assert.equal(result.cost, null, accountId);
+      assert.match(result.detail, /identificador de origem inválido/, accountId);
+    }
+  }
+});
+
+test('FUNNEL-META-ALIAS-001: valid Meta aliases and opaque non-Meta IDs retain zero and comparison boundaries', () => {
+  const observed = rows(fact({spend: 0, clicks: 0}))[0];
+  for (const accountId of ['123', 'act_123', 'act_opaque id:/with|delimiters']) {
+    const result = summary([{...observed, accountId}]);
+    assert.equal(result.value, 0, accountId);
+    assert.equal(result.cost, null, accountId);
+  }
+  const google = {...observed, platform: 'google_ads' as CampaignPerformance['platform'], accountId: 'act_act_123'};
+  assert.equal(summary([google]).value, 0);
+  const previous = rows(fact())[0];
+  previous.accountId = 'act_act_123';
+  const compared = configuredFunnel([observed], steps, scope, [previous]);
+  assert.equal(compared[0].value, 0);
+  assert.equal(compared[0].previousValue, null);
+  assert.match(compared[0].detail, /Comparação indisponível/);
+});
