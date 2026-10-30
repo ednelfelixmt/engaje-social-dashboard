@@ -8,6 +8,8 @@ export default tseslint.config(
   {
     files:[
       'src/lib/reports/marketing-bi.ts',
+      'src/lib/export/marketing-bi.ts',
+      'tests/marketing-bi-export.test.ts',
       'src/components/dashboard/marketing-bi-board.tsx',
       'src/components/dashboard/marketing-bi-charts.tsx',
       'tests/marketing-bi.test.ts',

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {buildAnalyticsWorkspace,analyticsCampaignKey} from '../src/lib/reports/analytics-workspace';
-import {biAccountKey,selectMarketingBI,marketingDrivers} from '../src/lib/reports/marketing-bi';
+import {biAccountKey,selectMarketingBI,marketingDrivers,marketingTrendPoints} from '../src/lib/reports/marketing-bi';
 import {input,fact} from './helpers/analytics-fixture';
 import {loadTypescript} from './helpers/load-typescript';
 
@@ -54,7 +54,7 @@ test('reference BI renders observed sources, account/campaign controls and no im
  const html=renderToStaticMarkup(React.createElement(MarketingBIBoard,{model:buildAnalyticsWorkspace(input())}));
  for(const text of ['Visão geral','Meta Ads','Google Ads','Comparativo','Ofensores','Conta do BI','Campanha do BI','Campanhas e resultados','Consolidado do recorte','CSV'])assert.ok(html.includes(text),text);
  for(const forbidden of ['RegisteredResources','Report/StaticResources','NaN','Infinity','Conectado ao RD','pessoas únicas convertidas'])assert.ok(!html.includes(forbidden),forbidden);
- assert.ok(!html.includes('<form'));assert.ok(html.includes('TikTok'));assert.ok(html.includes('2026-10-20 a 2026-10-21'));
+ assert.ok(!html.includes('<form'));assert.ok(html.includes('TikTok'));assert.ok(html.includes('2026-10-20 a 2026-10-21'));assert.ok(html.includes('· comparativo'),'historical series legend');
 });
 
 test('BI page navigation preserves canonical account/campaign scope for comparison and resets it for another provider',()=>{
@@ -69,11 +69,68 @@ test('BI page navigation preserves canonical account/campaign scope for comparis
  const snapshot=nodes(tree).find(el=>typeof el.type==='function'&&el.type.name==='PeriodSnapshot');assert.equal((snapshot?.props.totals as {spend:number}).spend,100);
  click('Google Ads');assert.equal(nodes(tree).find(el=>el.props['aria-label']==='Conta do BI')?.props.value,'all');assert.equal(nodes(tree).find(el=>el.props['aria-label']==='Campanha do BI')?.props.value,'all');
 });
- 
-test('BI drivers refuse duplicated canonical campaign identities in either period',()=>{
+
+test('BI trend compares calendar positions, keeps missing values null and preserves observed zero',()=>{
+ const points=marketingTrendPoints(selected(),'spend','clicks');
+ assert.deepEqual(points.map(p=>[p.currentDate,p.previousDate,p.primary,p.previous,p.secondary]),[
+  ['2026-10-20','2026-10-18',100,80,20],
+  ['2026-10-21','2026-10-19',null,null,null],
+ ]);
+ const zero=input();zero.ads[0].spend=0;zero.priorAds[0].spend=0;
+ const zeroSeries=marketingTrendPoints(selectMarketingBI(buildAnalyticsWorkspace(zero),{platform:'all',account:'all',campaign:'all'}),'spend');
+ assert.equal(zeroSeries[0].primary,0);assert.equal(zeroSeries[0].previous,0);
+ const previousOnly=input();previousOnly.ads=[];previousOnly.breakdowns=[];
+ const priorSeries=marketingTrendPoints(selectMarketingBI(buildAnalyticsWorkspace(previousOnly),{platform:'all',account:'all',campaign:'all'}),'spend');
+ assert.equal(priorSeries[0].primary,null);assert.equal(priorSeries[0].previous,80);
+ const none=input();none.scope={...none.scope,compare:'none'};none.priorAds=[];none.priorBreakdowns=[];none.priorCrm=[];
+ const noComparison=marketingTrendPoints(selectMarketingBI(buildAnalyticsWorkspace(none),{platform:'all',account:'all',campaign:'all'}),'spend');
+ assert.ok(noComparison.every(p=>p.previous===null&&p.previousDate===null));
+});
+
+test('BI rendered trend has markers for isolated prior observations while retaining null gaps',()=>{
+ const view=new URL('../src/components/dashboard/marketing-bi-charts.tsx',import.meta.url);
+ const passthrough=({children}:{children:React.ReactNode})=>React.createElement('div',null,children);
+ const omit=()=>null;
+ const series=({dataKey,dot,connectNulls}:{dataKey:string;dot:unknown;connectNulls:boolean})=>React.createElement('i',{
+  'data-series':dataKey,'data-markers':String(Boolean(dot)),'data-connect-nulls':String(connectNulls),
+ });
+ const {MarketingBITrend}=loadTypescript<typeof import('../src/components/dashboard/marketing-bi-charts')>(view,(id,native)=>
+  id==='recharts'?{ResponsiveContainer:passthrough,ComposedChart:passthrough,Line:series,CartesianGrid:omit,Tooltip:omit,XAxis:omit,YAxis:omit}:native(id));
+ const priorOnly=input();priorOnly.ads=[];priorOnly.breakdowns=[];
+ const previous=selectMarketingBI(buildAnalyticsWorkspace(priorOnly),{platform:'all',account:'all',campaign:'all'});
+ const html=renderToStaticMarkup(React.createElement(MarketingBITrend,{selection:previous,metric:'spend',currency:'BRL'}));
+ assert.ok(html.includes('data-series="previous" data-markers="true" data-connect-nulls="false"'),html);
+ assert.ok(html.includes('data-series="primary" data-markers="true" data-connect-nulls="false"'),html);
+ assert.ok(html.includes('· comparativo'));
+ const none=input();none.scope={...none.scope,compare:'none'};none.priorAds=[];none.priorBreakdowns=[];none.priorCrm=[];
+ const without=renderToStaticMarkup(React.createElement(MarketingBITrend,{selection:selectMarketingBI(buildAnalyticsWorkspace(none),{platform:'all',account:'all',campaign:'all'}),metric:'spend',currency:'BRL'}));
+ assert.ok(!without.includes('data-series="previous"'));
+ const altered=input();altered.priorAds[0].attribution_window='1d_click';
+ const incompatible=selectMarketingBI(buildAnalyticsWorkspace(altered),{platform:'all',account:'all',campaign:'all'});
+ const masked=renderToStaticMarkup(React.createElement(MarketingBITrend,{selection:incompatible,metric:'leads',currency:'BRL'}));
+ assert.ok(!masked.includes('data-series="previous"'),'incompatible leads have no historical chart line');
+ assert.ok(masked.includes('Comparativo histórico de leads/CPL indisponível'),'the missing comparison is explained');
+});
+
+
+test('BI trend suppresses historical attributed leads and CPL when attribution windows differ, preserving the other series',()=>{
+ const changed=input();changed.priorAds[0].attribution_window='1d_click';
+ const selection=selectMarketingBI(buildAnalyticsWorkspace(changed),{platform:'all',account:'all',campaign:'all'});
+ assert.equal(selection.compatible,false);
+ for(const metric of ['leads','cpl'] as const){
+  const points=marketingTrendPoints(selection,metric);
+  assert.ok(points[0].primary!==null,metric+' current remains observable');
+  assert.equal(points[0].previous,null,metric+' historical is not comparable');
+  assert.equal(points[0].previousDate,'2026-10-18','historical calendar is preserved');
+ }
+ assert.equal(marketingTrendPoints(selection,'spend')[0].previous,80,'spend does not require equivalent attribution');
+ assert.ok(marketingTrendPoints(selected(),'leads')[0].previous!==null,'equivalent attribution retains historical leads');
+});
+
+test('BI drivers fail closed on duplicate canonical campaigns in either period',()=>{
  for (const period of ['current','previous'] as const) {
   for (const duplicateAlias of [false,true]) {
-   const selection=selected(), original=selection[period][0];
+   const selection=selected(),original=selection[period][0];
    const alias=original.accountId.startsWith('act_')?original.accountId.slice(4):'act_'+original.accountId;
    selection[period]=[...selection[period],{...original,accountId:duplicateAlias?alias:original.accountId,spend:999}];
    const result=marketingDrivers(selection,'spend');
