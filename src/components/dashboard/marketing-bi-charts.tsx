@@ -2,7 +2,7 @@
 
 import {useId,useState} from 'react';
 import {Area,Bar,BarChart,Brush,CartesianGrid,Cell,ComposedChart,Line,ResponsiveContainer,Tooltip,XAxis,YAxis} from 'recharts';
-import {type PaidMetricKey} from '@/lib/metrics/paid-metrics';
+import {paidMetric,type PaidMetricKey} from '@/lib/metrics/paid-metrics';
 import {type BISelection,marketingDrivers,marketingTrendPoints,type BIAdditiveMetric} from '@/lib/reports/marketing-bi';
 import {analyticsFormat,analyticsMetricLabels} from './analytics-charts';
 
@@ -18,7 +18,10 @@ export function MarketingBITrend({selection,metric,secondary,currency,color='#df
   // Historical dates and historical measurements are different facts: retain
   // the comparison calendar even when every value is missing or withheld.
   const hasPreviousPeriod=points.some(p=>p.previousDate!==null);
-  const incompatibleLeadHistory = !selection.compatible && (metric==='leads'||metric==='cpl') && hasPreviousPeriod;
+  // A missing historical indicator is not proof of an attribution mismatch.
+  // Inspect original observations before suppressing a historical comparison.
+  const hasMeasuredHistoricalMetric=selection.timeline.some(day=>day.previous!==null&&paidMetric(day.previous,metric)!==null);
+  const incompatibleLeadHistory = !selection.compatible && (metric==='leads'||metric==='cpl') && hasMeasuredHistoricalMetric;
   const missingPriorMeasurements=hasPreviousPeriod&&!hasPrior&&!incompatibleLeadHistory;
   const visiblePoints=windowSize==='all'?points:points.slice(-Number(windowSize));
   const [zoom,setZoom]=useState<{startIndex?:number;endIndex?:number}>({});
