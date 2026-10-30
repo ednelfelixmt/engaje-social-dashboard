@@ -221,5 +221,9 @@
   "src/components/dashboard/funnel-explorer.tsx",
   "src/app/layout.tsx",
   "src/app/(tenant)/[organizationSlug]/layout.tsx",
-  "tests/report-studio-interactions.test.ts"
+  "tests/report-studio-interactions.test.ts",
+  "src/lib/reports/marketing-bi.ts",
+  "src/components/dashboard/marketing-bi-board.tsx",
+  "src/components/dashboard/marketing-bi-charts.tsx",
+  "tests/marketing-bi.test.ts"
 ]

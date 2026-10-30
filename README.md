@@ -121,3 +121,5 @@ A central privada em `/[organizationSlug]/reports` reúne os relatórios habilit
 A área privada /[organizationSlug]/reports/analytics oferece Análise 360 com datas livres, comparativos, mídia, funil, demografia, CSV e apresentação em TV. Consulte [contrato e limites](docs/engineering/analytics-bi-workspace.md) e [plano dos dois produtos RD Station](docs/engineering/rd-station-analytics-plan.md). País e pipeline RD reais continuam pendentes de ingestão/conexão e homologação.
 
 Análise 360, central e relatório de funil incluem o novo [Studio de relatórios](docs/engineering/report-studio-design.md): aparência clara, tema noturno opcional, KPIs selecionáveis, minisséries, gráficos alternáveis, busca/categorias e funil visual com detalhes.
+
+A Análise 360 agora inclui a Visão BI de campanhas, inspirada na estrutura de um PBIX fornecido pelo usuário. Consulte [análise, paridade e pendências](docs/engineering/marketing-bi-pbix-reference.md).

@@ -7,6 +7,10 @@ export default tseslint.config(
   {ignores:['node_modules/**','.next/**']},
   {
     files:[
+      'src/lib/reports/marketing-bi.ts',
+      'src/components/dashboard/marketing-bi-board.tsx',
+      'src/components/dashboard/marketing-bi-charts.tsx',
+      'tests/marketing-bi.test.ts',
       'src/components/dashboard/report-studio-frame.tsx',
       'src/components/dashboard/analytics-sparkline.tsx',
       'src/components/dashboard/funnel-explorer.tsx',
