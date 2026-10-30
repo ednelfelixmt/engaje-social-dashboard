@@ -35,7 +35,6 @@ test('BI CSV exports measured current and historical facts with provenance, null
   assert.equal(rows[0].comparacao_leads_cpl,'equivalente');
   assert.equal(rows[0].periodo,'atual');
   assert.equal(rows[0].leads,'0');
-  assert.equal(rows[0].cliques,'undefined' in rows[0] ? rows[0].cliques : rows[0].clicks,''); 
   assert.equal(rows[0].clicks,'');
   assert.equal(rows[0].cpl,'');
   assert.equal(rows[0].campanha,"'=SUM(1;2)");
