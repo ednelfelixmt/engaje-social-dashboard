@@ -86,3 +86,23 @@ test('BI trend compares calendar positions, keeps missing values null and preser
  const noComparison=marketingTrendPoints(selectMarketingBI(buildAnalyticsWorkspace(none),{platform:'all',account:'all',campaign:'all'}),'spend');
  assert.ok(noComparison.every(p=>p.previous===null&&p.previousDate===null));
 });
+
+test('BI rendered trend has markers for isolated prior observations while retaining null gaps',()=>{
+ const view=new URL('../src/components/dashboard/marketing-bi-charts.tsx',import.meta.url);
+ const passthrough=({children}:{children:React.ReactNode})=>React.createElement('div',null,children);
+ const omit=()=>null;
+ const series=({dataKey,dot,connectNulls}:{dataKey:string;dot:unknown;connectNulls:boolean})=>React.createElement('i',{
+  'data-series':dataKey,'data-markers':String(Boolean(dot)),'data-connect-nulls':String(connectNulls),
+ });
+ const {MarketingBITrend}=loadTypescript<typeof import('../src/components/dashboard/marketing-bi-charts')>(view,(id,native)=>
+  id==='recharts'?{ResponsiveContainer:passthrough,ComposedChart:passthrough,Line:series,CartesianGrid:omit,Tooltip:omit,XAxis:omit,YAxis:omit}:native(id));
+ const priorOnly=input();priorOnly.ads=[];priorOnly.breakdowns=[];
+ const previous=selectMarketingBI(buildAnalyticsWorkspace(priorOnly),{platform:'all',account:'all',campaign:'all'});
+ const html=renderToStaticMarkup(React.createElement(MarketingBITrend,{selection:previous,metric:'spend',currency:'BRL'}));
+ assert.ok(html.includes('data-series="previous" data-markers="true" data-connect-nulls="false"'),html);
+ assert.ok(html.includes('data-series="primary" data-markers="true" data-connect-nulls="false"'),html);
+ assert.ok(html.includes('· comparativo'));
+ const none=input();none.scope={...none.scope,compare:'none'};none.priorAds=[];none.priorBreakdowns=[];none.priorCrm=[];
+ const without=renderToStaticMarkup(React.createElement(MarketingBITrend,{selection:selectMarketingBI(buildAnalyticsWorkspace(none),{platform:'all',account:'all',campaign:'all'}),metric:'spend',currency:'BRL'}));
+ assert.ok(!without.includes('data-series="previous"'));
+});

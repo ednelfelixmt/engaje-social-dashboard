@@ -18,9 +18,9 @@ export function MarketingBITrend({selection,metric,secondary,currency}:{selectio
       <YAxis yAxisId="primary" width={45} tickFormatter={compact} tick={{fontSize:10,fill:'var(--studio-muted,#63728a)'}} axisLine={false} tickLine={false}/>
       {secondary?<YAxis yAxisId="secondary" orientation="right" width={45} tickFormatter={compact} tick={{fontSize:10,fill:'var(--studio-muted,#63728a)'}} axisLine={false} tickLine={false}/>:null}
       <Tooltip content={({active,payload})=>{const p=payload?.[0]?.payload as typeof points[number]|undefined;return active&&p?<div className="analytics-tooltip"><strong>{p.currentDate??p.previousDate}</strong><p>{analyticsMetricLabels[metric]} · atual: {analyticsFormat(p.primary,metric,currency)}</p>{hasPrior&&p.previousDate?<p>{analyticsMetricLabels[metric]} · comparativo ({p.previousDate}): {analyticsFormat(p.previous,metric,currency)}</p>:null}{secondary?<p>{analyticsMetricLabels[secondary]} · atual: {analyticsFormat(p.secondary,secondary,currency)}</p>:null}</div>:null;}}/>
-      <Line yAxisId="primary" dataKey="primary" stroke="#df1728" strokeWidth={2.5} dot={false} connectNulls={false} isAnimationActive={false}/>
-      {hasPrior?<Line yAxisId="primary" dataKey="previous" stroke="#7b879e" strokeDasharray="5 4" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false}/>:null}
-      {secondary?<Line yAxisId="secondary" dataKey="secondary" stroke="#64748b" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false}/>:null}
+      <Line yAxisId="primary" dataKey="primary" stroke="#df1728" strokeWidth={2.5} dot={{r:2}} connectNulls={false} isAnimationActive={false}/>
+      {hasPrior?<Line yAxisId="primary" dataKey="previous" stroke="#7b879e" strokeDasharray="5 4" strokeWidth={2} dot={{r:2.5}} connectNulls={false} isAnimationActive={false}/>:null}
+      {secondary?<Line yAxisId="secondary" dataKey="secondary" stroke="#64748b" strokeWidth={2} dot={{r:2}} connectNulls={false} isAnimationActive={false}/>:null}
     </ComposedChart></ResponsiveContainer>
   </div>;
 }
