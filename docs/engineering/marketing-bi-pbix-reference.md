@@ -48,3 +48,9 @@ Permanecem #211 (migrações), SEC-010/011, RD Marketing/CRM reais, país na ing
 ## Validação local deste ciclo
 
 883 testes passaram antes da regressão adicional de navegação; build, lint, arquitetura e tipos/Edge Auth aprovados. Prova visual de componentes sintéticos: comparação preservou conta/campanha Meta; duas snapshots refletiram o recorte; cascata informou cinco campanhas comparáveis; celular 390 px sem overflow; canvas TV 1032 px em viewport 1920×1080, um painel visível. Fullscreen nativo retornou indisponível no IAB; não equivale a TV física ou UX autenticada. Contagens/gates finais ficam no PR.
+
+## Refinamento de 30/10/2026
+
+O canvas dos clientes passa a ocupar a largura disponível, sem navegação lateral; a agência mantém os próprios controles. O login do cliente abre o BI e o cabeçalho mantém acesso aos relatórios e saída. KPIs exibem comparação auditável, séries permitem área/linhas/colunas, legenda e zoom visual, e o ranking seleciona campanhas por plataforma/conta/ID. Etapas do funil selecionam o indicador da série. A tabela diária permite consultar inclusive lacunas, sem depender de hover; zoom não altera totais ou exportações. Cores de canal não substituem verde/vermelho semânticos de comparação.
+
+A composição foi validada localmente em desktop, celular e apresentação TV com dados sintéticos isolados; não há nova homologação visual autenticada ou paridade DAX. Os itens de paridade pendentes acima permanecem.

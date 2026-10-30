@@ -95,7 +95,7 @@ test('BI rendered trend has markers for isolated prior observations while retain
   'data-series':dataKey,'data-markers':String(Boolean(dot)),'data-connect-nulls':String(connectNulls),
  });
  const {MarketingBITrend}=loadTypescript<typeof import('../src/components/dashboard/marketing-bi-charts')>(view,(id,native)=>
-  id==='recharts'?{ResponsiveContainer:passthrough,ComposedChart:passthrough,Line:series,CartesianGrid:omit,Tooltip:omit,XAxis:omit,YAxis:omit}:native(id));
+  id==='recharts'?{ResponsiveContainer:passthrough,ComposedChart:({children}:{children:React.ReactNode})=>React.createElement('svg',null,children),Area:series,Line:series,CartesianGrid:omit,Tooltip:omit,XAxis:omit,YAxis:omit}:native(id));
  const priorOnly=input();priorOnly.ads=[];priorOnly.breakdowns=[];
  const previous=selectMarketingBI(buildAnalyticsWorkspace(priorOnly),{platform:'all',account:'all',campaign:'all'});
  const html=renderToStaticMarkup(React.createElement(MarketingBITrend,{selection:previous,metric:'spend',currency:'BRL'}));
