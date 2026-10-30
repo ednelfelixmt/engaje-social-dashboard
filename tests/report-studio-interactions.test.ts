@@ -43,3 +43,21 @@ test('KPI selection controls the primary chart without changing the authorized t
 test('visual chart window and column mode preserve the full calendar input and totals',()=>{
  const f=harness<typeof import('../src/components/dashboard/analytics-charts')>(new URL('../src/components/dashboard/analytics-charts.tsx',import.meta.url));const rows=Array.from({length:20},(_,i)=>({index:i+1,currentDate:'2026-10-'+String(i+1).padStart(2,'0'),previousDate:null,current:{spend:10,impressions:100,clicks:5,leads:1,ctr:5,cpc:2,cpm:100,cpl:10},previous:null}));const props={rows,metric:'clicks' as const,currency:'BRL',comparing:false},render=()=>f.render(()=>f.module.AnalyticsTrend(props));let tree=render();const window=nodes(tree).find(el=>el.props['aria-label']==='Janela visual do gráfico');(window?.props.onChange as(e:unknown)=>void)({target:{value:'7'}});tree=render();const chart=nodes(tree).find(el=>Array.isArray(el.props.data));assert.equal((chart?.props.data as unknown[]).length,7);const column=nodes(tree).find(el=>el.type==='button'&&el.props.children==='Colunas');(column?.props.onClick as()=>void)();tree=render();assert.ok(nodes(tree).some(el=>el.props.dataKey==='current'&&el.props.maxBarSize===26));assert.equal(rows.length,20);
 });
+
+test('interactive KPI buttons describe the measured total, delta and prior period to assistive technology',()=>{
+ const {model}=loadTypescript<typeof import('./helpers/analytics-fixture')>(new URL('./helpers/analytics-fixture.ts',import.meta.url),(id,native)=>native(id));
+ const f=harness<typeof import('../src/components/dashboard/analytics-workspace')>(new URL('../src/components/dashboard/analytics-workspace.tsx',import.meta.url));
+ const tree=f.render(()=>f.module.AnalyticsWorkspace({model:model(),canManage:false}));
+ const button=nodes(tree).find(el=>el.props['aria-label']==='Analisar Cliques');
+ assert.ok(button,'the clickable KPI still has an action label');
+ const ids=String(button.props['aria-describedby']).split(' ');
+ assert.equal(ids.length,3,'measured current total, delta and previous period must all be described');
+ const descendants=nodes(button);
+ const elements=ids.map(id=>descendants.find(el=>el.props.id===id));
+ assert.ok(elements.every(Boolean),'each referenced description must exist inside the KPI');
+ assert.ok(renderToStaticMarkup(elements[0]).includes('Atual:'));
+ assert.ok(renderToStaticMarkup(elements[0]).includes('20'),'current synthetic clicks remain available');
+ assert.ok(renderToStaticMarkup(elements[1]).includes('%'),'the delta must be announced alongside its direction');
+ assert.ok(renderToStaticMarkup(elements[2]).includes('Anterior: 40'),'the baseline must remain available');
+ assert.equal(button.props['aria-pressed'],false,'accessibility does not change KPI selection state');
+});
