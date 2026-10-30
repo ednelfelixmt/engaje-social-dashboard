@@ -43,10 +43,10 @@ function fixture(options:Options={}){
   if(options.fetchThrow)throw new Error(canary);
   const u=new URL(String(input));assert.equal(u.origin,origin);
   const actor=cookie.endsWith('0')?0:1,f=existingIsolationFixtures[actor],peer=existingIsolationFixtures[1-actor];
-  const own=['overview','reports','reports/funnel'].some(path=>u.pathname==='/'+f.slug+'/'+path),admin=u.pathname==='/admin';
+  const own=['overview','reports','reports/funnel','reports/analytics'].some(path=>u.pathname==='/'+f.slug+'/'+path),admin=u.pathname==='/admin';
   const name=options.escapedName?'Fixture &amp; &lt;'+actor+'&gt;':'Fixture '+actor;
   let html=own?'<h1>'+(options.wrongName?'other fixture':name)+'</h1>'+(options.noOwnLink?'':'<a href="/'+f.slug+'/overview">Own</a>'):'not found';
-  if(own&&!options.missingReport)html+='<h2>Central de relatórios</h2><h2>Etapas do funil</h2>';
+  if(own&&!options.missingReport)html+='<h2>Central de relatórios</h2><h2>Etapas do funil</h2><h2>Desempenho de marketing</h2>';
   if(options.foreignLink)html+='<a href="/'+peer.slug+'/overview">Other</a>';
   if(options.foreignName)html+='Fixture '+(1-actor);
   if(options.adminLink)html+='<a href="/admin/users">Admin</a>';
@@ -80,8 +80,8 @@ test('authenticated HTTP preflight rejects unknown origins and private credentia
 
 test('HTTP acceptance proves own HTML, cross-tenant and administrator denials for two identity-bound viewers',async()=>{
  for(const escapedName of [false,true]){
-  const f=fixture({escapedName});const r=await f.run();assert.equal(r.status,'PASS');assert.equal(r.checks.length,24);
-  assert.equal(r.checks.filter(x=>x.status===200).length,6);assert.equal(r.checks.filter(x=>x.status===404).length,16);
+  const f=fixture({escapedName});const r=await f.run();assert.equal(r.status,'PASS');assert.equal(r.checks.length,28);
+  assert.equal(r.checks.filter(x=>x.status===200).length,8);assert.equal(r.checks.filter(x=>x.status===404).length,18);
   assert.equal(r.checks.filter(x=>x.status===307).length,2);assert.ok(!JSON.stringify(r).includes(canary));
   assert.deepEqual(f.logouts,[0,1]);assert.ok(f.jars.every(j=>j.getAll().length===0));
  }

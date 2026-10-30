@@ -2,6 +2,7 @@ import {calendarDays} from '@/lib/metrics/calendar';
 import type {PerformanceScope} from './performance-report';
 export type ReportContext = Pick<PerformanceScope, 'from' | 'to' | 'currency' | 'compare'>;
 export const reportCatalog = [
+ {path:'analytics',title:'Análise 360',description:'Desempenho, funis, público, comparativos e modo TV no mesmo workspace.',requires:'overview',comparison:true,formats:'CSV · Modo TV'},
  {path:'performance',title:'Executivo de mídia paga',description:'Investimento, resultados e custos por plataforma e campanha.',requires:'paid',comparison:true,formats:'CSV · PDF'},
  {path:'funnel',title:'Funil de mídia paga',description:'Etapas configuradas pela agência, cobertura e custos por resultado recebido.',requires:'funnel',comparison:true,formats:'CSV · PDF'},
  {path:'meta-audience',title:'Público do Meta Ads',description:'Demografia, dispositivos e geografia dos dados de anúncios recebidos.',requires:'paid',comparison:false,formats:'CSV'},

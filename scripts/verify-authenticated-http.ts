@@ -88,6 +88,8 @@ export async function verifyAuthenticatedHttp(env:NodeJS.ProcessEnv){
     {kind:'foreign-report-center',path:'/'+peer.slug+'/reports',status:404},
     {kind:'own-funnel-report',path:'/'+own.slug+'/reports/funnel',status:200,content:'Etapas do funil'},
     {kind:'foreign-funnel-report',path:'/'+peer.slug+'/reports/funnel',status:404},
+    {kind:'own-analytics-workspace',path:'/'+own.slug+'/reports/analytics',status:200,content:'Desempenho de marketing'},
+    {kind:'foreign-analytics-workspace',path:'/'+peer.slug+'/reports/analytics',status:404},
     {kind:'agency-denied',path:'/admin',status:307},
     ...['settings/dashboard','settings/integrations','settings/data-quality','settings/branding','sharing']
      .map(path=>({kind:'admin-only-'+path,path:'/'+own.slug+'/'+path,status:404})),
