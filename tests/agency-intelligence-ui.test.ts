@@ -88,3 +88,37 @@ test('agency scatter exposes keyboard-operable selection for every visible clien
  assert.ok(renderToStaticMarkup(empty).includes('Dispersão indisponível'));
  assert.equal(JSON.stringify(data.model),before,'selection UI must never mutate campaign facts');
 });
+
+
+test('agency scatter excludes invalid coordinates but preserves observed zero and authorized client picks',()=>{
+ const {AgencyEfficiencyChart}=loadTypescript<typeof import('../src/components/agency/agency-intelligence-charts')>(new URL('../src/components/agency/agency-intelligence-charts.tsx',import.meta.url),(name,native)=>native(name));
+ const selection=selectAgencyIntelligence(fixture().model,{clientIds:[a,b],currency:'BRL',platform:'all',granularity:'day'});
+ const original=selection.clients.map(row=>({...row,name:metadata.find(client=>client.id===row.id)!.name}));
+ const zero={...original[0],current:{...original[0].current,spend:0,leads:0,clicks:0,cpl:null}};
+ const invalid=(id:string,name:string,field:'spend'|'leads',value:number)=>({...original[0],id,name,current:{...original[0].current,[field]:value}});
+ const rows=[zero,original[1],invalid('negative-spend','Inválido gasto negativo','spend',-1),invalid('infinite-spend','Inválido gasto infinito','spend',Infinity),invalid('nan-leads','Inválido leads NaN','leads',NaN),invalid('negative-leads','Inválido leads negativos','leads',-1)];
+ const selected:string[]=[],before=rows.map(row=>({...row,current:{...row.current}}));
+ const tree=AgencyEfficiencyChart({rows,currency:'BRL',onSelect:id=>selected.push(id)});
+ const scatter=nodes(tree).find(node=>Array.isArray(node.props.data)&&node.props.fill==='#6366d6');
+ assert.ok(scatter,'scatter series present for valid observations');
+ const points=scatter.props.data as {id:string;spend:number;leads:number;size:number}[];
+ assert.deepEqual(points.map(point=>point.id),[a,b]);assert.equal(points[0].spend,0);assert.equal(points[0].leads,0);assert.equal(points[0].size,0);
+ const details=nodes(tree).find(node=>node.type==='details'),buttons=nodes(details).filter(node=>node.type==='button');
+ assert.deepEqual(buttons.map(button=>button.props['aria-label']),['Analisar Aurora sintética na dispersão da agência','Analisar Horizonte sintético na dispersão da agência']);
+ (buttons[0].props.onClick as()=>void)();assert.deepEqual(selected,[a]);assert.deepEqual(rows,before,'scatter never rewrites source facts');
+ assert.ok(renderToStaticMarkup(tree).includes('4 clientes sem par válido de medidas.'));
+});
+
+test('agency scatter uses fixed point sizes for invalid clicks and recomputes CPL from valid facts',()=>{
+ const {AgencyEfficiencyChart}=loadTypescript<typeof import('../src/components/agency/agency-intelligence-charts')>(new URL('../src/components/agency/agency-intelligence-charts.tsx',import.meta.url),(name,native)=>native(name));
+ const selection=selectAgencyIntelligence(fixture().model,{clientIds:[a,b],currency:'BRL',platform:'all',granularity:'day'});
+ const original=selection.clients.map(row=>({...row,name:metadata.find(client=>client.id===row.id)!.name}));
+ const rows=[original[0],{...original[1],current:{...original[1].current,spend:50,leads:5,clicks:Infinity,cpl:Infinity}}],before=rows.map(row=>({...row,current:{...row.current}}));
+ const tree=AgencyEfficiencyChart({rows,currency:'BRL',onSelect:()=>{}});
+ const scatter=nodes(tree).find(node=>Array.isArray(node.props.data)&&node.props.fill==='#6366d6'),zaxis=nodes(tree).find(node=>Array.isArray(node.props.range));
+ assert.ok(scatter);assert.ok(zaxis);
+ const points=scatter.props.data as {id:string;size:number;cpl:number|null}[];
+ assert.deepEqual(points.map(point=>point.size),[1,1]);assert.equal(points[1].cpl,10,'corrupted stored CPL cannot leak to tooltip');
+ assert.deepEqual(zaxis.props.range,[150,150]);assert.ok(renderToStaticMarkup(tree).includes('tamanho fixo, sem inferir cliques ausentes'));
+ assert.deepEqual(rows,before);
+});
