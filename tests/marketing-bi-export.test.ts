@@ -131,3 +131,32 @@ test('BI CSV labels attribution pairing per exported campaign, never by another 
   assert.equal(mixed.find(row=>row.periodo==='atual'&&row.campanha===data.ads[0].campaign_name)?.comparacao_leads_cpl,'nao_equivalente');
   assert.equal(mixed.find(row=>row.campanha==='Current only')?.comparacao_leads_cpl,'sem_par_observado');
 });
+
+
+test('BI CSV checks attribution per paired campaign even when another campaign makes the global selection incompatible',()=>{
+  const data=input();
+  data.ads.push(fact({id:'current-b',ad_id:'current-b-ad',campaign_id:'campaign-b',campaign_name:'Campaign B',spend:50}));
+  data.priorAds.push(fact({id:'prior-b',ad_id:'prior-b-ad',campaign_id:'campaign-b',campaign_name:'Campaign B',metric_date:'2026-10-18',spend:60,attribution_window:'1d_click'}));
+  const {model,selection}=choose(data);
+  assert.equal(selection.compatible,false,'global comparison is incompatible because campaign B changed window');
+  const before=JSON.stringify(model),rows=parse(marketingBICsv(model,selection));
+  assert.equal(rows.length,4);
+  assert.ok(rows.filter(row=>row.campanha==='Synthetic campaign').every(row=>row.comparacao_leads_cpl==='equivalente'));
+  assert.ok(rows.filter(row=>row.campanha==='Campaign B').every(row=>row.comparacao_leads_cpl==='nao_equivalente'));
+  assert.ok(parse(marketingBICsv(model,selection,'synthetic campaign')).every(row=>row.comparacao_leads_cpl==='equivalente'),'search should not inherit an unrelated campaign mismatch');
+  assert.ok(parse(marketingBICsv(model,selection,'campaign b')).every(row=>row.comparacao_leads_cpl==='nao_equivalente'));
+  assert.equal(JSON.stringify(model),before,'CSV attribution checks must not mutate source facts or lineage');
+});
+
+test('BI CSV fails closed for missing or duplicate attribution lineage without suppressing observed values',()=>{
+  const {model,selection}=choose();
+  assert.equal(selection.compatible,true);
+  for(const lineage of [[],[...model.lineage,...model.lineage]]){
+    const synthetic={...model,lineage};
+    const rows=parse(marketingBICsv(synthetic,selection));
+    assert.equal(rows.length,2);
+    assert.ok(rows.every(row=>row.comparacao_leads_cpl==='nao_equivalente'));
+    assert.equal(rows[0].spend,'100');
+    assert.equal(rows[1].spend,'80');
+  }
+});

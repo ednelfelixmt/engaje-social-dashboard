@@ -1,6 +1,7 @@
 import {analyticsCampaignKey, type AnalyticsWorkspaceModel} from '@/lib/reports/analytics-workspace';
 import type {BISelection} from '@/lib/reports/marketing-bi';
 import {paidMetric} from '@/lib/metrics/paid-metrics';
+import {comparableAttribution} from '@/lib/reports/performance-report';
 import {serializeCsv, type CsvCell} from './csv';
 
 /** Same metric columns as the visible BI campaign table; do not average rates. */
@@ -30,13 +31,22 @@ export function marketingBICsv(model: AnalyticsWorkspaceModel, selection: BISele
     analyticsCampaignKey(row.platform, row.accountId, row.campaignId);
   const currentKeys = new Set(current.map(campaignKey));
   const previousKeys = new Set(previousFacts.map(campaignKey));
+  // Selection-wide attribution may be incompatible because of an unrelated
+  // campaign. Check the documented windows of each exported campaign instead.
+  // Duplicate or absent lineage is unverified, never equivalent by default.
+  const lineageByCampaign = new Map<string, (typeof model.lineage)[number] | null>();
+  for (const lineage of model.lineage) {
+    lineageByCampaign.set(lineage.key, lineageByCampaign.has(lineage.key) ? null : lineage);
+  }
   // Each exported row needs its own pairing status. A different campaign's
   // historical observation must not mark an unmatched campaign as comparable.
   const attributionFor = (row: BISelection['current'][number]) => {
     const key = campaignKey(row);
     if (!comparing) return 'desativado';
     if (!currentKeys.has(key) || !previousKeys.has(key)) return 'sem_par_observado';
-    return selection.compatible ? 'equivalente' : 'nao_equivalente';
+    const lineage = lineageByCampaign.get(key);
+    return lineage && comparableAttribution({attribution:lineage.current}, {attribution:lineage.previous})
+      ? 'equivalente' : 'nao_equivalente';
   };
 
   const rows: CsvCell[][] = [[
