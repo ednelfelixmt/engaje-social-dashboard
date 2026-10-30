@@ -4,7 +4,7 @@ import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {loadTypescript} from './helpers/load-typescript';
 import {fact} from './helpers/analytics-fixture';
-import {buildAgencyIntelligence} from '../src/lib/reports/agency-intelligence';
+import {buildAgencyIntelligence,selectAgencyIntelligence} from '../src/lib/reports/agency-intelligence';
 import {summarizeClientAds} from '../src/lib/metrics/agency-overview';
 import type {AgencyClientCard} from '../src/lib/reports/agency-portfolio';
 const a='11111111-1111-4111-8111-111111111111',b='22222222-2222-4222-8222-222222222222';
@@ -37,4 +37,35 @@ test('incompatible lead and CPL KPI baselines are withheld while current values 
  const f=harness(),data=fixture();data.model=buildAgencyIntelligence({clients:metadata,current:makeRows().map(row=>({...row,leads:10})),previous:[fact({id:'prior-a',organization_id:a,metric_date:'2026-09-28',spend:80,leads:999,attribution_window:'1d_click'}),fact({id:'prior-b',organization_id:b,metric_date:'2026-09-28',spend:40,leads:888,attribution_window:'1d_click'})],from:'2026-10-01',to:'2026-10-03',compare:'previous_period'});const tree=f.render(()=>f.module.AgencyIntelligenceWorkbench({...data,selectedClient:'all',onSelectClient:()=>{}}));
  for(const label of ['Analisar Leads atribuídos na carteira','Analisar CPL na carteira']){const button=nodes(tree).find(node=>node.props['aria-label']===label);assert.ok(button);const html=renderToStaticMarkup(button);assert.ok(html.includes('atribuição não comparável'));assert.ok(html.includes('Sem base comparável'));assert.ok(!html.includes('1.887'));}
  const spend=nodes(tree).find(node=>node.props['aria-label']==='Analisar Investimento na carteira');assert.ok(spend);const html=renderToStaticMarkup(spend);assert.ok(!html.includes('atribuição não comparável'));assert.ok(html.includes('120,00'));
+});
+
+test('agency trend retains prior calendar in tooltip when previous period has no observations',()=>{
+ const model=buildAgencyIntelligence({clients:[metadata[0]],current:[makeRows()[0]],previous:[],from:'2026-10-01',to:'2026-10-03',compare:'previous_period'});
+ const selection=selectAgencyIntelligence(model,{clientIds:[a],currency:'BRL',platform:'all',granularity:'day'}),before=JSON.stringify(selection);
+ const {AgencyTrendChart}=loadTypescript<typeof import('../src/components/agency/agency-intelligence-charts')>(new URL('../src/components/agency/agency-intelligence-charts.tsx',import.meta.url),(name,native)=>name==='react'?{...React,useId:()=> 'fixture',useState:(initial:unknown)=>[initial,()=>{}]}:native(name));
+ const tree=AgencyTrendChart({selection,metric:'spend',secondary:'none',currency:'BRL'}),all=nodes(tree);
+ const chart=all.find(node=>Array.isArray(node.props.data)),tooltip=all.find(node=>typeof node.props.content==='function');
+ assert.ok(chart);assert.ok(tooltip);const point=(chart.props.data as unknown[])[0];
+ const html=renderToStaticMarkup((tooltip.props.content as (props:unknown)=>React.ReactElement)({active:true,payload:[{payload:point}]}));
+ assert.ok(html.includes('28/09/2026'),'calendar date survives absence of historical facts');
+ assert.ok(html.includes('Comparativo'));
+ assert.ok(all.some(node=>node.type==='p'&&node.props.children==='Sem medições históricas para este indicador; datas do calendário comparativo permanecem disponíveis.'));
+ assert.ok(!all.some(node=>node.props.dataKey==='previous'),'no synthetic historical series');
+ assert.equal(JSON.stringify(selection),before);
+});
+
+test('agency trend keeps prior dates without disclosing incompatible historical lead measurements',()=>{
+ const model=buildAgencyIntelligence({clients:[metadata[0]],current:[makeRows()[0]],previous:[fact({id:'incompatible-prior',organization_id:a,metric_date:'2026-09-28',spend:80,leads:987654,attribution_window:'1d_click'})],from:'2026-10-01',to:'2026-10-03',compare:'previous_period'});
+ const selection=selectAgencyIntelligence(model,{clientIds:[a],currency:'BRL',platform:'all',granularity:'day'});
+ assert.equal(selection.compatible,false);
+ const {AgencyTrendChart}=loadTypescript<typeof import('../src/components/agency/agency-intelligence-charts')>(new URL('../src/components/agency/agency-intelligence-charts.tsx',import.meta.url),(name,native)=>name==='react'?{...React,useId:()=> 'fixture',useState:(initial:unknown)=>[initial,()=>{}]}:native(name));
+ const tree=AgencyTrendChart({selection,metric:'leads',secondary:'none',currency:'BRL'}),all=nodes(tree);
+ const chart=all.find(node=>Array.isArray(node.props.data)),tooltip=all.find(node=>typeof node.props.content==='function');
+ assert.ok(chart);assert.ok(tooltip);const point=(chart.props.data as unknown[])[0];
+ const html=renderToStaticMarkup((tooltip.props.content as (props:unknown)=>React.ReactElement)({active:true,payload:[{payload:point}]}));
+ assert.ok(html.includes('28/09/2026'));
+ assert.ok(html.includes('atribuição não comparável'));
+ assert.ok(!html.includes('987.654'),'historical lead total must not be displayed');
+ assert.ok(all.some(node=>node.type==='p'&&node.props.children==='Comparativo de leads/CPL indisponível: atribuição histórica não comparável.'));
+ assert.ok(!all.some(node=>node.props.dataKey==='previous'));
 });
