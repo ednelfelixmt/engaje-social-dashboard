@@ -31,12 +31,15 @@ export function selectMarketingBI(model:AnalyticsWorkspaceModel, filters:{platfo
  * Missing observations remain null. Historical dates travel with their own values.
  */
 export function marketingTrendPoints(selection:BISelection, metric:PaidMetricKey, secondary?:PaidMetricKey) {
+  // An attribution window mismatch forbids a historical lead/CPL comparison.
+  // Other measurements and the observed current period are still available.
+  const priorComparable = selection.compatible || (metric !== 'leads' && metric !== 'cpl');
   return selection.timeline.map(day=>({
     date:day.currentDate??day.previousDate,
     currentDate:day.currentDate,
     previousDate:day.previousDate,
     primary:day.current?paidMetric(day.current,metric):null,
-    previous:day.previous?paidMetric(day.previous,metric):null,
+    previous:priorComparable&&day.previous?paidMetric(day.previous,metric):null,
     secondary:secondary&&day.current?paidMetric(day.current,secondary):null,
   }));
 }

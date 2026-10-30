@@ -9,6 +9,7 @@ const compact=(value:number)=>new Intl.NumberFormat('pt-BR',{notation:'compact',
 export function MarketingBITrend({selection,metric,secondary,currency}:{selection:BISelection;metric:PaidMetricKey;secondary?:PaidMetricKey;currency:string}) {
   const points=marketingTrendPoints(selection,metric,secondary);
   const hasPrior=points.some(p=>p.previous!==null);
+  const incompatibleLeadHistory = !selection.compatible && (metric==='leads'||metric==='cpl') && selection.timeline.some(day=>day.previousDate!==null);
   if(!points.some(p=>p.primary!==null||p.secondary!==null||p.previous!==null))return <p className="bi-empty">Sem medições diárias no recorte.</p>;
   return <div className="bi-trend" aria-label={'Evolução de '+analyticsMetricLabels[metric]}>
     <div className="bi-chart-legend"><span>● {analyticsMetricLabels[metric]} · atual</span>{hasPrior?<span>┄ {analyticsMetricLabels[metric]} · comparativo</span>:null}{secondary?<span>● {analyticsMetricLabels[secondary]} · eixo direito</span>:null}</div>
@@ -22,6 +23,7 @@ export function MarketingBITrend({selection,metric,secondary,currency}:{selectio
       {hasPrior?<Line yAxisId="primary" dataKey="previous" stroke="#7b879e" strokeDasharray="5 4" strokeWidth={2} dot={{r:2.5}} connectNulls={false} isAnimationActive={false}/>:null}
       {secondary?<Line yAxisId="secondary" dataKey="secondary" stroke="#64748b" strokeWidth={2} dot={{r:2}} connectNulls={false} isAnimationActive={false}/>:null}
     </ComposedChart></ResponsiveContainer>
+    {incompatibleLeadHistory?<p className="bi-footnote">Comparativo histórico de leads/CPL indisponível: janelas de atribuição não equivalentes.</p>:null}
   </div>;
 }
 

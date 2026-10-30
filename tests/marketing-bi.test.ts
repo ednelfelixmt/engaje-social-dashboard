@@ -105,4 +105,24 @@ test('BI rendered trend has markers for isolated prior observations while retain
  const none=input();none.scope={...none.scope,compare:'none'};none.priorAds=[];none.priorBreakdowns=[];none.priorCrm=[];
  const without=renderToStaticMarkup(React.createElement(MarketingBITrend,{selection:selectMarketingBI(buildAnalyticsWorkspace(none),{platform:'all',account:'all',campaign:'all'}),metric:'spend',currency:'BRL'}));
  assert.ok(!without.includes('data-series="previous"'));
+ const altered=input();altered.priorAds[0].attribution_window='1d_click';
+ const incompatible=selectMarketingBI(buildAnalyticsWorkspace(altered),{platform:'all',account:'all',campaign:'all'});
+ const masked=renderToStaticMarkup(React.createElement(MarketingBITrend,{selection:incompatible,metric:'leads',currency:'BRL'}));
+ assert.ok(!masked.includes('data-series="previous"'),'incompatible leads have no historical chart line');
+ assert.ok(masked.includes('Comparativo histórico de leads/CPL indisponível'),'the missing comparison is explained');
+});
+
+
+test('BI trend suppresses historical attributed leads and CPL when attribution windows differ, preserving the other series',()=>{
+ const changed=input();changed.priorAds[0].attribution_window='1d_click';
+ const selection=selectMarketingBI(buildAnalyticsWorkspace(changed),{platform:'all',account:'all',campaign:'all'});
+ assert.equal(selection.compatible,false);
+ for(const metric of ['leads','cpl'] as const){
+  const points=marketingTrendPoints(selection,metric);
+  assert.ok(points[0].primary!==null,metric+' current remains observable');
+  assert.equal(points[0].previous,null,metric+' historical is not comparable');
+  assert.equal(points[0].previousDate,'2026-10-18','historical calendar is preserved');
+ }
+ assert.equal(marketingTrendPoints(selection,'spend')[0].previous,80,'spend does not require equivalent attribution');
+ assert.ok(marketingTrendPoints(selected(),'leads')[0].previous!==null,'equivalent attribution retains historical leads');
 });
