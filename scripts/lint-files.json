@@ -205,5 +205,15 @@
   "tests/funnel-report-page.test.ts",
   "tests/funnel-report-ui.test.ts",
   "tests/funnel-report-export.test.ts",
-  "tests/report-center.test.ts"
+  "tests/report-center.test.ts",
+  "src/lib/reports/analytics-workspace.ts",
+  "src/components/dashboard/analytics-charts.tsx",
+  "src/components/dashboard/analytics-workspace.tsx",
+  "src/components/dashboard/display-mode-controller.tsx",
+  "src/app/(tenant)/[organizationSlug]/reports/analytics/page.tsx",
+  "tests/helpers/analytics-fixture.ts",
+  "tests/analytics-workspace.test.ts",
+  "tests/analytics-workspace-ui.test.ts",
+  "tests/analytics-workspace-page.test.ts",
+  "tests/display-mode-controller.test.ts"
 ]

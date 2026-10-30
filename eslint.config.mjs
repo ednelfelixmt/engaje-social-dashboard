@@ -7,6 +7,15 @@ export default tseslint.config(
   {ignores:['node_modules/**','.next/**']},
   {
     files:[
+      'tests/helpers/analytics-fixture.ts',
+      'tests/analytics-workspace.test.ts',
+      'tests/analytics-workspace-ui.test.ts',
+      'tests/analytics-workspace-page.test.ts',
+      'tests/display-mode-controller.test.ts',
+      'src/lib/reports/analytics-workspace.ts',
+      'src/components/dashboard/analytics-charts.tsx',
+      'src/components/dashboard/analytics-workspace.tsx',
+      'src/components/dashboard/display-mode-controller.tsx',
       'src/lib/reports/report-catalog.ts',
       'src/lib/reports/funnel-report.ts',
       'src/lib/export/funnel-report.ts',

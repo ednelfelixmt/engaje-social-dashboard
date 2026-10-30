@@ -59,8 +59,8 @@ function period(rows: readonly Fact[], range: {from: string; to: string}): Perfo
 }
 
 /** A reported window must be unambiguous and identical for the same provider/accounts. */
-export function comparableAttribution(current: PerformancePeriod, previous: PerformancePeriod): boolean {
- const known = (p: PerformancePeriod) => p.attribution.length > 0 && p.attribution.every(entry => entry.windows.length === 1 && !!entry.windows[0] && !/(unknown|default|unspecified|not[ _-]?set|n[aã]o[ _-]?informad|unavailable)/i.test(entry.windows[0]));
+export function comparableAttribution(current: Pick<PerformancePeriod, 'attribution'>, previous: Pick<PerformancePeriod, 'attribution'>): boolean {
+ const known = (p: Pick<PerformancePeriod, 'attribution'>) => p.attribution.length > 0 && p.attribution.every(entry => entry.windows.length === 1 && !!entry.windows[0] && !/(unknown|default|unspecified|not[ _-]?set|n[aã]o[ _-]?informad|unavailable)/i.test(entry.windows[0]));
  return known(current) && known(previous) && JSON.stringify(current.attribution) === JSON.stringify(previous.attribution);
 }
 
