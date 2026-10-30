@@ -101,3 +101,46 @@ test('valid budget comparison alone does not invent lead growth',()=>{
   assert.equal(result.hasComparableMetric,true);
   assert.equal(result.demandGrowthOutpacesSpend,false);
 });
+
+test('negative lead observations never imply growing demand',()=>{
+  const result=strategicPeriodComparison({...base,
+    current:{spend:100,leads:-50,cpl:null},
+    previous:{spend:100,leads:-100,cpl:null},
+  });
+  assert.deepEqual(result,{
+    spendChange:0,leadChange:null,cplChange:null,hasComparableMetric:true,
+    demandGrowthOutpacesSpend:false,
+  });
+});
+
+test('negative spend and CPL fail closed without hiding valid zero leads',()=>{
+  const result=strategicPeriodComparison({...base,
+    current:{spend:-5,leads:0,cpl:-1},
+    previous:{spend:100,leads:100,cpl:1},
+  });
+  assert.deepEqual(result,{
+    spendChange:null,leadChange:-100,cplChange:null,hasComparableMetric:true,
+    demandGrowthOutpacesSpend:false,
+  });
+});
+
+test('negative previous-period business metrics cannot serve as comparison baselines',()=>{
+  const result=strategicPeriodComparison({...base,
+    previous:{spend:-100,leads:-20,cpl:-2},
+  });
+  assert.deepEqual(result,{
+    spendChange:null,leadChange:null,cplChange:null,hasComparableMetric:false,
+    demandGrowthOutpacesSpend:false,
+  });
+});
+
+test('one invalid business metric leaves independent valid comparison measures available',()=>{
+  const result=strategicPeriodComparison({...base,
+    current:{spend:120,leads:-1,cpl:0.5},
+    previous:{spend:100,leads:100,cpl:1},
+  });
+  assert.deepEqual(result,{
+    spendChange:20,leadChange:null,cplChange:-50,hasComparableMetric:true,
+    demandGrowthOutpacesSpend:false,
+  });
+});

@@ -34,8 +34,11 @@ export function strategicPeriodComparison(input: Readonly<{
     && isRfcOrganizationUuid(organizationId) && /^[A-Z]{3}$/.test(requestedCurrency)
     && [...currentRows,...previousRows].every(row =>
       row.organizationId===organizationId && row.currency===requestedCurrency);
+  // Spend, lead counts and CPL are nonnegative observations. Signed refund
+  // adjustments can be valid elsewhere, but cannot signal growing demand here.
+  const observed=(value:number|null):value is number => typeof value==='number' && Number.isFinite(value) && value>=0;
   const change=(now:number|null,old:number|null,metric:string):number|null =>
-    sameScope ? (computeDelta(now,old,metric)?.change ?? null) : null;
+    sameScope && observed(now) && observed(old) ? (computeDelta(now,old,metric)?.change ?? null) : null;
   const spendChange=change(current.spend,previous.spend,'spend');
   const leadChange=change(current.leads,previous.leads,'leads');
   const cplChange=change(current.cpl,previous.cpl,'cpl');
