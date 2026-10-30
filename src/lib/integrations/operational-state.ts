@@ -26,7 +26,7 @@ export function summarizeClientConnectionHealth(allowedOrganizationIds:readonly 
   for(const row of rows){
     const current=summaries.get(row.organization_id);
     if(!current||!visibleOperationalIntegration(row))continue;
-    const key=integrationHealth(row).key;
+    const key=integrationHealth(row).key as 'connected'|'attention'|'pending'|'inactive';
     current[key]+=1;
     const timestamp=row.last_synced_at;
     if(timestamp&&Number.isFinite(Date.parse(timestamp))&&(!current.lastSyncedAt||Date.parse(timestamp)>Date.parse(current.lastSyncedAt)))current.lastSyncedAt=timestamp;
