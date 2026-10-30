@@ -16,9 +16,11 @@ test('viewer navigation retains dashboards and filters while hiding administrati
  assert.ok(html.includes('/fixture-a/paid'));
  assert.ok(!html.includes('/fixture-a/settings/'));
  assert.ok(!html.includes('/fixture-a/sharing'));
+ assert.ok(!html.includes('Voltar à agência'));
 });
 test('authorized agency administrator retains configuration and sharing navigation',()=>{
  const html=renderToStaticMarkup(createElement(Navigation,{slug:'fixture-a',canShare:true,enabled:['overview']}));
+ assert.ok(html.includes('href="/admin"'));assert.ok(html.includes('Voltar à agência'));
  for(const path of ['settings/dashboard','settings/integrations','settings/branding','settings/data-quality','sharing'])
   assert.ok(html.includes('/fixture-a/'+path),path);
 });

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {useEffect, useState} from 'react';
-import {Building2, ChartNoAxesCombined, ChevronDown, Crown, Database, Filter, Images, LayoutDashboard, LogOut, Megaphone, Menu, PanelLeftClose, PanelLeftOpen, Palette, Plug, Settings, Share2, Users, type LucideIcon} from 'lucide-react';
+import {ArrowLeft, Building2, ChartNoAxesCombined, ChevronDown, Crown, Database, Filter, Images, LayoutDashboard, LogOut, Megaphone, Menu, PanelLeftClose, PanelLeftOpen, Palette, Plug, Settings, Share2, Users, type LucideIcon} from 'lucide-react';
 
 type NavItem={key:string;label:string;icon:LucideIcon;requires?:string};
 type NavGroup={id:string;label:string;icon:LucideIcon;items:NavItem[];/** Grupos recolhíveis começam abertos só se contiverem a página atual (ou se defaultOpen). */collapsible?:boolean;defaultOpen?:boolean};
@@ -78,6 +78,7 @@ export function Navigation({slug,admin=false,enabled=[],canShare=false,organizat
 
   return <aside data-report-navigation data-collapsed={collapsed} data-mobile-open={mobileOpen} className="sticky top-0 z-40 flex w-full flex-col border-b border-white/[.08] bg-[#090d15] lg:fixed lg:inset-y-0 lg:w-[272px] lg:border-b-0 lg:border-r">
     <div className="navigation-brand"><Link prefetch href={slug?`/${encodeURIComponent(slug)}/reports/analytics`:'/admin'} title={organizationName??'Engaje Mídia Hub'}><span className="navigation-logo">{logoUrl&&!logoFailed?<img src={logoUrl} alt="" onError={()=>setLogoFailed(true)}/>:organizationName?<b>{organizationName.split(/\s+/).map(s=>s[0]).slice(0,2).join('')}</b>:<Crown className="text-primary" size={21}/>}</span><div className="navigation-label"><strong>{organizationName??'Engaje Mídia Hub'}</strong><small>MARKETING INTELLIGENCE</small></div></Link><button type="button" className="navigation-mobile-toggle" aria-label="Abrir navegação" aria-expanded={mobileOpen} onClick={()=>setMobileOpen(!mobileOpen)}><Menu size={21}/></button></div>
+    {!admin&&canShare?<Link href="/admin" className="navigation-agency-return" aria-label="Voltar à agência" title="Voltar à agência"><ArrowLeft size={18}/><span className="navigation-label">Voltar à agência</span></Link>:null}
     <button type="button" className="navigation-collapse" aria-label={collapsed?'Expandir menu lateral':'Recolher menu lateral'} aria-expanded={!collapsed} onClick={collapse}>{collapsed?<PanelLeftOpen size={19}/>:<PanelLeftClose size={19}/>}<span className="navigation-label">Recolher menu</span></button>
     <div className="hidden px-6 lg:block"><div className="h-px bg-gradient-to-r from-primary/40 via-white/10 to-transparent"/></div>
     <nav aria-label={admin?'Navegação da agência':'Navegação do workspace'} className="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-1 lg:flex-col lg:gap-1.5 lg:overflow-y-auto lg:px-4 lg:pb-5 lg:pt-5">
