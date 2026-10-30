@@ -31,6 +31,20 @@ export function marketingBICsv(model: AnalyticsWorkspaceModel, selection: BISele
     analyticsCampaignKey(row.platform, row.accountId, row.campaignId);
   const currentKeys = new Set(current.map(campaignKey));
   const previousKeys = new Set(previousFacts.map(campaignKey));
+  // A canonical campaign repeated in either source period has no unique 1:1
+  // correspondence. Inspect the full authorized selection, not just the name
+  // search result: hiding an alias must not make an ambiguous pair comparable.
+  const ambiguousKeys = new Set<string>();
+  const recordDuplicates = (facts: BISelection['current']) => {
+    const seen = new Set<string>();
+    for (const fact of facts) {
+      const key = campaignKey(fact);
+      if (seen.has(key)) ambiguousKeys.add(key);
+      seen.add(key);
+    }
+  };
+  recordDuplicates(selection.current);
+  recordDuplicates(selection.previous);
   // Selection-wide attribution may be incompatible because of an unrelated
   // campaign. Check the documented windows of each exported campaign instead.
   // Duplicate or absent lineage is unverified, never equivalent by default.
@@ -44,6 +58,7 @@ export function marketingBICsv(model: AnalyticsWorkspaceModel, selection: BISele
     const key = campaignKey(row);
     if (!comparing) return 'desativado';
     if (!currentKeys.has(key) || !previousKeys.has(key)) return 'sem_par_observado';
+    if (ambiguousKeys.has(key)) return 'nao_equivalente';
     const lineage = lineageByCampaign.get(key);
     return lineage && comparableAttribution({attribution:lineage.current}, {attribution:lineage.previous})
       ? 'equivalente' : 'nao_equivalente';

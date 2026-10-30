@@ -160,3 +160,43 @@ test('BI CSV fails closed for missing or duplicate attribution lineage without s
     assert.equal(rows[1].spend,'80');
   }
 });
+
+test('BI CSV refuses ambiguous canonical pairs without downgrading independent campaigns',()=>{
+  const data=input();
+  data.ads.push(fact({id:'now-b',ad_id:'ad-now-b',campaign_id:'campaign-b',campaign_name:'Independent B',spend:25}));
+  data.priorAds.push(fact({id:'prior-b',ad_id:'ad-prior-b',campaign_id:'campaign-b',campaign_name:'Independent B',metric_date:'2026-10-18',spend:20}));
+  const {model,selection}=choose(data);
+  const before=JSON.stringify({model,selection});
+  const aId=data.ads[0].campaign_id;
+  const a=selection.current.find(row=>row.campaignId===aId);
+  const prior=selection.previous.find(row=>row.campaignId===aId);
+  assert.ok(a);assert.ok(prior);
+  const statuses=(rows:ReturnType<typeof parse>,id:string)=>rows.filter(row=>row.campanha_id===id).map(row=>row.comparacao_leads_cpl);
+
+  // Meta 123 and act_123 identify the same campaign. Both observations must
+  // remain in the CSV, but no 1:1 historical comparison can be claimed.
+  const duplicateNow={...selection,current:[...selection.current,{...a,accountId:'123',campaignName:'Duplicate now',spend:0,leads:0}]};
+  const nowRows=parse(marketingBICsv(model,duplicateNow));
+  assert.equal(nowRows.length,5);
+  assert.deepEqual(statuses(nowRows,aId),['nao_equivalente','nao_equivalente','nao_equivalente']);
+  assert.deepEqual(statuses(nowRows,'campaign-b'),['equivalente','equivalente']);
+  assert.equal(nowRows.find(row=>row.campanha==='Duplicate now')?.spend,'0');
+
+  const duplicatePrior={...selection,previous:[...selection.previous,{...prior,accountId:'123',campaignName:'Duplicate prior',spend:0,leads:0}]};
+  const priorRows=parse(marketingBICsv(model,duplicatePrior));
+  assert.equal(priorRows.length,5);
+  assert.deepEqual(statuses(priorRows,aId),['nao_equivalente','nao_equivalente','nao_equivalente']);
+  assert.deepEqual(statuses(priorRows,'campaign-b'),['equivalente','equivalente']);
+  assert.equal(priorRows.find(row=>row.campanha==='Duplicate prior')?.spend,'0');
+  assert.equal(JSON.stringify({model,selection}),before,'no mutation of source models or selected rows');
+});
+
+test('BI CSV name search cannot hide a duplicate canonical source identity',()=>{
+  const {model,selection}=choose();
+  const original=selection.current[0];
+  const duplicate={...selection,current:[...selection.current,{...original,accountId:'123',campaignName:'Excluded by search'}]};
+  const rows=parse(marketingBICsv(model,duplicate,'Synthetic campaign'));
+  assert.equal(rows.length,2,'the unselected alias remains outside the exported rows');
+  assert.ok(rows.every(row=>row.comparacao_leads_cpl==='nao_equivalente'));
+  assert.ok(rows.every(row=>row.campanha!=='Excluded by search'));
+});
