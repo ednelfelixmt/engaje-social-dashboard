@@ -126,3 +126,20 @@ test('BI trend suppresses historical attributed leads and CPL when attribution w
  assert.equal(marketingTrendPoints(selection,'spend')[0].previous,80,'spend does not require equivalent attribution');
  assert.ok(marketingTrendPoints(selected(),'leads')[0].previous!==null,'equivalent attribution retains historical leads');
 });
+
+test('BI drivers fail closed on duplicate canonical campaigns in either period',()=>{
+ for (const period of ['current','previous'] as const) {
+  for (const duplicateAlias of [false,true]) {
+   const selection=selected(),original=selection[period][0];
+   const alias=original.accountId.startsWith('act_')?original.accountId.slice(4):'act_'+original.accountId;
+   selection[period]=[...selection[period],{...original,accountId:duplicateAlias?alias:original.accountId,spend:999}];
+   const result=marketingDrivers(selection,'spend');
+   assert.deepEqual(result,{available:false,start:null,end:null,rows:[],excluded:1,metric:'spend'});
+  }
+ }
+ const distinct=selected();
+ distinct.current.push({...distinct.current[0],accountId:'synthetic-other-account',campaignId:'synthetic-other-campaign'});
+ const safe=marketingDrivers(distinct,'spend');
+ assert.equal(safe.available,true);
+ assert.equal(safe.excluded,1);
+});

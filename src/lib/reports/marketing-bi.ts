@@ -47,9 +47,15 @@ export function marketingTrendPoints(selection:BISelection, metric:PaidMetricKey
 /** Reconcile only campaigns with observations in BOTH periods. Absence is never zero. */
 export function marketingDrivers(selection:BISelection, metric:BIAdditiveMetric) {
   if (!biAdditiveMetrics.includes(metric)) throw new Error('Non-additive BI driver metric');
-  const current = new Map(selection.current.map(row=>[analyticsCampaignKey(row.platform,row.accountId,row.campaignId),row]));
-  const previous = new Map(selection.previous.map(row=>[analyticsCampaignKey(row.platform,row.accountId,row.campaignId),row]));
+  const currentEntries = selection.current.map(row=>[analyticsCampaignKey(row.platform,row.accountId,row.campaignId),row] as const);
+  const previousEntries = selection.previous.map(row=>[analyticsCampaignKey(row.platform,row.accountId,row.campaignId),row] as const);
+  const current = new Map(currentEntries), previous = new Map(previousEntries);
   const keys = [...new Set([...current.keys(),...previous.keys()])];
+  // A canonical campaign appearing twice would otherwise be overwritten by Map.
+  // Fail closed rather than claim a reconciled waterfall with a lost observation.
+  if (current.size !== currentEntries.length || previous.size !== previousEntries.length) {
+    return {available:false,start:null,end:null,rows:[],excluded:keys.length,metric};
+  }
   const rows:{key:string;name:string;current:number;previous:number;change:number}[] = [];
   if (metric !== 'leads' || selection.compatible) {
     for (const key of keys) {
