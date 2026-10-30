@@ -7,7 +7,7 @@ import {reportCatalog,reportHref,type ReportContext,type ReportPath} from '@/lib
 
 type Category='all'|'performance'|'audience'|'content'|'guide';
 const categories:{key:Category;label:string}[]=[{key:'all',label:'Todos'},{key:'performance',label:'Resultados e funis'},{key:'audience',label:'Público e regiões'},{key:'content',label:'Conteúdo'},{key:'guide',label:'Metodologia'}];
-const categoryOf=(path:ReportPath):Category=>path.includes('audience')?'audience':path.startsWith('organic')?'content':path==='methodology'?'guide':'performance';
+const categoryOf=(path:ReportPath):Category=>path.includes('audience')?'audience':path.startsWith('organic')||path==='creatives'?'content':path==='methodology'?'guide':'performance';
 const icons={performance:ChartNoAxesCombined,audience:Users,content:Images,guide:BookOpen,all:FileBarChart2};
 export function ReportCenter({slug,enabled,context}:{slug:string;enabled:string[];context:ReportContext}) {
  const [query,setQuery]=useState(''),[category,setCategory]=useState<Category>('all');

@@ -17,3 +17,8 @@ test('center exposes only enabled report links, no writes, and an honest GA4 pen
  assert.ok(html.includes('/reports/funnel?'));assert.ok(html.includes('/reports/performance?'));assert.ok(!html.includes('/reports/organic-content?'));assert.ok(!html.includes('/reports/revenue?'));assert.ok(html.includes('Desabilitado na configuração'));assert.ok(html.includes('Em preparação'));assert.ok(html.includes('não comprova conexão'));assert.ok(!html.includes('/settings/'));assert.ok(!html.includes('<form'));assert.ok(!html.includes('Conectado'));
  const empty=renderToStaticMarkup(React.createElement(ReportCenter,{slug:scope.organizationSlug,enabled:[],context:scope}));assert.ok(!empty.includes('<a '));
 });
+
+test('creative library remains discoverable without a sidebar only when the agency enabled creatives',()=>{
+ const shown=renderToStaticMarkup(React.createElement(ReportCenter,{slug:scope.organizationSlug,enabled:['creatives'],context:scope}));const hidden=renderToStaticMarkup(React.createElement(ReportCenter,{slug:scope.organizationSlug,enabled:[],context:scope}));assert.ok(shown.includes('Biblioteca de criativos'));assert.ok(shown.includes('/'+scope.organizationSlug+'/paid-creatives?'));assert.ok(!hidden.includes('/paid-creatives?'));
+ const href=new URL(reportHref(scope.organizationSlug,'creatives',scope),'https://example.test');assert.equal(href.pathname,'/'+scope.organizationSlug+'/paid-creatives');assert.equal(href.searchParams.get('from'),scope.from);assert.equal(href.searchParams.get('to'),scope.to);assert.equal(href.searchParams.get('currency'),scope.currency);assert.equal(href.searchParams.get('compare'),'none');assert.ok(!href.pathname.includes('/reports/creatives'));
+});
