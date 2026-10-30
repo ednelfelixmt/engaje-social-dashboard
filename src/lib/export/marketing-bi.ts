@@ -26,13 +26,18 @@ export function marketingBICsv(model: AnalyticsWorkspaceModel, selection: BISele
     row.campaignName.toLocaleLowerCase('pt-BR').includes(term);
   const current = selection.current.filter(matches);
   const previousFacts = selection.previous.filter(matches);
-  const previousKeys = new Set(previousFacts.map(row =>
-    analyticsCampaignKey(row.platform, row.accountId, row.campaignId)));
-  const hasPairedCampaign = current.some(row =>
-    previousKeys.has(analyticsCampaignKey(row.platform, row.accountId, row.campaignId)));
-  const attribution = !comparing ? 'desativado'
-    : !selection.compatible ? 'nao_equivalente'
-      : !hasPairedCampaign ? 'sem_par_observado' : 'equivalente';
+  const campaignKey = (row: BISelection['current'][number]) =>
+    analyticsCampaignKey(row.platform, row.accountId, row.campaignId);
+  const currentKeys = new Set(current.map(campaignKey));
+  const previousKeys = new Set(previousFacts.map(campaignKey));
+  // Each exported row needs its own pairing status. A different campaign's
+  // historical observation must not mark an unmatched campaign as comparable.
+  const attributionFor = (row: BISelection['current'][number]) => {
+    const key = campaignKey(row);
+    if (!comparing) return 'desativado';
+    if (!currentKeys.has(key) || !previousKeys.has(key)) return 'sem_par_observado';
+    return selection.compatible ? 'equivalente' : 'nao_equivalente';
+  };
 
   const rows: CsvCell[][] = [[
     'versao','cliente','fonte','moeda','fuso_cadastral','modo_comparacao',
@@ -51,7 +56,7 @@ export function marketingBICsv(model: AnalyticsWorkspaceModel, selection: BISele
     for (const row of period.facts) {
       rows.push([
         '1',scope.organizationName,'metrics_ads',scope.currency,scope.timezone,
-        scope.compare,attribution,period.label,period.from,period.to,
+        scope.compare,attributionFor(row),period.label,period.from,period.to,
         row.platform,row.accountId,row.campaignId,row.campaignName,
         ...marketingBIMetrics.map(metric => paidMetric(row,metric)),
       ]);

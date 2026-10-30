@@ -105,3 +105,29 @@ test('BI CSV fails closed on selection crossing tenant, currency or a disabled c
   }
   assert.throws(()=>marketingBICsv({...model,scope:{...model.scope,compare:'none'}},selection),/scope mismatch/);
 });
+
+test('BI CSV labels attribution pairing per exported campaign, never by another campaign pair',()=>{
+  const data=input();
+  data.ads.push(fact({id:'synthetic-current-only',ad_id:'synthetic-ad-current',campaign_id:'campaign-current-only',campaign_name:'Current only',spend:15,leads:0}));
+  data.priorAds.push(fact({id:'synthetic-prior-only',ad_id:'synthetic-ad-prior',metric_date:'2026-10-18',campaign_id:'campaign-prior-only',campaign_name:'Prior only',spend:25}));
+  const {model,selection}=choose(data);
+  const baseline=JSON.stringify(model);
+  const rows=parse(marketingBICsv(model,selection));
+  assert.equal(rows.length,4);
+  const status=(period:string,campaign:string)=>{
+    const row=rows.find(item=>item.periodo===period&&item.campanha===campaign);
+    assert.ok(row,`Missing ${period}/${campaign}`);
+    return row.comparacao_leads_cpl;
+  };
+  assert.equal(status('atual',data.ads[0].campaign_name),'equivalente');
+  assert.equal(status('comparativo',data.priorAds[0].campaign_name),'equivalente');
+  assert.equal(status('atual','Current only'),'sem_par_observado');
+  assert.equal(status('comparativo','Prior only'),'sem_par_observado');
+  assert.equal(rows.find(row=>row.campanha==='Current only')?.leads,'0');
+  assert.equal(JSON.stringify(model),baseline,'CSV may not mutate or enrich source facts');
+
+  data.priorAds[0].attribution_window='1d_click';
+  const incompatible=choose(data),mixed=parse(marketingBICsv(incompatible.model,incompatible.selection));
+  assert.equal(mixed.find(row=>row.periodo==='atual'&&row.campanha===data.ads[0].campaign_name)?.comparacao_leads_cpl,'nao_equivalente');
+  assert.equal(mixed.find(row=>row.campanha==='Current only')?.comparacao_leads_cpl,'sem_par_observado');
+});
