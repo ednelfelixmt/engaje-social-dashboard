@@ -10,7 +10,7 @@ import {inviteClientUser} from '../actions';
 const roleLabels:Record<string,string>={super_admin:'Administrador da agência',client_admin:'Perfil antigo — regularizar',editor:'Perfil antigo — regularizar',viewer:'Visualizador'};
 const date=(value:string|undefined)=>value?new Date(value).toLocaleDateString('pt-BR',{timeZone:'America/Cuiaba'}):'Não registrado';
 
-export default async function Page({searchParams}:{searchParams?:Promise<Record<string,string|undefined>>}={}){
+export default async function Page({searchParams}:{searchParams?:Promise<Record<string,string|undefined>>}){
   const {db}=await requireAdmin();
   const search=await searchParams??{};
   const directoryPage=/^[1-9]\d{0,3}$/.test(search.page??'')?Number(search.page):1;

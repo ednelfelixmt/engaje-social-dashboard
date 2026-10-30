@@ -8,6 +8,20 @@ import {selectMarketingBI} from '../src/lib/reports/marketing-bi';
 function harness<T>(path:string){const state:unknown[]=[];let cursor=0;const module=loadTypescript<T>(new URL(path,import.meta.url),(id,native)=>id==='react'?{...React,useId:()=> 'fixture-id',useMemo:(fn:()=>unknown)=>fn(),useState:(initial:unknown)=>{const i=cursor++;if(!(i in state))state[i]=initial;return [state[i],(value:unknown)=>{state[i]=typeof value==='function'?value(state[i]):value;}];}}:native(id));return{module,render:<R>(fn:()=>R)=>{cursor=0;return fn();}};}
 function nodes(node:React.ReactNode):React.ReactElement<Record<string,unknown>>[]{if(!React.isValidElement(node))return [];const element=node as React.ReactElement<Record<string,unknown>>;return [element,...React.Children.toArray(element.props.children as React.ReactNode).flatMap(nodes)];}
 function event(tree:React.ReactNode,label:string,value:string){const select=nodes(tree).find(node=>node.props['aria-label']===label);assert.ok(select,label);(select.props.onChange as(e:unknown)=>void)({target:{value}});}
+
+test('client BI starts with one unit, allows an explicit second indicator and preserves full totals',()=>{
+ const f=harness<typeof import('../src/components/dashboard/marketing-bi-board')>('../src/components/dashboard/marketing-bi-board.tsx');
+ const m=model(),before=JSON.stringify(m),render=()=>f.render(()=>f.module.MarketingBIBoard({model:m}));let tree=render();
+ const trend=()=>nodes(tree).find(node=>typeof node.type==='function'&&node.type.name==='MarketingBITrend')!;
+ assert.equal(trend().props.secondary,undefined);const totals=JSON.stringify((trend().props.selection as {totals:unknown}).totals);
+ event(tree,'Indicador secundário do resumo BI','leads');tree=render();assert.equal(trend().props.secondary,'leads');
+ assert.equal(JSON.stringify((trend().props.selection as {totals:unknown}).totals),totals);
+ event(tree,'Indicador secundário do resumo BI','none');tree=render();assert.equal(trend().props.secondary,undefined);assert.equal(JSON.stringify(m),before);
+ event(tree,'Indicador secundário do resumo BI','leads');tree=render();
+ const leads=nodes(tree).find(node=>node.props['aria-label']==='Explorar Leads atribuídos');assert.ok(leads);(leads.props.onClick as()=>void)();tree=render();
+ assert.equal(nodes(tree).find(node=>node.props['aria-label']==='Indicador secundário do resumo BI')!.props.value,'none');
+ assert.equal(trend().props.secondary,undefined,'the selected primary indicator cannot remain hidden in secondary state');
+});
 test('BI chart modes, series toggles and visual zoom preserve full daily measurements and null gaps',()=>{
  const f=harness<typeof import('../src/components/dashboard/marketing-bi-charts')>('../src/components/dashboard/marketing-bi-charts.tsx');const selection=selectMarketingBI(model(),{platform:'all',account:'all',campaign:'all'});
  selection.timeline=Array.from({length:20},(_,i)=>({...selection.timeline[i%2],currentDate:'2026-10-'+String(i+1).padStart(2,'0')}));const before=JSON.stringify(selection);

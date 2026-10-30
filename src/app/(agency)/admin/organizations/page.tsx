@@ -42,14 +42,14 @@ export default async function Page() {
       <Card><details className="admin-create"><summary><div><h2>Cadastrar novo cliente</h2><p>Nome, segmento e modelo comercial. Acesso de clientes é somente leitura.</p></div><span>+ Novo cliente</span></summary><div className="pt-5"><ActionForm action={createOrganization} label="Cadastrar cliente"><div className="field-grid"><label>Nome do cliente<input name="name" minLength={2} maxLength={160} required placeholder="Nome do cliente" /></label><label>Endereço do workspace<input name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="nome-do-cliente" /><span className="muted text-xs">Letras minúsculas, números e hífens.</span></label><label>Segmento<select name="niche" required defaultValue=""><option value="" disabled>Selecionar segmento</option>{businessNiches.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select></label><label>Modelo comercial<select name="sales_model" required defaultValue=""><option value="" disabled>Selecionar modelo</option>{salesModels.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select></label></div></ActionForm><p className="muted mt-4 text-xs">Depois do cadastro, libere o acesso em <Link href="/admin/users" className="text-primary underline">Usuários e permissões</Link>.</p></div></details></Card>
 
       <AdminCollection label="clientes" statuses={[{value:'active',label:'Ativos'},{value:'paused',label:'Pausados'}]} entries={(data??[]).map((organization) => ({id:organization.id,name:organization.name,status:organization.status,search:organization.slug,content:
-        <details className="admin-client-row">
+        <details className="admin-client-row" name="client-management">
           <summary><ClientLogo name={organization.name} url={logos.get(organization.id)}/><div><strong>{organization.name}</strong><small>/{organization.slug}</small></div><span className={`admin-status ${organization.status==='active'?'is-good':''}`}>{organization.status==='active'?'Ativo':'Pausado'}</span><span className="admin-client-meta">{organization.currency} · {organization.timezone}</span><span className="admin-client-meta">{connections?.filter(c=>c.organization_id===organization.id&&c.status==='connected').length??0} conexão(ões)</span><span className="admin-client-edit">Gerenciar <ChevronDown size={16}/></span></summary>
           <div className="admin-client-editor"><div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold">{organization.name}</h2>
               <p className="muted text-sm mt-1">/{organization.slug}{organization.niche && organization.sales_model ? ` · funil sugerido: ${funnelPresetFor(suggestFunnelModel(organization.niche as BusinessNiche, organization.sales_model as SalesModel)).label}` : ''}</p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="admin-client-actions">
               <Button asChild variant="outline"><Link href={'/admin/organizations/'+organization.id+'/activity'}>Histórico de alterações</Link></Button>
               <Button asChild variant="outline">
                 <Link href={`/${organization.slug}/settings/branding`}>Logo e identidade</Link>

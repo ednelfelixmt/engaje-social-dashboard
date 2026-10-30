@@ -20,16 +20,16 @@ const {default:Page}=loadTypescript<typeof import('../src/app/(agency)/admin/use
 });
 
 test('administrative directory requires verified agency authorization before privileged reads',async()=>{
- authorized=false;adminReads=0;await assert.rejects(Page(),/Denied/);assert.equal(adminReads,0);authorized=true;
+ authorized=false;adminReads=0;await assert.rejects(Page({}),/Denied/);assert.equal(adminReads,0);authorized=true;
 });
 test('directory identifies members by email and preserves client links without requiring an invitation',async()=>{
- const html=renderToStaticMarkup(await Page());assert.ok(html.includes('person@example.invalid'));assert.ok(html.includes('Organização sintética'));assert.ok(html.includes('/admin/users/synthetic-person'));assert.ok(!html.includes('Vínculos sem identificação'));
+ const html=renderToStaticMarkup(await Page({}));assert.ok(html.includes('person@example.invalid'));assert.ok(html.includes('Organização sintética'));assert.ok(html.includes('/admin/users/synthetic-person'));assert.ok(!html.includes('Vínculos sem identificação'));
 });
 test('missing administrative configuration does not masquerade as an empty directory or erase memberships',async()=>{
- serviceKey=undefined;adminReads=0;const html=renderToStaticMarkup(await Page());assert.equal(adminReads,0);assert.ok(html.includes('Não foi possível consultar as contas'));assert.ok(html.includes('Organização sintética'));assert.ok(html.includes('Nenhum vínculo foi removido'));assert.ok(!html.includes('Nenhum convite registrado'));serviceKey='synthetic-key';
+ serviceKey=undefined;adminReads=0;const html=renderToStaticMarkup(await Page({}));assert.equal(adminReads,0);assert.ok(html.includes('Não foi possível consultar as contas'));assert.ok(html.includes('Organização sintética'));assert.ok(html.includes('Nenhum vínculo foi removido'));assert.ok(!html.includes('Nenhum convite registrado'));serviceKey='synthetic-key';
 });
 test('provider errors remain explicit without displaying secrets or upstream details',async()=>{
- adminError=true;invitationError=true;const html=renderToStaticMarkup(await Page());assert.ok(html.includes('Não foi possível consultar as contas'));assert.ok(html.includes('Não foi possível consultar os convites'));assert.ok(!html.includes('synthetic-key'));adminError=false;invitationError=false;
+ adminError=true;invitationError=true;const html=renderToStaticMarkup(await Page({}));assert.ok(html.includes('Não foi possível consultar as contas'));assert.ok(html.includes('Não foi possível consultar os convites'));assert.ok(!html.includes('synthetic-key'));adminError=false;invitationError=false;
 });
 test('server administration accepts modern secret keys and legacy service-role configuration, never public keys',()=>{
  assert.equal(administrationKey({SUPABASE_SECRET_KEY:' modern ',SUPABASE_SERVICE_ROLE_KEY:'legacy'}),'modern');assert.equal(administrationKey({SUPABASE_SERVICE_ROLE_KEY:'legacy'}),'legacy');assert.equal(administrationKey({NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:'public'}),null);
