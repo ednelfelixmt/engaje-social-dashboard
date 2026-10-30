@@ -2,7 +2,7 @@
 
 import {useId,useState} from 'react';
 import {Area,Bar,BarChart,Brush,CartesianGrid,Cell,ComposedChart,Line,ResponsiveContainer,Tooltip,XAxis,YAxis} from 'recharts';
-import {type PaidMetricKey} from '@/lib/metrics/paid-metrics';
+import {paidMetric,type PaidMetricKey} from '@/lib/metrics/paid-metrics';
 import {type BISelection,marketingDrivers,marketingTrendPoints,type BIAdditiveMetric} from '@/lib/reports/marketing-bi';
 import {analyticsFormat,analyticsMetricLabels} from './analytics-charts';
 
@@ -15,7 +15,14 @@ export function MarketingBITrend({selection,metric,secondary,currency,color='#df
   const [hidden,setHidden]=useState<string[]>([]);
   const points=marketingTrendPoints(selection,metric,secondary);
   const hasPrior=points.some(p=>p.previous!==null);
-  const incompatibleLeadHistory = !selection.compatible && (metric==='leads'||metric==='cpl') && selection.timeline.some(day=>day.previousDate!==null);
+  // Historical dates and historical measurements are different facts: retain
+  // the comparison calendar even when every value is missing or withheld.
+  const hasPreviousPeriod=points.some(p=>p.previousDate!==null);
+  // A missing historical indicator is not proof of an attribution mismatch.
+  // Inspect original observations before suppressing a historical comparison.
+  const hasMeasuredHistoricalMetric=selection.timeline.some(day=>day.previous!==null&&paidMetric(day.previous,metric)!==null);
+  const incompatibleLeadHistory = !selection.compatible && (metric==='leads'||metric==='cpl') && hasMeasuredHistoricalMetric;
+  const missingPriorMeasurements=hasPreviousPeriod&&!hasPrior&&!incompatibleLeadHistory;
   const visiblePoints=windowSize==='all'?points:points.slice(-Number(windowSize));
   const [zoom,setZoom]=useState<{startIndex?:number;endIndex?:number}>({});
   const start=Math.min(zoom.startIndex??0,Math.max(0,visiblePoints.length-1));
@@ -32,7 +39,7 @@ export function MarketingBITrend({selection,metric,secondary,currency,color='#df
       <XAxis dataKey="date" tickFormatter={dateLabel} minTickGap={30} tick={{fontSize:11,fill:'var(--studio-muted,#63728a)'}} axisLine={false} tickLine={false}/>
       <YAxis yAxisId="primary" width={48} tickFormatter={compact} tick={{fontSize:10,fill:'var(--studio-muted,#63728a)'}} axisLine={false} tickLine={false}/>
       {secondary?<YAxis yAxisId="secondary" orientation="right" width={48} tickFormatter={compact} tick={{fontSize:10,fill:'var(--studio-muted,#63728a)'}} axisLine={false} tickLine={false}/>:null}
-      <Tooltip cursor={{stroke:color,strokeDasharray:'4 4'}} content={({active,payload})=>{const p=payload?.[0]?.payload as typeof points[number]|undefined;return active&&p?<div className="analytics-tooltip"><strong>{p.currentDate??p.previousDate}</strong>{!hidden.includes('primary')?<p>{analyticsMetricLabels[metric]} · atual: {analyticsFormat(p.primary,metric,currency)}</p>:null}{hasPrior&&p.previousDate&&!hidden.includes('previous')?<p>{analyticsMetricLabels[metric]} · comparativo ({p.previousDate}): {analyticsFormat(p.previous,metric,currency)}</p>:null}{secondary&&!hidden.includes('secondary')?<p>{analyticsMetricLabels[secondary]} · atual: {analyticsFormat(p.secondary,secondary,currency)}</p>:null}</div>:null;}}/>
+      <Tooltip cursor={{stroke:color,strokeDasharray:'4 4'}} content={({active,payload})=>{const p=payload?.[0]?.payload as typeof points[number]|undefined;return active&&p?<div className="analytics-tooltip"><strong>{p.currentDate??p.previousDate}</strong>{!hidden.includes('primary')?<p>{analyticsMetricLabels[metric]} · atual: {analyticsFormat(p.primary,metric,currency)}</p>:null}{hasPreviousPeriod&&p.previousDate&&!hidden.includes('previous')?<p>{analyticsMetricLabels[metric]} · comparativo ({p.previousDate}): {analyticsFormat(p.previous,metric,currency)}</p>:null}{secondary&&!hidden.includes('secondary')?<p>{analyticsMetricLabels[secondary]} · atual: {analyticsFormat(p.secondary,secondary,currency)}</p>:null}</div>:null;}}/>
       {mode==='area'?<Area yAxisId="primary" dataKey="primary" hide={hidden.includes('primary')} stroke={color} fill={'url(#'+gradient+')'} strokeWidth={2.8} dot={{r:2}} activeDot={{r:5,stroke:'var(--studio-surface)',strokeWidth:2}} connectNulls={false} isAnimationActive={false}/>:mode==='bar'?<Bar yAxisId="primary" dataKey="primary" hide={hidden.includes('primary')} fill={color} maxBarSize={28} radius={[4,4,0,0]} isAnimationActive={false}/>:<Line yAxisId="primary" dataKey="primary" hide={hidden.includes('primary')} stroke={color} strokeWidth={2.8} dot={{r:2}} activeDot={{r:5}} connectNulls={false} isAnimationActive={false}/>}
       {hasPrior?<Line yAxisId="primary" dataKey="previous" hide={hidden.includes('previous')} stroke="#8794ad" strokeDasharray="5 4" strokeWidth={2} dot={{r:2}} connectNulls={false} isAnimationActive={false}/>:null}
       {secondary?<Line yAxisId="secondary" dataKey="secondary" hide={hidden.includes('secondary')} stroke="#7c5cce" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false}/>:null}
@@ -40,7 +47,8 @@ export function MarketingBITrend({selection,metric,secondary,currency,color='#df
     </ComposedChart></ResponsiveContainer></div>
     <p className="bi-footnote tv-hide">Passe o cursor ou use as setas no gráfico. Arraste as alças para ampliar.</p>
     {incompatibleLeadHistory?<p className="bi-footnote">Comparativo histórico de leads/CPL indisponível: janelas de atribuição não equivalentes.</p>:null}
-    <details className="analytics-details tv-hide"><summary>Consultar valores diários · {points.length} posições do calendário</summary><p className="bi-footnote">Zoom, legenda e estilo alteram somente o gráfico. Totais, tabela e CSV mantêm todo o recorte.</p><div className="analytics-table-wrap"><table><thead><tr><th>Data atual</th><th>{analyticsMetricLabels[metric]} · atual</th>{hasPrior?<><th>Data comparativa</th><th>{analyticsMetricLabels[metric]} · comparativo</th></>:null}{secondary?<th>{analyticsMetricLabels[secondary]} · atual</th>:null}</tr></thead><tbody>{points.map((p,index)=><tr key={index}><th scope="row">{p.currentDate??'—'}</th><td>{analyticsFormat(p.primary,metric,currency)}</td>{hasPrior?<><td>{p.previousDate??'—'}</td><td>{analyticsFormat(p.previous,metric,currency)}</td></>:null}{secondary?<td>{analyticsFormat(p.secondary,secondary,currency)}</td>:null}</tr>)}</tbody></table></div></details>
+    {missingPriorMeasurements?<p className="bi-footnote">Sem medições históricas para este indicador no período comparativo; a ausência não foi convertida em zero.</p>:null}
+    <details className="analytics-details tv-hide"><summary>Consultar valores diários · {points.length} posições do calendário</summary><p className="bi-footnote">Zoom, legenda e estilo alteram somente o gráfico. Totais, tabela e CSV mantêm todo o recorte.</p><div className="analytics-table-wrap"><table><thead><tr><th>Data atual</th><th>{analyticsMetricLabels[metric]} · atual</th>{hasPreviousPeriod?<><th>Data comparativa</th><th>{analyticsMetricLabels[metric]} · comparativo</th></>:null}{secondary?<th>{analyticsMetricLabels[secondary]} · atual</th>:null}</tr></thead><tbody>{points.map((p,index)=><tr key={index}><th scope="row">{p.currentDate??'—'}</th><td>{analyticsFormat(p.primary,metric,currency)}</td>{hasPreviousPeriod?<><td>{p.previousDate??'—'}</td><td>{analyticsFormat(p.previous,metric,currency)}</td></>:null}{secondary?<td>{analyticsFormat(p.secondary,secondary,currency)}</td>:null}</tr>)}</tbody></table></div></details>
   </div>;
 }
 

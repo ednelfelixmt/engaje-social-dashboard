@@ -22,3 +22,33 @@ test('campaign ranking cross-filters by platform, account and campaign and can b
  const trend=nodes(tree).filter(node=>typeof node.type==='function'&&node.type.name==='MarketingBITrend').at(-1);assert.equal((trend?.props.selection as {totals:{spend:number}}).totals.spend,50);
  const clear=nodes(tree).find(node=>node.type==='button'&&node.props.children==='Limpar seleção');assert.ok(clear);(clear.props.onClick as()=>void)();tree=render();assert.equal(nodes(tree).find(node=>node.props['aria-label']==='Campanha do BI')?.props.value,'all');assert.equal(m.current.reduce((total,row)=>total+(row.spend??0),0),150);
 });
+
+test('BI trend keeps historical dates visible when the comparative period has no observed leads',()=>{
+ const f=harness<typeof import('../src/components/dashboard/marketing-bi-charts')>('../src/components/dashboard/marketing-bi-charts.tsx');
+ const data=input();data.priorAds=[];data.priorBreakdowns=[];
+ const selection=selectMarketingBI(buildAnalyticsWorkspace(data),{platform:'all',account:'all',campaign:'all'});
+ assert.equal(selection.priorTotals.leads,null);
+ assert.equal(selection.compatible,false,'no previous attribution lineage exists');
+ assert.ok(selection.timeline.some(row=>row.previousDate!==null));
+ const before=JSON.stringify(selection);
+ const tree=f.render(()=>f.module.MarketingBITrend({selection,metric:'leads',currency:'BRL'}));
+ const all=nodes(tree);
+ assert.ok(all.some(node=>node.type==='th'&&node.props.children==='Data comparativa'));
+ assert.ok(all.some(node=>node.type==='p'&&node.props.children==='Sem medições históricas para este indicador no período comparativo; a ausência não foi convertida em zero.'));
+ assert.ok(!all.some(node=>node.type==='p'&&node.props.children==='Comparativo histórico de leads/CPL indisponível: janelas de atribuição não equivalentes.'));
+ assert.ok(!all.some(node=>node.props.dataKey==='previous'),'do not invent a line when the source has no historical observations');
+ assert.equal(all.filter(node=>node.type==='tbody').flatMap(node=>React.Children.toArray(node.props.children as React.ReactNode)).length,selection.timeline.length);
+ assert.equal(JSON.stringify(selection),before);
+});
+test('BI trend preserves historical dates without revealing attribution-incompatible lead values',()=>{
+ const f=harness<typeof import('../src/components/dashboard/marketing-bi-charts')>('../src/components/dashboard/marketing-bi-charts.tsx');
+ const data=input();data.priorAds[0].attribution_window='1d_click';
+ const selection=selectMarketingBI(buildAnalyticsWorkspace(data),{platform:'all',account:'all',campaign:'all'});
+ assert.equal(selection.compatible,false);
+ const before=JSON.stringify(selection),tree=f.render(()=>f.module.MarketingBITrend({selection,metric:'leads',currency:'BRL'}));
+ const all=nodes(tree);
+ assert.ok(all.some(node=>node.type==='th'&&node.props.children==='Data comparativa'));
+ assert.ok(all.some(node=>node.type==='p'&&node.props.children==='Comparativo histórico de leads/CPL indisponível: janelas de atribuição não equivalentes.'));
+ assert.ok(!all.some(node=>node.type==='p'&&node.props.children==='Sem medições históricas para este indicador no período comparativo; a ausência não foi convertida em zero.'));
+ assert.equal(JSON.stringify(selection),before);
+});
