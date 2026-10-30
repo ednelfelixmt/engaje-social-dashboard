@@ -2,7 +2,7 @@ import type {Row} from '@/types/database.types';
 import type {CampaignPerformance} from '@/types/domain';
 import {buildAnalyticsWorkspace,selectAnalytics,analyticsPlatforms,type AnalyticsPoint} from './analytics-workspace';
 import {calendarDays,comparisonPeriod,alignCalendarPeriods} from '@/lib/metrics/calendar';
-import {paidTotals,paidMetric,type PaidMetricKey} from '@/lib/metrics/paid-metrics';
+import {paidTotals,paidMetric,sumKnown,type PaidMetricKey} from '@/lib/metrics/paid-metrics';
 import {isRfcOrganizationUuid} from '@/lib/metrics/organization-scope';
 import {computeDelta} from '@/lib/metrics/delta';
 
@@ -11,6 +11,15 @@ export type AgencyGranularity='day'|'week'|'month';
 export type AgencySourceClient={id:string;name:string;slug:string;currency:string;timezone:string};
 type Dataset={organizationId:string;currency:string;current:CampaignPerformance[];previous:CampaignPerformance[];days:AnalyticsPoint[];priorDays:AnalyticsPoint[];comparable:Record<string,boolean>;sourceRecords:number};
 export type AgencyIntelligenceModel={from:string;to:string;compare:AgencyCompare;previous:{from:string;to:string}|null;datasets:Dataset[]};
+
+/** Investment mix is measured, not inferred: missing/invalid spend invalidates its source. */
+export function agencyPlatformInvestmentRows(campaigns: readonly CampaignPerformance[]) {
+ return analyticsPlatforms.map(platform=>{
+  const rows=campaigns.filter(campaign=>campaign.platform===platform);
+  return {platform,value:sumKnown(rows,row=>paidMetric(row,'spend')),campaigns:rows.length};
+ });
+}
+
 
 /** Only agency-authorized active tenants reach this builder; validate the entire batch before projection. */
 export function buildAgencyIntelligence(input:{clients:AgencySourceClient[];current:Row<'metrics_ads'>[];previous:Row<'metrics_ads'>[];from:string;to:string;compare:AgencyCompare}):AgencyIntelligenceModel {
