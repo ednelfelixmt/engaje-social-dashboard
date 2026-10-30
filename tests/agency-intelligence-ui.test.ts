@@ -109,16 +109,16 @@ test('agency scatter excludes invalid coordinates but preserves observed zero an
  assert.ok(renderToStaticMarkup(tree).includes('4 clientes sem par válido de medidas.'));
 });
 
-test('agency scatter uses fixed point sizes when any client has unmeasured or invalid clicks and hides corrupt CPL',()=>{
+test('agency scatter uses fixed point sizes for invalid clicks and recomputes CPL from valid facts',()=>{
  const {AgencyEfficiencyChart}=loadTypescript<typeof import('../src/components/agency/agency-intelligence-charts')>(new URL('../src/components/agency/agency-intelligence-charts.tsx',import.meta.url),(name,native)=>native(name));
  const selection=selectAgencyIntelligence(fixture().model,{clientIds:[a,b],currency:'BRL',platform:'all',granularity:'day'});
  const original=selection.clients.map(row=>({...row,name:metadata.find(client=>client.id===row.id)!.name}));
- const rows=[original[0],{...original[1],current:{...original[1].current,clicks:Infinity,cpl:Infinity}}],before=rows.map(row=>({...row,current:{...row.current}}));
+ const rows=[original[0],{...original[1],current:{...original[1].current,spend:50,leads:5,clicks:Infinity,cpl:Infinity}}],before=rows.map(row=>({...row,current:{...row.current}}));
  const tree=AgencyEfficiencyChart({rows,currency:'BRL',onSelect:()=>{}});
  const scatter=nodes(tree).find(node=>Array.isArray(node.props.data)&&node.props.fill==='#6366d6'),zaxis=nodes(tree).find(node=>Array.isArray(node.props.range));
  assert.ok(scatter);assert.ok(zaxis);
  const points=scatter.props.data as {id:string;size:number;cpl:number|null}[];
- assert.deepEqual(points.map(point=>point.size),[1,1]);assert.equal(points[1].cpl,null);
+ assert.deepEqual(points.map(point=>point.size),[1,1]);assert.equal(points[1].cpl,10,'corrupted stored CPL cannot leak to tooltip');
  assert.deepEqual(zaxis.props.range,[150,150]);assert.ok(renderToStaticMarkup(tree).includes('tamanho fixo, sem inferir cliques ausentes'));
  assert.deepEqual(rows,before);
 });
