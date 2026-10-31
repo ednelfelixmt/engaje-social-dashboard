@@ -2014,3 +2014,12 @@ Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamen
 - Atualização antes da publicação: incorporada a main até 91e0474 (proteção de geometria não finita do waterfall). A suíte completa desse conjunto passou com 963 testes; tipos, lint e arquitetura passaram novamente. A correção independente da main foi preservada.
 
 - Regressão de interação corrigida antes da integração: selecionar no eixo principal a mesma métrica do secundário limpa esse secundário, impedindo reaparecimento inesperado ao trocar novamente. O ajuste passou em 17 testes de UI da agência, tipos/lint e revisão independente do delta.
+
+
+### 30/10/2026 — Correção da renderização de séries no App Router
+- Falha confirmada após #301: valores e calendário presentes, mas nenhuma barra nem marcação Y no gráfico executivo em produção. Os testes anteriores e a prova esbuild/React18 não capturaram a incompatibilidade; não considerar essa renderização homologada.
+- Produção restaurada temporariamente ao deployment aprovado do commit 91e0474. Sem alteração de dados, permissões, schema ou integrações.
+- Causa reproduzida pela revisão independente: react-is18 reconhece Fragment do React18, mas não Fragment do React compilado do Next (react.transitional.element); Recharts2 não descobria séries agrupadas.
+- Correção: séries atuais, históricas e marcadores de zero como filhos diretos de ComposedChart na agência e no BI do cliente. Preservados nulls, datas, ocultação de séries, unidades e bloqueio de atribuição incompatível.
+- Regressão: filhos diretos verificados em Colunas/Área/Linhas nos dois gráficos; 25 testes direcionados aprovados, tipos e lint aprovados. Revisão independente sem bloqueantes. Claude indisponível nesta sessão; sem alegar revisão Claude.
+- Gate de saída: Quality Gate e Vercel no SHA final; conferir barras/eixos reais no navegador, alternância de modo e retorno do modo TV. Conclusão visual em produção permanece pendente até essa evidência.

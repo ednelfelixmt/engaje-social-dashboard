@@ -70,15 +70,12 @@ export function AgencyTrendChart({selection,metric,secondary,currency}:{selectio
     <YAxis yAxisId="current" allowDecimals={metric==='ctr'||['spend','cpl','cpm','cpc'].includes(metric)} tickFormatter={short} width={58} axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#718097'}}/>
     {secondary!=='none'?<YAxis yAxisId="secondary" orientation="right" allowDecimals={secondary==='ctr'||['spend','cpl','cpm','cpc'].includes(secondary)} tickFormatter={short} width={52} axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#7c5cce'}}/>:null}
     <Tooltip cursor={{fill:'#eaf0ff',fillOpacity:.5,stroke:'#d5dff0'}} content={({active,payload})=>{const point=payload?.[0]?.payload as typeof points[number]|undefined;return active&&point?inspect(point):null;}}/>
-    {mode==='bar'?<>
-     <Bar yAxisId="current" dataKey="current" fill="#3664e8" maxBarSize={28} radius={[4,4,0,0]} isAnimationActive={false}/>
-     {hasPrior?<Bar yAxisId="current" dataKey="previous" hide={!showPrior} fill="#b9c8e2" maxBarSize={22} radius={[4,4,0,0]} isAnimationActive={false}/>:null}
-     {hasPrior?<Line yAxisId="current" dataKey="zeroPrevious" hide={!showPrior} stroke="none" dot={{r:3,fill:'#99abc8'}} connectNulls={false} isAnimationActive={false}/>:null}
-     <Line yAxisId="current" dataKey="zeroCurrent" stroke="none" dot={{r:3,fill:'#3664e8'}} connectNulls={false} isAnimationActive={false}/>
-    </>:<>
-     {mode==='area'?<Area yAxisId="current" dataKey="current" stroke="#3664e8" fill={'url(#'+id+')'} strokeWidth={2.5} dot={{r:3}} activeDot={{r:5}} connectNulls={false} isAnimationActive={false}/>:<Line yAxisId="current" dataKey="current" stroke="#3664e8" strokeWidth={2.5} dot={{r:3}} connectNulls={false} isAnimationActive={false}/>}
-     {hasPrior?<Line yAxisId="current" dataKey="previous" hide={!showPrior} stroke="#99abc8" strokeDasharray="4 4" strokeWidth={2} dot={{r:2}} connectNulls={false} isAnimationActive={false}/>:null}
-    </>}
+    {/* Recharts must discover graphical series as direct children in the App Router runtime. */}
+    {mode==='bar'?<Bar yAxisId="current" dataKey="current" fill="#3664e8" maxBarSize={28} radius={[4,4,0,0]} isAnimationActive={false}/>:mode==='area'?<Area yAxisId="current" dataKey="current" stroke="#3664e8" fill={'url(#'+id+')'} strokeWidth={2.5} dot={{r:3}} activeDot={{r:5}} connectNulls={false} isAnimationActive={false}/>:<Line yAxisId="current" dataKey="current" stroke="#3664e8" strokeWidth={2.5} dot={{r:3}} connectNulls={false} isAnimationActive={false}/>}
+    {mode==='bar'&&hasPrior?<Bar yAxisId="current" dataKey="previous" hide={!showPrior} fill="#b9c8e2" maxBarSize={22} radius={[4,4,0,0]} isAnimationActive={false}/>:null}
+    {mode==='bar'&&hasPrior?<Line yAxisId="current" dataKey="zeroPrevious" hide={!showPrior} stroke="none" dot={{r:3,fill:'#99abc8'}} connectNulls={false} isAnimationActive={false}/>:null}
+    {mode==='bar'?<Line yAxisId="current" dataKey="zeroCurrent" stroke="none" dot={{r:3,fill:'#3664e8'}} connectNulls={false} isAnimationActive={false}/>:null}
+    {mode!=='bar'&&hasPrior?<Line yAxisId="current" dataKey="previous" hide={!showPrior} stroke="#99abc8" strokeDasharray="4 4" strokeWidth={2} dot={{r:2}} connectNulls={false} isAnimationActive={false}/>:null}
     {secondary!=='none'?<Line yAxisId="secondary" dataKey="secondary" stroke="#7c5cce" strokeWidth={2} dot={{r:2}} connectNulls={false} isAnimationActive={false}/>:null}
     {points.length>7?<Brush dataKey="label" height={20} travellerWidth={8} stroke="#becce3" fill="#f4f7fc" startIndex={start} endIndex={end} onChange={value=>{if(value)setZoom(value);}}/>:null}
    </ComposedChart></ResponsiveContainer>

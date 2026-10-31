@@ -195,3 +195,18 @@ test('agency scatter exposes keyboard-operable selection for every visible clien
  assert.ok(renderToStaticMarkup(empty).includes('Dispersão indisponível'));
  assert.equal(JSON.stringify(data.model),before,'selection UI must never mutate campaign facts');
 });
+
+test('Recharts discovers current, prior and zero markers as direct series in every agency mode',()=>{
+ const model=buildAgencyIntelligence({clients:[metadata[0]],current:[makeRows()[0]],previous:[fact({id:'prior-direct',organization_id:a,metric_date:'2026-09-28',spend:80})],from:'2026-10-01',to:'2026-10-03',compare:'previous_period'});
+ const selection=selectAgencyIntelligence(model,{clientIds:[a],currency:'BRL',platform:'all',granularity:'day'});
+ const f=trendHarness(),render=()=>f.render(()=>f.module.AgencyTrendChart({selection,metric:'spend',secondary:'none',currency:'BRL'}));let tree=render();
+ for(const mode of ['Colunas','Área','Linhas']){
+  const button=nodes(tree).find(node=>node.type==='button'&&node.props.children===mode);assert.ok(button);(button.props.onClick as()=>void)();tree=render();
+  const chart=nodes(tree).find(node=>Array.isArray(node.props.data))!;
+  const direct=React.Children.toArray(chart.props.children as React.ReactNode).filter(React.isValidElement) as React.ReactElement<Record<string,unknown>>[];
+  assert.ok(!direct.some(node=>node.type===React.Fragment),'Fragment discovery differs in the optimized App Router runtime');
+  assert.ok(direct.some(node=>node.props.dataKey==='current'));
+  assert.ok(direct.some(node=>node.props.dataKey==='previous'));
+  if(mode==='Colunas'){assert.ok(direct.some(node=>node.props.dataKey==='current'&&node.props.maxBarSize===28));assert.ok(direct.some(node=>node.props.dataKey==='previous'&&node.props.maxBarSize===22));assert.ok(direct.some(node=>node.props.dataKey==='zeroCurrent'));assert.ok(direct.some(node=>node.props.dataKey==='zeroPrevious'));}
+ }
+});
