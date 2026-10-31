@@ -58,9 +58,9 @@ test('CAMPAIGN-DRILLDOWN-INTEGRITY-001: campaign deep links reject invalid dates
 test('CAMPAIGN-DRILLDOWN-INTEGRITY-001: deep links cannot bypass validated provider and opaque campaign IDs', () => {
  const invalid = [
   {...selection,platform:'microsoft_ads' as typeof selection.platform},
-  {...selection,account:'bad\\u0000account'},
+  {...selection,account:'bad\u0000account'},
   {...selection,account:'account '},
-  {...selection,campaign:'bad\\u0085campaign'},
+  {...selection,campaign:'bad\u0085campaign'},
   {...selection,campaign:'x'.repeat(513)},
   {...selection,platform:'meta_ads' as const,account:'act_123'},
  ];
