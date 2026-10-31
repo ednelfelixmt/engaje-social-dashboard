@@ -18,7 +18,7 @@ test('audience ranking explicitly discloses twelve displayed groups out of more 
  const html=render(rows);
  assert.ok(html.includes('13 de 13 grupos recebidos com valor válido'));
  assert.ok(html.includes('Exibindo os 12 maiores valores entre 13 grupos válidos'));
- assert.ok(html.includes('Outros 1 grupos válidos não aparecem nas barras'));
+ assert.ok(html.includes('Grupos válidos não exibidos nas barras: 1'));
  assert.ok(html.includes('Grupo 13'));
  assert.ok(!html.includes('>Grupo 1</span>'));
  assert.deepEqual(rows,original,'rendering must not mutate source observations');
