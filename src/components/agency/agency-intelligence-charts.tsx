@@ -31,7 +31,8 @@ export function AgencyTrendChart({selection,metric,secondary,currency}:{selectio
  const hasPrior=points.some(point=>point.previous!==null);
  const hasComparisonCalendar=points.some(point=>point.context.previous!==null);
  const hasPriorRecords=selection.timeline.some(point=>(point.previous?.records??0)>0);
- const hasData=points.some(point=>point.current!==null||point.previous!==null||point.secondary!==null);
+ const hasCurrentData=points.some(point=>point.current!==null||point.secondary!==null);
+ const hasData=hasCurrentData||(showPrior&&hasPrior);
  const unit=['spend','cpc','cpm','cpl'].includes(metric)?currency:metric==='ctr'?'%':'eventos';
  const calendarDays=selection.timeline.reduce((sum,row)=>sum+(row.current?.calendarDays??0),0);
  const intervals=points.flatMap((point,index)=>point.context.current?[{
@@ -79,7 +80,7 @@ export function AgencyTrendChart({selection,metric,secondary,currency}:{selectio
     {secondary!=='none'?<Line yAxisId="secondary" dataKey="secondary" stroke="#7c5cce" strokeWidth={2} dot={{r:2}} connectNulls={false} isAnimationActive={false}/>:null}
     {points.length>7?<Brush dataKey="label" height={20} travellerWidth={8} stroke="#becce3" fill="#f4f7fc" startIndex={start} endIndex={end} onChange={value=>{if(value)setZoom(value);}}/>:null}
    </ComposedChart></ResponsiveContainer>
-  </div>:<p className="agency-bi-empty">Sem medições válidas neste recorte. Use o calendário abaixo para consultar os intervalos.</p>}
+  </div>:<p className="agency-bi-empty">{hasPrior&&!showPrior?'Sem medições atuais para este indicador; reative o comparativo para consultar as observações históricas.':'Sem medições válidas neste recorte. Use o calendário abaixo para consultar os intervalos.'}</p>}
   <ObservationCoverage intervals={intervals} selected={focused} onSelect={setFocused}/>
   {focused!==null&&points[focused]?<div className="chart-inspection tv-hide" role="status">{inspect(points[focused])}<button type="button" aria-label="Fechar consulta do intervalo" onClick={()=>setFocused(null)}>Fechar</button></div>:null}
   {hasComparisonCalendar&&!hasPrior?<p className="agency-bi-note" role="note">{!priorAllowed&&hasPriorRecords?'Comparativo de leads/CPL indisponível: atribuição histórica não comparável.':'Sem medições históricas para este indicador; datas do calendário comparativo permanecem disponíveis.'}</p>:null}
