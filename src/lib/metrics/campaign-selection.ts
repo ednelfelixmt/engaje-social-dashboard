@@ -10,6 +10,6 @@ export function campaignSelection(search:Record<string,unknown>):CampaignSelecti
  return {platform,account,campaign:search.campaign};
 }
 export function campaignHref(slug:string,filters:CampaignLinkFilters,selected:CampaignSelection):string {
- if(!slug || slug==='.' || slug==='..')throw new Error('Invalid organization slug');
+ if(typeof slug!=='string'||!slug.trim()||slug.trim()!==slug||slug==='.'||slug==='..'||/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/u.test(slug))throw new Error('Invalid organization slug');
  return '/'+encodeURIComponent(slug)+'/reports/campaign?'+new URLSearchParams({from:filters.from,to:filters.to,currency:filters.currency,compare:filters.compare,platform:selected.platform,account:selected.account,campaign:selected.campaign}).toString();
 }
