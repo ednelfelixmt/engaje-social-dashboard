@@ -27,8 +27,9 @@ export function agencyPortfolioChart(clients: readonly AgencyClientCard[], metri
   if (metric === 'spend' && (currency === null || !/^[A-Z]{3}$/.test(currency))) {
     return {rows: [], currency: null, excluded: clients.length, totalObserved: observed.length, mixedCurrency: currencies.size > 1};
   }
-  const maximum = Math.max(1, ...observed.map(row => row.value));
+  // Use the largest observed value, not an artificial unit floor; preserve measured zero.
+  const maximum = observed.reduce((highest, row) => Math.max(highest, row.value), 0);
   const rows = [...observed].sort((a,b) => b.value-a.value || a.client.name.localeCompare(b.client.name,'pt-BR'))
-    .slice(0,8).map(row => ({...row, width: row.value/maximum*100}));
+    .slice(0,8).map(row => ({...row, width: maximum > 0 ? row.value / maximum * 100 : 0}));
   return {rows, currency, excluded: clients.length-observed.length, totalObserved: observed.length, mixedCurrency: false};
 }
