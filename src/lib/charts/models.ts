@@ -106,11 +106,11 @@ export function histogramBins(values: readonly (number | null | undefined)[], bi
   // plain arithmetic while the range is representable (keeps tiny ranges exact); halves only when high - low would overflow
   const plain = Number.isFinite(high - low);
   const scale = plain ? 1 : 2;
-  const width = (high / scale - low / scale) / count;
+  const range = high / scale - low / scale, width = range / count;
   const edge = (index: number) => (low / scale + index * width) * scale;
   const out: HistogramBin[] = Array.from({length: count}, (_, index) => ({from: edge(index), to: index === count - 1 ? high : edge(index + 1), count: 0}));
   for (const value of valid) {
-    const position = Math.floor((value / scale - low / scale) / width);
+    const position = Math.floor(((value / scale - low / scale) / range) * count); // fraction of the range, so a denormal width cannot misplace the maximum
     out[Number.isFinite(position) ? Math.min(count - 1, Math.max(0, position)) : 0].count++;
   }
   return {bins: out, ignored};

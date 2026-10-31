@@ -202,3 +202,8 @@ test('cascata: nível que transborda fica indisponível até o próximo total', 
   assert.equal(bars[4].end, 10);
   assert.ok(bars.every(bar => Number.isFinite(bar.base + bar.up + bar.down + bar.total)));
 });
+
+test('histograma com faixa denormal coloca o máximo na última faixa', () => {
+  const {bins} = histogramBins([0, Number.MIN_VALUE], 2);
+  assert.deepEqual(bins.map(bin => bin.count), [1, 1]);
+});
