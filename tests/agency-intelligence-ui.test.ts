@@ -16,6 +16,60 @@ function nodes(node:React.ReactNode):React.ReactElement<Record<string,unknown>>[
 const named=(tree:React.ReactNode,name:string)=>nodes(tree).find(node=>typeof node.type==='function'&&node.type.name===name);
 function change(tree:React.ReactNode,label:string,value:string){const select=nodes(tree).find(node=>node.props['aria-label']===label);assert.ok(select,label);(select.props.onChange as(e:unknown)=>void)({target:{value}});}
 
+function trendHarness(){
+ const state:unknown[]=[];let cursor=0;
+ const module=loadTypescript<typeof import('../src/components/agency/agency-intelligence-charts')>(new URL('../src/components/agency/agency-intelligence-charts.tsx',import.meta.url),(name,native)=>name==='react'?{...React,useId:()=> 'fixture',useState:(initial:unknown)=>{const i=cursor++;if(!(i in state))state[i]=initial;return[state[i],(value:unknown)=>{state[i]=typeof value==='function'?value(state[i]):value;}];}}:native(name));
+ return {module,render:<T>(fn:()=>T)=>{cursor=0;return fn();}};
+}
+
+test('grouped comparison and interval inspection preserve dates, missing observations and full KPI totals',()=>{
+ const model=buildAgencyIntelligence({clients:[metadata[0]],current:[makeRows()[0]],previous:[fact({id:'prior-a',organization_id:a,metric_date:'2026-09-28',spend:80})],from:'2026-10-01',to:'2026-10-03',compare:'previous_period'});
+ const selection=selectAgencyIntelligence(model,{clientIds:[a],currency:'BRL',platform:'all',granularity:'day'}),before=JSON.stringify(selection);
+ const f=trendHarness(),render=()=>f.render(()=>f.module.AgencyTrendChart({selection,metric:'spend',secondary:'none',currency:'BRL'}));let tree=render();
+ assert.ok(nodes(tree).some(node=>node.props.dataKey==='previous'&&node.props.maxBarSize===22),'historical facts have grouped columns');
+ assert.ok(!nodes(tree).some(node=>node.props.dataKey==='previous'&&node.props.strokeDasharray),'default comparison is not a fragmented line');
+ const coverage=named(tree,'ObservationCoverage')!;assert.ok(coverage);const intervals=coverage.props.intervals as {received:boolean}[];assert.deepEqual(intervals.map(row=>row.received),[true,false,false]);
+ (coverage.props.onSelect as(index:number)=>void)(1);tree=render();
+ const inspection=nodes(tree).find(node=>node.props.className==='chart-inspection tv-hide');assert.ok(inspection);const html=renderToStaticMarkup(inspection);
+ assert.ok(html.includes('02/10/2026'));assert.ok(html.includes('29/09/2026'));assert.ok(html.includes('—'),'absent interval is never shown as a zero');
+ assert.equal(JSON.stringify(selection),before,'inspection cannot change totals, calendar or source measurements');
+});
+
+test('coverage describes weekly intervals and source records even when the selected ratio is unavailable',()=>{
+ const model=buildAgencyIntelligence({clients:metadata,current:[fact({organization_id:a,metric_date:'2026-10-01',spend:100,leads:0})],previous:[],from:'2026-10-01',to:'2026-10-10',compare:'none'});
+ const selection=selectAgencyIntelligence(model,{clientIds:[a,b],currency:'BRL',platform:'all',granularity:'week'});
+ const f=trendHarness();const tree=f.render(()=>f.module.AgencyTrendChart({selection,metric:'cpl',secondary:'none',currency:'BRL'}));
+ const intervals=named(tree,'ObservationCoverage')!.props.intervals as {label:string;received:boolean;detail:string}[];
+ assert.equal(intervals.length,2);assert.equal(intervals[0].label,'01/10/2026 a 07/10/2026');assert.equal(intervals[0].received,true);
+ assert.ok(intervals[0].detail.includes('1 de 7 dias'));assert.ok(intervals[0].detail.includes('1 de 2 clientes'));assert.equal(intervals[1].received,false);
+ assert.equal(selection.totals.cpl,null);
+});
+
+test('compact platform shares and efficiency summaries select exact authorized clients without inferring missing costs',()=>{
+ const f=trendHarness();const selected:string[]=[];
+ const sources=f.module.AgencyPlatformChart({rows:[{platform:'meta_ads',value:100,campaigns:1},{platform:'google_ads',value:300,campaigns:1},{platform:'tiktok_ads',value:null,campaigns:0}],currency:'BRL',selected:'all',onSelect:id=>selected.push(id)});
+ assert.deepEqual(nodes(sources).filter(node=>node.type==='b').map(node=>node.props.children),['25%','75%','—']);
+ (nodes(sources).filter(node=>node.type==='button')[1].props.onClick as()=>void)();assert.deepEqual(selected,['google_ads']);
+ const data=fixture(),selection=selectAgencyIntelligence(data.model,{clientIds:[a,b],currency:'BRL',platform:'all',granularity:'day'});
+ const rows=selection.clients.map((row,i)=>({...row,name:metadata[i].name,current:{...row.current,leads:i===0?0:2,cpl:i===0?null:25}})),before=JSON.stringify(rows);
+ const tree=f.module.AgencyEfficiencySummary({rows,currency:'BRL',onSelect:id=>selected.push(id),page:0,onPage:()=>{}}),html=renderToStaticMarkup(tree);
+ assert.ok(html.includes('Sem lead atribuído'));assert.ok(html.includes('25,00'));assert.ok(html.includes('—'));
+ (nodes(tree).find(node=>node.type==='button')!.props.onClick as()=>void)();assert.deepEqual(selected,['google_ads',a]);assert.equal(JSON.stringify(rows),before);
+});
+
+test('efficiency pagination bounds TV rows while retaining access to every selected client',()=>{
+ const f=trendHarness(),data=fixture(),selection=selectAgencyIntelligence(data.model,{clientIds:[a,b],currency:'BRL',platform:'all',granularity:'day'});
+ const rows=Array.from({length:9},(_,i)=>({...selection.clients[0],id:'synthetic-client-'+i,name:'Cliente sintético '+i}));
+ const before=JSON.stringify(rows),pages:number[]=[];const seen:string[]=[];
+ for(let page=0;page<3;page++){
+  const tree=f.module.AgencyEfficiencySummary({rows,currency:'BRL',page,onPage:value=>pages.push(value),onSelect:id=>seen.push(id)});
+  const clients=nodes(tree).filter(node=>typeof node.props['aria-label']==='string'&&(node.props['aria-label'] as string).startsWith('Analisar eficiência de'));
+  assert.equal(clients.length,page===2?1:4);for(const client of clients)(client.props.onClick as()=>void)();
+  if(page===0){const next=nodes(tree).find(node=>node.props['aria-label']==='Próximos clientes no resumo de eficiência');assert.ok(next);(next.props.onClick as()=>void)();}
+ }
+ assert.deepEqual(seen,rows.map(row=>row.id));assert.deepEqual(pages,[1]);assert.equal(JSON.stringify(rows),before);
+});
+
 test('executive chart starts with one unit and shares totals and coverage with the selected facts',()=>{
  const f=harness(),data=fixture();const tree=f.render(()=>f.module.AgencyIntelligenceWorkbench({...data,selectedClient:'all',onSelectClient:()=>{}}));
  const props=named(tree,'AgencyTrendChart')!.props;
@@ -24,7 +78,7 @@ test('executive chart starts with one unit and shares totals and coverage with t
  const chart=AgencyTrendChart(props as Parameters<typeof AgencyTrendChart>[0]);
  const summary=nodes(chart).find(node=>node.props.className==='agency-chart-summary');
  assert.ok(summary);const html=renderToStaticMarkup(summary);
- assert.ok(html.includes('150,00'));assert.ok(html.includes(' / 3 dias'));assert.ok(html.includes('Cobertura recebida'));
+ assert.ok(html.includes('150,00'));assert.ok(html.includes(' / 3 dias'));assert.ok(html.includes('Dias com registros'));
  const dataNode=nodes(chart).find(node=>Array.isArray(node.props.data))!;
  const points=dataNode.props.data as {current:number|null}[];
  assert.deepEqual(points.map(point=>point.current),[150,null,null],'missing collection days remain absent');
@@ -47,7 +101,7 @@ test('client ranking uses one scale for current and historical amounts, preserve
 test('agency source shares withhold an overflowing sum instead of displaying invented percentages',()=>{
  const {AgencyPlatformChart}=loadTypescript<typeof import('../src/components/agency/agency-intelligence-charts')>(new URL('../src/components/agency/agency-intelligence-charts.tsx',import.meta.url),(name,native)=>native(name));
  const tree=AgencyPlatformChart({rows:[{platform:'meta_ads',value:Number.MAX_VALUE,campaigns:1},{platform:'google_ads',value:Number.MAX_VALUE,campaigns:1}],currency:'BRL',selected:'all',onSelect:()=>{}});
- const pie=nodes(tree).find(node=>Array.isArray(node.props.data));assert.ok(pie);assert.deepEqual(pie.props.data,[]);
+ const shares=nodes(tree).filter(node=>node.type==='b');assert.equal(shares.length,2);assert.ok(shares.every(node=>node.props.children==='—'));
  assert.ok(renderToStaticMarkup(tree).includes('Distribuição indisponível'));assert.ok(!renderToStaticMarkup(tree).includes('50%'));
 });
 
@@ -58,12 +112,12 @@ test('a zero observation keeps a visible marker while missing dates remain null 
  const tree=AgencyTrendChart({selection,metric:'spend',secondary:'none',currency:'BRL'}),all=nodes(tree);
  const chart=all.find(node=>Array.isArray(node.props.data))!;
  assert.deepEqual((chart.props.data as {current:number|null}[]).map(row=>row.current),[0,null,null]);
- const markers=all.find(node=>node.props.dataKey==='current'&&node.props.stroke==='none');
+ const markers=all.find(node=>node.props.dataKey==='zeroCurrent'&&node.props.stroke==='none');
  assert.ok(markers);assert.ok(markers.props.dot);assert.equal(markers.props.connectNulls,false);
 });
 test('ranking cross-selection updates KPI, temporal series, funnel and campaign rows together without changing source facts',()=>{
  const f=harness(),data=fixture(),before=JSON.stringify(data.model);let selectedClient='all';const render=()=>f.render(()=>f.module.AgencyIntelligenceWorkbench({...data,selectedClient,onSelectClient:id=>{selectedClient=id;}}));let tree=render();assert.equal((named(tree,'AgencyTrendChart')?.props.selection as {totals:{spend:number}}).totals.spend,150);
- (named(tree,'AgencyClientRanking')?.props.onSelect as(id:string)=>void)(b);tree=render();assert.equal((named(tree,'AgencyTrendChart')?.props.selection as {totals:{spend:number}}).totals.spend,50);assert.equal((named(tree,'AgencyEfficiencyChart')?.props.rows as unknown[]).length,1);assert.ok(!renderToStaticMarkup(tree).includes('synthetic-a/reports/campaign'));assert.ok(renderToStaticMarkup(tree).includes('synthetic-b/reports/campaign'));
+ (named(tree,'AgencyClientRanking')?.props.onSelect as(id:string)=>void)(b);tree=render();assert.equal((named(tree,'AgencyTrendChart')?.props.selection as {totals:{spend:number}}).totals.spend,50);assert.equal((named(tree,'AgencyEfficiencySummary')?.props.rows as unknown[]).length,1);assert.ok(!renderToStaticMarkup(tree).includes('synthetic-a/reports/campaign'));assert.ok(renderToStaticMarkup(tree).includes('synthetic-b/reports/campaign'));
  const leads=nodes(tree).find(node=>node.props['aria-label']==='Analisar Leads atribuídos na carteira');assert.ok(leads);(leads.props.onClick as()=>void)();tree=render();assert.equal(named(tree,'AgencyTrendChart')?.props.metric,'leads');assert.equal(named(tree,'AgencyTrendChart')?.props.secondary,'none');assert.equal(JSON.stringify(data.model),before);
 });
 test('platform and granularidade controls alter all projections while table search limits only table and full CSV',()=>{
