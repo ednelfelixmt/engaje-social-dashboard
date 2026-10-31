@@ -125,6 +125,13 @@ test('platform and granularidade controls alter all projections while table sear
  (named(tree,'AgencyPlatformChart')?.props.onSelect as(value:string)=>void)('google_ads');tree=render();assert.equal((named(tree,'AgencyTrendChart')?.props.selection as {totals:{spend:number|null}}).totals.spend,null);(named(tree,'AgencyPlatformChart')?.props.onSelect as(value:string)=>void)('all');tree=render();
  change(tree,'Buscar campanha ou cliente na carteira','Aurora');tree=render();assert.equal((named(tree,'AgencyTrendChart')?.props.selection as {totals:{spend:number}}).totals.spend,150);const csv=nodes(tree).find(node=>node.type==='button'&&Array.isArray(node.props.children)&&React.Children.toArray(node.props.children as React.ReactNode).some(child=>child==='CSV · '));assert.ok(csv);(csv.props.onClick as()=>void)();assert.equal(f.downloads.length,1);assert.ok(f.downloads[0].includes('Aurora sintética'));assert.ok(!f.downloads[0].includes('Horizonte sintético'));
 });
+
+test('changing the primary indicator clears an identical secondary instead of restoring a hidden axis later',()=>{
+ const f=harness(),data=fixture(),before=JSON.stringify(data.model),render=()=>f.render(()=>f.module.AgencyIntelligenceWorkbench({...data,selectedClient:'all',onSelectClient:()=>{}}));let tree=render();
+ change(tree,'Indicador secundário da carteira','leads');tree=render();assert.equal(named(tree,'AgencyTrendChart')?.props.secondary,'leads');
+ change(tree,'Indicador principal da carteira','leads');tree=render();assert.equal(named(tree,'AgencyTrendChart')?.props.secondary,'none');
+ change(tree,'Indicador principal da carteira','spend');tree=render();assert.equal(named(tree,'AgencyTrendChart')?.props.secondary,'none');assert.equal(JSON.stringify(data.model),before);
+});
 test('numeric chart positions cannot be mistaken for client identity',()=>{
  const {agencyChartIdentity}=loadTypescript<typeof import('../src/components/agency/agency-intelligence-charts')>(new URL('../src/components/agency/agency-intelligence-charts.tsx',import.meta.url),(name,native)=>native(name));assert.equal(agencyChartIdentity({value:100,payload:{id:a}}),a);assert.equal(agencyChartIdentity({value:a,payload:{id:100}}),null);assert.equal(agencyChartIdentity({id:b}),b);
 });

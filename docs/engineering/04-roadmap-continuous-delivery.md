@@ -2012,3 +2012,5 @@ Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamen
 - **Revisão Codex PR #300 — P2 corrigido:** acumulação de decimais (0,7 + 0,1 → 0) podia deixar resíduo negativo de arredondamento e ocultar cascata válida. A geometria agora tolera exclusivamente resíduo relativo limitado por ULP e zera a coordenada negativa residual; overflow, intermediários não finitos e negativos materiais continuam indisponíveis. Foram acrescentados cenários sintéticos de regressão. Renovar Quality Gate e Vercel no novo head; não reutilizar aprovações do commit anterior.
 
 - Atualização antes da publicação: incorporada a main até 91e0474 (proteção de geometria não finita do waterfall). A suíte completa desse conjunto passou com 963 testes; tipos, lint e arquitetura passaram novamente. A correção independente da main foi preservada.
+
+- Regressão de interação corrigida antes da integração: selecionar no eixo principal a mesma métrica do secundário limpa esse secundário, impedindo reaparecimento inesperado ao trocar novamente. O ajuste passou em 17 testes de UI da agência, tipos/lint e revisão independente do delta.
