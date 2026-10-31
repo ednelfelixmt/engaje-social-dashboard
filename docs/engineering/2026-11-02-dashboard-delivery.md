@@ -88,3 +88,7 @@ A função sync rejeita provedores sem adaptador, antes de registrar conclusão.
 - Prova adicional sugerida pelo Claude: TV1920x1000 com painel executivo979px, demais946px, sem overflow horizontal, nota16px confirmada por estilo computado e15 pontos isolados presentes. Ajuste de altura restrito à TV com viewport até1020px.
 - Parecer final do Claude foi sobre a descrição do diff, sem execução/abertura de arquivos: sem bloqueantes confirmados. Recomendações de testes e legibilidade aplicadas; não atribuir a ele homologação do código ou da produção.
 - Correção CTR remove a pendência de unidade anteriormente registrada; gate remoto do novo head e homologação real continuam pendentes.
+
+## Fechamento do lote de revisão
+- Suíte final do lote CTR/TV:1005/1005 testes e build aprovados; lint aprovado. Produção intacta.
+- Main avançou durante o gate com PR313/314 (barras proporcionais). Mesclada main89bfa18; conflito restrito ao roadmap, preservados todos os registros. Novos testes direcionados e gates remotos devem validar essa consolidação.
