@@ -79,3 +79,17 @@ test('BI trend preserves historical dates without revealing attribution-incompat
  assert.ok(!all.some(node=>node.type==='p'&&node.props.children==='Sem medições históricas para este indicador no período comparativo; a ausência não foi convertida em zero.'));
  assert.equal(JSON.stringify(selection),before);
 });
+
+test('client BI exposes historical bars and zero markers directly to Recharts in every mode',()=>{
+ const f=harness<typeof import('../src/components/dashboard/marketing-bi-charts')>('../src/components/dashboard/marketing-bi-charts.tsx');
+ const selection=selectMarketingBI(model(),{platform:'all',account:'all',campaign:'all'});
+ const render=()=>f.render(()=>f.module.MarketingBITrend({selection,metric:'spend',currency:'BRL'}));let tree=render();
+ for(const mode of ['Colunas','Área','Linhas']){
+  const button=nodes(tree).find(node=>node.type==='button'&&node.props.children===mode);assert.ok(button);(button.props.onClick as()=>void)();tree=render();
+  const chart=nodes(tree).find(node=>Array.isArray(node.props.data))!;
+  const direct=React.Children.toArray(chart.props.children as React.ReactNode).filter(React.isValidElement) as React.ReactElement<Record<string,unknown>>[];
+  assert.ok(!direct.some(node=>node.type===React.Fragment));
+  assert.ok(direct.some(node=>node.props.dataKey==='primary'));assert.ok(direct.some(node=>node.props.dataKey==='previous'));
+  if(mode==='Colunas'){assert.ok(direct.some(node=>node.props.dataKey==='previous'&&node.props.maxBarSize===22));assert.ok(direct.some(node=>node.props.dataKey==='zeroPrevious'));}
+ }
+});
