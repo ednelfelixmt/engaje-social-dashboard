@@ -220,3 +220,52 @@ test('CAMPAIGN-META-ALIAS-002: one Meta alias remains valid; other providers kee
     assert.equal(literal[0].revenue, 75);
   }
 });
+
+
+test('CAMPAIGN-DRILLDOWN-INTEGRITY-001: invisible control characters in any source grain fail closed', () => {
+  const controls = ['\\u0000','\\u0009','\\u000a','\\u001f','\\u007f','\\u0085','\\u009f'];
+  for (const control of controls) {
+    const bad = 'synthetic' + control + 'identity';
+    const paid = [
+      ad({platform: bad as Row<'metrics_ads'>['platform']}),
+      ad({account_id: 'act_' + bad}),
+      ad({campaign_id: bad}),
+    ];
+    const external = [
+      crm({channel: bad, campaign_id: 'unmatched'}),
+      crm({account_id: bad, campaign_id: 'unmatched'}),
+      crm({campaign_id: bad}),
+    ];
+    const catalogRows = [
+      catalog({platform: bad as Row<'ad_campaigns'>['platform']}),
+      catalog({account_id: bad}),
+      catalog({external_id: bad}),
+    ];
+    for (const row of paid) {
+      assert.throws(() => scopedCampaigns([ad(), row], [crm()], 'crm', [catalog()], orgA, 'BRL'), /valid source identifiers/);
+    }
+    for (const row of external) {
+      assert.throws(() => scopedCampaigns([ad()], [crm(), row], 'crm', [], orgA, 'BRL'), /valid source identifiers/);
+      assert.throws(() => scopedCampaigns([], [row], 'crm', [], orgA, 'BRL'), /valid source identifiers/);
+    }
+    for (const row of catalogRows) {
+      assert.throws(() => scopedCampaigns([ad()], [], 'crm', [catalog(), row], orgA, 'BRL'), /valid source identifiers/);
+      assert.throws(() => scopedCampaigns([], [], 'crm', [row], orgA, 'BRL'), /valid source identifiers/);
+    }
+  }
+});
+
+test('CAMPAIGN-DRILLDOWN-INTEGRITY-001: keep valid opaque spaces, multiline labels and measured zero without mutation', () => {
+  const paid = [ad({account_id:'act_account alpha', campaign_id:'campaign beta', campaign_name:'Synthetic\\nCampaign', spend:0, leads:0})];
+  const external = [crm({account_id:'act_account alpha', campaign_id:'campaign beta', revenue:25})];
+  const snapshot = structuredClone({paid,external});
+  const result = scopedCampaigns(paid, external, 'crm', [], orgA, 'BRL');
+  assert.equal(result.length, 1);
+  assert.equal(result[0].accountId, 'act_account alpha');
+  assert.equal(result[0].campaignId, 'campaign beta');
+  assert.equal(result[0].campaignName, 'Synthetic\\nCampaign');
+  assert.equal(result[0].spend, 0);
+  assert.equal(result[0].leads, 0);
+  assert.equal(result[0].revenue, 25);
+  assert.deepEqual({paid,external}, snapshot);
+});
