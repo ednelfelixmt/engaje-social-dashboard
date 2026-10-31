@@ -137,3 +137,44 @@ test('RECON-META-ALIAS-002: valid Meta aliases, measured zero and non-Meta IDs r
     assert.equal(reconcilePaidFacts([{...a,platform,accountId:'act_act_123'}]).status,'ready',platform);
   }
 });
+
+
+test('RECON-OPAQUE-CONTROLS-001: internal C0, DEL and C1 controls invalidate each raw identity', () => {
+  const controlCharacters = ['\u0000', '\u0009', '\u000a', '\u001f', '\u007f', '\u0085', '\u009f'];
+  for (const encoded of controlCharacters) {
+    const control = JSON.parse('"' + encoded + '"') as string;
+    for (const field of ['platform', 'accountId', 'campaignId'] as const) {
+      const valid = { ...a, platform: 'meta_ads', accountId: 'act_123', campaignId: 'campaign-10' };
+      const original = valid[field];
+      const malformed = { ...valid, [field]: original.slice(0, 2) + control + original.slice(2) };
+      assert.deepEqual(
+        reconcilePaidFacts([malformed]),
+        { status: 'invalid', reason: 'Malformed fact grain' },
+        field + ' ' + encoded,
+      );
+    }
+  }
+});
+
+test('RECON-OPAQUE-CONTROLS-001: invalid source rows cannot inflate valid campaign totals', () => {
+  const valid = { ...a, platform: 'meta_ads', accountId: 'act_123', spend: 0, leads: 0 };
+  const polluted = { ...valid, accountId: 'act_12\u00853', spend: 900, leads: 90 };
+  const original = JSON.stringify([valid, polluted]);
+  assert.equal(reconcilePaidFacts([valid, polluted]).status, 'invalid');
+  assert.equal(reconcilePaidFacts([polluted, valid]).status, 'invalid');
+  assert.equal(JSON.stringify([valid, polluted]), original, 'source facts must not be modified');
+});
+
+test('RECON-OPAQUE-CONTROLS-001: ordinary internal spaces, Meta aliases and measured zeros remain valid', () => {
+  const ordinary = { ...a, platform: 'google_ads', accountId: 'customer 123', campaignId: 'launch v2', spend: 0, leads: 0, clicks: 0 };
+  const result = reconcilePaidFacts([ordinary]);
+  assert.equal(result.status, 'ready');
+  if (result.status === 'ready') {
+    assert.equal(result.rowCount, 1);
+    assert.equal(result.totals.spend, 0);
+    assert.equal(result.totals.leads, 0);
+  }
+  const meta = { ...ordinary, platform: 'meta_ads', accountId: 'act_123' };
+  assert.equal(reconcilePaidFacts([meta]).status, 'ready');
+  assert.equal(reconcilePaidFacts([meta, { ...meta, accountId: '123' }]).status, 'duplicate_grain');
+});
