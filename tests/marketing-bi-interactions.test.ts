@@ -93,3 +93,56 @@ test('client BI exposes historical bars and zero markers directly to Recharts in
   if(mode==='Colunas'){assert.ok(direct.some(node=>node.props.dataKey==='previous'&&node.props.maxBarSize===22));assert.ok(direct.some(node=>node.props.dataKey==='zeroPrevious'));}
  }
 });
+test('historical-only BI measurements cannot keep an empty plot visible after the comparison series is hidden',()=>{
+ const data=input();data.ads=[];data.breakdowns=[];
+ const selection=selectMarketingBI(buildAnalyticsWorkspace(data),{platform:'all',account:'all',campaign:'all'});
+ const before=JSON.stringify(selection);
+ const f=harness<typeof import('../src/components/dashboard/marketing-bi-charts')>('../src/components/dashboard/marketing-bi-charts.tsx');
+ const render=()=>f.render(()=>f.module.MarketingBITrend({selection,metric:'spend',currency:'BRL'}));
+ let tree=render();
+ const plot=()=>nodes(tree).some(node=>node.props.className==='bi-trend-plot');
+ const toggle=()=>{const button=nodes(tree).find(node=>node.props['aria-label']==='Mostrar Investimento · comparativo');assert.ok(button);(button.props.onClick as()=>void)();tree=render();};
+ assert.equal(plot(),true,'a measured historical bar remains visible');
+ toggle();
+ assert.equal(plot(),false,'hidden historical values cannot justify an empty Recharts surface');
+ assert.ok(nodes(tree).some(node=>node.props.className==='bi-empty'&&String(node.props.children).includes('Reative uma série')));
+ const tbody=nodes(tree).find(node=>node.type==='tbody');assert.ok(tbody);
+ assert.equal(React.Children.toArray(tbody.props.children as React.ReactNode).length,selection.timeline.length,'the audit table retains every calendar position');
+ toggle();
+ assert.equal(plot(),true,'reactivating the historical series restores the plot');
+ assert.equal(JSON.stringify(selection),before,'legend changes never modify the source facts');
+});
+
+test('observed zero remains a BI measurement, but hiding its only series produces an explicit empty state',()=>{
+ const data=input();data.scope={...data.scope,compare:'none'};data.priorAds=[];data.priorBreakdowns=[];data.priorCrm=[];data.ads[0].spend=0;
+ const selection=selectMarketingBI(buildAnalyticsWorkspace(data),{platform:'all',account:'all',campaign:'all'});
+ const before=JSON.stringify(selection);
+ const f=harness<typeof import('../src/components/dashboard/marketing-bi-charts')>('../src/components/dashboard/marketing-bi-charts.tsx');
+ const render=()=>f.render(()=>f.module.MarketingBITrend({selection,metric:'spend',currency:'BRL'}));
+ let tree=render();
+ const plot=()=>nodes(tree).some(node=>node.props.className==='bi-trend-plot');
+ const toggle=()=>{const button=nodes(tree).find(node=>node.props['aria-label']==='Mostrar Investimento · atual');assert.ok(button);(button.props.onClick as()=>void)();tree=render();};
+ assert.equal(plot(),true,'zero actually received is not missing');
+ toggle();
+ assert.equal(plot(),false,'a hidden zero cannot justify an empty graph');
+ toggle();
+ assert.equal(plot(),true);
+ assert.equal(JSON.stringify(selection),before);
+});
+
+test('a visual BI window with no measurements explains the empty plot without altering full-period totals',()=>{
+ const selection=selectMarketingBI(model(),{platform:'all',account:'all',campaign:'all'});
+ const absent=selection.timeline[1];
+ selection.timeline=[selection.timeline[0],...Array.from({length:9},(_,i)=>({...absent,index:i+1,currentDate:'2026-10-'+String(i+21).padStart(2,'0')}))];
+ const before=JSON.stringify(selection);
+ const f=harness<typeof import('../src/components/dashboard/marketing-bi-charts')>('../src/components/dashboard/marketing-bi-charts.tsx');
+ const render=()=>f.render(()=>f.module.MarketingBITrend({selection,metric:'spend',currency:'BRL'}));
+ let tree=render();
+ assert.ok(nodes(tree).some(node=>node.props.className==='bi-trend-plot'));
+ event(tree,'Janela visual da série BI','7');tree=render();
+ assert.ok(!nodes(tree).some(node=>node.props.className==='bi-trend-plot'));
+ assert.ok(nodes(tree).some(node=>node.props.className==='bi-empty'&&String(node.props.children).includes('Todo o período')));
+ event(tree,'Janela visual da série BI','all');tree=render();
+ assert.ok(nodes(tree).some(node=>node.props.className==='bi-trend-plot'));
+ assert.equal(JSON.stringify(selection),before);
+});
