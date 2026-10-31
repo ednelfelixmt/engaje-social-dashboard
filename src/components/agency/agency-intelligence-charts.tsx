@@ -14,9 +14,10 @@ export type AgencyClientPoint={id:string;name:string;current:AgencyIntelligenceS
 /** Recharts wraps the original datum in payload; never use a plotted numeric value as an identity. */
 export function agencyChartIdentity(entry:unknown):string|null {if(!entry||typeof entry!=='object')return null;const row=entry as {payload?:{id?:unknown};id?:unknown};const id=row.payload?.id??row.id;return typeof id==='string'?id:null;}
 
-export function AgencyTrendChart({selection,metric,secondary,currency}:{selection:AgencyIntelligenceSelection;metric:PaidMetricKey;secondary:PaidMetricKey|'none';currency:string}) {
+export function AgencyTrendChart({selection,metric,secondary,currency,mode:controlledMode,onMode}:{selection:AgencyIntelligenceSelection;metric:PaidMetricKey;secondary:PaidMetricKey|'none';currency:string;/** Optional: lets the parent keep the chosen style when the chart remounts for another KPI. */mode?:string;onMode?:(mode:string)=>void}) {
  const id='agency-area-'+useId().replace(/:/g,'');
- const [mode,setMode]=useState('bar');
+ const [localMode,setLocalMode]=useState('bar');
+ const mode=controlledMode??localMode,setMode=(next:string)=>{setLocalMode(next);onMode?.(next);};
  const [showPrior,setShowPrior]=useState(true);
  const [zoom,setZoom]=useState<{startIndex?:number;endIndex?:number}>({});
  const [focused,setFocused]=useState<number|null>(null);
@@ -65,19 +66,19 @@ export function AgencyTrendChart({selection,metric,secondary,currency}:{selectio
   <div className="agency-chart-units"><span>{analyticsMetricLabels[metric]} · {unit}</span>{secondary!=='none'?<span>{analyticsMetricLabels[secondary]} · eixo direito</span>:null}</div>
   {hasData?<div className="agency-bi-trend" aria-label="Evolução temporal da carteira">
    <ResponsiveContainer width="100%" height="100%"><ComposedChart accessibilityLayer data={points} barGap={2} margin={{top:14,right:12,left:0,bottom:6}}>
-    <defs><linearGradient id={id} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3664e8" stopOpacity={.22}/><stop offset="100%" stopColor="#3664e8" stopOpacity={.01}/></linearGradient></defs>
+    <defs><linearGradient id={id} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#24356f" stopOpacity={.22}/><stop offset="100%" stopColor="#24356f" stopOpacity={.01}/></linearGradient></defs>
     <CartesianGrid vertical={false} stroke="#e7edf5" strokeDasharray="3 5"/>
-    <XAxis dataKey="label" axisLine={false} tickLine={false} minTickGap={28} tick={{fontSize:11,fill:'#718097'}}/>
-    <YAxis yAxisId="current" allowDecimals={metric==='ctr'||['spend','cpl','cpm','cpc'].includes(metric)} tickFormatter={short} width={58} axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#718097'}}/>
-    {secondary!=='none'?<YAxis yAxisId="secondary" orientation="right" allowDecimals={secondary==='ctr'||['spend','cpl','cpm','cpc'].includes(secondary)} tickFormatter={short} width={52} axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#7c5cce'}}/>:null}
+    <XAxis dataKey="label" axisLine={false} tickLine={false} minTickGap={28} tick={{fontSize:12,fill:'#526079'}}/>
+    <YAxis yAxisId="current" allowDecimals={metric==='ctr'||['spend','cpl','cpm','cpc'].includes(metric)} tickFormatter={short} width={58} axisLine={false} tickLine={false} tick={{fontSize:12,fill:'#526079'}}/>
+    {secondary!=='none'?<YAxis yAxisId="secondary" orientation="right" allowDecimals={secondary==='ctr'||['spend','cpl','cpm','cpc'].includes(secondary)} tickFormatter={short} width={52} axisLine={false} tickLine={false} tick={{fontSize:12,fill:'#0e7c86'}}/>:null}
     <Tooltip cursor={{fill:'#eaf0ff',fillOpacity:.5,stroke:'#d5dff0'}} content={({active,payload})=>{const point=payload?.[0]?.payload as typeof points[number]|undefined;return active&&point?inspect(point):null;}}/>
     {/* Recharts must discover graphical series as direct children in the App Router runtime. */}
-    {mode==='bar'?<Bar yAxisId="current" dataKey="current" fill="#3664e8" maxBarSize={28} radius={[4,4,0,0]} isAnimationActive={false}/>:mode==='area'?<Area yAxisId="current" dataKey="current" stroke="#3664e8" fill={'url(#'+id+')'} strokeWidth={2.5} dot={{r:3}} activeDot={{r:5}} connectNulls={false} isAnimationActive={false}/>:<Line yAxisId="current" dataKey="current" stroke="#3664e8" strokeWidth={2.5} dot={{r:3}} connectNulls={false} isAnimationActive={false}/>}
-    {mode==='bar'&&hasPrior?<Bar yAxisId="current" dataKey="previous" hide={!showPrior} fill="#b9c8e2" maxBarSize={22} radius={[4,4,0,0]} isAnimationActive={false}/>:null}
-    {mode==='bar'&&hasPrior?<Line yAxisId="current" dataKey="zeroPrevious" hide={!showPrior} stroke="none" dot={{r:3,fill:'#99abc8'}} connectNulls={false} isAnimationActive={false}/>:null}
-    {mode==='bar'?<Line yAxisId="current" dataKey="zeroCurrent" stroke="none" dot={{r:3,fill:'#3664e8'}} connectNulls={false} isAnimationActive={false}/>:null}
-    {mode!=='bar'&&hasPrior?<Line yAxisId="current" dataKey="previous" hide={!showPrior} stroke="#99abc8" strokeDasharray="4 4" strokeWidth={2} dot={{r:2}} connectNulls={false} isAnimationActive={false}/>:null}
-    {secondary!=='none'?<Line yAxisId="secondary" dataKey="secondary" stroke="#7c5cce" strokeWidth={2} dot={{r:2}} connectNulls={false} isAnimationActive={false}/>:null}
+    {mode==='bar'?<Bar yAxisId="current" dataKey="current" fill="#24356f" maxBarSize={28} radius={[4,4,0,0]} isAnimationActive={false}/>:mode==='area'?<Area yAxisId="current" dataKey="current" stroke="#24356f" fill={'url(#'+id+')'} strokeWidth={2.5} dot={{r:3}} activeDot={{r:5}} connectNulls={false} isAnimationActive={false}/>:<Line yAxisId="current" dataKey="current" stroke="#24356f" strokeWidth={2.5} dot={{r:3}} connectNulls={false} isAnimationActive={false}/>}
+    {mode==='bar'&&hasPrior?<Bar yAxisId="current" dataKey="previous" hide={!showPrior} fill="#e7edf8" stroke="#6079af" strokeWidth={1.5} maxBarSize={22} radius={[4,4,0,0]} isAnimationActive={false}/>:null}
+    {mode==='bar'&&hasPrior?<Line yAxisId="current" dataKey="zeroPrevious" hide={!showPrior} stroke="none" dot={{r:3,fill:'#6079af'}} connectNulls={false} isAnimationActive={false}/>:null}
+    {mode==='bar'?<Line yAxisId="current" dataKey="zeroCurrent" stroke="none" dot={{r:3,fill:'#24356f'}} connectNulls={false} isAnimationActive={false}/>:null}
+    {mode!=='bar'&&hasPrior?<Line yAxisId="current" dataKey="previous" hide={!showPrior} stroke="#6079af" strokeDasharray="4 4" strokeWidth={2} dot={{r:2}} connectNulls={false} isAnimationActive={false}/>:null}
+    {secondary!=='none'?<Line yAxisId="secondary" dataKey="secondary" stroke="#0e7c86" strokeWidth={2} dot={{r:2}} connectNulls={false} isAnimationActive={false}/>:null}
     {points.length>7?<Brush dataKey="label" height={20} travellerWidth={8} stroke="#becce3" fill="#f4f7fc" startIndex={start} endIndex={end} onChange={value=>{if(value)setZoom(value);}}/>:null}
    </ComposedChart></ResponsiveContainer>
   </div>:<p className="agency-bi-empty">{hasPrior&&!showPrior?'Sem medições atuais para este indicador; reative o comparativo para consultar as observações históricas.':'Sem medições válidas neste recorte. Use o calendário abaixo para consultar os intervalos.'}</p>}

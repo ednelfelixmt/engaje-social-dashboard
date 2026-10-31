@@ -2024,6 +2024,23 @@ Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamen
 - Regressão: filhos diretos verificados em Colunas/Área/Linhas nos dois gráficos; 25 testes direcionados aprovados, tipos e lint aprovados. Revisão independente sem bloqueantes. Claude indisponível nesta sessão; sem alegar revisão Claude.
 - Gate de saída: Quality Gate e Vercel no SHA final; conferir barras/eixos reais no navegador, alternância de modo e retorno do modo TV. Conclusão visual em produção permanece pendente até essa evidência.
 
+- Resultado do ciclo: #303 integrado em main (71b84d2512512d45db05194de8d56366bc132f5d) após Quality Gate #574 e Vercel aprovados no head 9358892c50639c5646b24a674376fe65e11176ee. 966 testes locais aprovados.
+- Publicação bloqueada: Vercel retornou HTTP402 api-deployments-free-per-day (mais de100 deploys/dia, retryAfter86400) ao criar produção do merge. Não alterar plano, contornar quota ou promover preview sem configuração de produção validada.
+- Preview READY exige login próprio; não comprovada renderização autenticada nova nesse preview. Produção permanece no rollback aprovado 91e0474; navegador confirmou30 barras e5 marcações Y na versão restaurada. Correção nova ainda NÃO publicada nem homologada visualmente em produção.
+- Próximo passo: após liberação da quota, gerar produção do merge71b84d2, promover o build aprovado se necessário e verificar barras/eixos, modos e retornoTV. Registro final de quota permanece neste checkout até a próxima integração documental.
+
+- 30/10/2026 — Solicitação urgente de revisão de UI/UX pelo Claude: briefing de interface preparado sem credenciais/dados de clientes. Executável nativo não retornou conteúdo; CLI npm autenticado localmente retornou API401 OAuth access token has expired. Revisão Claude NÃO realizada. Login oficial solicitado; manter diagnósticos próprios separados de qualquer futura resposta do Claude.
+
+
+### 30/10/2026 — Parecer real do Claude e primeiro lote de leitura visual
+- Consulta concluída no aplicativo Claude, conversa existente Projeto Dashboard Engaje; o CLI permaneceu com OAuth401. Claude recebeu apenas código de interface e requisitos, sem credenciais ou dados de clientes, e respondeu sem ferramentas/edições.
+- Parecer identificou seta de alta sem base comparável, identidade de métricas confundida com tons de resultado, contraste histórico fraco, textos pequenos e aviso de busca ambíguo. Proposta maior de grade 8/4 e persistência de modo permanece para ciclo visual próprio; não homologada.
+- Implementado: Minus sem base ou variação zero; identidades neutras; série atual azul-marinho, histórico com contorno, secundário verde-azulado e legendas correspondentes; alinhamento das bases dos6 KPIs, apoio12px e aviso explícito da busca de campanhas.
+- Revisão do lote pelo Claude: sem bloqueantes confirmados no trecho, com pedidos de conferir imports/cores; conferidos. Mantida regra existente de comparação de cliques/impressões conforme requisitos; nenhuma alteração em cálculos, acesso ou integrações.
+- Rejeitada sugestão de fixtures reais: prova usa somente dados sintéticos fora do repositório. No bundle com React compilado do Next, navegador confirmou60 elementos de barra e5 ticksY, modos Área/Linhas e retornoTV; desktop sem overflow e6 cards com alturas idênticas. Em1920x1080, painéis1044/1026/1026px; em390x844, sem overflow horizontal.
+- Testes direcionados19/19, tipos, lint e build local aprovados. Gate remoto e publicação deste novo lote ainda pendentes; quota Vercel registrada no ciclo anterior. Não tratar prova sintética como homologação de dados reais ou produção.
+- Fechamento local do lote:967/967 testes completos e build final aprovados. Legenda secundária e curva conferidas no navegador com a mesma cor. Revisão visual foi sintética; produção e gate remoto deste lote permanecem pendentes.
+
 
 ## 30/10/2026 — AGENCY-TREND-HIDDEN-HISTORY-001: histórico oculto não sustenta gráfico vazio (PR proposto)
 
@@ -2033,6 +2050,17 @@ Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamen
 - **Risco e rollback:** mudança apenas do estado vazio e visibilidade do gráfico, sem afetar consultas, valores, CSV ou permissões. Reverter somente componente, regressões e este registro se houver falha de UX comprovada.
 - **Aceite:** exigir Quality Gate integral e Vercel Preview READY/status success no **mesmo head SHA**, PR mergeável e revisões sem bloqueios. Após merge confirmar Quality Gate da `main` e deployment de produção/SHA/alias; não declarar homologação de usuário autenticado sem execução.
 - **Bloqueios confirmados na análise:** #302, #294 e #292 têm Quality Gate success, mas status Vercel failure/build-rate-limit; #292 e #149 também conflitam com a main, #157 está draft/inativo. #211 Supabase Preview, SEC-010/011, UX-002, OAuth/GA4/RD Station reais, PDF e TV física seguem sem aceite. Nenhum segredo, dado real, migração, RLS, Auth, Storage, OAuth ou privilégio deve ser alterado neste pacote.
+
+
+### 30/10/2026 — Acordo Codex + Claude para entrega do dashboard em02/11
+- Divisão aceita pelo Claude e posse de arquivos registrada no [quadro de entrega](2026-11-02-dashboard-delivery.md). Codex integra e valida; Claude edita UI em checkout próprio, preservando workbench/charts/agency-studio.css até a consolidação.
+- Recebida a branch feat/agency-kpi-sparklines-change (24cabfd): miniaturas, painel O que mudou e modo persistente. Não publicada em produção nem homologada pelo Codex ainda.
+- Conflitos do PR305 com main304 resolvidos em worktree isolado, mantendo registros e regressões. Gates precisam ser renovados no head consolidado. Diferença de CTR em p.p. devolvida ao Claude para correção.
+- Meta02/11 preserva os gates de dados, segurança e release; acessos/autorizações, RD/GA4 reais, PDF/TV física e cota seguem explicitamente pendentes.
+
+### Retomada coordenada — 31/10/2026
+
+Consolidação local PR305 + main304 + Claude24cabfd passou em 974 testes, tipos, lint e arquitetura. Build não concluído e não homologado. Detectado e corrigido excesso de altura após miniaturas: primeiro painel TV de 1080px para 1034px em viewport 1920x1080; seis cards de 164px, sem overflow horizontal na prova sintética. Claude segue ativo; handoff do menu 4aff210 disponível e correção de CTR em pontos percentuais solicitada. Main2ede62f será preservada. Novos gates exigidos após consolidação final. Quadro detalhado em 2026-11-02-dashboard-delivery.md. Produção e homologação real permanecem pendentes.
 
 ## 30/10/2026 — BI-TREND-VISIBLE-OBSERVATIONS-001: séries ocultas ou janela vazia (proposto para CI)
 
@@ -2102,6 +2130,14 @@ Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamen
 - **Risco/rollback:** alteração exclusivamente textual de transparência na UI e projeção da fatia que já era exibida. Reverter somente `src/components/dashboard/metric-breakdown-card.tsx`, teste e este registro se houver regressão visual comprovada. Nenhum acesso a clientes reais, SQL/migração, Auth, RLS, Storage, OAuth, segredos, APIs, permissões ou escritura; isolamento multi-tenant e viewer somente leitura intactos.
 - **Condição de merge:** Quality Gate integral concluído/success e Vercel Preview `READY/success` no **mesmo HEAD SHA**, PR sem conflitos e sem revisão bloqueante. Depois do merge, verificar Quality Gate da `main`, deployment de produção e alias do domínio no SHA integrado. Não declarar homologação autenticada.
 - **Bloqueios constatados na abertura:** `main` em `52899dbc1872c522155aecf86cd229bf417919be`, CI pós-merge aprovado, porém status Vercel `failure` por `build-rate-limit` em 31/10/2026; domínio `mediahub.engajeperformance.com.br` ainda no deployment `dpl_GrHuGLvbSQBbbAgHo8muf57QJb96` do SHA `91e0474` (issue #278). PRs #302 e #294: Quality Gate success e Vercel failure/build-rate-limit; #305, #292, #149 conflitantes, #157 draft. Supabase Preview da `main` failure (issue #211); SEC-010/011, UX-002, conectores reais e testes PDF/TV seguem sem homologação. Não efetuar promoção manual de alias, retry de quota ou reconciliar SQL remoto.
+
+A retomada também integrou menu4aff210 e preservou a nota de exclusões no modo TV. 35 testes direcionados aprovados; prova sintética390x844 sem overflow horizontal e seis KPIs de mesma altura; modo Linhas preservado após retornoTV. O novo conjunto segue em testes/build e não está publicado.
+
+Checkpoint local de 31/10: 1001/1001 testes, lint, tipos, arquitetura e build do conjunto com main2ede62f/menu4aff210 aprovados. Smoke HTTP:19 rotas aprovadas usando a origem canônica de callback, após corrigir expectativa localhost do teste (307 inspecionado; sem mudar código/auth). Domínio permanece no rollback conhecido. CTR absoluto em pontos percentuais é pendência bloqueante da revisão do novo painel, comunicada ao Claude; novo head exige Quality Gate/Vercel próprios.
+
+Revisão de unidade CTR: Claude liberou implementação limitada ao Codex e revisou a descrição sem bloqueantes confirmados, sem abrir diff/executar testes. Ajuste p.p./variação relativa e nove regressões de insights aprovados. A biblioteca16modelos está recebida, não integrada; revisão própria pendente. Build final interrompido por EPERM em pasta de prerender .next após compilar e passar TypeScript; nova tentativa com servidor parado, sem declarar sucesso antecipado.
+
+Retorno do build: nova tentativa aprovada com servidor parado. Correção CTR aprovada em9 testes direcionados; diferença absoluta usa p.p. e a relativa fica separada, incluindo base zero e variação minúscula. Parecer Claude restrito à descrição, sem bloqueantes confirmados; recomendações incorporadas. TV1920x1000 medida com painel979px, nota16px e sem overflow horizontal. Gate final e produção continuam sujeitos à evidência do novo head.
 
 
 ## 31/10/2026 — AUDIENCE-BREAKDOWN-RELATIVE-BARS-001: escala proporcional sem piso fictício (proposto para Quality Gate)

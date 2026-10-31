@@ -211,6 +211,18 @@ test('Recharts discovers current, prior and zero markers as direct series in eve
  }
 });
 
+test('KPI direction remains neutral without comparison and when the measured value is unchanged',()=>{
+ const f=harness(),data=fixture(),tree=f.render(()=>f.module.AgencyIntelligenceWorkbench({...data,selectedClient:'all',onSelectClient:()=>{}}));
+ const kpi=nodes(tree).find(node=>node.props['aria-label']==='Analisar Investimento na carteira')!;
+ const missing=renderToStaticMarkup(kpi);
+ assert.ok(missing.includes('Sem base comparável'));assert.ok(missing.includes('lucide-minus'));assert.ok(!missing.includes('lucide-arrow-up-right'));assert.ok(missing.includes('data-tone="neutral"'));
+ const rows=makeRows(),prior=rows.map((row,i)=>({...row,id:'prior-neutral-'+i,metric_date:'2026-09-28'}));
+ const comparison=buildAgencyIntelligence({clients:metadata,current:rows,previous:prior,from:'2026-10-01',to:'2026-10-03',compare:'previous_period'});
+ const g=harness(),flat=g.render(()=>g.module.AgencyIntelligenceWorkbench({model:comparison,clients:data.clients,selectedClient:'all',onSelectClient:()=>{}}));
+ const flatKpi=nodes(flat).find(node=>node.props['aria-label']==='Analisar Investimento na carteira')!;
+ const html=renderToStaticMarkup(flatKpi);assert.ok(html.includes('0%'));assert.ok(html.includes('lucide-minus'));assert.ok(!html.includes('lucide-arrow-up-right'));
+ });
+
 test('agency historical-only trend is not mistaken for current data when comparison is hidden',()=>{
  const model=buildAgencyIntelligence({clients:[metadata[0]],current:[],previous:[fact({id:'history-only',organization_id:a,metric_date:'2026-09-28',spend:80})],from:'2026-10-01',to:'2026-10-03',compare:'previous_period'});
  const selection=selectAgencyIntelligence(model,{clientIds:[a],currency:'BRL',platform:'all',granularity:'day'}),before=JSON.stringify(selection);
@@ -239,4 +251,5 @@ test('agency trend keeps an observed current zero visible when the historical se
  assert.equal(values[0].current,0);assert.equal(values[0].zeroCurrent,0);assert.equal(values[1].current,null);
  assert.ok(nodes(tree).some(node=>node.props.dataKey==='zeroCurrent'),'zero remains an observed marker');
  assert.equal(JSON.stringify(selection),before);
+
 });
