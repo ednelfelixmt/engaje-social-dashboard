@@ -101,3 +101,17 @@ test('ORG-GRAIN-001: content reports reject padded or whitespace-only source ide
  assert.equal(accepted.rows[0].externalId,'provider:external-1');
  assert.equal(accepted.rows[0].account,'provider:account-1');
 });
+
+
+test('SOURCE-GRAIN-CONTROLS-001: organic content identity rejects internal controls without changing captions',()=>{
+ const invalid=['syn\u0000thetic','syn\nthetic','syn\tthetic','syn\u007fthetic','syn\u0085thetic'];
+ for(const field of ['id','account_id','external_id'] as const)for(const value of invalid){
+  assert.throws(()=>buildOrganicContentReport([post({[field]:value})],scope),/Organic source identity is missing/,field);
+ }
+ const accepted=buildOrganicContentReport([post({
+  id:'source alpha:01',account_id:'account alpha',external_id:'post alpha',
+  caption:'Multiline\ncaption',lifetime_metrics:{likes:0},
+ })],scope);
+ assert.equal(accepted.rows[0].likes,0);
+ assert.equal(accepted.rows[0].caption,'Multiline\ncaption');
+});

@@ -117,3 +117,16 @@ test('ORG-GRAIN-001: account reports reject padded record/account identities and
  assert.equal(accepted.rows[0].id,'row:alpha/1');
  assert.equal(accepted.accounts[0].account,'provider:account-1');
 });
+
+
+test('SOURCE-GRAIN-CONTROLS-001: organic account record and account IDs reject embedded controls',()=>{
+ const invalid=['syn\u0000thetic','syn\nthetic','syn\tthetic','syn\u007fthetic','syn\u0085thetic'];
+ for(const field of ['id','account_id'] as const)for(const value of invalid){
+  assert.throws(()=>buildOrganicAccountsReport([record({[field]:value})],scope),/Organic account identity is missing/,field);
+ }
+ const accepted=buildOrganicAccountsReport([record({
+  id:'source alpha:01',account_id:'account alpha',impressions:0,
+ })],scope);
+ assert.equal(accepted.rows[0].values.impressions,0);
+ assert.equal(accepted.accounts[0].account,'account alpha');
+});

@@ -26,6 +26,6 @@ export function validateOrganicScope(scope:OrganicScope){
 }
 /** Source IDs are opaque; do not normalize them into a different record identity. */
 export function organicIdentifier(value:unknown):value is string{
- return typeof value==='string'&&value.length>0&&value.trim()===value;
+ return typeof value==='string'&&value.length>0&&value.trim()===value&&!/[\u0000-\u001f\u007f-\u009f]/.test(value);
 }
 export function organicCounter(value:unknown):number|null{return typeof value==='number'&&Number.isSafeInteger(value)&&value>=0?value:null;}

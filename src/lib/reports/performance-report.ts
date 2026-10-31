@@ -25,7 +25,8 @@ const observed = (value: unknown) => typeof value === 'number' && Number.isFinit
 
 /** External IDs are opaque: never trim them into a different source identity. */
 function validSourceIdentity(value: unknown): value is string {
- return typeof value === 'string' && value.length > 0 && value.trim() === value;
+ return typeof value === 'string' && value.length > 0 && value.trim() === value
+  && !/[\u0000-\u001f\u007f-\u009f]/.test(value);
 }
 
 function validate(rows: readonly Fact[], scope: PerformanceScope, range: {from: string; to: string}) {

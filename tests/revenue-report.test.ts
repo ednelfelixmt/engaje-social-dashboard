@@ -153,3 +153,22 @@ test('REVENUE-META-GRAIN-001: valid Meta alias and opaque Google account IDs pre
  const unattributedMeta=buildRevenueReport([fact({channel:'meta_ads',account_id:'',campaign_id:'',revenue:0})],[],{...scope,to:scope.from,compare:'none'});
  assert.equal(unattributedMeta.current.totals.revenue,0);
 });
+
+
+test('SOURCE-GRAIN-CONTROLS-001: CRM and spreadsheet source keys reject internal controls before source selection', () => {
+ const fields = ['id', 'account_id', 'campaign_id'] as const;
+ const invalid = ['syn\u0000thetic', 'syn\nthetic', 'syn\tthetic', 'syn\u007fthetic', 'syn\u0085thetic'];
+ for (const field of fields) for (const value of invalid) {
+  const patch = {[field]:value} as Partial<Row<'metrics_crm'>>;
+  const base = {channel:'google_ads' as const,account_id:'account alpha',campaign_id:'campaign alpha',...patch};
+  assert.throws(() => buildRevenueReport([fact(base)], [], {...scope,compare:'none'}), /Invalid revenue report grain/,field + ' current');
+  assert.throws(() => buildRevenueReport([], [fact({...base,metric_date:'2026-10-18'})], scope), /Invalid revenue report grain/,field + ' previous');
+  assert.throws(() => buildRevenueReport([fact({...base,source:'spreadsheet'})], [], {...scope,compare:'none'}), /Invalid revenue report grain/,field + ' unselected');
+ }
+ const allowed = buildRevenueReport([fact({
+  id:'row alpha:01',channel:'google_ads',account_id:'account alpha',campaign_id:'campaign alpha',
+  revenue:0,purchases:0,leads:0,checkouts:0,
+ })],[],{...scope,to:scope.from,compare:'none'});
+ assert.equal(allowed.current.totals.revenue,0);
+ assert.equal(allowed.current.totals.purchases,0);
+});
