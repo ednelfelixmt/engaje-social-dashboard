@@ -13,7 +13,8 @@ export type QualityHealth={platform:QualityPlatform;campaigns:number;rows:number
 export type QualityJobView={id:string;status:'queued'|'running'|'completed'|'failed'|'unknown';createdAt:string|null;startedAt:string|null;completedAt:string|null;recordedCount:number|null;durationMs:number|null;timelineInvalid:boolean};
 /** Reject padded identities before deduplication, without silently normalizing opaque IDs. */
 function validGrainIdentifier(value: unknown): value is string {
- return typeof value === 'string' && value.trim().length > 0 && value === value.trim();
+ return typeof value === 'string' && value.trim().length > 0 && value === value.trim()
+  && !/[\u0000-\u001f\u007f-\u009f]/.test(value);
 }
 /** Meta 'act_' is an alias prefix, not an account identity by itself. */
 function validQualityAccount(platform:string,account:unknown):account is string{
