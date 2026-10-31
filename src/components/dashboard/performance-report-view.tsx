@@ -4,6 +4,7 @@ import type {PerformanceScope} from '@/lib/reports/performance-report';
 import {Card} from '@/components/ui/card';
 import {performanceMetrics, performanceDelta, comparableAttribution, type PerformanceGroup, type PerformancePeriod, type PerformanceReport} from '@/lib/reports/performance-report';
 import type {PaidMetricKey} from '@/lib/metrics/paid-metrics';
+import {formatReportObservation, formatReportChange} from '@/lib/reports/format-observation';
 import {PerformanceReportPrint} from './performance-report-print';
 import {PerformanceReportExport} from './performance-report-export';
 import {performanceReportCsv, performanceReportFilename} from '@/lib/export/performance-report';
@@ -11,13 +12,13 @@ import {performanceReportCsv, performanceReportFilename} from '@/lib/export/perf
 const labels: Record<PaidMetricKey, string> = {spend: 'Investimento', impressions: 'Impressões', clicks: 'Cliques', leads: 'Leads atribuídos', ctr: 'CTR', cpc: 'CPC', cpm: 'CPM', cpl: 'CPL atribuído'};
 const platformLabel = (key: string) => ({meta_ads: 'Meta Ads', google_ads: 'Google Ads', tiktok_ads: 'TikTok Ads'}[key] ?? key);
 function value(number: number | null, metric: PaidMetricKey, currency: string) {
- if (number === null) return '—';
- if (['spend', 'cpc', 'cpm', 'cpl'].includes(metric)) return new Intl.NumberFormat('pt-BR', {style: 'currency', currency}).format(number);
- return new Intl.NumberFormat('pt-BR', {maximumFractionDigits: 2}).format(number) + (metric === 'ctr' ? '%' : '');
+ return ['spend', 'cpc', 'cpm', 'cpl'].includes(metric)
+  ? formatReportObservation(number, {currency})
+  : formatReportObservation(number, {maximumFractionDigits: 2, suffix: metric === 'ctr' ? '%' : ''});
 }
 function change(current: PerformancePeriod, previous: PerformancePeriod | null, metric: PaidMetricKey) {
  const delta = performanceDelta(current, previous, metric);
- return delta === null ? 'Variação indisponível' : (delta > 0 ? '+' : '') + new Intl.NumberFormat('pt-BR', {maximumFractionDigits: 2}).format(delta) + '% vs. comparativo';
+ return delta === null || !Number.isFinite(delta) ? 'Variação indisponível' : formatReportChange(delta) + ' vs. comparativo';
 }
 function Source({period, title}: {period: PerformancePeriod; title: string}) {
  return <section aria-label={title} className="space-y-2 text-sm">
