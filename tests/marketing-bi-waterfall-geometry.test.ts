@@ -52,6 +52,32 @@ test('finite reconciled totals do not authorize a non-finite intermediate waterf
   assert.equal(JSON.stringify(selection),before,'viewer rendering never edits measurements');
 });
 
+test('small floating-point residual at zero does not suppress a valid decimal waterfall',()=>{
+  const selection=selected(),current=selection.current[0],previous=selection.previous[0];
+  selection.current=[
+    {...current,accountId:'synthetic-a',campaignId:'a',spend:0},
+    {...current,accountId:'synthetic-b',campaignId:'b',spend:0},
+  ];
+  selection.previous=[
+    {...previous,accountId:'synthetic-a',campaignId:'a',spend:0.7},
+    {...previous,accountId:'synthetic-b',campaignId:'b',spend:0.1},
+  ];
+  const snapshot=JSON.stringify(selection),report=marketingDrivers(selection,'spend');
+  assert.equal(report.available,true);
+  assert.equal(report.end,0);
+  const bars=projectMarketingWaterfall(report);
+  assert.ok(bars,'finite decimal rounding is not numeric overflow');
+  assert.ok(bars.every(bar=>Number.isFinite(bar.base)&&bar.base>=0&&Number.isFinite(bar.magnitude)));
+  assert.equal(bars.at(-1)?.magnitude,0);
+  assert.equal(JSON.stringify(selection),snapshot);
+});
+
+test('genuinely negative or infinite intermediate geometry remains unavailable',()=>{
+  const report=marketingDrivers(selected(),'spend');
+  assert.equal(projectMarketingWaterfall({...report,start:0,rows:[{...report.rows[0],change:-1}]}),null);
+  assert.equal(projectMarketingWaterfall({...report,start:Number.MAX_VALUE,rows:[{...report.rows[0],change:Number.MAX_VALUE}]}),null);
+});
+
 test('missing driver pairs and invalid grouped tail fail closed rather than producing plot coordinates',()=>{
   assert.equal(projectMarketingWaterfall(marketingDrivers(selectMarketingBI(buildAnalyticsWorkspace({...input(),priorAds:[]}),{platform:'all',account:'all',campaign:'all'}),'spend')),null);
   const report=marketingDrivers(selected(),'spend');

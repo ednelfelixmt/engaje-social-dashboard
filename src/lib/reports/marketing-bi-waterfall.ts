@@ -26,9 +26,15 @@ export function projectMarketingWaterfall(report:DriverReport):MarketingWaterfal
   const bars:MarketingWaterfallBar[]=[{name:'Comparativo',base:0,magnitude:running,change:null}];
   for (const row of shown) {
     if (!Number.isFinite(row.change)) return null;
-    const next=running+row.change;
+    const rawNext=running+row.change;
     const magnitude=Math.abs(row.change);
-    if (!Number.isFinite(next) || next<0 || !Number.isFinite(magnitude)) return null;
+    // Subtracting ordinary decimal measurements can leave a tiny negative
+    // rounding residual at zero. Tolerate only a bounded relative ULP error;
+    // genuine negative geometry and non-finite intermediates still fail closed.
+    const scale=Math.max(Math.abs(running),Math.abs(row.change));
+    const tolerance=Number.EPSILON*scale*(shown.length+2);
+    if (!Number.isFinite(rawNext) || rawNext < -tolerance || !Number.isFinite(magnitude)) return null;
+    const next=rawNext<0?0:rawNext;
     bars.push({name:row.name,base:Math.min(running,next),magnitude,change:row.change});
     running=next;
   }
