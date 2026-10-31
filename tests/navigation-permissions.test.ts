@@ -65,3 +65,11 @@ test('report center is always read-only and funnel report follows its own enable
  const hidden=renderToStaticMarkup(createElement(Navigation,{slug:'fixture-a',canShare:false,enabled:[]}));
  assert.ok(shown.includes('/fixture-a/reports/funnel'));assert.ok(hidden.includes('href="/fixture-a/reports"'));assert.ok(!hidden.includes('/fixture-a/reports/funnel'));assert.ok(!shown.includes('/fixture-a/settings/'));
 });
+
+test('o menu recolhido é restaurado antes da pintura, sem depender da hidratação',()=>{
+ const html=renderToStaticMarkup(createElement(Navigation,{slug:'fixture-a',canShare:false,enabled:['overview']}));
+ const aside=html.indexOf('<aside'),close=html.indexOf('</aside>'),script=html.indexOf('<script');
+ assert.ok(aside>=0&&close>aside&&script>close,'o script vem logo depois do aside, para alcançá-lo como irmão anterior');
+ assert.ok(html.includes('engaje:nav:v1:collapsed')&&html.includes('previousElementSibling')&&html.includes("data-collapsed','true'"));
+ assert.ok(html.includes('data-collapsed="false"'),'o HTML do servidor continua expandido: sem armazenamento local não há preferência a restaurar');
+});

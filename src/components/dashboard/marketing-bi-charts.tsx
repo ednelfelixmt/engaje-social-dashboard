@@ -29,15 +29,32 @@ export function MarketingBITrend({selection,metric,secondary,currency,color='#df
   const missingPriorMeasurements=hasPreviousPeriod&&!hasPrior&&!incompatibleLeadHistory;
   const visiblePoints=windowSize==='all'?points:points.slice(-Number(windowSize));
   const [zoom,setZoom]=useState<{startIndex?:number;endIndex?:number}>({});
-  const start=Math.min(zoom.startIndex??0,Math.max(0,visiblePoints.length-1));
-  const end=Math.max(start,Math.min(zoom.endIndex??visiblePoints.length-1,visiblePoints.length-1));
+  // Brush navigation narrows the actual displayed measurements, independently of
+  // the 7/14-day selector. Reject invalid or out-of-bounds indices defensively.
+  const last=Math.max(0,visiblePoints.length-1);
+  // A shorter report disables Brush. Its old indices must never hide newly
+  // selected dates, even if the component state persists across report filters.
+  const canBrush=visiblePoints.length>7;
+  const start=canBrush&&typeof zoom.startIndex==='number'&&Number.isInteger(zoom.startIndex)?Math.max(0,Math.min(zoom.startIndex,last)):0;
+  const end=canBrush&&typeof zoom.endIndex==='number'&&Number.isInteger(zoom.endIndex)?Math.max(start,Math.min(zoom.endIndex,last)):last;
+  const isZoomed=canBrush&&(start>0||end<last);
   const toggle=(key:string)=>setHidden(current=>current.includes(key)?current.filter(item=>item!==key):[...current,key]);
   const hasData=points.some(p=>p.primary!==null||p.secondary!==null||p.previous!==null);
+  // Only measurements in the visible window and in enabled series can justify a plot.
+  // An observed zero is a valid measurement; null is not.
+  const visibleHasData=visiblePoints.slice(start,end+1).some(point=>
+    (!hidden.includes('primary')&&point.primary!==null)
+    ||(!!secondary&&!hidden.includes('secondary')&&point.secondary!==null)
+    ||(hasPrior&&!hidden.includes('previous')&&point.previous!==null)
+  );
+  const emptyMessage=!hasData?'Indicador indisponível neste recorte; consulte os registros por intervalo.'
+    :isZoomed?'Sem medições nas séries visíveis do zoom. Restaure o zoom ou reative uma série; os valores recebidos permanecem na tabela.'
+    :'Sem medições nas séries visíveis desta janela. Reative uma série ou selecione Todo o período; os valores recebidos permanecem na tabela.';
   const series=[{key:'primary',label:analyticsMetricLabels[metric]+' · atual',color},...(hasPrior?[{key:'previous',label:analyticsMetricLabels[metric]+' · comparativo',color:'#a6b8d4'}]:[]),...(secondary?[{key:'secondary',label:analyticsMetricLabels[secondary]+' · eixo direito',color:'#7c5cce'}]:[])];
   return <div className="bi-trend" aria-label={'Evolução de '+analyticsMetricLabels[metric]}>
-    <div className="bi-chart-tools tv-hide"><div role="group" aria-label="Estilo do gráfico">{([{key:'area',label:'Área'},{key:'line',label:'Linhas'},{key:'bar',label:'Colunas'}] as const).map(item=><button type="button" key={item.key} aria-pressed={mode===item.key} onClick={()=>setMode(item.key)}>{item.label}</button>)}</div><label>Janela<select aria-label="Janela visual da série BI" value={windowSize} onChange={e=>{setWindowSize(e.target.value);setZoom({});}}><option value="all">Todo o período</option><option value="14">Últimos 14 dias</option><option value="7">Últimos 7 dias</option></select></label></div>
+    <div className="bi-chart-tools tv-hide"><div role="group" aria-label="Estilo do gráfico">{([{key:'area',label:'Área'},{key:'line',label:'Linhas'},{key:'bar',label:'Colunas'}] as const).map(item=><button type="button" key={item.key} aria-pressed={mode===item.key} onClick={()=>setMode(item.key)}>{item.label}</button>)}</div><label>Janela<select aria-label="Janela visual da série BI" value={windowSize} onChange={e=>{setWindowSize(e.target.value);setZoom({});}}><option value="all">Todo o período</option><option value="14">Últimos 14 dias</option><option value="7">Últimos 7 dias</option></select></label>{isZoomed?<button type="button" aria-label="Restaurar zoom do BI" onClick={()=>setZoom({})}>Restaurar zoom</button>:null}</div>
     <div className="bi-chart-legend">{series.map(item=><button type="button" key={item.key} style={{color:item.color}} aria-pressed={!hidden.includes(item.key)} aria-label={'Mostrar '+item.label} onClick={()=>toggle(item.key)}><i aria-hidden style={{background:item.color}}/>{item.label}</button>)}</div>
-    <div className="agency-chart-units"><span>{analyticsMetricLabels[metric]} · {['spend','cpc','cpm','cpl'].includes(metric)?currency:metric==='ctr'?'%':'eventos'}</span>{secondary?<span>{analyticsMetricLabels[secondary]} · eixo direito</span>:null}</div>{hasData?<div className="bi-trend-plot"><ResponsiveContainer width="100%" height="100%"><ComposedChart accessibilityLayer data={visiblePoints} barGap={2} margin={{left:0,right:10,top:12,bottom:6}}>
+    <div className="agency-chart-units"><span>{analyticsMetricLabels[metric]} · {['spend','cpc','cpm','cpl'].includes(metric)?currency:metric==='ctr'?'%':'eventos'}</span>{secondary?<span>{analyticsMetricLabels[secondary]} · eixo direito</span>:null}</div>{visibleHasData?<div className="bi-trend-plot"><ResponsiveContainer width="100%" height="100%"><ComposedChart accessibilityLayer data={visiblePoints} barGap={2} margin={{left:0,right:10,top:12,bottom:6}}>
       <defs><linearGradient id={gradient} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity={.28}/><stop offset="100%" stopColor={color} stopOpacity={.02}/></linearGradient></defs>
       <CartesianGrid vertical={false} stroke="var(--studio-grid,#e7e9ed)" strokeDasharray="3 4"/>
       <XAxis dataKey="date" tickFormatter={dateLabel} minTickGap={30} tick={{fontSize:11,fill:'var(--studio-muted,#63728a)'}} axisLine={false} tickLine={false}/>
@@ -51,8 +68,8 @@ export function MarketingBITrend({selection,metric,secondary,currency,color='#df
       {hasPrior&&mode==='bar'?<Line yAxisId="primary" dataKey="zeroPrevious" hide={hidden.includes('previous')} stroke="none" dot={{r:2,fill:'#99abc8'}} connectNulls={false} isAnimationActive={false}/>:null}
       {hasPrior&&mode!=='bar'?<Line yAxisId="primary" dataKey="previous" hide={hidden.includes('previous')} stroke="#99abc8" strokeDasharray="4 4" strokeWidth={2} dot={{r:2}} connectNulls={false} isAnimationActive={false}/>:null}
       {secondary?<Line yAxisId="secondary" dataKey="secondary" hide={hidden.includes('secondary')} stroke="#7c5cce" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false}/>:null}
-      {visiblePoints.length>7?<Brush className="bi-brush tv-hide" dataKey="date" height={22} travellerWidth={8} stroke={color} fill="var(--studio-surface,#fff)" tickFormatter={dateLabel} startIndex={start} endIndex={end} onChange={range=>{if(range)setZoom(range);}}/>:null}
-    </ComposedChart></ResponsiveContainer></div>:<p className="bi-empty">Indicador indisponível neste recorte; consulte os registros por intervalo.</p>}
+      {canBrush?<Brush className="bi-brush tv-hide" dataKey="date" height={22} travellerWidth={8} stroke={color} fill="var(--studio-surface,#fff)" tickFormatter={dateLabel} startIndex={start} endIndex={end} onChange={range=>{if(range)setZoom(range);}}/>:null}
+    </ComposedChart></ResponsiveContainer></div>:<p className="bi-empty">{emptyMessage}</p>}
     <ObservationCoverage intervals={intervals} selected={focused} onSelect={setFocused}/>
     {focused!==null&&points[focused]?<div className="chart-inspection tv-hide" role="status"><div className="chart-interval-inspector"><strong>Consulta do intervalo</strong><p>Atual · {points[focused].currentDate??'Sem data equivalente'} <b>{analyticsFormat(points[focused].primary,metric,currency)}</b></p>{hasPreviousPeriod?<p>Comparativo · {points[focused].previousDate??'Sem data equivalente'} <b>{analyticsFormat(points[focused].previous,metric,currency)}</b></p>:null}<small>Ausência não equivale a zero. A consulta não altera o período dos indicadores.</small></div><button type="button" aria-label="Fechar consulta do intervalo BI" onClick={()=>setFocused(null)}>Fechar</button></div>:null}
     <p className="bi-footnote tv-hide">Colunas agrupadas comparam valores recebidos na mesma escala. Selecione um intervalo no calendário para consultar as datas e os valores. O zoom não altera os indicadores.</p>
