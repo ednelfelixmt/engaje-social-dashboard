@@ -210,3 +210,33 @@ test('Recharts discovers current, prior and zero markers as direct series in eve
   if(mode==='Colunas'){assert.ok(direct.some(node=>node.props.dataKey==='current'&&node.props.maxBarSize===28));assert.ok(direct.some(node=>node.props.dataKey==='previous'&&node.props.maxBarSize===22));assert.ok(direct.some(node=>node.props.dataKey==='zeroCurrent'));assert.ok(direct.some(node=>node.props.dataKey==='zeroPrevious'));}
  }
 });
+
+test('agency historical-only trend is not mistaken for current data when comparison is hidden',()=>{
+ const model=buildAgencyIntelligence({clients:[metadata[0]],current:[],previous:[fact({id:'history-only',organization_id:a,metric_date:'2026-09-28',spend:80})],from:'2026-10-01',to:'2026-10-03',compare:'previous_period'});
+ const selection=selectAgencyIntelligence(model,{clientIds:[a],currency:'BRL',platform:'all',granularity:'day'}),before=JSON.stringify(selection);
+ const f=trendHarness(),render=()=>f.render(()=>f.module.AgencyTrendChart({selection,metric:'spend',secondary:'none',currency:'BRL'}));
+ let tree=render();
+ assert.equal(selection.priorTotals.spend,80);
+ assert.ok(nodes(tree).some(node=>node.props.className==='agency-bi-trend'),'initially show valid historical observations');
+ const toggle=nodes(tree).find(node=>node.type==='button'&&node.props['aria-pressed']===true&&renderToStaticMarkup(node).includes('Comparativo'));
+ assert.ok(toggle);(toggle.props.onClick as()=>void)();tree=render();
+ assert.ok(!nodes(tree).some(node=>node.props.className==='agency-bi-trend'),'hidden history must not keep an empty chart');
+ assert.ok(renderToStaticMarkup(tree).includes('Sem medições atuais para este indicador; reative o comparativo'));
+ const restore=nodes(tree).find(node=>node.type==='button'&&node.props['aria-pressed']===false&&renderToStaticMarkup(node).includes('Comparativo'));
+ assert.ok(restore);(restore.props.onClick as()=>void)();tree=render();
+ assert.ok(nodes(tree).some(node=>node.props.className==='agency-bi-trend'));
+ assert.equal(JSON.stringify(selection),before,'UI toggles do not change analytical facts or tenant selection');
+});
+
+test('agency trend keeps an observed current zero visible when the historical series is hidden',()=>{
+ const model=buildAgencyIntelligence({clients:[metadata[0]],current:[fact({organization_id:a,metric_date:'2026-10-01',spend:0})],previous:[fact({id:'history-zero',organization_id:a,metric_date:'2026-09-28',spend:80})],from:'2026-10-01',to:'2026-10-03',compare:'previous_period'});
+ const selection=selectAgencyIntelligence(model,{clientIds:[a],currency:'BRL',platform:'all',granularity:'day'}),before=JSON.stringify(selection);
+ const f=trendHarness(),render=()=>f.render(()=>f.module.AgencyTrendChart({selection,metric:'spend',secondary:'none',currency:'BRL'}));
+ let tree=render();const toggle=nodes(tree).find(node=>node.type==='button'&&node.props['aria-pressed']===true&&renderToStaticMarkup(node).includes('Comparativo'));
+ assert.ok(toggle);(toggle.props.onClick as()=>void)();tree=render();
+ const chart=nodes(tree).find(node=>Array.isArray(node.props.data));assert.ok(chart);
+ const values=chart.props.data as {current:number|null;previous:number|null;zeroCurrent:number|null}[];
+ assert.equal(values[0].current,0);assert.equal(values[0].zeroCurrent,0);assert.equal(values[1].current,null);
+ assert.ok(nodes(tree).some(node=>node.props.dataKey==='zeroCurrent'),'zero remains an observed marker');
+ assert.equal(JSON.stringify(selection),before);
+});

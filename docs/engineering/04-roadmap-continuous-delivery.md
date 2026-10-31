@@ -2023,3 +2023,13 @@ Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamen
 - Correção: séries atuais, históricas e marcadores de zero como filhos diretos de ComposedChart na agência e no BI do cliente. Preservados nulls, datas, ocultação de séries, unidades e bloqueio de atribuição incompatível.
 - Regressão: filhos diretos verificados em Colunas/Área/Linhas nos dois gráficos; 25 testes direcionados aprovados, tipos e lint aprovados. Revisão independente sem bloqueantes. Claude indisponível nesta sessão; sem alegar revisão Claude.
 - Gate de saída: Quality Gate e Vercel no SHA final; conferir barras/eixos reais no navegador, alternância de modo e retorno do modo TV. Conclusão visual em produção permanece pendente até essa evidência.
+
+
+## 30/10/2026 — AGENCY-TREND-HIDDEN-HISTORY-001: histórico oculto não sustenta gráfico vazio (PR proposto)
+
+- **Defeito identificado:** `AgencyTrendChart` considera `previous` no teste `hasData` mesmo quando o usuário desativa a série comparativa. Sem qualquer medição atual, a área do gráfico permanece vazia e pode sugerir visualização de dados atuais.
+- **Correção independente e reversível:** o estado de exibição depende de medição atual ou secundária efetivamente observada, ou de medições históricas quando o comparativo está visível. Na ausência atual com histórico oculto, apresentar mensagem explícita e permitir reativar a comparação; não alterar o calendário ou o estado dos fatos.
+- **Testes sintéticos adicionados:** recorte exclusivamente histórico com comparação ligada/desligada/restaurada; zero atual observado continua visualizável mesmo com histórico oculto; imutabilidade da seleção. Nenhuma organização, credencial ou informação real utilizada.
+- **Risco e rollback:** mudança apenas do estado vazio e visibilidade do gráfico, sem afetar consultas, valores, CSV ou permissões. Reverter somente componente, regressões e este registro se houver falha de UX comprovada.
+- **Aceite:** exigir Quality Gate integral e Vercel Preview READY/status success no **mesmo head SHA**, PR mergeável e revisões sem bloqueios. Após merge confirmar Quality Gate da `main` e deployment de produção/SHA/alias; não declarar homologação de usuário autenticado sem execução.
+- **Bloqueios confirmados na análise:** #302, #294 e #292 têm Quality Gate success, mas status Vercel failure/build-rate-limit; #292 e #149 também conflitam com a main, #157 está draft/inativo. #211 Supabase Preview, SEC-010/011, UX-002, OAuth/GA4/RD Station reais, PDF e TV física seguem sem aceite. Nenhum segredo, dado real, migração, RLS, Auth, Storage, OAuth ou privilégio deve ser alterado neste pacote.
