@@ -56,32 +56,39 @@ export function paretoSeries(rows: readonly {id: string; label: string; value: n
   const valid = rows.filter((row): row is {id: string; label: string; value: number} => finite(row.value) && row.value > 0).sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
   const total = safeSum(valid.map(row => row.value));
   const shares = sharesOf(valid.map(row => row.value));
-  let running = 0;
-  const all: ParetoRow[] = valid.map((row, index) => { running += shares[index]; return {...row, cumulative: Math.min(100, running * 100)}; });
+  let running = 0, runningShare = 0;
+  const all: ParetoRow[] = valid.map((row, index) => {
+    running += row.value; runningShare += shares[index];
+    // exact ratio while the real total is representable; scaled shares only when it is not
+    return {...row, cumulative: Math.min(100, total != null && total > 0 ? (running / total) * 100 : runningShare * 100)};
+  });
   const shown: ParetoRow[] = all.length > top ? [...all.slice(0, top - 1), {id: '__others__', label: `Outros (${all.length - top + 1})`, value: safeSum(valid.slice(top - 1).map(row => row.value)), cumulative: 100}] : all;
-  const reaches = all.findIndex(row => row.cumulative >= 80);
+  const reaches = all.findIndex(row => row.cumulative >= 80 - 1e-9);
   return {rows: shown, total, reaches: reaches >= 0 ? reaches + 1 : null, ignored: rows.length - valid.length};
 }
 
 /* ───────── waterfall ───────── */
 
 export type WaterfallInput = {id: string; label: string; value: number; kind: 'total' | 'delta'};
-export type WaterfallBar = {id: string; label: string; kind: 'total' | 'delta'; value: number; /** invisible base */ base: number; up: number; down: number; total: number; end: number};
+export type WaterfallBar = {id: string; label: string; kind: 'total' | 'delta'; value: number; /** invisible base */ base: number; up: number; down: number; total: number; /** running level after this step; null when it cannot be represented */ end: number | null; /** false when the value or the running level overflowed: no bar is drawn */ available: boolean};
 
 /**
  * Floating bars for a bridge. `total` steps stand on zero; `delta` steps float from the running level.
  * Works with negative levels: the base is the lower edge and the visible bar always has a non-negative size.
  */
 export function waterfallBars(steps: readonly WaterfallInput[]): WaterfallBar[] {
-  let level = 0;
+  let level: number | null = 0; // null = running level not representable; a later `total` step starts over
   return steps.map(step => {
+    const none = (end: number | null): WaterfallBar => ({id: step.id, label: step.label, kind: step.kind, value: step.value, base: 0, up: 0, down: 0, total: 0, end, available: false});
+    if (!finite(step.value)) { level = null; return none(null); }
     if (step.kind === 'total') {
       level = step.value;
-      return {id: step.id, label: step.label, kind: 'total', value: step.value, base: Math.min(0, step.value), up: 0, down: 0, total: Math.abs(step.value), end: level};
+      return {id: step.id, label: step.label, kind: 'total', value: step.value, base: Math.min(0, step.value), up: 0, down: 0, total: Math.abs(step.value), end: level, available: true};
     }
-    const start = level, end = level + step.value;
+    const start: number | null = level, end: number | null = start == null ? null : start + step.value;
+    if (start == null || end == null || !Number.isFinite(end)) { level = null; return none(null); }
     level = end;
-    return {id: step.id, label: step.label, kind: 'delta', value: step.value, base: Math.min(start, end), up: step.value >= 0 ? Math.abs(step.value) : 0, down: step.value < 0 ? Math.abs(step.value) : 0, total: 0, end};
+    return {id: step.id, label: step.label, kind: 'delta', value: step.value, base: Math.min(start, end), up: step.value >= 0 ? Math.abs(step.value) : 0, down: step.value < 0 ? Math.abs(step.value) : 0, total: 0, end, available: true};
   });
 }
 
@@ -96,10 +103,16 @@ export function histogramBins(values: readonly (number | null | undefined)[], bi
   const low = Math.min(...valid), high = Math.max(...valid);
   if (low === high) return {bins: [{from: low, to: high, count: valid.length}], ignored};
   const count = Math.max(1, Math.min(bins, valid.length));
-  // halves keep the range finite even for extreme values such as [-1e308, 1e308]
-  const half = high / 2 - low / 2, halfWidth = half / count, edge = (index: number) => (low / 2 + index * halfWidth) * 2;
+  // plain arithmetic while the range is representable (keeps tiny ranges exact); halves only when high - low would overflow
+  const plain = Number.isFinite(high - low);
+  const scale = plain ? 1 : 2;
+  const width = (high / scale - low / scale) / count;
+  const edge = (index: number) => (low / scale + index * width) * scale;
   const out: HistogramBin[] = Array.from({length: count}, (_, index) => ({from: edge(index), to: index === count - 1 ? high : edge(index + 1), count: 0}));
-  for (const value of valid) out[Math.min(count - 1, Math.max(0, Math.floor((value / 2 - low / 2) / halfWidth)))].count++;
+  for (const value of valid) {
+    const position = Math.floor((value / scale - low / scale) / width);
+    out[Number.isFinite(position) ? Math.min(count - 1, Math.max(0, position)) : 0].count++;
+  }
   return {bins: out, ignored};
 }
 

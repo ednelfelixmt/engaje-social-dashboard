@@ -2,7 +2,7 @@
 
 import {Bar, BarChart, CartesianGrid, LabelList, ReferenceLine, ResponsiveContainer, Tooltip, Treemap, XAxis, YAxis} from 'recharts';
 import {formatAxisValue, formatChartValue, histogramRangeLabel, numericAxisWidth, wrapLabel, type ChartFormat} from '@/lib/charts/format';
-import {histogramBins, spreadLabels, waterfallBars, type WaterfallInput} from '@/lib/charts/models';
+import {histogramBins, sharesOf, spreadLabels, waterfallBars, type WaterfallInput} from '@/lib/charts/models';
 import {HorizontalCategoryTick, planHorizontalTicks} from './axis-ticks';
 import {ChartTooltip} from './chart-tooltip';
 import {seriesColor, tone} from './tokens';
@@ -155,11 +155,11 @@ function Tile({x = 0, y = 0, width = 0, height = 0, id, label = '', fill, share 
 /** Part-of-whole for many items at once (budget concentration). Needs a frame height of at least 240. */
 export function TreemapChart({items, format, selectedId, ariaLabel}: {items: readonly TreeItem[]; format: ChartFormat; selectedId?: string | null; ariaLabel: string}) {
   const valid = items.filter((item): item is TreeItem & {value: number} => Number.isFinite(item.value) && (item.value as number) > 0).sort((a, b) => b.value - a.value);
-  const total = valid.reduce((sum, item) => sum + item.value, 0);
-  const data = valid.slice(0, 24).map((item, index) => ({id: item.id, name: item.label, label: item.label, value: item.value, fill: item.color ?? seriesColor(index), share: new Intl.NumberFormat('pt-BR', {maximumFractionDigits: 1}).format((item.value / total) * 100) + '%', selectedId}));
+  const shares = sharesOf(valid.map(item => item.value)); // scaled: stays correct even when the plain sum would overflow
+  const data = valid.slice(0, 24).map((item, index) => ({id: item.id, name: item.label, label: item.label, value: item.value, fill: item.color ?? seriesColor(index), size: shares[index], share: new Intl.NumberFormat('pt-BR', {maximumFractionDigits: 1}).format(shares[index] * 100) + '%', selectedId}));
   return <div role="img" aria-label={ariaLabel} style={{height: '100%', width: '100%'}}>
     <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-      <Treemap data={data} dataKey="value" nameKey="name" aspectRatio={16 / 9} isAnimationActive={false} content={<Tile />}>
+      <Treemap data={data} dataKey="size" nameKey="name" aspectRatio={16 / 9} isAnimationActive={false} content={<Tile />}>
         <Tooltip content={({active, payload}) => {
           const item = payload?.[0]?.payload as (typeof data)[number] | undefined;
           if (!active || !item) return null;

@@ -76,16 +76,21 @@ export function StackedBarChart({categories, series, format, layout, ariaLabel}:
     const knownIds = series.filter(item => known(category.values[item.id])).map(item => item.id);
     const total = safeSum(knownIds.map(id => category.values[id] as number)); // null = sum not representable, never 0
     const shares = sharesOf(knownIds.map(id => category.values[id] as number));
-    const row: Record<string, string | number | null | Record<string, number | null>> = {label: category.label, raw: category.values, total};
+    const hasWeight = knownIds.some(id => (category.values[id] as number) > 0); // all zero: no share to speak of
+    const shareById: Record<string, number | null> = {};
+    const row: Record<string, string | number | null | Record<string, number | null>> = {label: category.label, raw: category.values, total, shareById};
     for (const item of series) {
       const value = category.values[item.id];
       const at = knownIds.indexOf(item.id);
-      row[item.id] = !known(value) ? null : layout === 'percent' ? (shares[at] > 0 ? shares[at] * 100 : null) : value;
+      shareById[item.id] = !known(value) || !hasWeight ? null : shares[at]; // a real zero keeps its 0 share
+      row[item.id] = !known(value) ? null : layout === 'percent' ? (shareById[item.id] == null ? null : (shareById[item.id] as number) * 100) : value;
     }
     return row;
   });
+  // absolute stacks whose sum overflows cannot be drawn (Recharts would compute an infinite extent): fall back to side-by-side bars
+  const drawn: StackLayout = layout === 'stacked' && data.some(row => row.total == null) ? 'grouped' : layout;
   const axisFormat: ChartFormat = layout === 'percent' ? {kind: 'percent'} : format;
-  const peak = layout === 'percent' ? 100 : Math.max(0, ...data.map(row => layout === 'stacked' ? (typeof row.total === 'number' ? row.total : Math.max(0, ...series.map(item => (row[item.id] as number | null) ?? 0))) : Math.max(0, ...series.map(item => (row[item.id] as number | null) ?? 0))));
+  const peak = layout === 'percent' ? 100 : Math.max(0, ...data.map(row => drawn === 'stacked' ? (typeof row.total === 'number' ? row.total : Math.max(0, ...series.map(item => (row[item.id] as number | null) ?? 0))) : Math.max(0, ...series.map(item => (row[item.id] as number | null) ?? 0))));
   const yWidth = numericAxisWidth(axisFormat, peak);
   const rawBand = (width - yWidth - 16) / Math.max(1, categories.length), band = Math.max(40, rawBand);
   const plan = planHorizontalTicks(categories.map(category => category.label), band, 2, yWidth + rawBand / 2 - 4);
@@ -96,13 +101,13 @@ export function StackedBarChart({categories, series, format, layout, ariaLabel}:
         <XAxis dataKey="label" interval={0} tickLine={false} axisLine={{stroke: tone.grid}} height={plan.height} tick={props => <HorizontalCategoryTick {...props} bandWidth={band} rotate={plan.rotate} maxChars={plan.maxChars} />} />
         <YAxis width={yWidth} tick={axisTick} tickLine={false} axisLine={false} domain={layout === 'percent' ? [0, 100] : [0, 'auto']} tickFormatter={value => formatAxisValue(axisFormat, Number(value), peak)} />
         <Tooltip cursor={{fill: tone.grid, fillOpacity: 0.45}} content={({active, payload}) => {
-          const row = payload?.[0]?.payload as {label: string; raw: Record<string, number | null>; total: number | null} | undefined;
+          const row = payload?.[0]?.payload as {label: string; raw: Record<string, number | null>; total: number | null; shareById: Record<string, number | null>} | undefined;
           if (!active || !row) return null;
-          const rows = series.map(item => ({label: item.label, value: row.raw[item.id] == null ? 'Sem registro' : formatChartValue(format, row.raw[item.id]) + (layout === 'percent' && (data.find(entry => entry.label === row.label)?.[item.id] ?? null) != null ? ` (${pct(Number(data.find(entry => entry.label === row.label)?.[item.id]) / 100)})` : ''), color: item.color}));
-          if (layout !== 'grouped') rows.push({label: 'Total', value: formatChartValue(format, row.total), color: ''});
+          const rows = series.map(item => ({label: item.label, value: row.raw[item.id] == null ? 'Sem registro' : formatChartValue(format, row.raw[item.id]) + (layout === 'percent' && row.shareById[item.id] != null ? ` (${pct(row.shareById[item.id] as number)})` : ''), color: item.color}));
+          if (drawn !== 'grouped' || layout === 'stacked') rows.push({label: 'Total', value: formatChartValue(format, row.total), color: ''});
           return <ChartTooltip title={row.label} rows={rows.map(item => ({...item, color: item.color || undefined}))} />;
         }} />
-        {series.map(item => <Bar key={item.id} dataKey={item.id} name={item.label} stackId={layout === 'grouped' ? undefined : 'stack'} fill={item.color} radius={layout === 'grouped' ? [4, 4, 0, 0] : 0} maxBarSize={layout === 'grouped' ? 24 : 56} isAnimationActive={false} />)}
+        {series.map(item => <Bar key={item.id} dataKey={item.id} name={item.label} stackId={drawn === 'grouped' ? undefined : 'stack'} fill={item.color} radius={drawn === 'grouped' ? [4, 4, 0, 0] : 0} maxBarSize={drawn === 'grouped' ? 24 : 56} isAnimationActive={false} />)}
       </BarChart>
     </ResponsiveContainer>
   </div>;

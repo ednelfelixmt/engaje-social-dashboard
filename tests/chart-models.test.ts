@@ -176,3 +176,29 @@ test('histograma com extremos opostos mantém contagens e faixas finitas', () =>
   assert.equal(bins.reduce((sum, bin) => sum + bin.count, 0), 3);
   assert.ok(bins.every(bin => Number.isFinite(bin.from) && Number.isFinite(bin.to)));
 });
+
+test('Pareto: [19,17,9] alcança 80% na 2ª barra (sem erro de ponto flutuante)', () => {
+  const result = paretoSeries([{id: 'a', label: 'A', value: 19}, {id: 'b', label: 'B', value: 17}, {id: 'c', label: 'C', value: 9}], 5);
+  assert.equal(result.reaches, 2);
+  assert.ok(Math.abs(result.rows[1].cumulative - 80) < 1e-9);
+});
+
+test('histograma com faixa minúscula não lança exceção', () => {
+  const {bins} = histogramBins([0, 1e-323], 2);
+  assert.equal(bins.reduce((sum, bin) => sum + bin.count, 0), 2);
+});
+
+test('cascata: nível que transborda fica indisponível até o próximo total', () => {
+  const bars = waterfallBars([
+    {id: 't', label: 'T', value: 1e308, kind: 'total'},
+    {id: 'd', label: 'D', value: 1e308, kind: 'delta'},
+    {id: 'e', label: 'E', value: 5, kind: 'delta'},
+    {id: 'f', label: 'F', value: 7, kind: 'total'},
+    {id: 'g', label: 'G', value: 3, kind: 'delta'}
+  ]);
+  assert.deepEqual(bars.map(bar => bar.available), [true, false, false, true, true]);
+  assert.equal(bars[1].end, null);
+  assert.equal(bars[2].end, null);
+  assert.equal(bars[4].end, 10);
+  assert.ok(bars.every(bar => Number.isFinite(bar.base + bar.up + bar.down + bar.total)));
+});
