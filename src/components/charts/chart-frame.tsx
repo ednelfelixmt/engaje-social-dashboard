@@ -15,7 +15,7 @@ export function ChartLegend({items}: {items: readonly LegendItem[]}) {
  * Standard panel for every chart model: title, optional actions and legend, a body with an explicit height
  * (so a responsive plot can never collapse to 0px), an honest empty state and an accessible data table.
  */
-export function ChartFrame({title, subtitle, actions, legend, footnote, height = 280, empty, table, bare, children}: {
+export function ChartFrame({title, subtitle, actions, legend, footnote, height = 280, empty, table, bare, hideTitle, children}: {
   title: string;
   subtitle?: string;
   actions?: ReactNode;
@@ -28,13 +28,15 @@ export function ChartFrame({title, subtitle, actions, legend, footnote, height =
   table?: ChartTable;
   /** Embed inside an existing card: no border, background or padding of its own. */
   bare?: boolean;
+  /** The host card already shows a heading: keep the title for screen readers only. */
+  hideTitle?: boolean;
   children?: ReactNode;
 }) {
   return <section className="chart-kit chart-frame" data-bare={bare || undefined} aria-label={title}>
-    <header className="chart-frame-head">
-      <div><h3>{title}</h3>{subtitle ? <p>{subtitle}</p> : null}</div>
+    {hideTitle && !actions ? <h3 className="sr-only">{title}</h3> : <header className="chart-frame-head">
+      <div className={hideTitle ? 'sr-only' : undefined}><h3>{title}</h3>{subtitle ? <p>{subtitle}</p> : null}</div>
       {actions ? <div className="chart-frame-actions">{actions}</div> : null}
-    </header>
+    </header>}
     {legend?.length && !empty ? <ChartLegend items={legend} /> : null}
     {empty
       ? <div className="chart-empty" role="status" style={{minHeight: typeof height === 'number' ? Math.min(height, 160) : 120}}>{empty}</div>

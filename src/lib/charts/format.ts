@@ -52,10 +52,11 @@ export function numericAxisWidth(format: ChartFormat, max: number, fontSize = 12
 }
 
 /** Width reserved for category labels (horizontal bars): the longest label up to a cap, never more than `share` of the chart. */
-export function categoryAxisWidth(labels: readonly string[], containerWidth: number, {fontSize = 12, share = 0.42, min = 72, max = 240}: {fontSize?: number; share?: number; min?: number; max?: number} = {}): number {
+export function categoryAxisWidth(labels: readonly string[], containerWidth: number, {fontSize = 12, share = 0.42, min = 84, max = 240}: {fontSize?: number; share?: number; min?: number; max?: number} = {}): number {
   const widest = labels.reduce((largest, label) => Math.max(largest, estimateTextWidth(label, fontSize)), 0);
   const cap = Math.max(min, Math.min(max, Math.floor(containerWidth * share)));
-  return Math.min(cap, Math.max(min, widest + 10));
+  // +20: the label is right-aligned 8px before the bars and Recharts keeps a small gutter on the axis.
+  return Math.min(cap, Math.max(min, widest + 20));
 }
 
 /**

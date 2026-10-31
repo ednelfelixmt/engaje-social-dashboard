@@ -23,7 +23,8 @@ test('larguras reservadas cobrem o maior rótulo e respeitam o teto', () => {
   const long = '[ZF][Vendas][Conversão][WhatsApp] - Campanha Fecha Pesca';
   assert.equal(categoryAxisWidth([long], 1000), 240, 'teto de 240px');
   assert.equal(categoryAxisWidth([long], 300), 126, 'em painel estreito, no máximo 42% da largura');
-  assert.equal(categoryAxisWidth(['A'], 1000), 72, 'piso de 72px');
+  assert.equal(categoryAxisWidth(['A'], 1000), 84, 'piso de 84px');
+  assert.ok(categoryAxisWidth(['Google Ads'], 1000) >= estimateTextWidth('Google Ads') + 20, 'um nome curto também ganha folga');
 });
 
 test('wrapLabel quebra em até duas linhas, usa reticências só quando corta e dá pontos de quebra entre tags', () => {

@@ -32,7 +32,7 @@ const axisTick = {fill: tone.axis, fontSize: 12};
  * Series are direct children of ComposedChart (Recharts cannot discover them through a Fragment).
  * Isolated observations get a dot, otherwise a single day between gaps would not be drawn at all.
  */
-export function TimeSeriesChart({points, format, mode, name = 'Período selecionado', compare = false, compareName = 'Comparativo', secondary, target, ariaLabel, zeroBase = true}: {
+export function TimeSeriesChart({points, format, mode, name = 'Período selecionado', compare = false, compareName = 'Comparativo', secondary, target, ariaLabel, zeroBase = true, allLabels = false}: {
   points: readonly TimePoint[];
   format: ChartFormat;
   mode: TimeSeriesMode;
@@ -43,6 +43,8 @@ export function TimeSeriesChart({points, format, mode, name = 'Período selecion
   target?: {value: number; label: string} | null;
   ariaLabel: string;
   zeroBase?: boolean;
+  /** Categories (age ranges, platforms) must all be named; dates may be thinned out. */
+  allLabels?: boolean;
 }) {
   const gradient = 'ts-fill-' + useId().replace(/[^a-zA-Z0-9]/g, '');
   const data = points.map((point, index) => ({
@@ -73,7 +75,7 @@ export function TimeSeriesChart({points, format, mode, name = 'Período selecion
           </linearGradient>
         </defs>
         <CartesianGrid vertical={false} stroke={tone.grid} strokeDasharray="3 5" />
-        <XAxis dataKey="label" tick={axisTick} tickLine={false} axisLine={{stroke: tone.grid}} interval="preserveStartEnd" minTickGap={18} tickMargin={8} />
+        <XAxis dataKey="label" tick={axisTick} tickLine={false} axisLine={{stroke: tone.grid}} interval={allLabels ? 0 : 'preserveStartEnd'} minTickGap={allLabels ? 0 : 18} tickMargin={8} />
         <YAxis width={width} tick={axisTick} tickLine={false} axisLine={false} allowDecimals={decimals} domain={zeroBase ? [0, 'auto'] : ['auto', 'auto']} tickFormatter={value => formatAxisValue(format, Number(value), max)} />
         {secondary ? <YAxis yAxisId="secondary" orientation="right" width={numericAxisWidth(secondary.format, secondaryMax)} tick={axisTick} tickLine={false} axisLine={false} domain={[0, 'auto']} tickFormatter={value => formatAxisValue(secondary.format, Number(value), secondaryMax)} /> : null}
         <Tooltip

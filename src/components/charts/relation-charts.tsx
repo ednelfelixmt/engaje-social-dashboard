@@ -56,12 +56,16 @@ export function ScatterBubbleChart({points, xFormat, yFormat, xName, yName, size
         }} />
         <Scatter data={data} isAnimationActive={false} cursor={onSelect ? 'pointer' : undefined} onClick={entry => { const id = (entry as {id?: string}).id; if (id) onSelect?.(id); }}>
           {data.map(point => <Cell key={point.id} fill={point.color ?? tone.primary} fillOpacity={selectedId && selectedId !== point.id ? 0.3 : 0.75} stroke={tone.surface} strokeWidth={1.5} />)}
-          <LabelList dataKey="tag" content={(props: {cx?: string | number; cy?: string | number; x?: string | number; y?: string | number; height?: string | number; value?: string | number}) => {
+          <LabelList dataKey="tag" content={(props: {cx?: string | number; cy?: string | number; x?: string | number; y?: string | number; height?: string | number; index?: number; value?: string | number}) => {
             const label = String(props.value ?? '');
             if (!label) return null;
             const short = label.length > 24 ? label.slice(0, 23) + '…' : label;
             const radius = (Number(props.height) || 12) / 2;
-            return <text key={label} x={Number(props.cx ?? props.x ?? 0)} y={Number(props.cy ?? props.y ?? 0) - radius - 6} textAnchor="middle" fill={tone.text} stroke={tone.surface} strokeWidth={3} paintOrder="stroke" fontSize={12}>{short}</text>;
+            // Anchor by horizontal position so a label never runs past the plot edge: left bubbles start at the bubble, right bubbles end at it.
+            const share = maxX > 0 ? (data[props.index ?? -1]?.x ?? 0) / (maxX * 1.08) : 0.5;
+            const anchor = share > 0.78 ? 'end' : share < 0.2 ? 'start' : 'middle';
+            const cx = Number(props.cx ?? props.x ?? 0);
+            return <text key={label} x={anchor === 'end' ? cx + radius : anchor === 'start' ? cx - radius : cx} y={Number(props.cy ?? props.y ?? 0) - radius - 6} textAnchor={anchor} fill={tone.text} stroke={tone.surface} strokeWidth={3} paintOrder="stroke" fontSize={12}>{short}</text>;
           }} />
         </Scatter>
       </ScatterChart>

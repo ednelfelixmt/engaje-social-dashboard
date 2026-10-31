@@ -25,13 +25,13 @@ export function WaterfallChart({steps, format, direction = 'neutral', ariaLabel}
   const levels = bars.flatMap(bar => [bar.base, bar.base + bar.up + bar.down + bar.total]);
   const low = Math.min(0, ...levels), high = Math.max(0, ...levels), scale = Math.max(Math.abs(low), Math.abs(high));
   const yWidth = numericAxisWidth(format, scale);
-  const rawBand = (width - yWidth - 16) / Math.max(1, bars.length), band = Math.max(48, rawBand);
+  const rawBand = (width - yWidth - 34) / Math.max(1, bars.length), band = Math.max(48, rawBand);
   const plan = planHorizontalTicks(bars.map(bar => bar.label), band, 2, yWidth + rawBand / 2 - 4);
   const upColor = direction === 'higherIsBetter' ? tone.good : direction === 'lowerIsBetter' ? tone.bad : tone.primary;
   const downColor = direction === 'higherIsBetter' ? tone.bad : direction === 'lowerIsBetter' ? tone.good : tone.compareStroke;
   return <div ref={ref} role="img" aria-label={ariaLabel} style={{height: '100%', width: '100%'}}>
     <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-      <BarChart data={bars} margin={{top: 22, right: 12, left: 0, bottom: 0}} barCategoryGap="24%">
+      <BarChart data={bars} margin={{top: 22, right: 34, left: 0, bottom: 0}} barCategoryGap="24%">
         <CartesianGrid vertical={false} stroke={tone.grid} strokeDasharray="3 5" />
         <XAxis dataKey="label" interval={0} tickLine={false} axisLine={{stroke: tone.grid}} height={plan.height} tick={props => <HorizontalCategoryTick {...props} bandWidth={band} rotate={plan.rotate} maxChars={plan.maxChars} />} />
         <YAxis width={yWidth} tick={axisTick} tickLine={false} axisLine={false} domain={[low < 0 ? 'auto' : 0, 'auto']} tickFormatter={value => formatAxisValue(format, Number(value), scale)} />
