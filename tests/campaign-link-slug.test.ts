@@ -38,3 +38,42 @@ test('validation does not rewrite the caller filters or selected campaign', () =
  assert.deepEqual(filters,beforeFilters);
  assert.deepEqual(selection,beforeSelection);
 });
+
+
+test('CAMPAIGN-DRILLDOWN-INTEGRITY-001: campaign deep links reject invalid dates, periods, currencies and comparisons', () => {
+ const invalid = [
+  {...filters,from:'2026-02-30'},
+  {...filters,to:'2026-02-30'},
+  {...filters,from:'2026-10-22'},
+  {...filters,from:'2024-01-01'},
+  {...filters,currency:'brl'},
+  {...filters,currency:'BRLUSD'},
+  {...filters,compare:'next_period' as typeof filters.compare},
+ ];
+ for(const candidate of invalid) {
+  assert.throws(() => campaignHref('synthetic-a',candidate,selection), JSON.stringify(candidate));
+ }
+});
+
+test('CAMPAIGN-DRILLDOWN-INTEGRITY-001: deep links cannot bypass validated provider and opaque campaign IDs', () => {
+ const invalid = [
+  {...selection,platform:'microsoft_ads' as typeof selection.platform},
+  {...selection,account:'bad\\u0000account'},
+  {...selection,account:'account '},
+  {...selection,campaign:'bad\\u0085campaign'},
+  {...selection,campaign:'x'.repeat(513)},
+  {...selection,platform:'meta_ads' as const,account:'act_123'},
+ ];
+ for(const candidate of invalid) {
+  assert.throws(() => campaignHref('synthetic-a',filters,candidate), /Invalid campaign link selection/);
+ }
+});
+
+test('CAMPAIGN-DRILLDOWN-INTEGRITY-001: valid deep links preserve all selectors and do not mutate input', () => {
+ const given = {...filters}, target = {...selection};
+ const href=campaignHref('synthetic-a',given,target),url=new URL(href,'https://example.test');
+ assert.equal(url.pathname,'/synthetic-a/reports/campaign');
+ assert.deepEqual(Object.fromEntries(url.searchParams),{...given,platform:target.platform,account:target.account,campaign:target.campaign});
+ assert.deepEqual(given,filters);
+ assert.deepEqual(target,selection);
+});
