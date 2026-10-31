@@ -2,7 +2,7 @@
 
 import {Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
 import {formatAxisValue, formatChartValue, numericAxisWidth, type ChartFormat} from '@/lib/charts/format';
-import {groupSlices, paretoSeries, type Slice} from '@/lib/charts/models';
+import {groupSlices, paretoSeries, safeSum, sharesOf, type Slice} from '@/lib/charts/models';
 import {HorizontalCategoryTick, planHorizontalTicks} from './axis-ticks';
 import {ChartTooltip} from './chart-tooltip';
 import {maxCategories, seriesColor, tone} from './tokens';
@@ -32,7 +32,7 @@ export function DonutChart({slices, format, centerLabel = 'Total', selectedId, o
     <div className="chart-donut-plot" role="img" aria-label={ariaLabel}>
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <PieChart>
-          <Pie data={data} dataKey="value" nameKey="label" innerRadius="62%" outerRadius="96%" paddingAngle={data.length > 1 ? 2 : 0} startAngle={90} endAngle={-270} stroke="none" isAnimationActive={false}
+          <Pie data={data} dataKey="share" nameKey="label" innerRadius="62%" outerRadius="96%" paddingAngle={data.length > 1 ? 2 : 0} startAngle={90} endAngle={-270} stroke="none" isAnimationActive={false}
             cursor={onSelect ? 'pointer' : undefined} onClick={entry => { const id = (entry as {id?: string}).id; if (id && id !== '__others__') onSelect?.(id); }}>
             {data.map(slice => <Cell key={slice.id} fill={slice.fill} fillOpacity={fade(slice.id)} />)}
           </Pie>
@@ -73,16 +73,19 @@ export function StackedBarChart({categories, series, format, layout, ariaLabel}:
   const {ref, width} = useElementWidth<HTMLDivElement>();
   const known = (value: number | null | undefined): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0;
   const data = categories.map(category => {
-    const total = series.reduce((sum, item) => sum + (known(category.values[item.id]) ? (category.values[item.id] as number) : 0), 0);
+    const knownIds = series.filter(item => known(category.values[item.id])).map(item => item.id);
+    const total = safeSum(knownIds.map(id => category.values[id] as number)); // null = sum not representable, never 0
+    const shares = sharesOf(knownIds.map(id => category.values[id] as number));
     const row: Record<string, string | number | null | Record<string, number | null>> = {label: category.label, raw: category.values, total};
     for (const item of series) {
       const value = category.values[item.id];
-      row[item.id] = !known(value) ? null : layout === 'percent' ? (total > 0 ? (value / total) * 100 : null) : value;
+      const at = knownIds.indexOf(item.id);
+      row[item.id] = !known(value) ? null : layout === 'percent' ? (shares[at] > 0 ? shares[at] * 100 : null) : value;
     }
     return row;
   });
   const axisFormat: ChartFormat = layout === 'percent' ? {kind: 'percent'} : format;
-  const peak = layout === 'percent' ? 100 : Math.max(0, ...data.map(row => layout === 'stacked' ? (row.total as number) : Math.max(0, ...series.map(item => (row[item.id] as number | null) ?? 0))));
+  const peak = layout === 'percent' ? 100 : Math.max(0, ...data.map(row => layout === 'stacked' ? (typeof row.total === 'number' ? row.total : Math.max(0, ...series.map(item => (row[item.id] as number | null) ?? 0))) : Math.max(0, ...series.map(item => (row[item.id] as number | null) ?? 0))));
   const yWidth = numericAxisWidth(axisFormat, peak);
   const rawBand = (width - yWidth - 16) / Math.max(1, categories.length), band = Math.max(40, rawBand);
   const plan = planHorizontalTicks(categories.map(category => category.label), band, 2, yWidth + rawBand / 2 - 4);
@@ -93,9 +96,9 @@ export function StackedBarChart({categories, series, format, layout, ariaLabel}:
         <XAxis dataKey="label" interval={0} tickLine={false} axisLine={{stroke: tone.grid}} height={plan.height} tick={props => <HorizontalCategoryTick {...props} bandWidth={band} rotate={plan.rotate} maxChars={plan.maxChars} />} />
         <YAxis width={yWidth} tick={axisTick} tickLine={false} axisLine={false} domain={layout === 'percent' ? [0, 100] : [0, 'auto']} tickFormatter={value => formatAxisValue(axisFormat, Number(value), peak)} />
         <Tooltip cursor={{fill: tone.grid, fillOpacity: 0.45}} content={({active, payload}) => {
-          const row = payload?.[0]?.payload as {label: string; raw: Record<string, number | null>; total: number} | undefined;
+          const row = payload?.[0]?.payload as {label: string; raw: Record<string, number | null>; total: number | null} | undefined;
           if (!active || !row) return null;
-          const rows = series.map(item => ({label: item.label, value: row.raw[item.id] == null ? 'Sem registro' : formatChartValue(format, row.raw[item.id]) + (layout === 'percent' && row.total > 0 ? ` (${pct((row.raw[item.id] as number) / row.total)})` : ''), color: item.color}));
+          const rows = series.map(item => ({label: item.label, value: row.raw[item.id] == null ? 'Sem registro' : formatChartValue(format, row.raw[item.id]) + (layout === 'percent' && (data.find(entry => entry.label === row.label)?.[item.id] ?? null) != null ? ` (${pct(Number(data.find(entry => entry.label === row.label)?.[item.id]) / 100)})` : ''), color: item.color}));
           if (layout !== 'grouped') rows.push({label: 'Total', value: formatChartValue(format, row.total), color: ''});
           return <ChartTooltip title={row.label} rows={rows.map(item => ({...item, color: item.color || undefined}))} />;
         }} />
@@ -111,7 +114,7 @@ export function StackedBarChart({categories, series, format, layout, ariaLabel}:
 export function ParetoChart({rows, format, name = 'Valor', ariaLabel}: {rows: readonly {id: string; label: string; value: number | null}[]; format: ChartFormat; name?: string; ariaLabel: string}) {
   const {ref, width} = useElementWidth<HTMLDivElement>();
   const pareto = paretoSeries(rows, 10);
-  const peak = Math.max(0, ...pareto.rows.map(row => row.value));
+  const peak = Math.max(0, ...pareto.rows.map(row => row.value ?? 0));
   const yWidth = numericAxisWidth(format, peak), rWidth = 48;
   const rawBand = (width - yWidth - rWidth - 16) / Math.max(1, pareto.rows.length), band = Math.max(40, rawBand);
   const plan = planHorizontalTicks(pareto.rows.map(row => row.label), band, 2, yWidth + rawBand / 2 - 4);

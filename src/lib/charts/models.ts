@@ -2,10 +2,36 @@
 
 const finite = (value: number | null | undefined): value is number => typeof value === 'number' && Number.isFinite(value);
 
+/**
+ * Sum that admits when it cannot be represented: `null` (never `Infinity`, never a silent 0) if any term is not finite or the
+ * running total overflows. Callers show "—" for `null`; a real zero stays 0.
+ */
+export function safeSum(values: readonly (number | null | undefined)[]): number | null {
+  let total = 0;
+  for (const value of values) {
+    if (!finite(value)) return null;
+    total += value;
+  }
+  return Number.isFinite(total) ? total : null;
+}
+
+/**
+ * Share (0–1) of each non-negative value in their sum. Scaled by the largest value first, so the shares stay exact even
+ * when the plain sum would overflow. All-zero (or empty) input yields zeros: there is no share to speak of.
+ */
+export function sharesOf(values: readonly number[]): number[] {
+  const peak = Math.max(0, ...values);
+  if (!(peak > 0) || !Number.isFinite(peak)) return values.map(() => 0);
+  const scaled = values.map(value => value / peak);
+  const sum = scaled.reduce((acc, value) => acc + value, 0);
+  return scaled.map(value => value / sum);
+}
+
 /* ───────── composition ───────── */
 
 export type Slice = {id: string; label: string; value: number | null; color?: string};
-export type GroupedSlices = {slices: (Slice & {value: number; share: number})[]; total: number; ignored: number};
+/** `total` is `null` when the real sum is not representable (overflow); the shares are still correct. */
+export type GroupedSlices = {slices: (Slice & {value: number | null; share: number})[]; total: number | null; ignored: number};
 
 /**
  * Valid positive slices sorted by size; everything past `max - 1` becomes one "Outros" slice.
@@ -16,20 +42,23 @@ export function groupSlices(slices: readonly Slice[], max = 8): GroupedSlices {
   const ignored = slices.length - valid.length;
   const head = valid.length > max ? valid.slice(0, max - 1) : valid;
   const tail = valid.length > max ? valid.slice(max - 1) : [];
-  const rest = tail.reduce((sum, slice) => sum + slice.value, 0);
-  const merged = tail.length ? [...head, {id: '__others__', label: `Outros (${tail.length})`, value: rest}] : head;
-  const total = merged.reduce((sum, slice) => sum + slice.value, 0);
-  return {slices: merged.map(slice => ({...slice, share: total > 0 ? slice.value / total : 0})), total: Number.isFinite(total) ? total : 0, ignored};
+  const rest = safeSum(tail.map(slice => slice.value));
+  const merged: (Slice & {value: number | null})[] = tail.length ? [...head, {id: '__others__', label: `Outros (${tail.length})`, value: rest}] : head;
+  // shares come from the real members (scaled), so "Outros" weighs its members even if their sum overflows
+  const all = sharesOf(valid.map(slice => slice.value));
+  const shares = tail.length ? [...all.slice(0, head.length), all.slice(head.length).reduce((acc, share) => acc + share, 0)] : all;
+  return {slices: merged.map((slice, index) => ({...slice, share: shares[index]})), total: safeSum(merged.map(slice => slice.value)), ignored};
 }
 
-export type ParetoRow = {id: string; label: string; value: number; cumulative: number};
+export type ParetoRow = {id: string; label: string; value: number | null; cumulative: number};
 /** Descending bars with the running share (0–100) of the total. Rows without a valid positive value are left out. */
-export function paretoSeries(rows: readonly {id: string; label: string; value: number | null}[], top = 10): {rows: ParetoRow[]; total: number; reaches: number | null; ignored: number} {
+export function paretoSeries(rows: readonly {id: string; label: string; value: number | null}[], top = 10): {rows: ParetoRow[]; total: number | null; reaches: number | null; ignored: number} {
   const valid = rows.filter((row): row is {id: string; label: string; value: number} => finite(row.value) && row.value > 0).sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
-  const total = valid.reduce((sum, row) => sum + row.value, 0);
+  const total = safeSum(valid.map(row => row.value));
+  const shares = sharesOf(valid.map(row => row.value));
   let running = 0;
-  const all = valid.map(row => { running += row.value; return {...row, cumulative: total > 0 ? (running / total) * 100 : 0}; });
-  const shown = all.length > top ? [...all.slice(0, top - 1), {id: '__others__', label: `Outros (${all.length - top + 1})`, value: all.slice(top - 1).reduce((sum, row) => sum + row.value, 0), cumulative: 100}] : all;
+  const all: ParetoRow[] = valid.map((row, index) => { running += shares[index]; return {...row, cumulative: Math.min(100, running * 100)}; });
+  const shown: ParetoRow[] = all.length > top ? [...all.slice(0, top - 1), {id: '__others__', label: `Outros (${all.length - top + 1})`, value: safeSum(valid.slice(top - 1).map(row => row.value)), cumulative: 100}] : all;
   const reaches = all.findIndex(row => row.cumulative >= 80);
   return {rows: shown, total, reaches: reaches >= 0 ? reaches + 1 : null, ignored: rows.length - valid.length};
 }
@@ -67,9 +96,10 @@ export function histogramBins(values: readonly (number | null | undefined)[], bi
   const low = Math.min(...valid), high = Math.max(...valid);
   if (low === high) return {bins: [{from: low, to: high, count: valid.length}], ignored};
   const count = Math.max(1, Math.min(bins, valid.length));
-  const width = (high - low) / count;
-  const out: HistogramBin[] = Array.from({length: count}, (_, index) => ({from: low + index * width, to: index === count - 1 ? high : low + (index + 1) * width, count: 0}));
-  for (const value of valid) out[Math.min(count - 1, Math.floor((value - low) / width))].count++;
+  // halves keep the range finite even for extreme values such as [-1e308, 1e308]
+  const half = high / 2 - low / 2, halfWidth = half / count, edge = (index: number) => (low / 2 + index * halfWidth) * 2;
+  const out: HistogramBin[] = Array.from({length: count}, (_, index) => ({from: edge(index), to: index === count - 1 ? high : edge(index + 1), count: 0}));
+  for (const value of valid) out[Math.min(count - 1, Math.max(0, Math.floor((value / 2 - low / 2) / halfWidth)))].count++;
   return {bins: out, ignored};
 }
 
@@ -77,7 +107,10 @@ export function median(values: readonly (number | null | undefined)[]): number |
   const valid = values.filter(finite).sort((a, b) => a - b);
   if (!valid.length) return null;
   const middle = Math.floor(valid.length / 2);
-  return valid.length % 2 ? valid[middle] : (valid[middle - 1] + valid[middle]) / 2;
+  if (valid.length % 2) return valid[middle];
+  const [low, high] = [valid[middle - 1], valid[middle]];
+  const mean = (low + high) / 2;
+  return Number.isFinite(mean) ? mean : low / 2 + high / 2; // halves first when the plain sum would overflow
 }
 
 /* ───────── heatmap ───────── */

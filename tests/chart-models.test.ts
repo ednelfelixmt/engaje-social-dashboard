@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {estimateTextWidth, formatAxisValue, formatChartValue, numericAxisWidth, categoryAxisWidth, wrapLabel, shortDate} from '../src/lib/charts/format';
-import {groupSlices, paretoSeries, waterfallBars, histogramBins, median, rampThresholds, rampStepFor, heatmapGrid, radarIndex, spreadLabels} from '../src/lib/charts/models';
+import {groupSlices, safeSum, sharesOf, paretoSeries, waterfallBars, histogramBins, median, rampThresholds, rampStepFor, heatmapGrid, radarIndex, spreadLabels} from '../src/lib/charts/models';
 
 test('formatação: ausência nunca vira zero e o eixo de valores pequenos mantém casas decimais', () => {
   assert.equal(formatChartValue({kind: 'money'}, null), '—');
@@ -139,4 +139,40 @@ test('spreadLabels separa rótulos que colidem, preserva a ordem e respeita os l
   const reversed = spreadLabels([300, 104, 102, 100], 16, 0, 400);
   assert.ok(reversed[0] === 300 && reversed[1] > reversed[2] && reversed[2] > reversed[3], 'a entrada pode vir em qualquer ordem');
   assert.deepEqual(spreadLabels([], 16, 0, 10), []);
+});
+
+test('somas que transbordam viram indisponíveis, nunca zero nem Infinity', () => {
+  const huge = [{id: 'a', label: 'A', value: 1e308}, {id: 'b', label: 'B', value: 1e308}];
+  const grouped = groupSlices(huge, 6);
+  assert.equal(grouped.total, null);
+  assert.deepEqual(grouped.slices.map(slice => slice.share), [0.5, 0.5]);
+  const pareto = paretoSeries(huge, 5);
+  assert.equal(pareto.total, null);
+  assert.deepEqual(pareto.rows.map(row => row.cumulative), [50, 100]);
+  assert.equal(median([1e308, 1e308]), 1e308);
+  assert.equal(median([-1e308, 1e308]), 0);
+  assert.equal(safeSum([1e308, 1e308]), null);
+  assert.equal(safeSum([1, NaN]), null);
+  assert.equal(safeSum([]), 0);
+});
+
+test('"Outros" pesa a soma dos membros mesmo quando o valor absoluto é indisponível', () => {
+  const many = Array.from({length: 4}, (_, i) => ({id: 'f' + i, label: 'F' + i, value: 1e308}));
+  const grouped = groupSlices(many, 3);
+  assert.equal(grouped.slices.length, 3);
+  assert.equal(grouped.slices[2].value, null);
+  assert.deepEqual(grouped.slices.map(slice => slice.share), [0.25, 0.25, 0.5]);
+});
+
+test('zero observado continua zero e não confunde com indisponível', () => {
+  assert.equal(groupSlices([{id: 'z', label: 'Z', value: 0}], 6).total, 0);
+  assert.deepEqual(sharesOf([0, 0]), [0, 0]);
+  assert.deepEqual(sharesOf([1, 3]), [0.25, 0.75]);
+  assert.equal(paretoSeries([{id: 'a', label: 'A', value: 10}, {id: 'b', label: 'B', value: 10}], 5).total, 20);
+});
+
+test('histograma com extremos opostos mantém contagens e faixas finitas', () => {
+  const {bins} = histogramBins([-1e308, 0, 1e308], 2);
+  assert.equal(bins.reduce((sum, bin) => sum + bin.count, 0), 3);
+  assert.ok(bins.every(bin => Number.isFinite(bin.from) && Number.isFinite(bin.to)));
 });
