@@ -5,7 +5,7 @@ import {Boxes, Brush, MapPin, MonitorSmartphone, Trophy, UsersRound} from 'lucid
 import {Card} from '@/components/ui/card';
 import {money, number} from '@/lib/utils';
 import type {PerformanceRankingGroups, RankedPerformance, RankingDimension} from '@/lib/metrics/rankings';
-import {rankingCtr as ctr, rankingResultMetric as resultMetric, rankingUnitCost, rankingBarWidth, rankPerformanceRows as ordered, type RankingCriterion as Criterion} from '@/lib/metrics/ranking-display';
+import {rankingCtr as ctr, rankingResultMetric as resultMetric, rankingUnitCost, rankingBarWidth, rankingObservedMaximum, rankPerformanceRows as ordered, type RankingCriterion as Criterion} from '@/lib/metrics/ranking-display';
 
 type AudienceDimension = 'demographic'|Extract<RankingDimension,'device'|'state'|'city'>;
 const rankingDefinitions: {type:RankingDimension;title:string;description:string;icon:typeof UsersRound}[] = [
@@ -35,7 +35,7 @@ function RankingCard({title,description,icon:Icon,rows,criterion,currency}:{titl
 
 function AudienceRows({type,rows,metric,currency}:{type:RankingDimension;rows:RankedPerformance[];metric:'results'|'spend'|'ctr';currency:string}){
   const result=resultMetric(rows),ranked=ordered(rows,metric);
-  const maximum=Math.max(1,...ranked.map((row)=>metric==='spend'?row.spend:metric==='ctr'?Number(ctr(row)??0):Number(row[result.key]??0)));
+  const maximum=rankingObservedMaximum(ranked.map((row)=>metric==='spend'?row.spend:metric==='ctr'?ctr(row):row[result.key]));
   if(!ranked.length)return <EmptyState message={type==='city'?'A plataforma conectada não enviou cidades neste período.':'A plataforma não enviou este detalhamento no período.'}/>;
   return <div className="grid gap-4">{ranked.map((row,index)=>{const value=metric==='spend'?row.spend:metric==='ctr'?Number(ctr(row)??0):Number(row[result.key]??0);const label=translatedLabel(type,row.label);return <div className="grid grid-cols-[minmax(110px,1fr)_minmax(90px,2fr)_auto] items-center gap-3" key={row.key}><div className="flex min-w-0 items-center gap-2"><span className="text-[10px] font-bold text-zinc-600">{String(index+1).padStart(2,'0')}</span><strong className="truncate text-sm text-zinc-200" title={label}>{label}</strong></div><div className="h-2.5 overflow-hidden rounded-full bg-white/[.05]"><div className="h-full rounded-full bg-gradient-to-r from-primary via-amber-300 to-cyan-300 transition-all" style={{width:`${rankingBarWidth(value,maximum)}%`}}/></div><strong className="data-value min-w-20 text-right text-sm">{metric==='spend'?money(value,currency):metric==='ctr'?`${number(value,2)}%`:number(value)}</strong></div>;})}</div>;
 }

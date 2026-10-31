@@ -37,6 +37,15 @@ export function rankingBarWidth(value: number, maximum: number): number {
   return Math.min(100, Math.max(3, value / maximum * 100));
 }
 
+/** Scale the audience bars against the largest finite, non-negative observation, not a synthetic floor of one. */
+export function rankingObservedMaximum(values: readonly (number | null | undefined)[]): number {
+  let maximum = 0;
+  for (const value of values) {
+    if (value != null && Number.isFinite(value) && value > maximum) maximum = value;
+  }
+  return maximum;
+}
+
 function compareNumbers(left: number, right: number): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
