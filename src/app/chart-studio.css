@@ -1,5 +1,5 @@
 /* Chart surfaces: readable measures, explicit calendar presence and compact sources. */
-.agency-bi[data-chart-layout=operational]{--chart-blue:#3664e8;gap:18px}
+.agency-bi[data-chart-layout=operational]{--chart-blue:#24356f;gap:18px}
 .agency-bi[data-chart-layout=operational] .agency-bi-kpis{grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
 .agency-bi[data-chart-layout=operational] .agency-bi-kpis>button{min-height:122px;border-radius:12px;padding:15px 16px;box-shadow:none}
 .agency-bi[data-chart-layout=operational] .agency-bi-kpis>button[aria-pressed=true]{border-color:#b5c8fc;background:#f6f9ff;box-shadow:inset 0 3px var(--chart-blue)}
@@ -15,7 +15,7 @@
 .agency-bi[data-chart-layout=operational] .agency-bi-trend{height:310px}
 .agency-bi[data-chart-layout=operational] .agency-bi-legend>i{background:var(--chart-blue);border-radius:3px;width:10px;height:10px}
 .agency-bi[data-chart-layout=operational] .agency-bi-legend button{display:flex;align-items:center;gap:6px;color:#64748b!important}
-.agency-bi[data-chart-layout=operational] .agency-bi-legend button>i{background:#b9c8e2;width:10px;height:10px;border-radius:3px}
+.agency-bi[data-chart-layout=operational] .agency-bi-legend button>i{background:#e7edf8;border:1.5px solid #6079af;width:10px;height:10px;border-radius:3px}
 .agency-bi[data-chart-layout=operational] .agency-bi-chart-controls button[aria-pressed=true]{color:var(--chart-blue)}
 .agency-bi[data-chart-layout=operational] .agency-bi-note{font-size:11px;line-height:1.7;margin-top:12px;padding-top:0}
 .agency-bi[data-chart-layout=operational] .agency-bi-panel>.agency-bi-note:last-child{margin-top:12px;padding-top:0}
@@ -51,8 +51,8 @@
 .chart-interval-inspector>strong{display:block;margin-bottom:8px;font-size:12px;font-weight:700}
 .chart-interval-inspector>p{display:flex;align-items:center;gap:8px;margin-top:5px;font-size:11px;flex-wrap:wrap}
 .chart-interval-inspector b{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:700}
-.chart-interval-inspector i{width:8px;height:8px;border-radius:2px;background:#3664e8;flex:none}
-.chart-interval-inspector i[data-prior]{background:#b9c8e2}
+.chart-interval-inspector i{width:8px;height:8px;border-radius:2px;background:#24356f;flex:none}
+.chart-interval-inspector i[data-prior]{background:#e7edf8;border:1.5px solid #6079af}
 .chart-interval-inspector>small{display:block;font-size:10px;color:var(--studio-muted,#718097);margin-top:10px}
 .chart-inspection{display:flex;align-items:start;gap:12px;background:var(--studio-soft,#f6f9ff);border:1px solid var(--studio-border,#d7e3fe);border-radius:10px;padding:12px;margin-top:12px}
 .chart-inspection .chart-interval-inspector{background:transparent;box-shadow:none;border:0;padding:0;max-width:none;flex:1}
@@ -105,3 +105,20 @@
 .tv-mode .observation-select{display:none}
 .tv-mode .agency-efficiency-values strong{font-size:20px}
 @media(prefers-reduced-motion:reduce){.agency-source-cards>button{transition:none}}
+
+/* Claude review: stable card baselines and readable supporting text. */
+.agency-bi[data-chart-layout=operational] .agency-bi-kpis{align-items:stretch}
+.agency-bi[data-chart-layout=operational] .agency-bi-kpis>button{display:flex;flex-direction:column;align-items:flex-start;min-height:144px}
+.agency-bi[data-chart-layout=operational] .agency-bi-kpis>button>span{font-size:12px;line-height:18px}
+.agency-bi[data-chart-layout=operational] .agency-bi-kpis>button>div{min-height:22px;display:flex;align-items:center}
+.agency-bi[data-chart-layout=operational] .agency-bi-kpis>button>small{margin-top:auto;min-height:34px;font-size:12px;line-height:17px}
+.agency-bi[data-chart-layout=operational] :is(.agency-bi-note,.agency-source-cards small,.agency-efficiency-values>span,.agency-efficiency-summary small,.agency-bi-panel header p:last-child:not(.agency-bi-eyebrow)){font-size:12px;line-height:1.5;color:var(--studio-muted,#526079)}
+.agency-bi[data-chart-layout=operational] .agency-source-cards>button>span:first-child{font-size:12px;color:var(--studio-muted,#526079)}
+.agency-bi[data-chart-layout=operational] .agency-bi-chart-selects select{min-height:36px}
+.agency-bi[data-chart-layout=operational] .agency-bi-legend button{color:var(--studio-muted,#526079)!important}
+.agency-bi[data-chart-layout=operational] .observation-dates{font-size:12px;color:var(--studio-muted,#526079)}
+.agency-bi[data-chart-layout=operational] .chart-interval-inspector>p{font-size:12px}
+.agency-bi[data-chart-layout=operational] .chart-interval-inspector>small{font-size:12px;line-height:1.5}
+@media(max-width:640px){.agency-bi[data-chart-layout=operational] .agency-bi-chart-selects select,.agency-bi[data-chart-layout=operational] .agency-bi-chart-controls button{min-height:44px}}
+
+.agency-bi[data-chart-layout=operational] .agency-bi-legend>b{color:#0e7c86}

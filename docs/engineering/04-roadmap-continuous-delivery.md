@@ -2023,3 +2023,20 @@ Atualização antes do merge: PR #132 (08a26a3) integrou agregações e isolamen
 - Correção: séries atuais, históricas e marcadores de zero como filhos diretos de ComposedChart na agência e no BI do cliente. Preservados nulls, datas, ocultação de séries, unidades e bloqueio de atribuição incompatível.
 - Regressão: filhos diretos verificados em Colunas/Área/Linhas nos dois gráficos; 25 testes direcionados aprovados, tipos e lint aprovados. Revisão independente sem bloqueantes. Claude indisponível nesta sessão; sem alegar revisão Claude.
 - Gate de saída: Quality Gate e Vercel no SHA final; conferir barras/eixos reais no navegador, alternância de modo e retorno do modo TV. Conclusão visual em produção permanece pendente até essa evidência.
+
+- Resultado do ciclo: #303 integrado em main (71b84d2512512d45db05194de8d56366bc132f5d) após Quality Gate #574 e Vercel aprovados no head 9358892c50639c5646b24a674376fe65e11176ee. 966 testes locais aprovados.
+- Publicação bloqueada: Vercel retornou HTTP402 api-deployments-free-per-day (mais de100 deploys/dia, retryAfter86400) ao criar produção do merge. Não alterar plano, contornar quota ou promover preview sem configuração de produção validada.
+- Preview READY exige login próprio; não comprovada renderização autenticada nova nesse preview. Produção permanece no rollback aprovado 91e0474; navegador confirmou30 barras e5 marcações Y na versão restaurada. Correção nova ainda NÃO publicada nem homologada visualmente em produção.
+- Próximo passo: após liberação da quota, gerar produção do merge71b84d2, promover o build aprovado se necessário e verificar barras/eixos, modos e retornoTV. Registro final de quota permanece neste checkout até a próxima integração documental.
+
+- 30/10/2026 — Solicitação urgente de revisão de UI/UX pelo Claude: briefing de interface preparado sem credenciais/dados de clientes. Executável nativo não retornou conteúdo; CLI npm autenticado localmente retornou API401 OAuth access token has expired. Revisão Claude NÃO realizada. Login oficial solicitado; manter diagnósticos próprios separados de qualquer futura resposta do Claude.
+
+
+### 30/10/2026 — Parecer real do Claude e primeiro lote de leitura visual
+- Consulta concluída no aplicativo Claude, conversa existente Projeto Dashboard Engaje; o CLI permaneceu com OAuth401. Claude recebeu apenas código de interface e requisitos, sem credenciais ou dados de clientes, e respondeu sem ferramentas/edições.
+- Parecer identificou seta de alta sem base comparável, identidade de métricas confundida com tons de resultado, contraste histórico fraco, textos pequenos e aviso de busca ambíguo. Proposta maior de grade 8/4 e persistência de modo permanece para ciclo visual próprio; não homologada.
+- Implementado: Minus sem base ou variação zero; identidades neutras; série atual azul-marinho, histórico com contorno, secundário verde-azulado e legendas correspondentes; alinhamento das bases dos6 KPIs, apoio12px e aviso explícito da busca de campanhas.
+- Revisão do lote pelo Claude: sem bloqueantes confirmados no trecho, com pedidos de conferir imports/cores; conferidos. Mantida regra existente de comparação de cliques/impressões conforme requisitos; nenhuma alteração em cálculos, acesso ou integrações.
+- Rejeitada sugestão de fixtures reais: prova usa somente dados sintéticos fora do repositório. No bundle com React compilado do Next, navegador confirmou60 elementos de barra e5 ticksY, modos Área/Linhas e retornoTV; desktop sem overflow e6 cards com alturas idênticas. Em1920x1080, painéis1044/1026/1026px; em390x844, sem overflow horizontal.
+- Testes direcionados19/19, tipos, lint e build local aprovados. Gate remoto e publicação deste novo lote ainda pendentes; quota Vercel registrada no ciclo anterior. Não tratar prova sintética como homologação de dados reais ou produção.
+- Fechamento local do lote:967/967 testes completos e build final aprovados. Legenda secundária e curva conferidas no navegador com a mesma cor. Revisão visual foi sintética; produção e gate remoto deste lote permanecem pendentes.

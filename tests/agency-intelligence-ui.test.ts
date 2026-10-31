@@ -210,3 +210,15 @@ test('Recharts discovers current, prior and zero markers as direct series in eve
   if(mode==='Colunas'){assert.ok(direct.some(node=>node.props.dataKey==='current'&&node.props.maxBarSize===28));assert.ok(direct.some(node=>node.props.dataKey==='previous'&&node.props.maxBarSize===22));assert.ok(direct.some(node=>node.props.dataKey==='zeroCurrent'));assert.ok(direct.some(node=>node.props.dataKey==='zeroPrevious'));}
  }
 });
+
+test('KPI direction remains neutral without comparison and when the measured value is unchanged',()=>{
+ const f=harness(),data=fixture(),tree=f.render(()=>f.module.AgencyIntelligenceWorkbench({...data,selectedClient:'all',onSelectClient:()=>{}}));
+ const kpi=nodes(tree).find(node=>node.props['aria-label']==='Analisar Investimento na carteira')!;
+ const missing=renderToStaticMarkup(kpi);
+ assert.ok(missing.includes('Sem base comparável'));assert.ok(missing.includes('lucide-minus'));assert.ok(!missing.includes('lucide-arrow-up-right'));assert.ok(missing.includes('data-tone="neutral"'));
+ const rows=makeRows(),prior=rows.map((row,i)=>({...row,id:'prior-neutral-'+i,metric_date:'2026-09-28'}));
+ const comparison=buildAgencyIntelligence({clients:metadata,current:rows,previous:prior,from:'2026-10-01',to:'2026-10-03',compare:'previous_period'});
+ const g=harness(),flat=g.render(()=>g.module.AgencyIntelligenceWorkbench({model:comparison,clients:data.clients,selectedClient:'all',onSelectClient:()=>{}}));
+ const flatKpi=nodes(flat).find(node=>node.props['aria-label']==='Analisar Investimento na carteira')!;
+ const html=renderToStaticMarkup(flatKpi);assert.ok(html.includes('0%'));assert.ok(html.includes('lucide-minus'));assert.ok(!html.includes('lucide-arrow-up-right'));
+});
