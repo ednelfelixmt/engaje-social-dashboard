@@ -4,7 +4,7 @@ import {useState} from 'react';
 import {Boxes, Brush, MapPin, MonitorSmartphone, Trophy, UsersRound} from 'lucide-react';
 import {Card} from '@/components/ui/card';
 import {money, number} from '@/lib/utils';
-import type {PerformanceRankingGroups, RankingDimension} from '@/lib/metrics/rankings';
+import type {PerformanceRankingGroups, RankedPerformance, RankingDimension} from '@/lib/metrics/rankings';
 import {rankingCtr as ctr, rankingResultMetric as resultMetric, rankingUnitCost, rankingBarWidth, rankPerformanceRows as ordered, type RankingCriterion as Criterion} from '@/lib/metrics/ranking-display';
 
 type AudienceDimension = 'demographic'|Extract<RankingDimension,'device'|'state'|'city'>;
