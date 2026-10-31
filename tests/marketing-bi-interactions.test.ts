@@ -186,3 +186,25 @@ test('BI brush keeps an observed zero visible and rejects other empty ranges wit
  assert.ok(nodes(tree).some(node=>node.props.className==='bi-trend-plot'));
  assert.equal(JSON.stringify(selection),before);
 });
+
+test('BI clears effective Brush range when report date filtering leaves seven days without a Brush',()=>{
+ let selection=selectMarketingBI(model(),{platform:'all',account:'all',campaign:'all'});
+ const absent=selection.timeline[1];
+ selection={...selection,timeline:[selection.timeline[0],...Array.from({length:9},(_,i)=>({...absent,index:i+1,currentDate:'2026-10-'+String(i+21).padStart(2,'0')}))]};
+ const longPeriod=JSON.stringify(selection);
+ const f=harness<typeof import('../src/components/dashboard/marketing-bi-charts')>('../src/components/dashboard/marketing-bi-charts.tsx');
+ const render=()=>f.render(()=>f.module.MarketingBITrend({selection,metric:'spend',currency:'BRL'}));
+ let tree=render();
+ const brush=nodes(tree).find(node=>node.props.className==='bi-brush tv-hide');assert.ok(brush);
+ (brush.props.onChange as(range:{startIndex:number;endIndex:number})=>void)({startIndex:8,endIndex:9});
+ tree=render();
+ assert.ok(!nodes(tree).some(node=>node.props.className==='bi-trend-plot'),'a zoomed gap should show the empty state');
+ selection={...selection,timeline:selection.timeline.slice(0,7)};
+ const shortPeriod=JSON.stringify(selection);
+ tree=render();
+ assert.ok(nodes(tree).some(node=>node.props.className==='bi-trend-plot'),'all seven dates are visible when Brush is unavailable');
+ assert.ok(!nodes(tree).some(node=>node.props.className==='bi-brush tv-hide'));
+ assert.ok(!nodes(tree).some(node=>node.props['aria-label']==='Restaurar zoom do BI'),'disabled Brush cannot leave a stale zoom control');
+ assert.equal(JSON.stringify(selection),shortPeriod);
+ assert.equal(JSON.parse(longPeriod).timeline.length,10);
+});

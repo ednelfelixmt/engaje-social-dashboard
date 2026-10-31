@@ -32,9 +32,12 @@ export function MarketingBITrend({selection,metric,secondary,currency,color='#df
   // Brush navigation narrows the actual displayed measurements, independently of
   // the 7/14-day selector. Reject invalid or out-of-bounds indices defensively.
   const last=Math.max(0,visiblePoints.length-1);
-  const start=typeof zoom.startIndex==='number'&&Number.isInteger(zoom.startIndex)?Math.max(0,Math.min(zoom.startIndex,last)):0;
-  const end=typeof zoom.endIndex==='number'&&Number.isInteger(zoom.endIndex)?Math.max(start,Math.min(zoom.endIndex,last)):last;
-  const isZoomed=visiblePoints.length>7&&(start>0||end<last);
+  // A shorter report disables Brush. Its old indices must never hide newly
+  // selected dates, even if the component state persists across report filters.
+  const canBrush=visiblePoints.length>7;
+  const start=canBrush&&typeof zoom.startIndex==='number'&&Number.isInteger(zoom.startIndex)?Math.max(0,Math.min(zoom.startIndex,last)):0;
+  const end=canBrush&&typeof zoom.endIndex==='number'&&Number.isInteger(zoom.endIndex)?Math.max(start,Math.min(zoom.endIndex,last)):last;
+  const isZoomed=canBrush&&(start>0||end<last);
   const toggle=(key:string)=>setHidden(current=>current.includes(key)?current.filter(item=>item!==key):[...current,key]);
   const hasData=points.some(p=>p.primary!==null||p.secondary!==null||p.previous!==null);
   // Only measurements in the visible window and in enabled series can justify a plot.
@@ -65,7 +68,7 @@ export function MarketingBITrend({selection,metric,secondary,currency,color='#df
       {hasPrior&&mode==='bar'?<Line yAxisId="primary" dataKey="zeroPrevious" hide={hidden.includes('previous')} stroke="none" dot={{r:2,fill:'#99abc8'}} connectNulls={false} isAnimationActive={false}/>:null}
       {hasPrior&&mode!=='bar'?<Line yAxisId="primary" dataKey="previous" hide={hidden.includes('previous')} stroke="#99abc8" strokeDasharray="4 4" strokeWidth={2} dot={{r:2}} connectNulls={false} isAnimationActive={false}/>:null}
       {secondary?<Line yAxisId="secondary" dataKey="secondary" hide={hidden.includes('secondary')} stroke="#7c5cce" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false}/>:null}
-      {visiblePoints.length>7?<Brush className="bi-brush tv-hide" dataKey="date" height={22} travellerWidth={8} stroke={color} fill="var(--studio-surface,#fff)" tickFormatter={dateLabel} startIndex={start} endIndex={end} onChange={range=>{if(range)setZoom(range);}}/>:null}
+      {canBrush?<Brush className="bi-brush tv-hide" dataKey="date" height={22} travellerWidth={8} stroke={color} fill="var(--studio-surface,#fff)" tickFormatter={dateLabel} startIndex={start} endIndex={end} onChange={range=>{if(range)setZoom(range);}}/>:null}
     </ComposedChart></ResponsiveContainer></div>:<p className="bi-empty">{emptyMessage}</p>}
     <ObservationCoverage intervals={intervals} selected={focused} onSelect={setFocused}/>
     {focused!==null&&points[focused]?<div className="chart-inspection tv-hide" role="status"><div className="chart-interval-inspector"><strong>Consulta do intervalo</strong><p>Atual · {points[focused].currentDate??'Sem data equivalente'} <b>{analyticsFormat(points[focused].primary,metric,currency)}</b></p>{hasPreviousPeriod?<p>Comparativo · {points[focused].previousDate??'Sem data equivalente'} <b>{analyticsFormat(points[focused].previous,metric,currency)}</b></p>:null}<small>Ausência não equivale a zero. A consulta não altera o período dos indicadores.</small></div><button type="button" aria-label="Fechar consulta do intervalo BI" onClick={()=>setFocused(null)}>Fechar</button></div>:null}
