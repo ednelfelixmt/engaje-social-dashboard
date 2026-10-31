@@ -1,10 +1,11 @@
 import {Card} from '@/components/ui/card';
+import {formatReportObservation, formatReportChange} from '@/lib/reports/format-observation';
 import {RevenueReportExport} from './revenue-report-export';
 import {revenueReportCsv, revenueReportFilename} from '@/lib/export/revenue-report';
 import {revenueMetrics, revenueDelta, type RevenueMetric, type RevenuePeriod, type RevenueReport} from '@/lib/reports/revenue-report';
 const labels: Record<RevenueMetric, string> = {revenue: 'Receita líquida informada', purchases: 'Compras informadas', leads: 'Leads informados', checkouts: 'Checkouts informados'};
 function display(value: number | null, key: RevenueMetric, currency: string) {
- return value === null ? '—' : new Intl.NumberFormat('pt-BR', key === 'revenue' ? {style: 'currency', currency} : {maximumFractionDigits: 2}).format(value);
+ return formatReportObservation(value, key === 'revenue' ? {currency} : {maximumFractionDigits: 2});
 }
 function Daily({period, title, currency, timezone}: {period: RevenuePeriod; title: string; currency: string; timezone: string}) {
  const syncLabel = (date: string) => new Intl.DateTimeFormat('pt-BR', {timeZone: timezone, dateStyle: 'short', timeStyle: 'short'}).format(new Date(date));
@@ -27,7 +28,7 @@ export function RevenueReportView({report}: {report: RevenueReport}) {
    const change = revenueDelta(report, key);
    return <Card key={key}><h2 className="text-sm text-zinc-400">{labels[key]}</h2><strong className="mt-2 block text-2xl">{display(current.totals[key], key, scope.currency)}</strong>
     <p className="mt-2 text-xs text-zinc-400">{current.knownDays[key]} de {current.days.length} dias com valor válido e conciliação declarada.</p>
-    {previous ? <p className="mt-2 text-xs text-zinc-400">Comparativo: {display(previous.totals[key], key, scope.currency)} ({previous.knownDays[key]}/{previous.days.length} dias). {change === null ? 'Variação indisponível' : (change > 0 ? '+' : '') + new Intl.NumberFormat('pt-BR', {maximumFractionDigits: 2}).format(change) + '%'}.</p> : null}
+    {previous ? <p className="mt-2 text-xs text-zinc-400">Comparativo: {display(previous.totals[key], key, scope.currency)} ({previous.knownDays[key]}/{previous.days.length} dias). {formatReportChange(change)}.</p> : null}
    </Card>;
   })}</section>
   <Card><h2 className="font-semibold">Fonte e limites da análise</h2>

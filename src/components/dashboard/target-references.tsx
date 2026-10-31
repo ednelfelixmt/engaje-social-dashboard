@@ -1,16 +1,16 @@
 import {Card} from '@/components/ui/card';
+import {formatReportObservation} from '@/lib/reports/format-observation';
 import {PerformanceReportPrint} from '@/components/dashboard/performance-report-print';
 import {TargetReferencesExport} from '@/components/dashboard/target-references-export';
 import {targetReferencesCsv, targetReferencesFilename} from '@/lib/export/target-references';
 import type {TargetReference, TargetReferenceReport, TargetStatus} from '@/lib/reports/target-references';
 const statusLabels: Record<TargetStatus, string> = {not_configured:'Sem referência',invalid_target:'Cadastro inválido',unsupported:'Aguardando base compatível',currency_mismatch:'Moeda não comparável',insufficient_data:'Dados insuficientes',below:'Abaixo da referência',equal:'Igual à referência',above:'Acima da referência'};
 function numeric(value: number) {
- return new Intl.NumberFormat('pt-BR',{maximumFractionDigits:6,notation:value !== 0 && Math.abs(value) < 0.000001 ? 'scientific' : 'standard'}).format(value);
+ return formatReportObservation(value, {maximumFractionDigits: 6, scientificTiny: true});
 }
 function format(value: number | null, row: TargetReference, currency: string) {
- if (value === null) return '—';
- if (row.unit === 'money') return new Intl.NumberFormat('pt-BR',{style:'currency',currency,minimumFractionDigits:2,maximumFractionDigits:6,notation:value !== 0 && Math.abs(value) < 0.000001 ? 'scientific' : 'standard'}).format(value);
- return numeric(value) + (row.unit === 'percent' ? '%' : row.unit === 'ratio' ? 'x' : '');
+ if (row.unit === 'money') return formatReportObservation(value, {currency, minimumFractionDigits: 2, maximumFractionDigits: 6, scientificTiny: true});
+ return formatReportObservation(value, {maximumFractionDigits: 6, scientificTiny: true, suffix: row.unit === 'percent' ? '%' : row.unit === 'ratio' ? 'x' : ''});
 }
 export function TargetReferences({report}: {report: TargetReferenceReport}) {
  const {scope} = report;
@@ -23,7 +23,7 @@ export function TargetReferences({report}: {report: TargetReferenceReport}) {
   <section className="grid gap-4 md:grid-cols-2" aria-label="Valores e referências">{report.rows.map(row => <Card key={row.field} data-reference-card>
    <h2 className="text-lg font-semibold">{row.label}</h2><p className="mt-2 text-sm text-cyan-200">{statusLabels[row.status]}</p>
    <dl className="mt-4 grid grid-cols-2 gap-4"><div><dt className="text-xs text-zinc-400">Observado no período · {row.unit === 'money' ? scope.currency : 'fonte de anúncios'}</dt><dd className="mt-1 break-words text-xl font-semibold">{format(row.actual,row,scope.currency)}</dd></div><div><dt className="text-xs text-zinc-400">Referência cadastrada · {row.unit === 'money' ? scope.referenceCurrency : row.unit === 'percent' ? '%' : row.unit === 'ratio' ? 'x' : 'contagem'}</dt><dd className="mt-1 break-words text-xl font-semibold">{format(row.target,row,scope.referenceCurrency)}</dd></div></dl>
-   {row.difference !== null ? <p className="mt-3 text-sm text-zinc-300">Diferença observada − referência: {row.unit === 'percent' ? numeric(row.difference)+' p.p.' : format(row.difference,row,scope.currency)}</p> : null}
+   {row.difference !== null && Number.isFinite(row.difference) ? <p className="mt-3 text-sm text-zinc-300">Diferença observada − referência: {row.unit === 'percent' ? numeric(row.difference)+' p.p.' : format(row.difference,row,scope.currency)}</p> : null}
    <p className="mt-3 text-sm text-zinc-400">{row.reason}</p>
    {['target_spend','target_leads','target_cpl','target_ctr'].includes(row.field) ? <p className="mt-2 text-xs text-zinc-500">{row.knownDays} de {report.expectedDays} dias com os componentes informados. Razões usam totais do período; componentes diários iguais a zero não são dados ausentes.</p> : null}
   </Card>)}</section>
