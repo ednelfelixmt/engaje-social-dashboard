@@ -223,7 +223,7 @@ test('CAMPAIGN-META-ALIAS-002: one Meta alias remains valid; other providers kee
 
 
 test('CAMPAIGN-DRILLDOWN-INTEGRITY-001: invisible control characters in any source grain fail closed', () => {
-  const controls = ['\\u0000','\\u0009','\\u000a','\\u001f','\\u007f','\\u0085','\\u009f'];
+  const controls = ['\u0000','\u0009','\u000a','\u001f','\u007f','\u0085','\u009f'];
   for (const control of controls) {
     const bad = 'synthetic' + control + 'identity';
     const paid = [
@@ -256,14 +256,14 @@ test('CAMPAIGN-DRILLDOWN-INTEGRITY-001: invisible control characters in any sour
 });
 
 test('CAMPAIGN-DRILLDOWN-INTEGRITY-001: keep valid opaque spaces, multiline labels and measured zero without mutation', () => {
-  const paid = [ad({account_id:'act_account alpha', campaign_id:'campaign beta', campaign_name:'Synthetic\\nCampaign', spend:0, leads:0})];
+  const paid = [ad({account_id:'act_account alpha', campaign_id:'campaign beta', campaign_name:'Synthetic\nCampaign', spend:0, leads:0})];
   const external = [crm({account_id:'act_account alpha', campaign_id:'campaign beta', revenue:25})];
   const snapshot = structuredClone({paid,external});
   const result = scopedCampaigns(paid, external, 'crm', [], orgA, 'BRL');
   assert.equal(result.length, 1);
   assert.equal(result[0].accountId, 'act_account alpha');
   assert.equal(result[0].campaignId, 'campaign beta');
-  assert.equal(result[0].campaignName, 'Synthetic\\nCampaign');
+  assert.equal(result[0].campaignName, 'Synthetic\nCampaign');
   assert.equal(result[0].spend, 0);
   assert.equal(result[0].leads, 0);
   assert.equal(result[0].revenue, 25);
