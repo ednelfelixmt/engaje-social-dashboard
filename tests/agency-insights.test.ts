@@ -70,3 +70,47 @@ test('o painel O que mudou usa cor só onde há semântica e nunca esconde clien
  const empty=renderToStaticMarkup(React.createElement(AgencyChangeBreakdown,{breakdown:{rows:[],excluded:0},names,metric:'spend',currency:'BRL',onSelect:()=>undefined}));
  assert.ok(empty.includes('Sem clientes com valor válido'));
 });
+
+test('CTR de 1% para 1,5% mostra +0,50 p.p. e +50% de variação relativa',()=>{
+ const selection=select([row({id:'now',organization_id:a,metric_date:'2026-10-02',impressions:1000,clicks:15})],[row({id:'prior',organization_id:a,metric_date:'2026-09-27',impressions:1000,clicks:10})]);
+ const breakdown=changeBreakdown(selection.clients,'ctr');
+ assert.equal(breakdown.rows[0].change,.5);
+ assert.equal(breakdown.rows[0].percent,50);
+ const html=renderToStaticMarkup(React.createElement(AgencyChangeBreakdown,{breakdown,names:new Map([[a,'Aurora']]),metric:'ctr',currency:'BRL',onSelect:()=>undefined}));
+ assert.ok(html.includes('+0,50\u00a0p.p.')&&html.includes('+50%'));
+ assert.ok(html.includes('CTR subiu 0,50 pontos percentuais (+50% de variação relativa)'));
+ assert.ok(html.includes('a diferença absoluta usa pontos percentuais'));
+ assert.ok(!html.includes('+0,50%'));
+});
+
+test('CTR distingue queda absoluta em pontos percentuais de queda relativa',()=>{
+ const selection=select([row({id:'now',organization_id:a,metric_date:'2026-10-02',impressions:1000,clicks:5})],[row({id:'prior',organization_id:a,metric_date:'2026-09-27',impressions:1000,clicks:10})]);
+ const html=renderToStaticMarkup(React.createElement(AgencyChangeBreakdown,{breakdown:changeBreakdown(selection.clients,'ctr'),names:new Map([[a,'Aurora']]),metric:'ctr',currency:'BRL',onSelect:()=>undefined}));
+ assert.ok(html.includes('−0,50\u00a0p.p.')&&html.includes('-50%'));
+ assert.ok(html.includes('CTR caiu 0,50 pontos percentuais (-50% de variação relativa)'));
+ assert.ok(html.includes('data-tone="bad"'));
+});
+
+test('CTR distingue mudança minúscula, zero exato e base zero sem inventar percentual',()=>{
+ const render=(clicks:number,previousClicks:number,impressions=100000)=>{
+  const selection=select([row({id:'now',organization_id:a,metric_date:'2026-10-02',impressions,clicks})],[row({id:'prior',organization_id:a,metric_date:'2026-09-27',impressions,clicks:previousClicks})]);
+  return renderToStaticMarkup(React.createElement(AgencyChangeBreakdown,{breakdown:changeBreakdown(selection.clients,'ctr'),names:new Map([[a,'Aurora']]),metric:'ctr',currency:'BRL',onSelect:()=>undefined}));
+ };
+ const tiny=render(1001,1000);
+ assert.ok(tiny.includes('&lt;0,01\u00a0p.p.')&&tiny.includes('CTR subiu menos de 0,01 pontos percentuais'));
+ assert.ok(!tiny.includes('+&lt;'));
+ const zero=render(1000,1000);
+ assert.ok(zero.includes('0,00\u00a0p.p.')&&zero.includes('CTR sem variação'));
+ assert.ok(!zero.includes('&lt;0,01'));
+ const newValue=render(15,0,1000);
+ assert.ok(newValue.includes('+1,50\u00a0p.p.')&&newValue.includes('Variação relativa indisponível'));
+ assert.ok(!/Infinity|NaN/.test(newValue));
+});
+
+test('a unidade de investimento e CPL permanece monetária após o ajuste de CTR',()=>{
+ const selection=select([row({id:'now',organization_id:a,metric_date:'2026-10-02',spend:150,leads:2})],[row({id:'prior',organization_id:a,metric_date:'2026-09-27',spend:100,leads:2})]);
+ for(const [metric,expected] of [['spend','+R$\u00a050,00'],['cpl','+R$\u00a025,00']] as const){
+  const html=renderToStaticMarkup(React.createElement(AgencyChangeBreakdown,{breakdown:changeBreakdown(selection.clients,metric),names:new Map([[a,'Aurora']]),metric,currency:'BRL',onSelect:()=>undefined}));
+  assert.ok(html.includes(expected));assert.ok(!html.includes('p.p.'));
+ }
+});

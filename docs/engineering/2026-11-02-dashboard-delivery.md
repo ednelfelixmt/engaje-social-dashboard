@@ -76,3 +76,15 @@ A função sync rejeita provedores sem adaptador, antes de registrar conclusão.
 - Smoke HTTP local: 19 rotas aprovadas com a origem canônica de recuperação configurada. A primeira execução pressupôs callback localhost e falhou; resposta307 foi inspecionada e confirmou a origem canônica prevista no contrato. Nenhuma autorização foi contornada.
 - Domínio permanece no deployment dpl_GrHuGLvbSQBbbAgHo8muf57QJb96. Não declarar o lote aplicado em produção.
 - Bloqueante da revisão do lote: delta absoluto de CTR ainda usa % em vez de pontos percentuais no componente novo; ajuste/handoff solicitado ao Claude. Não integrar à main antes da correção e dos novos gates.
+
+## Revisão final de unidade e handoff
+- Claude confirmou handoff do ajuste CTR ao Codex; seus arquivos locais não commitados foram preservados. Parecer independente apenas sobre descrição/diff informado: sem bloqueantes confirmados; não declarou ter aberto o diff ou executado testes.
+- Aplicado no checkout isolado: delta absoluto de CTR em p.p., variação relativa separada, aria por extenso; cobertura de crescimento/queda, diferença minúscula, zero exato, base zero e regressão BRL/CPL. Nove testes de insights passaram.
+- Feedback do revisor incorporado: sinal de diferença minúscula fica na seta, aria usa menos de; unidade não quebra de linha; nota TV16px e comentário sobre a exceção à regra geral.
+- Biblioteca de16 modelos recebida em feat/biblioteca-graficos (718bdf3/5dad7e6); 26 arquivos, baseada em main antiga. Não integrada automaticamente ao lote: requer revisão própria e preservação das correções atuais.
+- Build final compilou e passou TypeScript, mas o prerender de /_not-found falhou com EPERM ao criar pasta em .next. Nova tentativa após parar o servidor local; pendente até resultado real. O build anterior do conjunto1001 continua registrado, sem substituir o gate do head final.
+
+- Nova tentativa do build concluiu com sucesso após parada do servidor; a falha EPERM permanece no histórico, sem causa sistêmica presumida.
+- Prova adicional sugerida pelo Claude: TV1920x1000 com painel executivo979px, demais946px, sem overflow horizontal, nota16px confirmada por estilo computado e15 pontos isolados presentes. Ajuste de altura restrito à TV com viewport até1020px.
+- Parecer final do Claude foi sobre a descrição do diff, sem execução/abertura de arquivos: sem bloqueantes confirmados. Recomendações de testes e legibilidade aplicadas; não atribuir a ele homologação do código ou da produção.
+- Correção CTR remove a pendência de unidade anteriormente registrada; gate remoto do novo head e homologação real continuam pendentes.

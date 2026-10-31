@@ -116,6 +116,7 @@
 .tv-mode .agency-bi[data-chart-layout=operational] .agency-bi-kpis>button>strong{margin:4px 0}
 .tv-mode .agency-bi[data-chart-layout=operational] .agency-kpi-spark{height:18px;margin:4px 0 0}
 .tv-mode .agency-bi[data-chart-layout=operational] .agency-bi-kpis>button>small{min-height:18px}
+@media(max-height:1020px) and (min-width:1024px){.tv-mode .agency-bi[data-chart-layout=operational] .agency-bi-trend{height:22vh;min-height:200px;max-height:230px}}
 .agency-bi[data-chart-layout=operational] :is(.agency-bi-note,.agency-source-cards small,.agency-efficiency-values>span,.agency-efficiency-summary small,.agency-bi-panel header p:last-child:not(.agency-bi-eyebrow)){font-size:12px;line-height:1.5;color:var(--studio-muted,#526079)}
 .agency-bi[data-chart-layout=operational] .agency-source-cards>button>span:first-child{font-size:12px;color:var(--studio-muted,#526079)}
 .agency-bi[data-chart-layout=operational] .agency-bi-chart-selects select{min-height:36px}
@@ -126,3 +127,5 @@
 @media(max-width:640px){.agency-bi[data-chart-layout=operational] .agency-bi-chart-selects select,.agency-bi[data-chart-layout=operational] .agency-bi-chart-controls button{min-height:44px}}
 
 .agency-bi[data-chart-layout=operational] .agency-bi-legend>b{color:#0e7c86}
+
+.tv-mode .agency-bi[data-chart-layout=operational] .agency-bi-panel.agency-bi-change>.agency-bi-note{font-size:16px}

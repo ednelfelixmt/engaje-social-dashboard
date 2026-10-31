@@ -90,7 +90,8 @@
 .agency-kpi-spark[data-empty]{background:repeating-linear-gradient(90deg,#e2e7ef 0 4px,transparent 4px 8px) center/100% 1px no-repeat}
 svg.agency-kpi-spark path{fill:none;stroke:#24356f;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
 svg.agency-kpi-spark path[data-dot]{stroke-width:4.5}
-.tv-mode .agency-bi-change>.agency-bi-note{display:block!important;font-size:14px}
+/* Preserve exclusions in TV despite the generic hidden-note rule above. */
+.tv-mode .agency-bi-change>.agency-bi-note{display:block!important}
 .agency-bi-change .agency-change-axis{display:grid;grid-template-columns:minmax(110px,170px) 1fr minmax(120px,170px);gap:12px;margin-bottom:4px;font-size:12px;color:#5b6b84}
 .agency-bi-change .agency-change-axis>span:first-child{grid-column:2;justify-self:start}
 .agency-bi-change .agency-change-axis>span:last-child{grid-column:2;grid-row:1;justify-self:end}
