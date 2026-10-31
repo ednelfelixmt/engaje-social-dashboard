@@ -11,9 +11,10 @@ function validCalendarDate(value:string):boolean {
  return Number.isFinite(parsed.getTime())&&parsed.toISOString().slice(0,10)===value;
 }
 
-/** A padded or whitespace-only provider identity is not a distinct campaign grain. */
+/** Reject padded or control-bearing opaque source IDs without normalizing their value. */
 function validGrainIdentifier(value: string): boolean {
- return typeof value === 'string' && value.trim().length > 0 && value === value.trim();
+ return typeof value === 'string' && value.trim().length > 0 && value === value.trim()
+  && !/[\u0000-\u001f\u007f-\u009f]/.test(value);
 }
 
 /** Fail closed: do not silently de-duplicate conflicting campaign-day facts or convert currencies. */
