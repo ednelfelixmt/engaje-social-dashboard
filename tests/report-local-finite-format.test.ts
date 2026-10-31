@@ -17,7 +17,7 @@ test('report display preserves genuine zero, signed amounts, currencies and loca
   assert.equal(formatReportObservation(0, {suffix: '%'}), '0%');
   assert.match(formatReportObservation(0, {currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 6}), /0,00$/);
   assert.equal(formatReportObservation(1234.567, {maximumFractionDigits: 6}), '1.234,567');
-  assert.match(formatReportObservation(-12.5, {currency: 'BRL'}), /-R\\$\\s*12,50$/u);
+  assert.match(formatReportObservation(-12.5, {currency: 'BRL'}), /-R\$\s*12,50$/u);
   assert.equal(formatReportChange(20), '+20%');
   assert.equal(formatReportChange(-20), '-20%');
   assert.equal(formatReportChange(0), '0%');
