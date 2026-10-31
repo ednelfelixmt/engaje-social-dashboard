@@ -1,4 +1,10 @@
 # Roadmap de continuidade — 2026-10-22
+
+> Estado verificável e fila de conclusão em31/10: [auditoria de finalização](2026-10-31-finalization-audit.md). Preservar o histórico abaixo; código aprovado não equivale a produção/homologação.
+
+### Checkpoint coordenado de31/10/2026
+
+PR305 e main b6977e6 publicados por promoção oficial do build produção dpl_AqJWhhAFnZtvMb1Y4NDvyo9Fa8tj: Quality Gate41209216663/Vercel aprovados, alias/SHA conferidos,19 HTTP externos e visão administrativa real verificados. Isso resolve a divergência observada em#278 para esse SHA, sem remover a cota API nem afirmar homologação A/B. Biblioteca do Claude até f642409 e diffs de moeda/marcador estão em lote isolado:1047 testes,23 direcionados, tipos/lint/arquitetura/build e19 HTTP locais aprovados. Confirmação móvel390px sem overflow. Histórico oculto e dispersão inválida corrigidos com falhas reproduzidas antes do patch. Revisão final e gates remotos do novo lote ainda exigidos. Auditoria de dependências:11 entradas moderadas de desenvolvimento,0 em produção; sem atualização forçada. Detalhes, riscos e fila de finalização na auditoria vinculada acima.
 Status: Fase 00 **ABERTA COM PENDÊNCIAS CONTROLADAS**; trilha Fase 01 **AUTORIZADA PARA TRABALHOS DE FUNDAÇÃO NÃO DESTRUTIVOS**. Não confundir com aprovação de segurança ou release comercial.
 
 ## Regra de não paralisação
@@ -2177,3 +2183,7 @@ Retorno do build: nova tentativa aprovada com servidor parado. Correção CTR ap
 - **Segurança e rollback:** alteração apenas de escala visual em um componente e projeção pura; sem API, SQL, RLS, migrações, Auth, Storage, OAuth, segredos, privilégios ou escrita de cliente. Isolamento multi-tenant e usuários viewer somente leitura não modificados. Em regressão comprovada, reverter o componente, helper, teste e este registro.
 - **Gates obrigatórios:** Quality Gate integral `completed/success` e Vercel Preview `READY` + status GitHub Vercel `success` no mesmo SHA final, PR sem conflitos ou revisão bloqueante, antes de integrar. Verificar CI `main`, deployment produção e SHA do domínio canônico após eventual merge; sem gate não efetuar merge nem declarar publicação/homologação.
 - **Bloqueios externos verificados:** PR #315 segue aberta e mergeável com Quality Gate #41199130494 `success`, mas Vercel no head `c8f3bf2` em `failure/build-rate-limit`; PRs #302, #294, #292, #149 e draft #157 abertas. Produção Vercel READY em `main` `539d33d9` (deployment `dpl_HBJnCrPJeJD9cDii5zoEf97qVE2N`) mas domínio `mediahub.engajeperformance.com.br` ainda aponta a `91e0474` (issue #278). Supabase Preview #211, SEC-010/011, UX-002, conexões reais OAuth/GA4/RD Station e homologações de PDF/TV física pendentes. Não alterar aliases, cotas ou políticas para este pacote.
+
+### 31/10/2026 — revisão conjunta de finalização (lote em validação)
+
+Claude entregou f642409 e diffs congelados de moeda do eixo/marcador histórico; Codex integrou e reproduziu os defeitos antes dos patches.1047 testes completos do conjunto passaram; revisão posterior do diff real levantou hipótese de previousDate, confirmada por regressão e corrigida; adicionada regressão de cliques ausentes. Novos testes direcionados/gates finais exigidos. Produção b6977e6 está sincronizada via build produção existente, com Quality Gate41209216663, Vercel success, alias/SHA e19 HTTP externos; sessão administrativa abriu, menu persistiu,6KPIs192px/60barras/sem overflow. Biblioteca nova ainda não publicada. Pendências SEC-010/011, UX-002, RD/GA4, migrações211, PDF/TV física e SMTP adiado permanecem explícitas na auditoria de finalização.
