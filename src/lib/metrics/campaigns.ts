@@ -177,7 +177,10 @@ export function campaigns(
 
 /** Provider identifiers are opaque: validate them without normalizing or trimming them. */
 function validScopedSourceId(value: unknown, optional = false): value is string {
-  return typeof value === 'string' && (optional && value === '' || value.length > 0 && value.trim() === value);
+  return typeof value === 'string' && (
+    (optional && value === '')
+    || (value.length > 0 && value.trim() === value && !/[\u0000-\u001f\u007f-\u009f]/u.test(value))
+  );
 }
 
 /** CRM can be unattributed; paid facts and campaign catalog entries cannot. */
