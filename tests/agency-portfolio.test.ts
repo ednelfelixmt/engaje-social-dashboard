@@ -35,6 +35,47 @@ test('agency chart limits only presentation and search/status filters keep no-da
   assert.equal(selectAgencyClients(list,'','connected').length,5);assert.equal(selectAgencyClients(list,'','attention').length,5);
 });
 
+
+test('agency portfolio fractional BRL spends use the actual largest observed amount',()=>{
+  const a=client(),input=[
+    client({name:'A: R$ 0,25',summary:{...a.summary,spend:0.25}}),
+    client({id:orgB,name:'B: R$ 0,125',summary:{...a.summary,spend:0.125}}),
+  ];
+  const before=structuredClone(input);
+  const result=agencyPortfolioChart(input,'spend');
+  assert.deepEqual(result.rows.map(row=>row.width),[100,50]);
+  assert.deepEqual(result.rows.map(row=>row.value),[0.25,0.125]);
+  assert.equal(result.currency,'BRL');assert.equal(result.excluded,0);
+  assert.deepEqual(input,before,'visual scaling must never mutate tenant observations');
+});
+
+test('agency portfolio all observed zero spends do not divide by zero or invent bars',()=>{
+  const a=client(),input=[
+    client({name:'A: zero observado',summary:{...a.summary,spend:0}}),
+    client({id:orgB,name:'B: zero observado',summary:{...a.summary,spend:0}}),
+  ];
+  const result=agencyPortfolioChart(input,'spend');
+  assert.equal(result.totalObserved,2);assert.equal(result.excluded,0);
+  assert.deepEqual(result.rows.map(row=>row.width),[0,0]);
+  assert.ok(result.rows.every(row=>Number.isFinite(row.width)));
+});
+
+test('agency portfolio ignores missing, negative and non-finite amounts without hiding a fractional observation',()=>{
+  const a=client(),input=[
+    client({name:'A: fração válida',summary:{...a.summary,spend:0.0001}}),
+    client({id:orgB,name:'B: indisponível',summary:{...a.summary,spend:null}}),
+    client({id:'synthetic-negative',name:'C: inválido negativo',summary:{...a.summary,spend:-1}}),
+    client({id:'synthetic-nan',name:'D: inválido NaN',summary:{...a.summary,spend:NaN}}),
+    client({id:'synthetic-infinity',name:'E: inválido infinito',summary:{...a.summary,spend:Infinity}}),
+  ];
+  const before=structuredClone(input);
+  const result=agencyPortfolioChart(input,'spend');
+  assert.equal(result.totalObserved,1);assert.equal(result.excluded,4);
+  assert.equal(result.rows.length,1);assert.equal(result.rows[0].width,100);
+  assert.ok(Number.isFinite(result.rows[0].width));
+  assert.deepEqual(input,before);
+});
+
 const {AgencyOverview}=loadTypescript<typeof import('../src/components/agency/agency-overview')>(new URL('../src/components/agency/agency-overview.tsx',import.meta.url),(id,native)=>native(id));
 test('agency renders personalized dates and direct BI links with scope while keeping existing workspaces',()=>{
   const a=client(),empty=client({id:orgB,name:'Horizonte sintético',slug:'horizonte-sintetico',hasData:false,connected:false,summary:summarizeClientAds(orgB,'BRL',[])});
