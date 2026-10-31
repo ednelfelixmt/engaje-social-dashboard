@@ -142,7 +142,7 @@ test('RECON-META-ALIAS-002: valid Meta aliases, measured zero and non-Meta IDs r
 test('RECON-OPAQUE-CONTROLS-001: internal C0, DEL and C1 controls invalidate each raw identity', () => {
   const controlCharacters = ['\u0000', '\u0009', '\u000a', '\u001f', '\u007f', '\u0085', '\u009f'];
   for (const encoded of controlCharacters) {
-    const control = JSON.parse('"' + encoded + '"') as string;
+    const control = encoded;
     for (const field of ['platform', 'accountId', 'campaignId'] as const) {
       const valid = { ...a, platform: 'meta_ads', accountId: 'act_123', campaignId: 'campaign-10' };
       const original = valid[field];
