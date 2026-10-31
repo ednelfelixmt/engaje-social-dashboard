@@ -17,7 +17,7 @@ const channels = ['meta_ads', 'google_ads', 'tiktok_ads', 'organic', 'direct', '
 const account = (row: Fact) => row.channel === 'meta_ads' ? row.account_id.replace(/^act_/, '') : row.account_id;
 /** Opaque source IDs may contain internal spaces, but never silent edge padding. */
 const validOpaqueId = (value: unknown, allowEmpty = false): value is string =>
- typeof value === 'string' && (allowEmpty || value.length > 0) && value.trim() === value;
+ typeof value === 'string' && (allowEmpty || value.length > 0) && value.trim() === value && !/[\u0000-\u001f\u007f-\u009f]/.test(value);
 /** Reject malformed Meta alias prefixes before generating the financial grain key. */
 const validRevenueAccount = (row: Fact): boolean => {
  if (!validOpaqueId(row.account_id, true)) return false;
