@@ -9,6 +9,12 @@ export type BreakdownPoint = {label: string; spend: number | null; impressions: 
 export type BreakdownMetric = keyof Omit<BreakdownPoint, 'label'> | 'ctr' | 'cpc' | 'cpm' | 'cpl';
 const metrics = ['spend', 'impressions', 'clicks', 'leads'] as const;
 export const validObservation = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0;
+
+/** Percentual visual relativo ao maior valor observado, inclusive para métricas abaixo de 1. */
+export function breakdownBarWidth(value: number | null, maximum: number): number {
+ if (!validObservation(value) || !validObservation(maximum) || maximum === 0) return 0;
+ return Math.min(100, (value / maximum) * 100);
+}
 export function breakdownMetricValue(row: BreakdownPoint, metric: BreakdownMetric): number | null {
  const known = (key: typeof metrics[number]) => validObservation(row[key]) ? row[key] : null;
  if (metric === 'ctr') return finiteRatio(known('clicks'), known('impressions'), 100);
