@@ -18,7 +18,7 @@ export type ReportPath = typeof reportCatalog[number]['path'];
 /** Whitelist navigation context. Account/campaign identifiers never follow a report link. */
 export function reportHref(slug:string, path:ReportPath, context:ReportContext):string {
  const item=reportCatalog.find(item=>item.path===path);
- if(!item||!slug.trim()||slug.trim()!==slug||slug==='.'||slug==='..'||!['none','previous_period','previous_year'].includes(context.compare)||! /^[A-Z]{3}$/.test(context.currency))throw new Error('Invalid report navigation');
+ if(!item||!slug.trim()||slug.trim()!==slug||slug==='.'||slug==='..'||/[\u0000-\u001F\u007F-\u009F\u2028\u2029]/u.test(slug)||!['none','previous_period','previous_year'].includes(context.compare)||! /^[A-Z]{3}$/.test(context.currency))throw new Error('Invalid report navigation');
  calendarDays(context.from,context.to);
  const query=new URLSearchParams({from:context.from,to:context.to,currency:context.currency,compare:item.comparison?context.compare:'none'});
  const route='route' in item?item.route:'reports/'+path;

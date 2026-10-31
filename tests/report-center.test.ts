@@ -22,3 +22,22 @@ test('creative library remains discoverable without a sidebar only when the agen
  const shown=renderToStaticMarkup(React.createElement(ReportCenter,{slug:scope.organizationSlug,enabled:['creatives'],context:scope}));const hidden=renderToStaticMarkup(React.createElement(ReportCenter,{slug:scope.organizationSlug,enabled:[],context:scope}));assert.ok(shown.includes('Biblioteca de criativos'));assert.ok(shown.includes('/'+scope.organizationSlug+'/paid-creatives?'));assert.ok(!hidden.includes('/paid-creatives?'));
  const href=new URL(reportHref(scope.organizationSlug,'creatives',scope),'https://example.test');assert.equal(href.pathname,'/'+scope.organizationSlug+'/paid-creatives');assert.equal(href.searchParams.get('from'),scope.from);assert.equal(href.searchParams.get('to'),scope.to);assert.equal(href.searchParams.get('currency'),scope.currency);assert.equal(href.searchParams.get('compare'),'none');assert.ok(!href.pathname.includes('/reports/creatives'));
 });
+
+
+test('report links reject hidden slug delimiters instead of percent-encoding unsafe tenant routes',()=>{
+ const context={...scope},snapshot=structuredClone(context);
+ for(const slug of ['client\nname','client\tname','client\u0000name','client\u001fname','client\u007fname','client\u0085name','client\u009fname','client\u2028name','client\u2029name']){
+  assert.throws(()=>reportHref(slug,'analytics',context),/Invalid report navigation/,JSON.stringify(slug));
+ }
+ assert.deepEqual(context,snapshot,'validation does not rewrite the caller context');
+});
+
+test('slug validation preserves safe escaped segments and all report-specific route contracts',()=>{
+ const context={...scope},slug='client/segment';
+ assert.ok(reportHref(slug,'analytics',context).startsWith('/client%2Fsegment/reports/analytics?'));
+ assert.ok(reportHref(slug,'creatives',context).startsWith('/client%2Fsegment/paid-creatives?'));
+ assert.equal(new URL(reportHref(slug,'creatives',context),'https://example.test').searchParams.get('compare'),'none');
+ for(const path of ['analytics','creatives','methodology'] as const){
+  assert.throws(()=>reportHref('client\u001fname',path,context),/Invalid report navigation/);
+ }
+});
