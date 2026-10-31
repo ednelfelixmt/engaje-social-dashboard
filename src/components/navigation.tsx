@@ -51,6 +51,8 @@ const agencyGroups:NavGroup[]=[
 ];
 
 const storagePrefix='engaje:nav:v1:';
+/** Roda durante o parse do HTML, antes de o conteúdo ser pintado: quem deixou o menu recolhido não vê ele abrir e fechar na hidratação. */
+const restoreCollapsedScript=`(function(){try{if(localStorage.getItem(${JSON.stringify(storagePrefix+'collapsed')})==='true'){var a=document.currentScript&&document.currentScript.previousElementSibling;if(a&&a.hasAttribute('data-report-navigation'))a.setAttribute('data-collapsed','true')}}catch(e){}})()`;
 
 export function Navigation({slug,admin=false,enabled=[],canShare=false,organizationName,logoUrl}:{slug?:string;admin?:boolean;enabled?:string[];canShare?:boolean;organizationName?:string;logoUrl?:string|null}){
   const path=usePathname();
@@ -76,7 +78,7 @@ export function Navigation({slug,admin=false,enabled=[],canShare=false,organizat
     return next;
   });
 
-  return <aside data-report-navigation data-collapsed={collapsed} data-mobile-open={mobileOpen} className="sticky top-0 z-40 flex w-full flex-col border-b border-white/[.08] bg-[#090d15] lg:fixed lg:inset-y-0 lg:w-[272px] lg:border-b-0 lg:border-r">
+  return <><aside suppressHydrationWarning data-report-navigation data-collapsed={collapsed} data-mobile-open={mobileOpen} className="sticky top-0 z-40 flex w-full flex-col border-b border-white/[.08] bg-[#090d15] lg:fixed lg:inset-y-0 lg:w-[272px] lg:border-b-0 lg:border-r">
     <div className="navigation-brand"><Link prefetch href={slug?`/${encodeURIComponent(slug)}/reports/analytics`:'/admin'} title={organizationName??'Engaje Mídia Hub'}><span className="navigation-logo">{logoUrl&&!logoFailed?<img src={logoUrl} alt="" onError={()=>setLogoFailed(true)}/>:organizationName?<b>{organizationName.split(/\s+/).map(s=>s[0]).slice(0,2).join('')}</b>:<Crown className="text-primary" size={21}/>}</span><div className="navigation-label"><strong>{organizationName??'Engaje Mídia Hub'}</strong><small>MARKETING INTELLIGENCE</small></div></Link><button type="button" className="navigation-mobile-toggle" aria-label="Abrir navegação" aria-expanded={mobileOpen} onClick={()=>setMobileOpen(!mobileOpen)}><Menu size={21}/></button></div>
     {!admin&&canShare?<Link href="/admin" className="navigation-agency-return" aria-label="Voltar à agência" title="Voltar à agência"><ArrowLeft size={18}/><span className="navigation-label">Voltar à agência</span></Link>:null}
     <button type="button" className="navigation-collapse" aria-label={collapsed?'Expandir menu lateral':'Recolher menu lateral'} aria-expanded={!collapsed} onClick={collapse}>{collapsed?<PanelLeftOpen size={19}/>:<PanelLeftClose size={19}/>}<span className="navigation-label">Recolher menu</span></button>
@@ -105,5 +107,5 @@ export function Navigation({slug,admin=false,enabled=[],canShare=false,organizat
       })}
     </nav>
     <form action="/auth/signout" method="post" className="navigation-signout mt-auto border-t border-white/[.07]"><button type="submit" aria-label="Sair da plataforma" title="Sair da plataforma" className="flex w-full items-center gap-3 p-6 text-sm text-zinc-500 transition hover:bg-white/[.025] hover:text-white"><LogOut size={16}/><span className="navigation-label">Sair da plataforma</span></button></form>
-  </aside>;
+  </aside><script dangerouslySetInnerHTML={{__html:restoreCollapsedScript}}/></>;
 }
