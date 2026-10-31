@@ -190,3 +190,37 @@ test('AUDIENCE-META-ALIAS-001: valid Meta aliases consolidate and non-Meta IDs r
  assert.equal(google.sourceRecords,2);
  assert.equal(google.groups.gender[0].spend,20);
 });
+
+
+test('AUDIENCE-OPAQUE-GRAIN-CONTROLS-001: reject internal C0, DEL and C1 in every source grain field',()=>{
+ const fields=['id','account_id','campaign_id','dimension_type','dimension_value'] as const;
+ const clean={id:'synthetic-source',account_id:'act_123',campaign_id:'synthetic-campaign',dimension_type:'gender',dimension_value:'male'};
+ const controls=['\u0000','\u0009','\u001f','\u007f','\u0085','\u009f'];
+ for(const field of fields)for(const control of controls){
+  const original=clean[field];
+  const malformed={...fact(),[field]:original.slice(0,2)+control+original.slice(2)};
+  assert.throws(()=>build([malformed]),/Invalid audience report grain/,field+' '+control.codePointAt(0));
+ }
+});
+
+test('AUDIENCE-OPAQUE-GRAIN-CONTROLS-001: unsupported dimensions cannot conceal malformed identities',()=>{
+ for(const field of ['id','account_id','campaign_id','dimension_value'] as const){
+  const malformed={...fact({dimension_type:'creative'}),[field]:'opaque\u0085identity'};
+  assert.throws(()=>build([fact(),malformed]),/Invalid audience report grain/,field);
+ }
+ assert.throws(()=>build([fact({dimension_type:'crea\u0000tive'})]),/Invalid audience report grain/);
+});
+
+test('AUDIENCE-OPAQUE-GRAIN-CONTROLS-001: retain legitimate spaces, zero and multiline display labels',()=>{
+ const first=fact({id:'origin A B',account_id:'act_12 3',campaign_id:'campaign A B',dimension_type:'city',dimension_value:'New York',dimension_label:'North\nSouth',spend:0,leads:0});
+ const unclassified=fact({id:'origin unknown',account_id:'act_12 3',campaign_id:'campaign A B',dimension_type:'city',dimension_value:'',dimension_label:'',spend:0,leads:0});
+ const originalFirst={...first},originalUnclassified={...unclassified};
+ const report=build([first,unclassified]);
+ assert.equal(report.sourceRecords,2);
+ assert.equal(report.groups.city.find(row=>row.value==='New York')?.spend,0);
+ assert.equal(report.groups.city.find(row=>row.value==='New York')?.label,'North\nSouth');
+ assert.equal(report.groups.city.find(row=>row.value==='New York')?.sourceIds[0],'origin A B');
+ assert.equal(report.groups.city.find(row=>row.value==='')?.label,'Não informado');
+ assert.deepEqual(first,originalFirst);
+ assert.deepEqual(unclassified,originalUnclassified);
+});

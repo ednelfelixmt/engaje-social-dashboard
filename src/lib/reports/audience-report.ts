@@ -30,7 +30,8 @@ const organizationUuid = z.string().uuid();
 
 /** Source identifiers are opaque: never trim a malformed ID into a different grain. */
 function intactAudienceIdentifier(value: unknown): value is string {
- return typeof value === 'string' && value.trim().length > 0 && value === value.trim();
+ return typeof value === 'string' && value.trim().length > 0 && value === value.trim()
+  && !/[\u0000-\u001f\u007f-\u009f]/.test(value);
 }
 
 /** An empty breakdown value is an existing unclassified bucket, not a padded ID. */
