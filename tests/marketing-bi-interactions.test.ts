@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
 import {loadTypescript} from './helpers/load-typescript';
 import {model,input,fact} from './helpers/analytics-fixture';
 import {buildAnalyticsWorkspace,analyticsCampaignKey} from '../src/lib/reports/analytics-workspace';
@@ -29,6 +30,18 @@ test('BI chart modes, series toggles and visual zoom preserve full daily measure
  event(tree,'Janela visual da série BI','7');tree=render();const chart=nodes(tree).find(node=>Array.isArray(node.props.data));assert.equal((chart?.props.data as {primary:number|null}[]).length,7);assert.ok((chart?.props.data as {primary:number|null}[]).some(p=>p.primary===null));
  assert.equal(nodes(tree).filter(node=>node.type==='tbody').flatMap(node=>React.Children.toArray(node.props.children as React.ReactNode)).length,20);
  const legend=nodes(tree).find(node=>node.props['aria-label']==='Mostrar Investimento · atual');assert.ok(legend);(legend.props.onClick as()=>void)();tree=render();assert.ok(nodes(tree).some(node=>node.props.dataKey==='primary'&&node.props.hide===true));assert.equal(JSON.stringify(selection),before);
+});
+
+test('BI calendar inspection keeps source presence independent of the selected metric and preserves real comparison dates',()=>{
+ const f=harness<typeof import('../src/components/dashboard/marketing-bi-charts')>('../src/components/dashboard/marketing-bi-charts.tsx');
+ const data=input();data.ads[0].leads=0;data.priorAds=[];
+ const selection=selectMarketingBI(buildAnalyticsWorkspace(data),{platform:'all',account:'all',campaign:'all'}),before=JSON.stringify(selection);
+ const render=()=>f.render(()=>f.module.MarketingBITrend({selection,metric:'cpl',currency:'BRL'}));let tree=render();
+ const calendar=nodes(tree).find(node=>typeof node.type==='function'&&node.type.name==='ObservationCoverage');assert.ok(calendar);
+ const intervals=calendar.props.intervals as {received:boolean}[];assert.deepEqual(intervals.map(row=>row.received),[true,false],'a zero-lead record is still a received observation');
+ (calendar.props.onSelect as(index:number)=>void)(1);tree=render();
+ const inspection=nodes(tree).find(node=>node.props.className==='chart-inspection tv-hide');assert.ok(inspection);
+ const html=renderToStaticMarkup(inspection);assert.ok(html.includes('2026-10-21'));assert.ok(html.includes('2026-10-19'));assert.ok(html.includes('—'));assert.equal(JSON.stringify(selection),before);
 });
 test('campaign ranking cross-filters by platform, account and campaign and can be cleared',()=>{
  const f=harness<typeof import('../src/components/dashboard/marketing-bi-board')>('../src/components/dashboard/marketing-bi-board.tsx');const data=input();data.ads.push(fact({id:'second',ad_id:'second-ad',account_id:'456',spend:50}));const m=buildAnalyticsWorkspace(data),render=()=>f.render(()=>f.module.MarketingBIBoard({model:m}));let tree=render();const key=analyticsCampaignKey('meta_ads','456',data.ads[0].campaign_id);

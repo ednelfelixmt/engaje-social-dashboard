@@ -95,7 +95,7 @@ test('BI trend compares calendar positions, keeps missing values null and preser
  assert.ok(noComparison.every(p=>p.previous===null&&p.previousDate===null));
 });
 
-test('BI rendered trend has markers for isolated prior observations while retaining null gaps',()=>{
+test('BI rendered columns show isolated historical values and retain markers only for observed zeros',()=>{
  const view=new URL('../src/components/dashboard/marketing-bi-charts.tsx',import.meta.url);
  const passthrough=({children}:{children:React.ReactNode})=>React.createElement('div',null,children);
  const omit=()=>null;
@@ -103,20 +103,20 @@ test('BI rendered trend has markers for isolated prior observations while retain
   'data-series':dataKey,'data-markers':String(Boolean(dot)),'data-connect-nulls':String(connectNulls),
  });
  const {MarketingBITrend}=loadTypescript<typeof import('../src/components/dashboard/marketing-bi-charts')>(view,(id,native)=>
-  id==='recharts'?{ResponsiveContainer:passthrough,ComposedChart:({children}:{children:React.ReactNode})=>React.createElement('svg',null,children),Area:series,Bar:series,Line:series,CartesianGrid:omit,Tooltip:omit,XAxis:omit,YAxis:omit}:native(id));
+  id==='recharts'?{ResponsiveContainer:passthrough,ComposedChart:({children}:{children:React.ReactNode})=>React.createElement('svg',null,children),Area:series,Bar:({dataKey}:{dataKey:string})=>React.createElement('b',{'data-bars':dataKey}),Line:series,CartesianGrid:omit,Tooltip:omit,XAxis:omit,YAxis:omit}:native(id));
  const priorOnly=input();priorOnly.ads=[];priorOnly.breakdowns=[];
  const previous=selectMarketingBI(buildAnalyticsWorkspace(priorOnly),{platform:'all',account:'all',campaign:'all'});
  const html=renderToStaticMarkup(React.createElement(MarketingBITrend,{selection:previous,metric:'spend',currency:'BRL'}));
- assert.ok(html.includes('data-series="previous" data-markers="true" data-connect-nulls="false"'),html);
- assert.ok(html.includes('data-series="primary" data-markers="true" data-connect-nulls="false"'),html);
+ assert.ok(html.includes('data-bars="previous"'),html);
+ assert.ok(html.includes('data-bars="primary"'),html);assert.ok(html.includes('data-series="zeroPrimary" data-markers="true" data-connect-nulls="false"'),html);
  assert.ok(html.includes('· comparativo'));
  const none=input();none.scope={...none.scope,compare:'none'};none.priorAds=[];none.priorBreakdowns=[];none.priorCrm=[];
  const without=renderToStaticMarkup(React.createElement(MarketingBITrend,{selection:selectMarketingBI(buildAnalyticsWorkspace(none),{platform:'all',account:'all',campaign:'all'}),metric:'spend',currency:'BRL'}));
- assert.ok(!without.includes('data-series="previous"'));
+ assert.ok(!without.includes('data-bars="previous"'));
  const altered=input();altered.priorAds[0].attribution_window='1d_click';
  const incompatible=selectMarketingBI(buildAnalyticsWorkspace(altered),{platform:'all',account:'all',campaign:'all'});
  const masked=renderToStaticMarkup(React.createElement(MarketingBITrend,{selection:incompatible,metric:'leads',currency:'BRL'}));
- assert.ok(!masked.includes('data-series="previous"'),'incompatible leads have no historical chart line');
+ assert.ok(!masked.includes('data-bars="previous"'),'incompatible leads have no historical columns');
  assert.ok(masked.includes('Comparativo histórico de leads/CPL indisponível'),'the missing comparison is explained');
 });
 

@@ -26,6 +26,7 @@ export default tseslint.config(
       'src/lib/reports/agency-intelligence.ts',
       'src/components/agency/agency-intelligence-workbench.tsx',
       'src/components/agency/agency-intelligence-charts.tsx',
+      'src/components/dashboard/observation-coverage.tsx',
       'src/lib/reports/agency-portfolio.ts',
       'src/app/(agency)/admin/page.tsx',
       'src/app/(agency)/admin/layout.tsx',
