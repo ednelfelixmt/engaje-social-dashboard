@@ -14,9 +14,10 @@ export type AgencyClientPoint={id:string;name:string;current:AgencyIntelligenceS
 /** Recharts wraps the original datum in payload; never use a plotted numeric value as an identity. */
 export function agencyChartIdentity(entry:unknown):string|null {if(!entry||typeof entry!=='object')return null;const row=entry as {payload?:{id?:unknown};id?:unknown};const id=row.payload?.id??row.id;return typeof id==='string'?id:null;}
 
-export function AgencyTrendChart({selection,metric,secondary,currency}:{selection:AgencyIntelligenceSelection;metric:PaidMetricKey;secondary:PaidMetricKey|'none';currency:string}) {
+export function AgencyTrendChart({selection,metric,secondary,currency,mode:controlledMode,onMode}:{selection:AgencyIntelligenceSelection;metric:PaidMetricKey;secondary:PaidMetricKey|'none';currency:string;/** Optional: lets the parent keep the chosen style when the chart remounts for another KPI. */mode?:string;onMode?:(mode:string)=>void}) {
  const id='agency-area-'+useId().replace(/:/g,'');
- const [mode,setMode]=useState('bar');
+ const [localMode,setLocalMode]=useState('bar');
+ const mode=controlledMode??localMode,setMode=(next:string)=>{setLocalMode(next);onMode?.(next);};
  const [showPrior,setShowPrior]=useState(true);
  const [zoom,setZoom]=useState<{startIndex?:number;endIndex?:number}>({});
  const [focused,setFocused]=useState<number|null>(null);
