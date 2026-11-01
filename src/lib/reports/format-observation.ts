@@ -14,6 +14,16 @@ export function formatReportObservation(value: number | null | undefined, option
   // convert a monetary observation into an unlabeled numeric value.
   // ISO currency codes are three ASCII uppercase letters at this boundary.
   if (options.currency !== undefined && !/^[A-Z]{3}$/.test(options.currency)) return '—';
+  // Invalid precision or inverted digit ranges can throw RangeError in
+  // Intl.NumberFormat and prevent the entire report from rendering.
+  // Only accept the ECMA-402 fraction digit range; no guessed fallback.
+  const validFractionDigits = (digits: number | undefined) =>
+    digits === undefined || (Number.isInteger(digits) && digits >= 0 && digits <= 100);
+  if (!validFractionDigits(options.minimumFractionDigits) ||
+      !validFractionDigits(options.maximumFractionDigits) ||
+      (options.minimumFractionDigits !== undefined &&
+       options.maximumFractionDigits !== undefined &&
+       options.minimumFractionDigits > options.maximumFractionDigits)) return '—';
   const notation = options.scientificTiny && value !== 0 && Math.abs(value) < 0.000001 ? 'scientific' : 'standard';
   const intl: Intl.NumberFormatOptions = options.currency
     ? {style: 'currency', currency: options.currency, notation}
