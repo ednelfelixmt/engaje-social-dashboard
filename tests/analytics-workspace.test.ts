@@ -36,3 +36,46 @@ test('marginal dimensions are grouped independently, unknown groups stay visible
 test('large BI payloads are rejected without silently truncating authorized source facts',()=>{const data=input();data.ads[0].campaign_name='Synthetic'.repeat(250000);assert.throws(()=>buildAnalyticsWorkspace(data),AnalyticsCapacityError);});
 
 test('audience lead comparison rejects changed account windows while preserving impressions',()=>{const data=input();data.priorBreakdowns[0].attribution_window='1d_click';const selected=selectAnalytics(buildAnalyticsWorkspace(data),{platform:'all',campaign:'all'}),rows=analyticsAudienceRows(selected.audience,selected.priorAudience,'gender');assert.equal(rows[0].current.leads,null);assert.equal(rows[0].previous.leads,null);assert.equal(rows[0].current.impressions,1000);});
+
+test('ANALYTICS-AUDIENCE-WINDOW-RAW-001: malformed raw audience attribution cannot become valid leads after trimming',()=>{
+ for(const window of [' 7d_click','7d_click ','7d_click\u200b','7d_click\u202e','unknown','']){
+  const data=input();
+  data.breakdowns[0].attribution_window=window;
+  data.priorBreakdowns[0].attribution_window=window;
+  const unchanged=structuredClone(data.breakdowns);
+  const selected=selectAnalytics(buildAnalyticsWorkspace(data),{platform:'all',campaign:'all'});
+  const [row]=analyticsAudienceRows(selected.audience,selected.priorAudience,'gender');
+  assert.equal(selected.audience[0].window,window,'current provenance must remain raw');
+  assert.equal(selected.priorAudience[0].window,window,'historical provenance must remain raw');
+  assert.equal(row.current.leads,null,JSON.stringify(window));
+  assert.equal(row.previous.leads,null,JSON.stringify(window));
+  assert.equal(row.current.impressions,1000);
+  assert.equal(row.previous.impressions,800);
+  assert.equal(row.current.clicks,20);
+  assert.deepEqual(data.breakdowns,unchanged);
+ }
+});
+test('ANALYTICS-AUDIENCE-WINDOW-RAW-001: legitimate zero leads and other measurements survive strict attribution',()=>{
+ for(const window of ['7d_click','7d click']){
+  const data=input();
+  data.breakdowns[0].attribution_window=window;
+  data.priorBreakdowns[0].attribution_window=window;
+  data.breakdowns[0].leads=0;
+  data.priorBreakdowns[0].leads=0;
+  const selected=selectAnalytics(buildAnalyticsWorkspace(data),{platform:'all',campaign:'all'});
+  const [row]=analyticsAudienceRows(selected.audience,selected.priorAudience,'gender');
+  assert.equal(row.current.leads,0,window);
+  assert.equal(row.previous.leads,0,window);
+  assert.equal(row.current.spend,100);
+  assert.equal(row.current.impressions,1000);
+ }
+ const data=input();
+ data.scope={...scope,compare:'none'};
+ data.priorAds=[];data.priorBreakdowns=[];
+ data.breakdowns[0].attribution_window='7d_click ';
+ const selected=selectAnalytics(buildAnalyticsWorkspace(data),{platform:'all',campaign:'all'});
+ const [row]=analyticsAudienceRows(selected.audience,selected.priorAudience,'gender');
+ assert.equal(row.current.leads,null,'an invalid window must fail closed without a comparison period');
+ assert.equal(row.current.spend,100);
+ assert.equal(row.previous.leads,null);
+});
