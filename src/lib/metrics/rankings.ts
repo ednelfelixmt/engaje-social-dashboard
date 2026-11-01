@@ -6,9 +6,13 @@ export type RankingDimension = Row<'metrics_ads_breakdowns'>['dimension_type'];
 export type RankedPerformance = {key:string;label:string;spend:number;revenue:number|null;impressions:number|null;clicks:number|null;leads:number|null;purchases:number|null};
 export type PerformanceRankingGroups = Record<'campaign'|RankingDimension,RankedPerformance[]>;
 
-/** Keep opaque source IDs intact. Whitespace padding is not a distinct identity. */
+/** Keep opaque source IDs intact. Whitespace padding and invisible control
+ * characters cannot establish distinct, trustworthy source identities.
+ * Never trim or rewrite the provider value.
+ */
 function validOpaqueIdentifier(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0 && value === value.trim();
+  return typeof value === 'string' && value.trim().length > 0 && value === value.trim() &&
+    !/[\u0000-\u001f\u007f-\u009f]/u.test(value);
 }
 
 /** Only Meta has an account alias; the bare act_ marker is not an account. */
