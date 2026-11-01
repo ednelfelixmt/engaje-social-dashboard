@@ -115,3 +115,17 @@ test('SOURCE-GRAIN-CONTROLS-001: organic content identity rejects internal contr
  assert.equal(accepted.rows[0].likes,0);
  assert.equal(accepted.rows[0].caption,'Multiline\ncaption');
 });
+
+
+test('ORG-TIMEZONE-SCOPE-001: invalid tenant timezone cannot label organic content or its empty export',()=>{
+ for (const timezone of ['Mars/Olympus','America/Cuiaba ','']) {
+  const invalidScope={...scope,timezone};
+  assert.throws(()=>buildOrganicContentReport([],invalidScope),RangeError,'empty '+JSON.stringify(timezone));
+  assert.throws(()=>buildOrganicContentReport([post()],invalidScope),RangeError,'populated '+JSON.stringify(timezone));
+ }
+ for (const timezone of ['UTC','America/Cuiaba']) {
+  const valid=buildOrganicContentReport([post({lifetime_metrics:{likes:0}})],{...scope,timezone});
+  assert.equal(valid.rows[0].likes,0);
+  assert.equal(valid.scope.timezone,timezone);
+ }
+});

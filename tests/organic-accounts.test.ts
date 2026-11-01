@@ -130,3 +130,18 @@ test('SOURCE-GRAIN-CONTROLS-001: organic account record and account IDs reject e
  assert.equal(accepted.rows[0].values.impressions,0);
  assert.equal(accepted.accounts[0].account,'account alpha');
 });
+
+
+test('ORG-TIMEZONE-SCOPE-001: invalid tenant timezone fails closed for account reports and empty periods',()=>{
+ for (const timezone of ['Mars/Olympus','America/Cuiaba ','']) {
+  const invalidScope={...scope,timezone};
+  assert.throws(()=>validateOrganicScope(invalidScope),RangeError,JSON.stringify(timezone));
+  assert.throws(()=>buildOrganicAccountsReport([],invalidScope),RangeError,'empty '+JSON.stringify(timezone));
+  assert.throws(()=>buildOrganicAccountsReport([record()],invalidScope),RangeError,'populated '+JSON.stringify(timezone));
+ }
+ for (const timezone of ['UTC','America/Cuiaba']) {
+  const valid=buildOrganicAccountsReport([record({impressions:0})],{...scope,timezone});
+  assert.equal(valid.rows[0].values.impressions,0);
+  assert.equal(valid.scope.timezone,timezone);
+ }
+});
