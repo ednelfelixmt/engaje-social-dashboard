@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import {AuthCard} from '@/components/auth/auth-card';
 import {PasswordRecoveryForm} from '@/components/auth/password-recovery-form';
 import {requestPasswordRecovery} from '../recovery/actions';
-export default function ForgotPassword(){return <main className="grid min-h-screen place-items-center p-6"><section className="w-full max-w-md space-y-6 rounded-3xl border border-white/10 bg-[#17171E] p-8"><header><p className="eyebrow">Engaje Mídia Hub</p><h1 className="mt-3 text-2xl font-semibold">Recupere seu acesso</h1><p className="muted mt-3 text-sm leading-6">Informe seu e-mail para solicitar um link de redefinição de senha. Abra o link neste mesmo navegador.</p></header><PasswordRecoveryForm action={requestPasswordRecovery} mode="request"/><Link href="/login" className="inline-block text-sm text-zinc-400 underline">Voltar ao login</Link></section></main>;}
+export default function ForgotPassword(){return <AuthCard title="Recupere seu acesso"><p className="zf-lead">Informe seu e-mail para solicitar um link de redefinição de senha. Abra o link neste mesmo navegador.</p><PasswordRecoveryForm action={requestPasswordRecovery} mode="request"/><Link href="/login" className="zf-link">Voltar ao login</Link></AuthCard>;}

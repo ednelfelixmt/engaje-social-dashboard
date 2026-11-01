@@ -1,6 +1,5 @@
 import {LoginForm} from './login-form';
 import {ZfMark} from './zf-crown';
-import './zf-login.css';
 import {serverClient} from '@/lib/supabase/server';
 import {notFound} from 'next/navigation';
 import type {CSSProperties} from 'react';

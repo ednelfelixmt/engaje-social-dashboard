@@ -9,7 +9,7 @@ function format(val:number|null,metric:Metric,currency:string){if(val==null)retu
 function barColor(title:string,label:string,index:number){
  const l=label.toLocaleLowerCase('pt-BR');
  if(title.toLowerCase().includes('gênero'))return l.includes('femin')?'#b487f4':l.includes('mascul')?'#4eafff':'#87909f';
- const colors=['#ffd524','#50c6ec','#a68bff','#58d6a1','#f0a565','#fa7c9a','#81a8fc','#abb3c0'];return colors[index%colors.length];
+ const colors=['#ffffff','#50c6ec','#a68bff','#58d6a1','#f0a565','#fa7c9a','#81a8fc','#abb3c0'];return colors[index%colors.length];
 }
 export function MetricBreakdownCard({title,rows,currency,note}:{title:string;rows:BreakdownPoint[];currency:string;note?:string}){
  const [metric,setMetric]=useState<Metric>('impressions');
