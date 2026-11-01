@@ -139,3 +139,20 @@ test('ORG-SOURCE-INVISIBLE-CONTROLS-001: content grain rejects invisible and bid
  assert.equal(accepted.rows[0].externalId,'post/α:1');
  assert.equal(accepted.rows[0].likes,0);
 });
+
+
+test('ORG-TIMEZONE-REQUIRED-001: missing or non-string timezone cannot label content reports',()=>{
+ for(const timezone of [undefined,null,0,false,{},[]]){
+  const invalid={...scope,timezone} as unknown as OrganicContentScope;
+  assert.throws(()=>buildOrganicContentReport([],invalid),RangeError,'empty '+String(timezone));
+  assert.throws(()=>buildOrganicContentReport([post()],invalid),RangeError,'populated '+String(timezone));
+ }
+ const omitted={...scope} as Partial<OrganicContentScope>;
+ delete omitted.timezone;
+ assert.throws(()=>buildOrganicContentReport([],omitted as OrganicContentScope),RangeError,'omitted timezone');
+ for(const timezone of ['UTC','America/Cuiaba']){
+  const valid=buildOrganicContentReport([post({lifetime_metrics:{likes:0}})],{...scope,timezone});
+  assert.equal(valid.scope.timezone,timezone);
+  assert.equal(valid.rows[0].likes,0);
+ }
+});
