@@ -178,3 +178,39 @@ test('RECON-OPAQUE-CONTROLS-001: ordinary internal spaces, Meta aliases and meas
   assert.equal(reconcilePaidFacts([meta]).status, 'ready');
   assert.equal(reconcilePaidFacts([meta, { ...meta, accountId: '123' }]).status, 'duplicate_grain');
 });
+
+
+test('RECON-OPAQUE-UNICODE-001: invisible, directional and malformed UTF-16 identities reject the whole source grain', () => {
+  const invisible = ['\u00ad', '\u061c', '\u200b', '\u200e', '\u202e', '\u2066', '\u2069', '\ufeff', '\u2028', '\u2029'];
+  const malformed = [String.fromCharCode(0xd800), String.fromCharCode(0xdc00), '🎯' + String.fromCharCode(0xd800)];
+  const base = {...a, platform: 'meta_ads', accountId: 'act_123', campaignId: 'campaign-10'};
+  for (const insertion of [...invisible, ...malformed]) {
+    for (const field of ['platform', 'accountId', 'campaignId'] as const) {
+      const value = base[field];
+      const row = {...base, [field]: value.slice(0, 2) + insertion + value.slice(2)};
+      assert.deepEqual(
+        reconcilePaidFacts([row]),
+        {status: 'invalid', reason: 'Malformed fact grain'},
+        field + ' ' + JSON.stringify(insertion),
+      );
+    }
+  }
+});
+
+test('RECON-OPAQUE-UNICODE-001: one concealed row cannot inflate zero observations, while visible Unicode and Meta aliases survive', () => {
+  const ordinary = {...a, platform: 'meta_ads', accountId: 'act_123', campaignId: 'Café 🎯', spend: 0, leads: 0, clicks: 0};
+  const polluted = {...ordinary, accountId: 'act_12\u200b3', spend: 900, leads: 90};
+  const before = JSON.stringify([ordinary, polluted]);
+  assert.equal(reconcilePaidFacts([ordinary, polluted]).status, 'invalid');
+  assert.equal(reconcilePaidFacts([polluted, ordinary]).status, 'invalid');
+  assert.equal(JSON.stringify([ordinary, polluted]), before, 'input must remain untouched');
+  const valid = reconcilePaidFacts([ordinary]);
+  assert.equal(valid.status, 'ready');
+  if (valid.status === 'ready') {
+    assert.equal(valid.totals.spend, 0);
+    assert.equal(valid.totals.leads, 0);
+    assert.equal(valid.totals.clicks, 0);
+  }
+  assert.equal(reconcilePaidFacts([ordinary, {...ordinary, accountId: '123'}]).status, 'duplicate_grain');
+  assert.equal(reconcilePaidFacts([{...a, accountId: 'cliente público 🎯', campaignId: 'Campanha café'}]).status, 'ready');
+});
