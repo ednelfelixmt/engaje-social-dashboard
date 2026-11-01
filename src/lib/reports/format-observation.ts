@@ -10,6 +10,10 @@ export type ReportObservationFormat = Readonly<{
 /** A missing or non-finite source value is unavailable; observed zero is not missing. */
 export function formatReportObservation(value: number | null | undefined, options: ReportObservationFormat = {}): string {
   if (value == null || !Number.isFinite(value)) return '—';
+  // A malformed currency identifier must not crash a report or silently
+  // convert a monetary observation into an unlabeled numeric value.
+  // ISO currency codes are three ASCII uppercase letters at this boundary.
+  if (options.currency !== undefined && !/^[A-Z]{3}$/.test(options.currency)) return '—';
   const notation = options.scientificTiny && value !== 0 && Math.abs(value) < 0.000001 ? 'scientific' : 'standard';
   const intl: Intl.NumberFormatOptions = options.currency
     ? {style: 'currency', currency: options.currency, notation}
