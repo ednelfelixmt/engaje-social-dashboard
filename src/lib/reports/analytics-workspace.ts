@@ -18,6 +18,11 @@ type Attribution=PerformancePeriod['attribution'];
 export type AnalyticsWorkspaceModel={scope:PerformanceScope;steps:FunnelStepConfig[];current:CampaignPerformance[];previous:CampaignPerformance[];days:AnalyticsPoint[];priorDays:AnalyticsPoint[];audience:AnalyticsAudience[];priorAudience:AnalyticsAudience[];lineage:{key:string;current:Attribution;previous:Attribution}[];commercial:RevenueReport;omittedAudience:number;sourceRecords:number};
 export class AnalyticsCapacityError extends Error {constructor(){super('Recorte analítico extenso; reduza o período para abrir todos os dados sem truncamento.');}}
 const intact=(value:unknown,empty=false):value is string=>typeof value==='string'&&(empty||value.length>0)&&value.trim()===value&&!/[\u0000-\u001f\u007f-\u009f]/.test(value);
+/** Treat provider attribution-window labels as evidence, never silently sanitize them. */
+const knownAudienceAttributionWindow=(value:string)=>
+ value.length>0&&value===value.trim()&&
+ !/[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u200b-\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]/u.test(value)&&
+ !/(unknown|default|unspecified|not[ _-]?set|n[aã]o[ _-]?informad|unavailable)/i.test(value);
 const account=(value:string,platform:string)=>platform==='meta_ads'?value.replace(/^act_/,''):value;
 export const analyticsCampaignKey=(platform:string,accountId:string,campaignId:string)=>JSON.stringify([platform,account(accountId,platform),campaignId]);
 function daily(rows:Row<'metrics_ads'>[]):AnalyticsPoint[]{
@@ -34,7 +39,7 @@ function audience(rows:Row<'metrics_ads_breakdowns'>[],scope:PerformanceScope,ra
   const key=analyticsCampaignKey(row.platform,row.account_id,row.campaign_id),grain=JSON.stringify([row.metric_date,key,row.dimension_type,row.dimension_value]);
   if(ids.has(row.id)||grains.has(grain))throw new Error('Duplicate analytics audience grain');ids.add(row.id);grains.add(grain);
   if(!analyticsDimensions.includes(row.dimension_type as AnalyticsDimension)){omitted++;continue;}
-  result.push({date:row.metric_date,key,platform:row.platform,account:account(row.account_id,row.platform),dimension:row.dimension_type as AnalyticsDimension,value:row.dimension_value,label:row.dimension_label?.trim()||row.dimension_value||'Não informado',window:row.attribution_window.trim(),spend:row.spend,impressions:row.impressions,clicks:row.clicks,leads:row.leads});
+  result.push({date:row.metric_date,key,platform:row.platform,account:account(row.account_id,row.platform),dimension:row.dimension_type as AnalyticsDimension,value:row.dimension_value,label:row.dimension_label?.trim()||row.dimension_value||'Não informado',window:row.attribution_window,spend:row.spend,impressions:row.impressions,clicks:row.clicks,leads:row.leads});
  }
  return {rows:result,omitted};
 }
@@ -69,7 +74,7 @@ export function analyticsDelta(current:PaidTotals,previous:PaidTotals,metric:Pai
 }
 export function analyticsAudienceRows(current:AnalyticsAudience[],previous:AnalyticsAudience[],dimension:AnalyticsDimension){
  const now=current.filter(row=>row.dimension===dimension),prior=previous.filter(row=>row.dimension===dimension),values=[...new Set([...now,...prior].map(row=>row.value))];
- const aggregate=(rows:AnalyticsAudience[])=>{const windows=new Set(rows.map(r=>r.window));const validWindow=windows.size===1&&[...windows].every(w=>w&&!/(unknown|default|unspecified|not[ _-]?set|n[aã]o[ _-]?informad|unavailable)/i.test(w));return{spend:sum(rows,'spend'),impressions:sum(rows,'impressions'),clicks:sum(rows,'clicks'),leads:validWindow?sum(rows,'leads'):null};};
+ const aggregate=(rows:AnalyticsAudience[])=>{const windows=new Set(rows.map(r=>r.window));const validWindow=windows.size===1&&[...windows].every(knownAudienceAttributionWindow);return{spend:sum(rows,'spend'),impressions:sum(rows,'impressions'),clicks:sum(rows,'clicks'),leads:validWindow?sum(rows,'leads'):null};};
  const canonical:Record<string,string>={female:'Feminino',male:'Masculino',unknown:'Não informado',mobile:'Celular',desktop:'Computador',tablet:'Tablet'};
  return values.map(value=>{const currentRows=now.filter(row=>row.value===value),previousRows=prior.filter(row=>row.value===value),all=[...currentRows,...previousRows],labels=new Set(all.map(row=>row.label)),currentValues=aggregate(currentRows),previousValues=aggregate(previousRows);const attribution=(rows:AnalyticsAudience[]):Attribution=>{const groups=new Map<string,{platform:string;account:string;windows:Set<string>}>();for(const row of rows){const key=JSON.stringify([row.platform,row.account]),group=groups.get(key)??{platform:row.platform,account:row.account,windows:new Set<string>()};group.windows.add(row.window);groups.set(key,group);}return [...groups.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([,group])=>({...group,windows:[...group.windows].sort()}));};if(currentRows.length&&previousRows.length&&!comparableAttribution({attribution:attribution(currentRows)},{attribution:attribution(previousRows)})){currentValues.leads=null;previousValues.leads=null;}return{value,label:canonical[value.toLowerCase()]??(labels.size===1?[...labels][0]:value||'Não informado'),current:currentValues,previous:previousValues,currentRecords:currentRows.length,previousRecords:previousRows.length};});
 }
