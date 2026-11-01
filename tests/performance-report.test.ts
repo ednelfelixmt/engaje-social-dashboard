@@ -173,3 +173,29 @@ test('SOURCE-GRAIN-CONTROLS-001: performance source keys reject internal C0/C1 c
  assert.equal(allowed.current.totals.spend,0);
  assert.equal(allowed.campaigns[0].account,'12 alpha');
 });
+
+test('REPORT-TIMEZONE-REQUIRED-001: performance report refuses implicit or non-textual timezones', () => {
+ const malformed: unknown[] = [undefined, null, 0, false, {}, [], ['UTC']];
+ for (const timezone of malformed) {
+  const invalid = {...scope, timezone: timezone as string};
+  assert.throws(() => buildPerformanceReport([], [], invalid), /Performance report timezone must be explicit/, String(timezone));
+  assert.throws(() => buildPerformanceReport([fact({spend:0})], [prior({spend:0})], invalid),
+   /Performance report timezone must be explicit/, 'populated ' + String(timezone));
+ }
+ const omitted = {...scope};
+ delete (omitted as Partial<PerformanceScope>).timezone;
+ assert.throws(() => buildPerformanceReport([], [], omitted), /Performance report timezone must be explicit/);
+ // A string must still be an actual IANA timezone; no silent sanitization or fallback.
+ for (const timezone of ['', 'UTC ', 'Mars/Olympus']) {
+  assert.throws(() => buildPerformanceReport([], [], {...scope, timezone}), RangeError);
+ }
+ for (const timezone of ['UTC', 'America/Cuiaba']) {
+  const current = fact({spend:0, clicks:0, leads:0}), earlier = prior({spend:0});
+  const valid = buildPerformanceReport([current], [earlier], {...scope, timezone});
+  assert.equal(valid.scope.timezone, timezone);
+  assert.equal(valid.current.totals.spend, 0);
+  assert.equal(valid.previous?.totals.spend, 0);
+  assert.equal(current.spend, 0);
+  assert.equal(earlier.spend, 0);
+ }
+});

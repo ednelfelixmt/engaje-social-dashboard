@@ -172,3 +172,28 @@ test('SOURCE-GRAIN-CONTROLS-001: CRM and spreadsheet source keys reject internal
  assert.equal(allowed.current.totals.revenue,0);
  assert.equal(allowed.current.totals.purchases,0);
 });
+
+test('REPORT-TIMEZONE-REQUIRED-001: revenue report refuses implicit or non-textual timezones', () => {
+ const malformed: unknown[] = [undefined, null, 0, false, {}, [], ['UTC']];
+ for (const timezone of malformed) {
+  const invalid = {...scope, timezone: timezone as string};
+  assert.throws(() => buildRevenueReport([], [], invalid), /Revenue report timezone must be explicit/, String(timezone));
+  assert.throws(() => buildRevenueReport([fact({revenue:0})], [], invalid),
+   /Revenue report timezone must be explicit/, 'populated ' + String(timezone));
+ }
+ const omitted = {...scope};
+ delete (omitted as Partial<RevenueScope>).timezone;
+ assert.throws(() => buildRevenueReport([], [], omitted), /Revenue report timezone must be explicit/);
+ for (const timezone of ['', 'UTC ', 'Mars/Olympus']) {
+  assert.throws(() => buildRevenueReport([], [], {...scope, timezone}), RangeError);
+ }
+ for (const timezone of ['UTC', 'America/Cuiaba']) {
+  const row = fact({revenue:0, purchases:0});
+  const valid = buildRevenueReport([row], [], {...scope, to:scope.from, compare:'none', timezone});
+  assert.equal(valid.scope.timezone, timezone);
+  assert.equal(valid.current.totals.revenue, 0);
+  assert.equal(valid.current.totals.purchases, 0);
+  assert.equal(row.revenue, 0);
+  assert.equal(valid.previous, null);
+ }
+});
