@@ -57,13 +57,13 @@ test('real but tiny report changes remain distinguishable from observed zero', (
 });
 
 test('invalid report currencies fail closed without changing observed values', () => {
-  for (const currency of ['', 'brl', 'BR', 'BRLL', 'BRL ', ' BRL', 'B R', 'BRL\\n', '\\u0000BRL']) {
+  for (const currency of ['', 'brl', 'BR', 'BRLL', 'BRL ', ' BRL', 'B R', 'BRL\n', '\u0000BRL']) {
     assert.equal(formatReportObservation(123.45, {currency}), '—', JSON.stringify(currency));
     assert.equal(formatReportObservation(0, {currency, maximumFractionDigits: 6, scientificTiny: true}), '—', JSON.stringify(currency));
   }
   // Valid declared currencies, missing observations and nonmonetary values
   // keep their existing semantics; no conversion or fallback unit is invented.
-  assert.match(formatReportObservation(123.45, {currency: 'BRL'}), /R\\$\\s*123,45$/u);
+  assert.match(formatReportObservation(123.45, {currency: 'BRL'}), /R\$\s*123,45$/u);
   assert.match(formatReportObservation(0, {currency: 'USD'}), /0,00$/u);
   assert.equal(formatReportObservation(null, {currency: 'BRL'}), '—');
   assert.equal(formatReportObservation(2.5, {suffix: 'x'}), '2,5x');
