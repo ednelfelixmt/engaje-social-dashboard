@@ -70,3 +70,26 @@ test('REPORT-NAV-INVISIBLE-SLUG-001: visible Unicode and escaped segments preser
  }
  assert.deepEqual(context,before,'valid navigation never rewrites scope');
 });
+
+
+test('REPORT-NAV-UTF16-FAILCLOSED-001: every report route rejects unpaired UTF-16 slug code units before URL encoding',()=>{
+ const invalidSlugs=['cliente'+String.fromCharCode(0xD800),String.fromCharCode(0xDC00)+'cliente','cliente'+String.fromCharCode(0xD83D)+'texto','cliente😀'+String.fromCharCode(0xDC00)];
+ const context={...scope},snapshot=structuredClone(context);
+ for(const item of reportCatalog)for(const slug of invalidSlugs){
+  assert.throws(()=>reportHref(slug,item.path,context),/Invalid report navigation/,item.path+' '+JSON.stringify(slug));
+ }
+ assert.deepEqual(context,snapshot,'invalid identifiers never rewrite the navigation context');
+});
+
+test('REPORT-NAV-UTF16-FAILCLOSED-001: valid Unicode surrogate pairs preserve encoded navigation and report filters',()=>{
+ const context={...scope},snapshot=structuredClone(context),slug='cliente😀/loja';
+ for(const item of reportCatalog){
+  const href=reportHref(slug,item.path,context),url=new URL(href,'https://synthetic.example');
+  assert.ok(href.startsWith('/cliente%F0%9F%98%80%2Floja/'),item.path);
+  assert.equal(url.searchParams.get('from'),context.from);
+  assert.equal(url.searchParams.get('to'),context.to);
+  assert.equal(url.searchParams.get('currency'),context.currency);
+  assert.equal(url.searchParams.get('compare'),item.comparison?context.compare:'none');
+ }
+ assert.deepEqual(context,snapshot);
+});
