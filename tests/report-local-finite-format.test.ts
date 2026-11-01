@@ -85,3 +85,17 @@ test('invalid decimal precision options fail closed instead of crashing report r
   assert.equal(formatReportObservation(0, {maximumFractionDigits: 100}), '0');
   assert.equal(formatReportObservation(null, {minimumFractionDigits: -1}), '—');
 });
+
+
+test('minimum-only report precision never conflicts with its implicit maximum', () => {
+  // Before the fix, non-currency minimum > 2 with no maximum threw RangeError.
+  assert.equal(formatReportObservation(12.3456, {minimumFractionDigits: 3}), '12,346');
+  assert.equal(formatReportObservation(1.2, {minimumFractionDigits: 3}), '1,200');
+  assert.equal(formatReportObservation(0, {minimumFractionDigits: 5}), '0,00000');
+  assert.equal(formatReportObservation(0, {minimumFractionDigits: 100}), '0,' + '0'.repeat(100));
+  // Explicit bounds, ordinary defaults and currency formatting are unaffected.
+  assert.equal(formatReportObservation(2.5, {minimumFractionDigits: 3, maximumFractionDigits: 3}), '2,500');
+  assert.equal(formatReportObservation(2.5, {minimumFractionDigits: 3, maximumFractionDigits: 2}), '—');
+  assert.equal(formatReportObservation(2.5), '2,5');
+  assert.match(formatReportObservation(0, {currency: 'BRL', minimumFractionDigits: 3}), /R\$\s*0,000$/u);
+});
