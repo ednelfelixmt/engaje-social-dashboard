@@ -42,8 +42,8 @@ export default function InvitePage(){
   }catch{setError('Não foi possível ativar o acesso. Contate o administrador da agência.');}
   finally{setBusy(false);}
  }
- return <main className="grid min-h-screen place-items-center bg-[#090d15] px-5 py-10">
-  <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-[#151b26] p-7 shadow-2xl sm:p-9">
+ return <main className="grid min-h-screen place-items-center bg-[#0a0a0a] px-5 py-10">
+  <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-[#111111] p-7 shadow-2xl sm:p-9">
    <div className="flex size-12 items-center justify-center rounded-xl border border-primary/25 bg-primary/10"><ShieldCheck className="text-primary" size={24}/></div>
    <p className="eyebrow mt-5">Engaje Mídia Hub · Convite de acesso</p>
    <h1 className="mt-2 text-2xl font-semibold text-white">Ative sua conta</h1>
