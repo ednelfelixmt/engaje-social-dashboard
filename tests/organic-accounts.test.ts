@@ -145,3 +145,13 @@ test('ORG-TIMEZONE-SCOPE-001: invalid tenant timezone fails closed for account r
   assert.equal(valid.scope.timezone,timezone);
  }
 });
+
+test('ORG-SOURCE-INVISIBLE-CONTROLS-001: account grain rejects invisible and bidi provider identities',()=>{
+ const hidden=['id\u200Btoken','id\u200Etoken','id\u200Ftoken','id\u202Etoken','id\u2066token','id\u2069token','id\u2060token','id\u00ADtoken','id\u061Ctoken','id\uFEFFtoken'];
+ for(const field of ['id','account_id'] as const)for(const value of hidden){
+  assert.throws(()=>buildOrganicAccountsReport([record({[field]:value})],scope),/Organic account identity is missing/,field+' '+JSON.stringify(value));
+ }
+ const accepted=buildOrganicAccountsReport([record({id:'linha:São Paulo α-1',account_id:'conta:Ωmega',impressions:0})],scope);
+ assert.equal(accepted.accounts[0].account,'conta:Ωmega');
+ assert.equal(accepted.rows[0].values.impressions,0);
+});
