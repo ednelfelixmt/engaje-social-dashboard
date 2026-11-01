@@ -27,7 +27,9 @@ export function formatReportObservation(value: number | null | undefined, option
   const notation = options.scientificTiny && value !== 0 && Math.abs(value) < 0.000001 ? 'scientific' : 'standard';
   const intl: Intl.NumberFormatOptions = options.currency
     ? {style: 'currency', currency: options.currency, notation}
-    : {maximumFractionDigits: options.maximumFractionDigits ?? 2, notation};
+    // When only a minimum is supplied, the implicit non-currency maximum must
+    // accommodate it; otherwise Intl.NumberFormat throws RangeError.
+    : {maximumFractionDigits: options.maximumFractionDigits ?? Math.max(2, options.minimumFractionDigits ?? 0), notation};
   if (options.maximumFractionDigits !== undefined) intl.maximumFractionDigits = options.maximumFractionDigits;
   if (options.minimumFractionDigits !== undefined) intl.minimumFractionDigits = options.minimumFractionDigits;
   return new Intl.NumberFormat('pt-BR', intl).format(value) + (options.suffix ?? '');
