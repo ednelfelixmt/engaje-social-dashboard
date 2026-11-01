@@ -1,4 +1,5 @@
 import type {RankedPerformance} from './rankings';
+import {finiteRatio} from './aggregation';
 
 export type RankingCriterion = 'results' | 'efficiency' | 'spend' | 'ctr';
 export type RankingResultKey = 'purchases' | 'leads' | 'clicks';
@@ -18,8 +19,10 @@ export function rankingCtr(row: RankedPerformance): number | null {
   if (row.impressions == null || row.clicks == null ||
       !Number.isFinite(row.impressions) || !Number.isFinite(row.clicks) ||
       row.impressions <= 0 || row.clicks < 0) return null;
-  const percentage = row.clicks / row.impressions * 100;
-  return Number.isFinite(percentage) ? percentage : null;
+  // A fractional source observation can underflow to zero before the
+  // percentage multiplier is applied. Keep a measured positive CTR distinct
+  // from a genuine zero, using the shared overflow-safe ratio calculation.
+  return finiteRatio(row.clicks, row.impressions, 100);
 }
 
 /** An observed zero investment is eligible; a zero or absent result is not an efficiency measurement. */
