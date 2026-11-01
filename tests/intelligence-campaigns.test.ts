@@ -188,3 +188,51 @@ test('INTEL-META-IDENTITY-001: Meta aliases share stable UI identity while other
     campaign({accountId: '123'}), campaign({accountId: 'act_123'}),
   ], organizationId, currency), /unique source identities/);
 });
+
+
+test('INTELLIGENCE-CAMPAIGN-PAID-SCOPE-001: unsupported providers fail closed in measured and catalog-only rows', () => {
+  const observedZero = campaign({campaignId: 'observed-zero'});
+  for (const invalidPlatform of ['instagram_organic', 'microsoft_ads', 'unknown']) {
+    const invalidMeasured = campaign({
+      platform: invalidPlatform as CampaignPerformance['platform'],
+      accountId: 'foreign-source', campaignId: 'foreign-measured',
+      metricValues: {spend: 500}, spend: 500,
+    });
+    const invalidCatalog = campaign({
+      platform: invalidPlatform as CampaignPerformance['platform'],
+      accountId: 'foreign-source', campaignId: 'foreign-catalog',
+      metricValues: {}, currency: '',
+    });
+    assert.throws(
+      () => intelligenceCampaignShape([observedZero, invalidMeasured], organizationId, currency),
+      /supported paid source platforms/, invalidPlatform,
+    );
+    assert.throws(
+      () => intelligenceCampaignShape([observedZero, invalidCatalog], organizationId, currency),
+      /supported paid source platforms/, invalidPlatform,
+    );
+    assert.throws(
+      () => intelligenceCampaignShape([invalidCatalog], organizationId, currency),
+      /supported paid source platforms/, invalidPlatform,
+    );
+  }
+  assert.equal(observedZero.spend, 0);
+});
+
+test('INTELLIGENCE-CAMPAIGN-PAID-SCOPE-001: three supported paid providers retain measured zero and opaque IDs', () => {
+  const rows = Object.freeze([
+    Object.freeze(campaign({platform: 'meta_ads', accountId: 'act_123', campaignId: 'meta', spend: 0})),
+    Object.freeze(campaign({platform: 'google_ads', accountId: 'act_act_123', campaignId: 'google', spend: 0})),
+    Object.freeze(campaign({platform: 'tiktok_ads', accountId: 'ad account east', campaignId: 'tiktok', spend: 0})),
+  ]);
+  const output = intelligenceCampaignShape(rows, organizationId, currency);
+  assert.deepEqual(output.map(row => row.platform), ['meta_ads', 'google_ads', 'tiktok_ads']);
+  assert.deepEqual(output.map(row => row.spend), [0, 0, 0]);
+  assert.deepEqual(output.map(row => row.id), [
+    JSON.stringify([organizationId, 'meta_ads', '123', 'meta']),
+    JSON.stringify([organizationId, 'google_ads', 'act_act_123', 'google']),
+    JSON.stringify([organizationId, 'tiktok_ads', 'ad account east', 'tiktok']),
+  ]);
+  assert.equal(rows[0].accountId, 'act_123');
+  assert.equal(rows[2].accountId, 'ad account east');
+});
