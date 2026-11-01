@@ -173,3 +173,44 @@ test('SOURCE-GRAIN-CONTROLS-001: performance source keys reject internal C0/C1 c
  assert.equal(allowed.current.totals.spend,0);
  assert.equal(allowed.campaigns[0].account,'12 alpha');
 });
+
+
+test('PERF-ATTRIBUTION-PROVENANCE-001: malformed source windows cannot prove comparable leads or CPL', () => {
+ const original=buildPerformanceReport([fact()],[prior()],scope);
+ assert.equal(comparableAttribution(original.current,original.previous!),true);
+ assert.equal(performanceDelta(original.current,original.previous,'leads'),0);
+ const malformed: unknown[] = [
+  ' 7d_click', '7d_click ', '7d_click\n', '7d_\u0000click',
+  '7d_click\u0085', '7d_click\u2028', ' ', null,
+ ];
+ for (const raw of malformed) {
+  const value=raw as string;
+  for (const corruptedCurrent of [true,false]) {
+   const report=buildPerformanceReport(
+    [fact({attribution_window:corruptedCurrent?value:'7d_click'})],
+    [prior({attribution_window:corruptedCurrent?'7d_click':value})],scope,
+   );
+   assert.equal(comparableAttribution(report.current,report.previous!),false,JSON.stringify(raw));
+   assert.equal(performanceDelta(report.current,report.previous,'leads'),null);
+   assert.equal(performanceDelta(report.current,report.previous,'cpl'),null);
+   assert.equal(performanceDelta(report.current,report.previous,'spend'),100);
+   assert.equal(performanceDelta(report.current,report.previous,'ctr'),0);
+   const altered=corruptedCurrent?report.current:report.previous!;
+   assert.deepEqual(altered.attribution[0]?.windows,[''],JSON.stringify(raw));
+  }
+ }
+});
+
+test('PERF-ATTRIBUTION-PROVENANCE-001: mixed valid and malformed windows remain explicit, stable, and read-only', () => {
+ const records=[fact(),fact({id:'synthetic-second',ad_id:'synthetic-other',attribution_window:'7d_click ',spend:0,leads:0})];
+ const snapshot=JSON.stringify(records);
+ const a=buildPerformanceReport(records,[prior()],scope);
+ const b=buildPerformanceReport([...records].reverse(),[prior()],scope);
+ assert.deepEqual(a.current.attribution,b.current.attribution);
+ assert.deepEqual(a.current.attribution[0]?.windows,['','7d_click']);
+ assert.equal(comparableAttribution(a.current,a.previous!),false);
+ assert.equal(a.current.totals.leads,2);
+ assert.equal(a.current.totals.spend,100);
+ assert.equal(performanceDelta(a.current,a.previous,'leads'),null);
+ assert.equal(JSON.stringify(records),snapshot,'source observations must not be mutated');
+});

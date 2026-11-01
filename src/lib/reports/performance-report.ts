@@ -52,7 +52,13 @@ function period(rows: readonly Fact[], range: {from: string; to: string}): Perfo
  for (const row of rows) {
   const key = JSON.stringify([row.platform, accountOf(row)]);
   const entry = windows.get(key) ?? {platform: row.platform, account: accountOf(row), windows: new Set<string>()};
-  entry.windows.add(row.attribution_window.trim()); windows.set(key, entry);
+  // Attribution provenance must not be silently repaired by trim(). A padded,
+  // control-bearing or unavailable window is unknown, never evidence that
+  // two periods used equivalent attribution. Preserve valid raw values.
+  const rawWindow: unknown = row.attribution_window;
+  const comparableWindow = typeof rawWindow === 'string' && rawWindow === rawWindow.trim()
+    && !/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/u.test(rawWindow) ? rawWindow : '';
+  entry.windows.add(comparableWindow); windows.set(key, entry);
  }
  return {...range, totals: paidTotals(rows), sourceIds: rows.map(row => row.id).sort(),
   coverage: Object.fromEntries(baseMetrics.map(metric => [metric, rows.filter(row => observed(row[metric])).length])) as PerformancePeriod['coverage'],
