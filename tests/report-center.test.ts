@@ -41,3 +41,32 @@ test('slug validation preserves safe escaped segments and all report-specific ro
   assert.throws(()=>reportHref('client\u001fname',path,context),/Invalid report navigation/);
  }
 });
+
+
+test('REPORT-NAV-INVISIBLE-SLUG-001: all report routes reject hidden or bidirectional tenant slug controls',()=>{
+ const invalidSlugs=[
+  'cliente\u061Coculto', 'cliente\u200Boculto', 'cliente\u200Eoculto', 'cliente\u200Foculto',
+  'cliente\u202Aoculto', 'cliente\u202Boculto', 'cliente\u202Coculto', 'cliente\u202Doculto', 'cliente\u202Eoculto',
+  'cliente\u2060oculto', 'cliente\u2066oculto', 'cliente\u2067oculto', 'cliente\u2068oculto', 'cliente\u2069oculto',
+  'cliente\uFEFFoculto',
+ ];
+ const context={...scope},before=structuredClone(context);
+ for(const item of reportCatalog)for(const slug of invalidSlugs){
+  assert.throws(()=>reportHref(slug,item.path,context),/Invalid report navigation/,item.path+' '+JSON.stringify(slug));
+ }
+ assert.deepEqual(context,before,'navigation validation must not mutate any scope');
+});
+
+test('REPORT-NAV-INVISIBLE-SLUG-001: visible Unicode and escaped segments preserve links and explicit comparison scope',()=>{
+ const context={...scope},before=structuredClone(context),slug='café/loja';
+ for(const item of reportCatalog){
+  const href=reportHref(slug,item.path,context);
+  assert.ok(href.startsWith('/caf%C3%A9%2Floja/'),item.path);
+  const url=new URL(href,'https://synthetic.example');
+  assert.equal(url.searchParams.get('from'),context.from);
+  assert.equal(url.searchParams.get('to'),context.to);
+  assert.equal(url.searchParams.get('currency'),context.currency);
+  assert.equal(url.searchParams.get('compare'),item.comparison?context.compare:'none');
+ }
+ assert.deepEqual(context,before,'valid navigation never rewrites scope');
+});
