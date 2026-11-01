@@ -273,68 +273,88 @@ html.is-touch-dragging * { cursor: grabbing !important; }
 
 .tv-mode .analytics-funnel li{padding:12px 18px}.tv-mode .analytics-funnel-values{gap:3px}.tv-mode .analytics-funnel-values>strong{font-size:30px;line-height:1.1}.tv-mode .analytics-funnel-values>small{line-height:1.2}.tv-mode .analytics-funnel-values>.analytics-delta{margin-top:0}
 
-/* Login com a identidade da ZF Comunicação: preto e branco, coroa grande. */
+/* Login e páginas de acesso: identidade da ZF Comunicação (palco preto, cartão branco, logo fiel). */
 .zf-login {
   --primary: #0a0a0a;
   --primary-rgb: 10 10 10;
   position: relative;
+  isolation: isolate;
   display: grid;
   min-height: 100vh;
   min-height: 100dvh;
   place-items: center;
   padding: 24px;
-  background-color: #0a0a0a;
+  overflow: hidden;
+  background-color: #050505;
   background-image: radial-gradient(ellipse at 50% 0%, rgba(255,255,255,.1), transparent 55%);
   background-size: cover;
   background-position: center;
 }
+.zf-stage { position: fixed; inset: 0; z-index: -1; display: block; width: 100%; height: 100%; background: #050505; }
+
 .zf-card {
+  position: relative;
   width: 100%;
-  max-width: 440px;
-  border-radius: 28px;
-  background: #fff;
-  padding: clamp(32px, 6vw, 48px) clamp(24px, 6vw, 44px) clamp(28px, 5vw, 40px);
+  max-width: 448px;
+  border-radius: 32px;
+  background: linear-gradient(180deg, #fff 0%, #fafafa 100%);
+  padding: clamp(32px, 6vw, 52px) clamp(24px, 6vw, 48px) clamp(28px, 5vw, 44px);
   color: #0a0a0a;
-  box-shadow: 0 30px 90px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.06);
   text-align: center;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 2px 4px rgba(0,0,0,.2), 0 24px 60px rgba(0,0,0,.55), 0 60px 140px rgba(0,0,0,.6), inset 0 1px 0 #fff;
 }
-.zf-mark { display: grid; justify-items: center; gap: 4px; margin-bottom: 26px; }
-.zf-crown { width: clamp(112px, 34vw, 148px); height: auto; color: #0a0a0a; }
-.zf-letters {
-  font-family: "Bodoni MT", Didot, "Playfair Display", "Times New Roman", serif;
-  font-size: clamp(46px, 13vw, 60px);
-  font-weight: 500;
-  letter-spacing: .06em;
-  line-height: 1;
+
+/* Logo: coroa maior sobre as letras do logo (centro da coroa em 52% da largura das letras) */
+.zf-mark { display: grid; justify-items: center; margin-bottom: clamp(20px, 4vh, 30px); }
+.zf-lockup { --L: clamp(150px, min(54vw, 27vh), 236px); display: block; width: var(--L); }
+.zf-crownwrap { position: relative; display: block; width: calc(var(--L) * .62); margin: 0 0 calc(var(--L) * .05) calc(var(--L) * .212); }
+.zf-crown { display: block; width: 100%; height: auto; filter: drop-shadow(0 10px 18px rgba(0,0,0,.28)); }
+.zf-crownwrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 38%, rgba(255,255,255,.9) 50%, transparent 62%);
+  background-size: 260% 100%;
+  background-position: 160% 0;
+  opacity: .55;
+  -webkit-mask: url(/zf-crown.png) center / 100% 100% no-repeat;
+  mask: url(/zf-crown.png) center / 100% 100% no-repeat;
+  pointer-events: none;
+  animation: zf-glint 6s ease-in-out 1.6s infinite;
 }
+.zf-letters { display: block; width: 100%; height: auto; }
+.zf-mark--sm .zf-lockup { --L: clamp(120px, min(40vw, 20vh), 170px); }
 .zf-logo-img { max-width: min(260px, 70%); max-height: 120px; object-fit: contain; }
-.zf-card h1 { margin: 0 0 28px; font-size: 2rem; font-weight: 600; letter-spacing: -.02em; line-height: 1.1; }
+
+.zf-card h1 { margin: 0 0 26px; font-size: clamp(1.7rem, 5vw, 2.1rem); font-weight: 650; letter-spacing: -.03em; line-height: 1.1; }
+
+/* Campos */
 .zf-card form { text-align: left; }
-.zf-card label { color: #4b4b4b; }
-.zf-card input { border-color: #d6d6d6; background-color: #f5f5f5; color: #0a0a0a; caret-color: #0a0a0a; }
-.zf-card input:hover { border-color: #b8b8b8; background-color: #eeeeee; }
-.zf-card input:focus { border-color: #0a0a0a; box-shadow: 0 0 0 3px rgba(10,10,10,.12); }
-.zf-card input::placeholder { color: #8c8c8c; }
-.zf-card input:-webkit-autofill, .zf-card input:-webkit-autofill:hover, .zf-card input:-webkit-autofill:focus { -webkit-text-fill-color: #0a0a0a; box-shadow: 0 0 0 1000px #f5f5f5 inset; caret-color: #0a0a0a; }
+.zf-card label { color: #555; font-size: 12px; font-weight: 650; letter-spacing: .01em; }
+.zf-card input { min-height: 52px; border: 1px solid #e1e1e1; border-radius: 14px; background-color: #f6f6f6; color: #0a0a0a; caret-color: #0a0a0a; font-size: 15px; }
+.zf-card input:hover { border-color: #c9c9c9; background-color: #f1f1f1; }
+.zf-card input:focus { border-color: #0a0a0a; background-color: #fff; box-shadow: 0 0 0 4px rgba(10,10,10,.08); }
+.zf-card input::placeholder { color: #9a9a9a; }
+.zf-card input:-webkit-autofill, .zf-card input:-webkit-autofill:hover, .zf-card input:-webkit-autofill:focus { -webkit-text-fill-color: #0a0a0a; box-shadow: 0 0 0 1000px #f6f6f6 inset; caret-color: #0a0a0a; }
+.zf-pass { position: relative; display: block; }
+.zf-pass input { width: 100%; padding-right: 48px; }
+.zf-eye { position: absolute; right: 6px; top: 50%; display: grid; width: 40px; height: 40px; place-items: center; transform: translateY(-50%); border: 0; border-radius: 10px; background: transparent; color: #777; cursor: pointer; transition: color .2s, background .2s; }
+.zf-eye:hover { background: rgba(0,0,0,.05); color: #0a0a0a; }
+.zf-eye:focus-visible { outline: 2px solid #0a0a0a; outline-offset: 2px; }
+.zf-forgot { display: inline-block; justify-self: start; color: #555; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+.zf-forgot:hover { color: #0a0a0a; }
 .zf-card a { color: #0a0a0a; text-decoration: underline; text-underline-offset: 3px; }
-.zf-card a:hover { text-decoration-thickness: 2px; }
-.zf-card button { background: #0a0a0a; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,.22); }
-.zf-card button:hover:not(:disabled) { background: #262626; filter: none; }
-.zf-card button:focus-visible, .zf-card a:focus-visible { outline: 2px solid #0a0a0a; outline-offset: 3px; }
+.zf-card a:focus-visible { outline: 2px solid #0a0a0a; outline-offset: 3px; }
 .zf-card [role="alert"] { color: #b42318; }
 
-@keyframes zf-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-.zf-card .zf-mark { animation: zf-rise .7s cubic-bezier(.22,1,.36,1) both; }
-.zf-card h1 { animation: zf-rise .7s .1s cubic-bezier(.22,1,.36,1) both; }
-.zf-card form { animation: zf-rise .7s .2s cubic-bezier(.22,1,.36,1) both; }
-@media (prefers-reduced-motion: reduce) {
-  .zf-card .zf-mark, .zf-card h1, .zf-card form { animation: none; }
-}
+/* Botão principal */
+.zf-card form > button { position: relative; min-height: 54px; overflow: hidden; border-radius: 16px; background: #0a0a0a; color: #fff; font-size: 15px; letter-spacing: .01em; box-shadow: 0 14px 30px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.14); }
+.zf-card form > button:hover:not(:disabled) { background: #1c1c1c; filter: none; }
+.zf-card form > button::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,.22) 50%, transparent 65%); transform: translateX(-120%); transition: transform .8s; pointer-events: none; }
+.zf-card form > button:hover:not(:disabled)::after { transform: translateX(120%); }
+.zf-card form > button:focus-visible { outline: 2px solid #0a0a0a; outline-offset: 3px; }
 
-/* Variante compacta e textos de apoio (recuperação e redefinição de senha) */
-.zf-mark--sm { margin-bottom: 18px; }
-.zf-mark--sm .zf-crown { width: clamp(84px, 24vw, 104px); }
-.zf-mark--sm .zf-letters { font-size: clamp(34px, 10vw, 42px); }
+/* Textos de apoio (recuperação e redefinição de senha) */
 .zf-body { display: grid; gap: 20px; text-align: left; }
 .zf-lead { margin: 0; color: #4b4b4b; font-size: .9rem; line-height: 1.65; }
 .zf-link { display: inline-block; justify-self: start; color: #4b4b4b; font-size: .875rem; }
@@ -342,3 +362,17 @@ html.is-touch-dragging * { cursor: grabbing !important; }
 .zf-note p { margin: 0; }
 .zf-note a { color: #0a0a0a; }
 .zf-card [role="status"]:not(.zf-note) { color: #067647; }
+
+/* Entrada em sequência: cartão, coroa (com mola), letras, título e formulário */
+@keyframes zf-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes zf-drop { 0% { opacity: 0; transform: translateY(-26px) scale(.86); } 60% { opacity: 1; transform: translateY(4px) scale(1.03); } 100% { opacity: 1; transform: none; } }
+@keyframes zf-glint { 0% { background-position: 160% 0; } 35%, 100% { background-position: -60% 0; } }
+.zf-card { animation: zf-rise .8s cubic-bezier(.22,1,.36,1) both; }
+.zf-crownwrap { animation: zf-drop 1s .15s cubic-bezier(.34,1.56,.64,1) both; }
+.zf-letters { animation: zf-rise .8s .35s cubic-bezier(.22,1,.36,1) both; }
+.zf-card h1 { animation: zf-rise .8s .5s cubic-bezier(.22,1,.36,1) both; }
+.zf-card form, .zf-body { animation: zf-rise .8s .65s cubic-bezier(.22,1,.36,1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .zf-card, .zf-crownwrap, .zf-crownwrap::after, .zf-letters, .zf-card h1, .zf-card form, .zf-body { animation: none; }
+  .zf-card form > button::after { transition: none; }
+}

@@ -15,9 +15,13 @@ export type RevenueReport = {scope: RevenueScope; current: RevenuePeriod; previo
 const organizationUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const channels = ['meta_ads', 'google_ads', 'tiktok_ads', 'organic', 'direct', 'unattributed'];
 const account = (row: Fact) => row.channel === 'meta_ads' ? row.account_id.replace(/^act_/, '') : row.account_id;
-/** Opaque source IDs may contain internal spaces, but never silent edge padding. */
+/** Opaque source IDs may contain visible Unicode, but no deceptive control characters. */
+const unsafeOpaqueControls = /[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u200b\u200e-\u200f\u2028-\u202e\u2060\u2066-\u2069\ufeff]/u;
+/** Reject isolated UTF-16 surrogates; valid astral Unicode remains a single code point. */
+const malformedOpaqueUtf16 = /[\uD800-\uDFFF]/u;
 const validOpaqueId = (value: unknown, allowEmpty = false): value is string =>
- typeof value === 'string' && (allowEmpty || value.length > 0) && value.trim() === value && !/[\u0000-\u001f\u007f-\u009f]/.test(value);
+ typeof value === 'string' && (allowEmpty || value.length > 0) && value.trim() === value &&
+ !unsafeOpaqueControls.test(value) && !malformedOpaqueUtf16.test(value);
 /** Reject malformed Meta alias prefixes before generating the financial grain key. */
 const validRevenueAccount = (row: Fact): boolean => {
  if (!validOpaqueId(row.account_id, true)) return false;
