@@ -272,3 +272,28 @@ test('DATAQUAL-OPAQUE-CONTROLS-001: ordinary internal spaces and observed zero r
  assert.equal(result.jobs[0].recordedCount,0);
  assert.deepEqual(data,before);
 });
+
+
+test('DATAQUAL-COLLECTION-PROVENANCE-001: a recent metric date cannot conceal an unverified collection',()=>{
+ const mixed=buildDataQuality({...input(),metrics:[
+  {...metric,id:'known',synced_at:'2026-10-27T11:00:00Z'},
+  {...metric,id:'future',synced_at:'2026-10-27T14:00:00Z'},
+ ]},scope).items[0];
+ assert.equal(mixed.status,'invalid');
+ assert.equal(mixed.latest,'2026-10-27');
+ assert.equal(mixed.age,0);
+ assert.equal(mixed.lastReceived,'2026-10-27T11:00:00.000Z');
+ assert.equal(mixed.unknownCollections,1);
+ assert.equal(mixed.invalidDates,0);
+ assert.equal(mixed.futureDates,0);
+ const unknown=buildDataQuality({...input(),metrics:[{...metric,synced_at:'not-a-timestamp'}]},scope).items[0];
+ assert.equal(unknown.status,'invalid');
+ assert.equal(unknown.unknownCollections,1);
+ assert.equal(unknown.lastReceived,null);
+ const healthy=buildDataQuality(input(),scope).items[0];
+ assert.equal(healthy.status,'recent');
+ assert.equal(healthy.unknownCollections,0);
+ const missing=buildDataQuality({...input(),metrics:[]},scope).items[0];
+ assert.equal(missing.status,'missing');
+ assert.equal(missing.unknownCollections,0);
+});

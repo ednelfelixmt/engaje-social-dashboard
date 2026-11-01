@@ -52,3 +52,16 @@ test('DATAQUAL-MIXED-DATE-001: admin UI labels mixed dates as inconsistent rathe
  assert.ok(!html.includes('Sem data histórica válida'));
  assert.ok(!html.includes('Nenhum indicador parcial'));
 });
+
+
+test('DATAQUAL-COLLECTION-PROVENANCE-001: admin health badge distinguishes unverified collection from invalid dates',async()=>{
+ reset();sources.metrics_ads=[{...metric,synced_at:'2099-01-02T00:00:00Z'}];
+ const html=renderToStaticMarkup(await Page(props()));
+ assert.ok(html.includes('Coletas sem validação'));
+ assert.ok(html.includes('Coletas desconhecidas ou futuras: 1'));
+ assert.ok(html.includes('20/10/2026'));
+ assert.ok(!html.includes('Última data recente'));
+ assert.ok(!html.includes('Última data antiga'));
+ assert.ok(!html.includes('Datas inconsistentes'));
+ assert.ok(!html.includes('Nenhum indicador parcial'));
+});
