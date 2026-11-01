@@ -1,5 +1,6 @@
 import type {CampaignPerformance} from '@/types/domain';
 import {isRfcOrganizationUuid} from './organization-scope';
+import {platformDashboards} from './platforms';
 
 /** Provider identifiers are opaque. Never trim or rewrite them during projection. */
 function validSourceId(value: unknown): value is string {
@@ -46,6 +47,12 @@ export function intelligenceCampaignShape(
   if (rows.some(row => !validSourceId(row.platform)
     || accountIdentity(row.platform, row.accountId) === null || !validSourceId(row.campaignId))) {
     throw new Error('Intelligence campaigns require valid source identifiers');
+  }
+  // The paid intelligence timeline already restricts its sources to the supported
+  // paid provider catalog. Apply the same contract to campaign cards, including
+  // catalog-only placeholders and records omitted from the displayed subset.
+  if (rows.some(row => !platformDashboards.some(provider => provider.platform === row.platform))) {
+    throw new Error('Intelligence campaigns require supported paid source platforms');
   }
   const measured = rows.filter(observed);
   // Use the same canonical Meta grain for every period. Different raw aliases
