@@ -129,3 +129,13 @@ test('ORG-TIMEZONE-SCOPE-001: invalid tenant timezone cannot label organic conte
   assert.equal(valid.scope.timezone,timezone);
  }
 });
+
+test('ORG-SOURCE-INVISIBLE-CONTROLS-001: content grain rejects invisible and bidi provider identities',()=>{
+ const hidden=['id\u200Btoken','id\u200Etoken','id\u200Ftoken','id\u202Etoken','id\u2066token','id\u2069token','id\u2060token','id\u00ADtoken','id\u061Ctoken','id\uFEFFtoken'];
+ for(const field of ['id','account_id','external_id'] as const)for(const value of hidden){
+  assert.throws(()=>buildOrganicContentReport([post({[field]:value})],scope),/Organic source identity is missing/,field+' '+JSON.stringify(value));
+ }
+ const accepted=buildOrganicContentReport([post({id:'visível:São Paulo α-1',account_id:'conta:Ωmega',external_id:'post/α:1',lifetime_metrics:{likes:0}})],scope);
+ assert.equal(accepted.rows[0].externalId,'post/α:1');
+ assert.equal(accepted.rows[0].likes,0);
+});

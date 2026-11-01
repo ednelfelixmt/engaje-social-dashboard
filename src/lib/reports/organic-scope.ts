@@ -29,6 +29,9 @@ export function validateOrganicScope(scope:OrganicScope){
 }
 /** Source IDs are opaque; do not normalize them into a different record identity. */
 export function organicIdentifier(value:unknown):value is string{
- return typeof value==='string'&&value.length>0&&value.trim()===value&&!/[\u0000-\u001f\u007f-\u009f]/.test(value);
+ return typeof value==='string'&&value.length>0&&value.trim()===value&&
+  // Directional formatting and invisible controls cannot be trusted as opaque source IDs.
+  // Keep visible Unicode; never normalize or silently merge provider identities.
+  !/[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u200b\u200e-\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]/u.test(value);
 }
 export function organicCounter(value:unknown):number|null{return typeof value==='number'&&Number.isSafeInteger(value)&&value>=0?value:null;}
