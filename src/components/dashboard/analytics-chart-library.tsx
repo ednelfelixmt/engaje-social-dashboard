@@ -7,7 +7,7 @@ import type {ChartFormat} from '@/lib/charts/format';
 import type {WaterfallInput} from '@/lib/charts/models';
 import {money,number} from '@/lib/utils';
 export type AnalysisCampaign={id:string;name:string;platform:string;spend:number;leads:number|null;clicks:number|null;impressions:number|null};
-const PANEL='min-w-0 rounded-2xl border border-white/10 bg-[#101722] p-4';
+const PANEL='min-w-0 rounded-2xl border border-[var(--studio-border,#2b3649)] bg-[var(--studio-surface,#101722)] p-4';
 
 /** Budget concentration: one rectangle per campaign, coloured by platform. Size is spend and nothing else. */
 export function BudgetTreemap({rows,currency}:{rows:AnalysisCampaign[];currency:string}){
@@ -16,13 +16,21 @@ export function BudgetTreemap({rows,currency}:{rows:AnalysisCampaign[];currency:
  const selected=data.find(x=>x.id===selection)??data[0];
  const total=data.reduce((s,x)=>s+x.spend,0);
  const top=data.slice(0,12);
+ const invalid=rows.some(row=>!Number.isFinite(row.spend)||row.spend<0)||!Number.isFinite(total);
+ const remainder=data.slice(12);
+ const campaignIds=new Set(top.map(row=>row.id));
+ let remainderId='budget-others';
+ while(campaignIds.has(remainderId))remainderId+='-';
+ const tiles=[...top.map(r=>({id:r.id,label:r.name,value:r.spend,color:platformColor(r.platform)})),...(remainder.length?[{id:remainderId,label:'Outras campanhas ('+remainder.length+')',value:remainder.reduce((sum,row)=>sum+row.spend,0),color:'var(--chart-axis)'}]:[])];
+ if(invalid)return <section className={PANEL}><h3 className="text-sm font-semibold">Treemap de campanhas</h3><p role="status" className="mt-3 text-sm text-zinc-400">Investimento indisponível: valores inválidos ou soma fora do intervalo suportado. Nenhuma participação parcial foi calculada.</p></section>;
  const format:ChartFormat={kind:'money',currency};
  return <section className={PANEL}><div className="flex items-start justify-between gap-2"><div><p className="text-[10px] uppercase tracking-[.15em] text-zinc-500">Concentração de orçamento</p><h3 className="mt-1 text-sm font-semibold text-white">Treemap de campanhas</h3></div><span className="text-xs text-zinc-400">{data.length} campanhas</span></div>
  <div className="mt-3"><ChartFrame bare hideTitle title="Concentração de orçamento por campanha" height={260} empty={top.length?null:'Sem investimento para construir o treemap.'}
   legend={[...new Set(top.map(r=>r.platform))].map(platform=>({label:platform==='meta_ads'?'Meta Ads':platform==='google_ads'?'Google Ads':platform==='tiktok_ads'?'TikTok Ads':platform,color:platformColor(platform)}))}
-  table={{columns:['Campanha','Investimento','Participação'],rows:top.map(r=>[r.name,money(r.spend,currency),number(r.spend/total*100,1)+'%'])}}>
-  <TreemapChart items={top.map(r=>({id:r.id,label:r.name,value:r.spend,color:platformColor(r.platform)}))} format={format} selectedId={selection} ariaLabel="Concentração de orçamento por campanha"/>
+  table={{columns:['Campanha','Investimento','Participação'],rows:tiles.map(r=>[r.label,money(r.value,currency),number(r.value/total*100,1)+'%'])}}>
+  <TreemapChart items={tiles} format={format} selectedId={selection} ariaLabel="Concentração de orçamento por campanha"/>
  </ChartFrame></div>
+ {remainder.length?<p className="mt-2 text-xs text-zinc-400">As 12 maiores campanhas são exibidas individualmente; as demais compõem Outras campanhas. Participações calculadas sobre todo o investimento válido.</p>:null}
  {selected?<><div className="mt-3 grid gap-1.5 sm:grid-cols-2">{top.slice(0,6).map(r=><button key={r.id} type="button" aria-pressed={selected.id===r.id} onClick={()=>setSelection(selection===r.id?null:r.id)} className={`flex items-center justify-between gap-2 rounded-lg border px-2.5 py-2 text-left text-xs ${selected.id===r.id?'border-yellow-400/50 bg-yellow-400/5':'border-white/[.07]'}`}><span className="flex min-w-0 items-center gap-2"><i className="size-2 shrink-0 rounded-sm" style={{background:platformColor(r.platform)}}/><span className="truncate" title={r.name}>{r.name}</span></span><strong className="whitespace-nowrap">{number(r.spend/total*100,1)}%</strong></button>)}</div><p className="mt-3 text-xs leading-5 text-zinc-400">Maior concentração: {selected.name} — {money(selected.spend,currency)} ({number(selected.spend/total*100,1)}% da verba). O tamanho representa exclusivamente investimento.</p></>:null}</section>;
 }
 

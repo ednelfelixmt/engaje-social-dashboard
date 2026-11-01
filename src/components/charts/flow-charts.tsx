@@ -180,16 +180,18 @@ export type FunnelStage = {id: string; label: string; value: number | null};
  */
 export function FunnelBarsChart({stages, format = {kind: 'count'}, ariaLabel}: {stages: readonly FunnelStage[]; format?: ChartFormat; ariaLabel: string}) {
   const first = stages.find(stage => Number.isFinite(stage.value) && (stage.value as number) > 0)?.value ?? 0;
-  return <ul className="chart-funnel-bars" aria-label={ariaLabel}>
+  return <ul className="chart-kit chart-funnel-bars" aria-label={ariaLabel}>
     {stages.map((stage, index) => {
       const value = stage.value;
       const previous = index > 0 ? stages[index - 1].value : null;
-      const rate = value != null && previous != null && previous > 0 ? (value / previous) * 100 : null;
-      const widthPct = value != null && first > 0 ? Math.max(1.5, Math.min(100, (value / first) * 100)) : 0;
+      const measured = value != null && Number.isFinite(value) && value >= 0;
+      const conversion = measured && previous != null && Number.isFinite(previous) && previous > 0 ? (value / previous) * 100 : null;
+      const rate = conversion != null && Number.isFinite(conversion) ? conversion : null;
+      const widthPct = measured && first > 0 ? Math.min(100, (value / first) * 100) : 0;
       return <li key={stage.id}>
         <span className="chart-funnel-label">{stage.label}</span>
         <span className="chart-funnel-track" aria-hidden><i style={{width: widthPct + '%'}} /></span>
-        <span className="chart-funnel-figure"><b>{formatChartValue(format, value)}</b><small>{index === 0 ? 'Entrada' : rate == null ? 'Sem base de conversão' : new Intl.NumberFormat('pt-BR', {maximumFractionDigits: 2}).format(rate) + '% da etapa anterior'}</small></span>
+        <span className="chart-funnel-figure"><b>{formatChartValue(format, measured ? value : null)}</b><small>{index === 0 ? 'Entrada' : rate == null ? 'Sem base de conversão' : new Intl.NumberFormat('pt-BR', {maximumFractionDigits: 2}).format(rate) + '% da etapa anterior'}</small></span>
       </li>;
     })}
   </ul>;
