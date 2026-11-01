@@ -303,3 +303,53 @@ test('FUNNEL-META-ALIAS-001: valid Meta aliases and opaque non-Meta IDs retain z
   assert.equal(compared[0].previousValue, null);
   assert.match(compared[0].detail, /Comparação indisponível/);
 });
+
+test('FUNNEL-OPAQUE-CONTROLS-001: C0, DEL and C1 inside measured source identities fail closed', () => {
+  const observed = rows(fact())[0];
+  const original = structuredClone(observed);
+  for (const field of ['platform', 'accountId', 'campaignId'] as const) {
+    for (const control of ['\0', '\t', '\n', '\u007f', '\u0085', '\u009f']) {
+      const invalid = {...observed, [field]: `${observed[field]}${control}suffix`} as CampaignPerformance;
+      const result = summary([observed, invalid]);
+      assert.equal(result.value, null, `${field}: ${JSON.stringify(control)}`);
+      assert.equal(result.cost, null);
+      assert.match(result.detail, /identificador de origem inválido/);
+      assert.equal(summary([invalid]).value, null);
+    }
+  }
+  assert.deepEqual(observed, original, 'invalid IDs are rejected, never normalized in-place');
+});
+
+test('FUNNEL-OPAQUE-CONTROLS-001: invisible IDs in catalog-only campaigns invalidate observed totals', () => {
+  const observed = rows(fact({spend: 0, clicks: 0}))[0];
+  const catalog = campaigns([], [], 'crm', [{
+    organization_id: scope.organizationId, platform: 'meta_ads',
+    account_id: 'synthetic-catalog-account', external_id: 'synthetic-catalog',
+    name: 'Synthetic catalog', status: 'active',
+  } as Row<'ad_campaigns'>])[0];
+  assert.equal(hasFunnelMeasurements(catalog), false);
+  for (const field of ['platform', 'accountId', 'campaignId'] as const) {
+    const corrupt = {...catalog, [field]: `${catalog[field]}\u0085hidden`} as CampaignPerformance;
+    assert.equal(hasFunnelMeasurements(corrupt), false);
+    const result = summary([observed, corrupt]);
+    assert.equal(result.value, null, field);
+    assert.equal(result.cost, null, field);
+    assert.match(result.detail, /identificador de origem inválido/);
+  }
+});
+
+test('FUNNEL-OPAQUE-CONTROLS-001: valid opaque IDs, observed zero and prior-period rejection remain intact', () => {
+  const observed = rows(fact({spend: 0, clicks: 0}))[0];
+  const valid: CampaignPerformance = {...observed, accountId: 'act_opaque account|segment:α', campaignId: 'campaign / segment|:ß'};
+  const initial = structuredClone(valid);
+  const validResult = summary([valid]);
+  assert.equal(validResult.value, 0);
+  assert.equal(validResult.cost, null);
+  assert.deepEqual(valid, initial);
+  const previous = rows(fact())[0];
+  previous.campaignId = `${previous.campaignId}\u000aline-break`;
+  const comparison = configuredFunnel([valid], steps, scope, [previous]);
+  assert.equal(comparison[0].value, 0);
+  assert.equal(comparison[0].previousValue, null);
+  assert.match(comparison[0].detail, /Comparação indisponível/);
+});

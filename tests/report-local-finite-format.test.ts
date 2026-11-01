@@ -38,3 +38,88 @@ test('executive, campaign, revenue and target report views use the finite local 
     assert.match(source, /from '@\/lib\/reports\/format-observation'/, filename);
   }
 });
+
+test('real but tiny report changes remain distinguishable from observed zero', () => {
+  for (const magnitude of [0.0049, 0.00001, 1e-8, Number.MIN_VALUE]) {
+    const rising = formatReportChange(magnitude);
+    const falling = formatReportChange(-magnitude);
+    assert.match(rising, /^\+[\d,.]+E-\d+%$/u, String(magnitude));
+    assert.match(falling, /^-[\d,.]+E-\d+%$/u, String(-magnitude));
+    assert.notEqual(rising, '+0%');
+    assert.notEqual(falling, '-0%');
+  }
+  // Values at the two-decimal rounding boundary retain their regular display.
+  assert.equal(formatReportChange(0.005), '+0,01%');
+  assert.equal(formatReportChange(-0.005), '-0,01%');
+  assert.equal(formatReportChange(2.345), '+2,35%');
+  assert.equal(formatReportChange(-0), '0%');
+  assert.equal(formatReportChange(0), '0%');
+});
+
+test('invalid report currencies fail closed without changing observed values', () => {
+  for (const currency of ['', 'brl', 'BR', 'BRLL', 'BRL ', ' BRL', 'B R', 'BRL\n', '\u0000BRL']) {
+    assert.equal(formatReportObservation(123.45, {currency}), '—', JSON.stringify(currency));
+    assert.equal(formatReportObservation(0, {currency, maximumFractionDigits: 6, scientificTiny: true}), '—', JSON.stringify(currency));
+  }
+  // Valid declared currencies, missing observations and nonmonetary values
+  // keep their existing semantics; no conversion or fallback unit is invented.
+  assert.match(formatReportObservation(123.45, {currency: 'BRL'}), /R\$\s*123,45$/u);
+  assert.match(formatReportObservation(0, {currency: 'USD'}), /0,00$/u);
+  assert.equal(formatReportObservation(null, {currency: 'BRL'}), '—');
+  assert.equal(formatReportObservation(2.5, {suffix: 'x'}), '2,5x');
+});
+
+test('invalid decimal precision options fail closed instead of crashing report rendering', () => {
+  for (const digits of [-1, -0.5, 1.5, 101, NaN, Infinity, -Infinity]) {
+    assert.equal(formatReportObservation(12.345, {maximumFractionDigits: digits}), '—', String(digits));
+    assert.equal(formatReportObservation(0, {currency: 'BRL', minimumFractionDigits: digits}), '—', String(digits));
+  }
+  assert.equal(formatReportObservation(12.345, {minimumFractionDigits: 3, maximumFractionDigits: 2}), '—');
+  assert.equal(formatReportObservation(0, {currency: 'BRL', minimumFractionDigits: 4, maximumFractionDigits: 1}), '—');
+
+  // Supported precision and a genuine observed zero retain the same values.
+  assert.equal(formatReportObservation(12.3456, {minimumFractionDigits: 3, maximumFractionDigits: 4}), '12,3456');
+  assert.equal(formatReportObservation(4.1, {maximumFractionDigits: 0}), '4');
+  assert.equal(formatReportObservation(0, {maximumFractionDigits: 0}), '0');
+  assert.match(formatReportObservation(0, {currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2}), /R\$\s*0,00$/u);
+  assert.equal(formatReportObservation(0, {maximumFractionDigits: 100}), '0');
+  assert.equal(formatReportObservation(null, {minimumFractionDigits: -1}), '—');
+});
+
+
+test('minimum-only report precision never conflicts with its implicit maximum', () => {
+  // Before the fix, non-currency minimum > 2 with no maximum threw RangeError.
+  assert.equal(formatReportObservation(12.3456, {minimumFractionDigits: 3}), '12,346');
+  assert.equal(formatReportObservation(1.2, {minimumFractionDigits: 3}), '1,200');
+  assert.equal(formatReportObservation(0, {minimumFractionDigits: 5}), '0,00000');
+  assert.equal(formatReportObservation(0, {minimumFractionDigits: 100}), '0,' + '0'.repeat(100));
+  // Explicit bounds, ordinary defaults and currency formatting are unaffected.
+  assert.equal(formatReportObservation(2.5, {minimumFractionDigits: 3, maximumFractionDigits: 3}), '2,500');
+  assert.equal(formatReportObservation(2.5, {minimumFractionDigits: 3, maximumFractionDigits: 2}), '—');
+  assert.equal(formatReportObservation(2.5), '2,5');
+  assert.match(formatReportObservation(0, {currency: 'BRL', minimumFractionDigits: 3}), /R\$\s*0,000$/u);
+});
+
+test('negative zero is an observed zero in every report presentation mode', () => {
+  const formats = [
+    {},
+    {suffix: '%'},
+    {currency: 'BRL'},
+    {currency: 'USD', minimumFractionDigits: 2},
+    {scientificTiny: true, maximumFractionDigits: 6},
+    {minimumFractionDigits: 4},
+  ] as const;
+  for (const options of formats) {
+    assert.equal(formatReportObservation(-0, options), formatReportObservation(0, options), JSON.stringify(options));
+  }
+  assert.equal(formatReportObservation(-0), '0');
+  assert.equal(formatReportObservation(-0, {suffix: '%'}), '0%');
+  assert.equal(formatReportChange(-0), '0%');
+});
+
+test('normalizing signed zero does not erase genuine negative report measurements', () => {
+  assert.equal(formatReportObservation(-1.25), '-1,25');
+  assert.match(formatReportObservation(-1.25, {currency: 'BRL'}), /-R\$\s*1,25$/u);
+  assert.equal(formatReportObservation(-1e-8, {scientificTiny: true, maximumFractionDigits: 6}), '-1E-8');
+  assert.equal(formatReportObservation(1e-8, {scientificTiny: true, maximumFractionDigits: 6}), '1E-8');
+});

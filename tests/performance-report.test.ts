@@ -156,3 +156,46 @@ test('PERF-META-ALIAS-001: valid Meta aliases remain one grain and non-Meta IDs 
  assert.equal(google.campaigns[0].account, 'act_act_123');
  assert.equal(google.current.totals.spend, 0);
 });
+
+
+test('SOURCE-GRAIN-CONTROLS-001: performance source keys reject internal C0/C1 control characters in both periods', () => {
+ const fields = ['id', 'account_id', 'campaign_id', 'ad_id'] as const;
+ const invalid = ['syn\u0000thetic', 'syn\nthetic', 'syn\tthetic', 'syn\u007fthetic', 'syn\u0085thetic'];
+ for (const field of fields) for (const value of invalid) {
+  const patch = {[field]:value} as Partial<Row<'metrics_ads'>>;
+  assert.throws(() => buildPerformanceReport([fact(patch)], [], scope), /Invalid performance report grain/, field + ' current');
+  assert.throws(() => buildPerformanceReport([], [prior(patch)], scope), /Invalid performance report grain/, field + ' prior');
+ }
+ const allowed = buildPerformanceReport([fact({
+  id:'source alpha:01', account_id:'act_12 alpha', campaign_id:'campaign west:01', ad_id:'ad west:01',
+  spend:0, impressions:0, clicks:0, leads:0,
+ })], [], {...scope,compare:'none'});
+ assert.equal(allowed.current.totals.spend,0);
+ assert.equal(allowed.campaigns[0].account,'12 alpha');
+});
+
+test('REPORT-TIMEZONE-REQUIRED-001: performance report refuses implicit or non-textual timezones', () => {
+ const malformed: unknown[] = [undefined, null, 0, false, {}, [], ['UTC']];
+ for (const timezone of malformed) {
+  const invalid = {...scope, timezone: timezone as string};
+  assert.throws(() => buildPerformanceReport([], [], invalid), /Performance report timezone must be explicit/, String(timezone));
+  assert.throws(() => buildPerformanceReport([fact({spend:0})], [prior({spend:0})], invalid),
+   /Performance report timezone must be explicit/, 'populated ' + String(timezone));
+ }
+ const omitted = {...scope};
+ delete (omitted as Partial<PerformanceScope>).timezone;
+ assert.throws(() => buildPerformanceReport([], [], omitted), /Performance report timezone must be explicit/);
+ // A string must still be an actual IANA timezone; no silent sanitization or fallback.
+ for (const timezone of ['', 'UTC ', 'Mars/Olympus']) {
+  assert.throws(() => buildPerformanceReport([], [], {...scope, timezone}), RangeError);
+ }
+ for (const timezone of ['UTC', 'America/Cuiaba']) {
+  const current = fact({spend:0, clicks:0, leads:0}), earlier = prior({spend:0});
+  const valid = buildPerformanceReport([current], [earlier], {...scope, timezone});
+  assert.equal(valid.scope.timezone, timezone);
+  assert.equal(valid.current.totals.spend, 0);
+  assert.equal(valid.previous?.totals.spend, 0);
+  assert.equal(current.spend, 0);
+  assert.equal(earlier.spend, 0);
+ }
+});

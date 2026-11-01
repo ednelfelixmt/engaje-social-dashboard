@@ -25,7 +25,8 @@ const observed = (value: unknown) => typeof value === 'number' && Number.isFinit
 
 /** External IDs are opaque: never trim them into a different source identity. */
 function validSourceIdentity(value: unknown): value is string {
- return typeof value === 'string' && value.length > 0 && value.trim() === value;
+ return typeof value === 'string' && value.length > 0 && value.trim() === value
+  && !/[\u0000-\u001f\u007f-\u009f]/.test(value);
 }
 
 function validate(rows: readonly Fact[], scope: PerformanceScope, range: {from: string; to: string}) {
@@ -73,6 +74,8 @@ export function performanceDelta(current: PerformancePeriod, previous: Performan
 export function buildPerformanceReport(currentRows: readonly Fact[], previousRows: readonly Fact[], scope: PerformanceScope): PerformanceReport {
  if (!organizationUuid.safeParse(scope.organizationId).success || !scope.organizationSlug || !/^[A-Z]{3}$/.test(scope.currency) || !['none', 'previous_period', 'previous_year'].includes(scope.compare) || !Number.isFinite(Date.parse(scope.generatedAt))) throw new Error('Invalid performance report scope');
  if (new Date(scope.generatedAt).toISOString() !== scope.generatedAt) throw new Error('Report timestamp must be canonical UTC');
+ // Intl treats timeZone: undefined as the server's timezone; reports need explicit provenance.
+ if (typeof scope.timezone !== 'string') throw new RangeError('Performance report timezone must be explicit');
  new Intl.DateTimeFormat('pt-BR', {timeZone: scope.timezone});
  const range = {from: scope.from, to: scope.to};
  const priorRange = comparisonPeriod(scope.from, scope.to, scope.compare);

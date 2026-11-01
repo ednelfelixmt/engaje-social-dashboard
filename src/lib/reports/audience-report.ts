@@ -30,7 +30,8 @@ const organizationUuid = z.string().uuid();
 
 /** Source identifiers are opaque: never trim a malformed ID into a different grain. */
 function intactAudienceIdentifier(value: unknown): value is string {
- return typeof value === 'string' && value.trim().length > 0 && value === value.trim();
+ return typeof value === 'string' && value.trim().length > 0 && value === value.trim()
+  && !/[\u0000-\u001f\u007f-\u009f]/.test(value);
 }
 
 /** An empty breakdown value is an existing unclassified bucket, not a padded ID. */
@@ -55,6 +56,8 @@ export function buildAudienceReport(rows: readonly Row<'metrics_ads_breakdowns'>
  const days = new Set(calendarDays(scope.from, scope.to));
  if (!organizationUuid.safeParse(scope.organizationId).success || !scope.organizationSlug || !['meta_ads', 'google_ads'].includes(scope.platform) || !/^[A-Z]{3}$/.test(scope.currency) || !Number.isFinite(Date.parse(scope.generatedAt))) throw new Error('Invalid audience report scope');
  if (new Date(scope.generatedAt).toISOString() !== scope.generatedAt) throw new Error('Report timestamp must be canonical UTC');
+ // Intl accepts undefined as a fallback to the server timezone; report provenance must be explicit.
+ if (typeof scope.timezone !== 'string') throw new RangeError('Audience report timezone must be explicit');
  new Intl.DateTimeFormat('pt-BR', {timeZone: scope.timezone});
  const seenIds = new Set<string>(), seenGrains = new Set<string>();
  const relevant: Row<'metrics_ads_breakdowns'>[] = [];

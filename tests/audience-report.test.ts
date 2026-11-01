@@ -190,3 +190,67 @@ test('AUDIENCE-META-ALIAS-001: valid Meta aliases consolidate and non-Meta IDs r
  assert.equal(google.sourceRecords,2);
  assert.equal(google.groups.gender[0].spend,20);
 });
+
+
+test('AUDIENCE-OPAQUE-GRAIN-CONTROLS-001: reject internal C0, DEL and C1 in every source grain field',()=>{
+ const fields=['id','account_id','campaign_id','dimension_type','dimension_value'] as const;
+ const clean={id:'synthetic-source',account_id:'act_123',campaign_id:'synthetic-campaign',dimension_type:'gender',dimension_value:'male'};
+ const controls=['\u0000','\u0009','\u001f','\u007f','\u0085','\u009f'];
+ for(const field of fields)for(const control of controls){
+  const original=clean[field];
+  const malformed={...fact(),[field]:original.slice(0,2)+control+original.slice(2)};
+  assert.throws(()=>build([malformed]),/Invalid audience report grain/,field+' '+control.codePointAt(0));
+ }
+});
+
+test('AUDIENCE-OPAQUE-GRAIN-CONTROLS-001: unsupported dimensions cannot conceal malformed identities',()=>{
+ for(const field of ['id','account_id','campaign_id','dimension_value'] as const){
+  const malformed={...fact({dimension_type:'creative'}),[field]:'opaque\u0085identity'};
+  assert.throws(()=>build([fact(),malformed]),/Invalid audience report grain/,field);
+ }
+ assert.throws(()=>build([fact({dimension_type:'crea\u0000tive'})]),/Invalid audience report grain/);
+});
+
+test('AUDIENCE-OPAQUE-GRAIN-CONTROLS-001: retain legitimate spaces, zero and multiline display labels',()=>{
+ const first=fact({id:'origin A B',account_id:'act_12 3',campaign_id:'campaign A B',dimension_type:'city',dimension_value:'New York',dimension_label:'North\nSouth',spend:0,leads:0});
+ const unclassified=fact({id:'origin unknown',account_id:'act_12 3',campaign_id:'campaign A B',dimension_type:'city',dimension_value:'',dimension_label:'',spend:0,leads:0});
+ const originalFirst={...first},originalUnclassified={...unclassified};
+ const report=build([first,unclassified]);
+ assert.equal(report.sourceRecords,2);
+ assert.equal(report.groups.city.find(row=>row.value==='New York')?.spend,0);
+ assert.equal(report.groups.city.find(row=>row.value==='New York')?.label,'North\nSouth');
+ assert.equal(report.groups.city.find(row=>row.value==='New York')?.sourceIds[0],'origin A B');
+ assert.equal(report.groups.city.find(row=>row.value==='')?.label,'Não informado');
+ assert.deepEqual(first,originalFirst);
+ assert.deepEqual(unclassified,originalUnclassified);
+});
+
+test('AUDIENCE-TIMEZONE-REQUIRED-001: absent or non-textual timezone fails closed before any aggregation',()=>{
+ // Intl.DateTimeFormat accepts undefined and defaults to the process timezone.
+ const missing={...scope} as Partial<AudienceReportScope>;
+ delete missing.timezone;
+ assert.throws(()=>buildAudienceReport([],missing as AudienceReportScope),/Audience report timezone must be explicit/);
+ for(const invalid of [undefined,null,0,42,false,true,{},[],{toString:()=> 'UTC'}]){
+  const malformed={...scope,timezone:invalid as string};
+  assert.throws(()=>buildAudienceReport([],malformed),/Audience report timezone must be explicit/,String(invalid));
+  assert.throws(()=>buildAudienceReport([fact()],malformed),/Audience report timezone must be explicit/,String(invalid));
+ }
+});
+
+test('AUDIENCE-TIMEZONE-REQUIRED-001: explicit valid zones preserve observed zero and CSV provenance',()=>{
+ for(const timezone of ['UTC','America/Cuiaba']){
+  const row=fact({spend:0,impressions:0,clicks:0,leads:0});
+  const untouched={...row};
+  const report=buildAudienceReport([row],{...scope,timezone});
+  assert.equal(report.scope.timezone,timezone);
+  assert.equal(report.attributionWindow,'7d_click');
+  assert.deepEqual([report.groups.gender[0].spend,report.groups.gender[0].impressions,report.groups.gender[0].clicks,report.groups.gender[0].leads],[0,0,0,0]);
+  const parsed=Papa.parse<Record<string,string>>(audienceReportCsv(report),{delimiter:';',header:true});
+  assert.equal(parsed.errors.length,0);
+  assert.equal(parsed.data[0].fuso_organizacao,timezone);
+  assert.deepEqual(row,untouched);
+  const empty=buildAudienceReport([],{...scope,timezone});
+  assert.equal(empty.sourceRecords,0);
+  assert.equal(empty.scope.timezone,timezone);
+ }
+});

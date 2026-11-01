@@ -22,3 +22,74 @@ test('creative library remains discoverable without a sidebar only when the agen
  const shown=renderToStaticMarkup(React.createElement(ReportCenter,{slug:scope.organizationSlug,enabled:['creatives'],context:scope}));const hidden=renderToStaticMarkup(React.createElement(ReportCenter,{slug:scope.organizationSlug,enabled:[],context:scope}));assert.ok(shown.includes('Biblioteca de criativos'));assert.ok(shown.includes('/'+scope.organizationSlug+'/paid-creatives?'));assert.ok(!hidden.includes('/paid-creatives?'));
  const href=new URL(reportHref(scope.organizationSlug,'creatives',scope),'https://example.test');assert.equal(href.pathname,'/'+scope.organizationSlug+'/paid-creatives');assert.equal(href.searchParams.get('from'),scope.from);assert.equal(href.searchParams.get('to'),scope.to);assert.equal(href.searchParams.get('currency'),scope.currency);assert.equal(href.searchParams.get('compare'),'none');assert.ok(!href.pathname.includes('/reports/creatives'));
 });
+
+
+test('report links reject hidden slug delimiters instead of percent-encoding unsafe tenant routes',()=>{
+ const context={...scope},snapshot=structuredClone(context);
+ for(const slug of ['client\nname','client\tname','client\u0000name','client\u001fname','client\u007fname','client\u0085name','client\u009fname','client\u2028name','client\u2029name']){
+  assert.throws(()=>reportHref(slug,'analytics',context),/Invalid report navigation/,JSON.stringify(slug));
+ }
+ assert.deepEqual(context,snapshot,'validation does not rewrite the caller context');
+});
+
+test('slug validation preserves safe escaped segments and all report-specific route contracts',()=>{
+ const context={...scope},slug='client/segment';
+ assert.ok(reportHref(slug,'analytics',context).startsWith('/client%2Fsegment/reports/analytics?'));
+ assert.ok(reportHref(slug,'creatives',context).startsWith('/client%2Fsegment/paid-creatives?'));
+ assert.equal(new URL(reportHref(slug,'creatives',context),'https://example.test').searchParams.get('compare'),'none');
+ for(const path of ['analytics','creatives','methodology'] as const){
+  assert.throws(()=>reportHref('client\u001fname',path,context),/Invalid report navigation/);
+ }
+});
+
+
+test('REPORT-NAV-INVISIBLE-SLUG-001: all report routes reject hidden or bidirectional tenant slug controls',()=>{
+ const invalidSlugs=[
+  'cliente\u061Coculto', 'cliente\u200Boculto', 'cliente\u200Eoculto', 'cliente\u200Foculto',
+  'cliente\u202Aoculto', 'cliente\u202Boculto', 'cliente\u202Coculto', 'cliente\u202Doculto', 'cliente\u202Eoculto',
+  'cliente\u2060oculto', 'cliente\u2066oculto', 'cliente\u2067oculto', 'cliente\u2068oculto', 'cliente\u2069oculto',
+  'cliente\uFEFFoculto',
+ ];
+ const context={...scope},before=structuredClone(context);
+ for(const item of reportCatalog)for(const slug of invalidSlugs){
+  assert.throws(()=>reportHref(slug,item.path,context),/Invalid report navigation/,item.path+' '+JSON.stringify(slug));
+ }
+ assert.deepEqual(context,before,'navigation validation must not mutate any scope');
+});
+
+test('REPORT-NAV-INVISIBLE-SLUG-001: visible Unicode and escaped segments preserve links and explicit comparison scope',()=>{
+ const context={...scope},before=structuredClone(context),slug='café/loja';
+ for(const item of reportCatalog){
+  const href=reportHref(slug,item.path,context);
+  assert.ok(href.startsWith('/caf%C3%A9%2Floja/'),item.path);
+  const url=new URL(href,'https://synthetic.example');
+  assert.equal(url.searchParams.get('from'),context.from);
+  assert.equal(url.searchParams.get('to'),context.to);
+  assert.equal(url.searchParams.get('currency'),context.currency);
+  assert.equal(url.searchParams.get('compare'),item.comparison?context.compare:'none');
+ }
+ assert.deepEqual(context,before,'valid navigation never rewrites scope');
+});
+
+
+test('REPORT-NAV-UTF16-FAILCLOSED-001: every report route rejects unpaired UTF-16 slug code units before URL encoding',()=>{
+ const invalidSlugs=['cliente'+String.fromCharCode(0xD800),String.fromCharCode(0xDC00)+'cliente','cliente'+String.fromCharCode(0xD83D)+'texto','cliente😀'+String.fromCharCode(0xDC00)];
+ const context={...scope},snapshot=structuredClone(context);
+ for(const item of reportCatalog)for(const slug of invalidSlugs){
+  assert.throws(()=>reportHref(slug,item.path,context),/Invalid report navigation/,item.path+' '+JSON.stringify(slug));
+ }
+ assert.deepEqual(context,snapshot,'invalid identifiers never rewrite the navigation context');
+});
+
+test('REPORT-NAV-UTF16-FAILCLOSED-001: valid Unicode surrogate pairs preserve encoded navigation and report filters',()=>{
+ const context={...scope},snapshot=structuredClone(context),slug='cliente😀/loja';
+ for(const item of reportCatalog){
+  const href=reportHref(slug,item.path,context),url=new URL(href,'https://synthetic.example');
+  assert.ok(href.startsWith('/cliente%F0%9F%98%80%2Floja/'),item.path);
+  assert.equal(url.searchParams.get('from'),context.from);
+  assert.equal(url.searchParams.get('to'),context.to);
+  assert.equal(url.searchParams.get('currency'),context.currency);
+  assert.equal(url.searchParams.get('compare'),item.comparison?context.compare:'none');
+ }
+ assert.deepEqual(context,snapshot);
+});

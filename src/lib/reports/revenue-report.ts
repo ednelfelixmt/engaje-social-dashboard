@@ -17,7 +17,7 @@ const channels = ['meta_ads', 'google_ads', 'tiktok_ads', 'organic', 'direct', '
 const account = (row: Fact) => row.channel === 'meta_ads' ? row.account_id.replace(/^act_/, '') : row.account_id;
 /** Opaque source IDs may contain internal spaces, but never silent edge padding. */
 const validOpaqueId = (value: unknown, allowEmpty = false): value is string =>
- typeof value === 'string' && (allowEmpty || value.length > 0) && value.trim() === value;
+ typeof value === 'string' && (allowEmpty || value.length > 0) && value.trim() === value && !/[\u0000-\u001f\u007f-\u009f]/.test(value);
 /** Reject malformed Meta alias prefixes before generating the financial grain key. */
 const validRevenueAccount = (row: Fact): boolean => {
  if (!validOpaqueId(row.account_id, true)) return false;
@@ -63,6 +63,8 @@ function period(rows: readonly Fact[], scope: RevenueScope, range: {from: string
 /** One source only, with an observation required for every calendar day of each total. */
 export function buildRevenueReport(current: readonly Fact[], previous: readonly Fact[], scope: RevenueScope): RevenueReport {
  if (!organizationUuid.test(scope.organizationId) || !scope.organizationSlug || !['crm', 'spreadsheet'].includes(scope.source) || !/^[A-Z]{3}$/.test(scope.currency) || !['none', 'previous_period', 'previous_year'].includes(scope.compare)) throw new Error('Invalid revenue report scope');
+ // Do not inherit the runtime's default timezone when the organization's zone is absent.
+ if (typeof scope.timezone !== 'string') throw new RangeError('Revenue report timezone must be explicit');
  new Intl.DateTimeFormat('pt-BR', {timeZone: scope.timezone});
  if (scope.compare === 'none' && previous.length) throw new Error('Unexpected revenue comparison facts');
  return {scope: {...scope}, current: period(current, scope, {from: scope.from, to: scope.to}), previous: scope.compare === 'none' ? null : period(previous, scope, comparisonPeriod(scope.from, scope.to, scope.compare))};

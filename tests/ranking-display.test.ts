@@ -53,3 +53,27 @@ test('audience bar widths represent measured zero as zero and clamp positive val
   assert.equal(rankingBarWidth(10, 100), 10);
   assert.equal(rankingBarWidth(150, 100), 100);
 });
+
+test('RANKING-CTR-UNDERFLOW-001: measured positive CTR cannot silently become zero', () => {
+  // Synthetic extreme magnitudes exercise the arithmetic boundary without
+  // connecting to a provider or making claims about real account data.
+  const tiny = row('tiny-observation', 1, null, 1e-310, 1e15);
+  const observedZero = row('zero-observation', 1, null, 0, 1e15);
+  assert.equal(tiny.clicks! / tiny.impressions! * 100, 0, 'old evaluation order underflows');
+  assert.equal(rankingCtr(tiny), 1e-323);
+  assert.equal(rankingCtr(observedZero), 0);
+  assert.deepEqual(rankPerformanceRows([observedZero, tiny], 'ctr').map(item => item.key),
+    ['tiny-observation', 'zero-observation']);
+  assert.equal(rankingCtr(row('unrepresentable', 1, null, 1e-310, 1e100)), null);
+});
+
+test('RANKING-CTR-UNDERFLOW-001: valid ordinary CTR is unchanged and invalid source remains unavailable', () => {
+  const original = row('regular', 50, 3, 25, 100);
+  const snapshot = JSON.stringify(original);
+  assert.equal(rankingCtr(original), 25);
+  assert.equal(rankingCtr(row('missing', 5, null, null, 100)), null);
+  assert.equal(rankingCtr(row('negative', 5, null, -1, 100)), null);
+  assert.equal(rankingCtr(row('impossible', 5, null, 5, 0)), null);
+  assert.equal(rankingCtr(row('infinite', 5, null, Infinity, 100)), null);
+  assert.equal(JSON.stringify(original), snapshot, 'source facts are not mutated');
+});

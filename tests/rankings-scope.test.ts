@@ -351,3 +351,73 @@ test('RANK-META-ALIAS-002: valid Meta aliases and literal non-Meta prefixes rema
   assert.equal(google.campaign.length,1);
   assert.equal(google.creative[0].label,'Legenda sintética');
 });
+
+
+test('RANK-OPAQUE-CONTROLS-001: embedded C0, DEL and C1 are rejected in every ranking source ID', () => {
+  const creative = (fields: Partial<Row<'creatives'>>) => ({
+    organization_id: '11111111-1111-4111-8111-111111111111',
+    platform: 'meta_ads', account_id: 'account-1', ad_id: 'ad-1', ...fields,
+  } as Row<'creatives'>);
+  const candidates: Array<(id: string) => unknown> = [
+    id => preparePerformanceRankings([campaign({platform: id as CampaignPerformance['platform']})], [], [], []),
+    id => preparePerformanceRankings([campaign({accountId: id})], [], [], []),
+    id => preparePerformanceRankings([campaign({campaignId: id})], [], [], []),
+    id => preparePerformanceRankings([], [ad({platform: id as Row<'metrics_ads'>['platform']})], [], []),
+    id => preparePerformanceRankings([], [ad({account_id: id})], [], []),
+    id => preparePerformanceRankings([], [ad({ad_id: id})], [], []),
+    id => preparePerformanceRankings([], [ad({adset_id: id})], [], []),
+    id => preparePerformanceRankings([], [], [breakdown({platform: id as Row<'metrics_ads_breakdowns'>['platform']})], []),
+    id => preparePerformanceRankings([], [], [breakdown({account_id: id})], []),
+    id => preparePerformanceRankings([], [], [breakdown({dimension_type: id as Row<'metrics_ads_breakdowns'>['dimension_type']})], []),
+    id => preparePerformanceRankings([], [], [breakdown({dimension_value: id})], []),
+    id => preparePerformanceRankings([], [], [], [creative({platform: id as Row<'creatives'>['platform']})]),
+    id => preparePerformanceRankings([], [], [], [creative({account_id: id})]),
+    id => preparePerformanceRankings([], [], [], [creative({ad_id: id})]),
+  ];
+  for (const control of ['\u0000', '\t', '\n', '\u001f', '\u007f', '\u0085', '\u009f']) {
+    for (const attempt of candidates) {
+      assert.throws(() => attempt('prefix' + control + 'suffix'), /intact source identifiers/,
+        'embedded control ' + JSON.stringify(control) + ' must be rejected before aggregation');
+    }
+  }
+});
+
+test('RANK-OPAQUE-CONTROLS-001: an invalid non-displayed source blocks the whole ranking', () => {
+  assert.throws(() => preparePerformanceRankings(
+    [campaign({spend: 0, clicks: 0})], [],
+    [breakdown({dimension_type: 'device', account_id: 'account\u0085two'})], [],
+  ), /intact source identifiers/);
+  assert.throws(() => preparePerformanceRankings(
+    [campaign()], [ad({ad_id: 'ad\u0000hidden'})], [], [],
+  ), /intact source identifiers/);
+});
+
+test('RANK-OPAQUE-CONTROLS-001: valid internal spaces, multiline labels, aliases and measured zero survive unchanged', () => {
+  const sourceCampaign = campaign({
+    accountId: 'act_123', campaignId: 'campaign internal space',
+    campaignName: 'Campanha\nMultilinha', spend: 0, leads: 0,
+  });
+  const sourceAd = ad({
+    account_id: 'act_123', ad_id: 'ad internal space', adset_id: null, spend: 0,
+  });
+  const sourceBreakdown = breakdown({
+    account_id: '123', dimension_value: 'female: segment',
+    dimension_label: 'Mulheres\nAdultas', spend: 0, leads: 0,
+  });
+  const sourceCreative = {
+    organization_id: '11111111-1111-4111-8111-111111111111',
+    platform: 'meta_ads', account_id: '123', ad_id: 'ad internal space',
+    caption: 'Legenda\nMultilinha',
+  } as Row<'creatives'>;
+  const sources = [sourceCampaign, sourceAd, sourceBreakdown, sourceCreative];
+  const original = JSON.stringify(sources);
+  const result = preparePerformanceRankings([sourceCampaign], [sourceAd], [sourceBreakdown], [sourceCreative]);
+  assert.equal(result.campaign[0].spend, 0);
+  assert.equal(result.campaign[0].leads, 0);
+  assert.equal(result.campaign[0].label, 'Campanha\nMultilinha');
+  assert.equal(result.gender[0].leads, 0);
+  assert.equal(result.gender[0].label, 'Mulheres\nAdultas');
+  assert.equal(result.creative[0].label, 'Legenda\nMultilinha');
+  assert.equal(result.audience.length, 0, 'optional absent adset ID remains valid');
+  assert.equal(JSON.stringify(sources), original, 'source observations must not be rewritten');
+});

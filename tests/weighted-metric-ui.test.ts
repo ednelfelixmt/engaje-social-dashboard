@@ -117,3 +117,13 @@ test('actual workspace denies a foreign organization before rendering campaign d
     timeline: [], funnelSteps: [], rankings: {}, storageKey: 'synthetic',
   })), /Workspace campaigns require authorized organization and currency/);
 });
+
+
+test('WEIGHTED-PRECISION-LOSS-001: weighted KPI discloses arithmetic underflow instead of displaying zero', () => {
+  const summary = weighted.summarizeWeightedMetric([{value: Number.MIN_VALUE, weight: 0.5}]);
+  const html = renderToStaticMarkup(React.createElement(WeightedMetricNote, {summary}));
+  assert.match(html, /Métrica indisponível/);
+  assert.match(html, /Precisão numérica insuficiente/);
+  assert.doesNotMatch(html, /Estimativa ponderada por impressões/);
+  assert.doesNotMatch(html, /Cálculo excede o limite numérico/);
+});

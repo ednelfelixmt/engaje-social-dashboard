@@ -101,3 +101,58 @@ test('ORG-GRAIN-001: content reports reject padded or whitespace-only source ide
  assert.equal(accepted.rows[0].externalId,'provider:external-1');
  assert.equal(accepted.rows[0].account,'provider:account-1');
 });
+
+
+test('SOURCE-GRAIN-CONTROLS-001: organic content identity rejects internal controls without changing captions',()=>{
+ const invalid=['syn\u0000thetic','syn\nthetic','syn\tthetic','syn\u007fthetic','syn\u0085thetic'];
+ for(const field of ['id','account_id','external_id'] as const)for(const value of invalid){
+  assert.throws(()=>buildOrganicContentReport([post({[field]:value})],scope),/Organic source identity is missing/,field);
+ }
+ const accepted=buildOrganicContentReport([post({
+  id:'source alpha:01',account_id:'account alpha',external_id:'post alpha',
+  caption:'Multiline\ncaption',lifetime_metrics:{likes:0},
+ })],scope);
+ assert.equal(accepted.rows[0].likes,0);
+ assert.equal(accepted.rows[0].caption,'Multiline\ncaption');
+});
+
+
+test('ORG-TIMEZONE-SCOPE-001: invalid tenant timezone cannot label organic content or its empty export',()=>{
+ for (const timezone of ['Mars/Olympus','America/Cuiaba ','']) {
+  const invalidScope={...scope,timezone};
+  assert.throws(()=>buildOrganicContentReport([],invalidScope),RangeError,'empty '+JSON.stringify(timezone));
+  assert.throws(()=>buildOrganicContentReport([post()],invalidScope),RangeError,'populated '+JSON.stringify(timezone));
+ }
+ for (const timezone of ['UTC','America/Cuiaba']) {
+  const valid=buildOrganicContentReport([post({lifetime_metrics:{likes:0}})],{...scope,timezone});
+  assert.equal(valid.rows[0].likes,0);
+  assert.equal(valid.scope.timezone,timezone);
+ }
+});
+
+test('ORG-SOURCE-INVISIBLE-CONTROLS-001: content grain rejects invisible and bidi provider identities',()=>{
+ const hidden=['id\u200Btoken','id\u200Etoken','id\u200Ftoken','id\u202Etoken','id\u2066token','id\u2069token','id\u2060token','id\u00ADtoken','id\u061Ctoken','id\uFEFFtoken'];
+ for(const field of ['id','account_id','external_id'] as const)for(const value of hidden){
+  assert.throws(()=>buildOrganicContentReport([post({[field]:value})],scope),/Organic source identity is missing/,field+' '+JSON.stringify(value));
+ }
+ const accepted=buildOrganicContentReport([post({id:'visível:São Paulo α-1',account_id:'conta:Ωmega',external_id:'post/α:1',lifetime_metrics:{likes:0}})],scope);
+ assert.equal(accepted.rows[0].externalId,'post/α:1');
+ assert.equal(accepted.rows[0].likes,0);
+});
+
+
+test('ORG-TIMEZONE-REQUIRED-001: missing or non-string timezone cannot label content reports',()=>{
+ for(const timezone of [undefined,null,0,false,{},[]]){
+  const invalid={...scope,timezone} as unknown as OrganicContentScope;
+  assert.throws(()=>buildOrganicContentReport([],invalid),RangeError,'empty '+String(timezone));
+  assert.throws(()=>buildOrganicContentReport([post()],invalid),RangeError,'populated '+String(timezone));
+ }
+ const omitted={...scope} as Partial<OrganicContentScope>;
+ delete omitted.timezone;
+ assert.throws(()=>buildOrganicContentReport([],omitted as OrganicContentScope),RangeError,'omitted timezone');
+ for(const timezone of ['UTC','America/Cuiaba']){
+  const valid=buildOrganicContentReport([post({lifetime_metrics:{likes:0}})],{...scope,timezone});
+  assert.equal(valid.scope.timezone,timezone);
+  assert.equal(valid.rows[0].likes,0);
+ }
+});

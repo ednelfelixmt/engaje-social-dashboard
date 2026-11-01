@@ -117,3 +117,59 @@ test('ORG-GRAIN-001: account reports reject padded record/account identities and
  assert.equal(accepted.rows[0].id,'row:alpha/1');
  assert.equal(accepted.accounts[0].account,'provider:account-1');
 });
+
+
+test('SOURCE-GRAIN-CONTROLS-001: organic account record and account IDs reject embedded controls',()=>{
+ const invalid=['syn\u0000thetic','syn\nthetic','syn\tthetic','syn\u007fthetic','syn\u0085thetic'];
+ for(const field of ['id','account_id'] as const)for(const value of invalid){
+  assert.throws(()=>buildOrganicAccountsReport([record({[field]:value})],scope),/Organic account identity is missing/,field);
+ }
+ const accepted=buildOrganicAccountsReport([record({
+  id:'source alpha:01',account_id:'account alpha',impressions:0,
+ })],scope);
+ assert.equal(accepted.rows[0].values.impressions,0);
+ assert.equal(accepted.accounts[0].account,'account alpha');
+});
+
+
+test('ORG-TIMEZONE-SCOPE-001: invalid tenant timezone fails closed for account reports and empty periods',()=>{
+ for (const timezone of ['Mars/Olympus','America/Cuiaba ','']) {
+  const invalidScope={...scope,timezone};
+  assert.throws(()=>validateOrganicScope(invalidScope),RangeError,JSON.stringify(timezone));
+  assert.throws(()=>buildOrganicAccountsReport([],invalidScope),RangeError,'empty '+JSON.stringify(timezone));
+  assert.throws(()=>buildOrganicAccountsReport([record()],invalidScope),RangeError,'populated '+JSON.stringify(timezone));
+ }
+ for (const timezone of ['UTC','America/Cuiaba']) {
+  const valid=buildOrganicAccountsReport([record({impressions:0})],{...scope,timezone});
+  assert.equal(valid.rows[0].values.impressions,0);
+  assert.equal(valid.scope.timezone,timezone);
+ }
+});
+
+test('ORG-SOURCE-INVISIBLE-CONTROLS-001: account grain rejects invisible and bidi provider identities',()=>{
+ const hidden=['id\u200Btoken','id\u200Etoken','id\u200Ftoken','id\u202Etoken','id\u2066token','id\u2069token','id\u2060token','id\u00ADtoken','id\u061Ctoken','id\uFEFFtoken'];
+ for(const field of ['id','account_id'] as const)for(const value of hidden){
+  assert.throws(()=>buildOrganicAccountsReport([record({[field]:value})],scope),/Organic account identity is missing/,field+' '+JSON.stringify(value));
+ }
+ const accepted=buildOrganicAccountsReport([record({id:'linha:São Paulo α-1',account_id:'conta:Ωmega',impressions:0})],scope);
+ assert.equal(accepted.accounts[0].account,'conta:Ωmega');
+ assert.equal(accepted.rows[0].values.impressions,0);
+});
+
+
+test('ORG-TIMEZONE-REQUIRED-001: missing or non-string timezone cannot inherit runtime defaults in account reports',()=>{
+ for(const timezone of [undefined,null,0,false,{},[]]){
+  const invalid={...scope,timezone} as unknown as OrganicScope;
+  assert.throws(()=>validateOrganicScope(invalid),RangeError,String(timezone));
+  assert.throws(()=>buildOrganicAccountsReport([],invalid),RangeError,'empty '+String(timezone));
+  assert.throws(()=>buildOrganicAccountsReport([record()],invalid),RangeError,'populated '+String(timezone));
+ }
+ const omitted={...scope} as Partial<OrganicScope>;
+ delete omitted.timezone;
+ assert.throws(()=>buildOrganicAccountsReport([],omitted as OrganicScope),RangeError,'omitted timezone');
+ for(const timezone of ['UTC','America/Cuiaba']){
+  const valid=buildOrganicAccountsReport([record({impressions:0})],{...scope,timezone});
+  assert.equal(valid.scope.timezone,timezone);
+  assert.equal(valid.rows[0].values.impressions,0);
+ }
+});

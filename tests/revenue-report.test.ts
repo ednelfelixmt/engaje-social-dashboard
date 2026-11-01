@@ -153,3 +153,47 @@ test('REVENUE-META-GRAIN-001: valid Meta alias and opaque Google account IDs pre
  const unattributedMeta=buildRevenueReport([fact({channel:'meta_ads',account_id:'',campaign_id:'',revenue:0})],[],{...scope,to:scope.from,compare:'none'});
  assert.equal(unattributedMeta.current.totals.revenue,0);
 });
+
+
+test('SOURCE-GRAIN-CONTROLS-001: CRM and spreadsheet source keys reject internal controls before source selection', () => {
+ const fields = ['id', 'account_id', 'campaign_id'] as const;
+ const invalid = ['syn\u0000thetic', 'syn\nthetic', 'syn\tthetic', 'syn\u007fthetic', 'syn\u0085thetic'];
+ for (const field of fields) for (const value of invalid) {
+  const patch = {[field]:value} as Partial<Row<'metrics_crm'>>;
+  const base = {channel:'google_ads' as const,account_id:'account alpha',campaign_id:'campaign alpha',...patch};
+  assert.throws(() => buildRevenueReport([fact(base)], [], {...scope,compare:'none'}), /Invalid revenue report grain/,field + ' current');
+  assert.throws(() => buildRevenueReport([], [fact({...base,metric_date:'2026-10-18'})], scope), /Invalid revenue report grain/,field + ' previous');
+  assert.throws(() => buildRevenueReport([fact({...base,source:'spreadsheet'})], [], {...scope,compare:'none'}), /Invalid revenue report grain/,field + ' unselected');
+ }
+ const allowed = buildRevenueReport([fact({
+  id:'row alpha:01',channel:'google_ads',account_id:'account alpha',campaign_id:'campaign alpha',
+  revenue:0,purchases:0,leads:0,checkouts:0,
+ })],[],{...scope,to:scope.from,compare:'none'});
+ assert.equal(allowed.current.totals.revenue,0);
+ assert.equal(allowed.current.totals.purchases,0);
+});
+
+test('REPORT-TIMEZONE-REQUIRED-001: revenue report refuses implicit or non-textual timezones', () => {
+ const malformed: unknown[] = [undefined, null, 0, false, {}, [], ['UTC']];
+ for (const timezone of malformed) {
+  const invalid = {...scope, timezone: timezone as string};
+  assert.throws(() => buildRevenueReport([], [], invalid), /Revenue report timezone must be explicit/, String(timezone));
+  assert.throws(() => buildRevenueReport([fact({revenue:0})], [], invalid),
+   /Revenue report timezone must be explicit/, 'populated ' + String(timezone));
+ }
+ const omitted = {...scope};
+ delete (omitted as Partial<RevenueScope>).timezone;
+ assert.throws(() => buildRevenueReport([], [], omitted), /Revenue report timezone must be explicit/);
+ for (const timezone of ['', 'UTC ', 'Mars/Olympus']) {
+  assert.throws(() => buildRevenueReport([], [], {...scope, timezone}), RangeError);
+ }
+ for (const timezone of ['UTC', 'America/Cuiaba']) {
+  const row = fact({revenue:0, purchases:0});
+  const valid = buildRevenueReport([row], [], {...scope, to:scope.from, compare:'none', timezone});
+  assert.equal(valid.scope.timezone, timezone);
+  assert.equal(valid.current.totals.revenue, 0);
+  assert.equal(valid.current.totals.purchases, 0);
+  assert.equal(row.revenue, 0);
+  assert.equal(valid.previous, null);
+ }
+});

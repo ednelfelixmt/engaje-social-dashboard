@@ -95,3 +95,38 @@ test('agency interaction filters cards and chart without changing the declared p
   assert.equal(elements(tree).filter(el=>el.props.className==='agency-client-card').length,1);assert.ok(renderToStaticMarkup(tree).includes('2 clientes'));assert.ok(!renderToStaticMarkup(tree).includes('Logo Estúdio'));
   const leads=elements(tree).find(el=>el.type==='button'&&el.props.children==='Leads');assert.ok(leads);(leads.props.onClick as()=>void)();tree=render();assert.ok(renderToStaticMarkup(tree).includes('Clientes por leads'));
 });
+
+test('AGENCY-PORTFOLIO-BAR-RATIO-001: measured positive micro-bars retain representable percentages',()=>{
+  const baseline=client();
+  for (const metric of ['spend','leads'] as const) {
+    const input=[
+      client({id:orgA,name:'A: referência sintética',summary:{...baseline.summary,[metric]:1e15}}),
+      client({id:orgB,name:'B: microvalor sintético',summary:{...baseline.summary,[metric]:1e-310}}),
+    ];
+    const before=structuredClone(input);
+    const result=agencyPortfolioChart(input,metric);
+    assert.equal(result.rows.length,2,metric);
+    assert.equal(result.rows[0].width,100,metric);
+    assert.equal(result.rows[1].value,1e-310,metric);
+    assert.equal(result.rows[1].width,1e-323,metric);
+    assert.ok(result.rows[1].width>0,metric);
+    assert.equal(result.excluded,0,metric);
+    assert.deepEqual(input,before,metric+' must not mutate source facts');
+  }
+});
+
+test('AGENCY-PORTFOLIO-BAR-RATIO-001: unrepresentable ratios never become NaN or Infinity',()=>{
+  const baseline=client();
+  const input=[
+    client({id:orgA,name:'A: extremo sintético',summary:{...baseline.summary,spend:1e308}}),
+    client({id:orgB,name:'B: mínimo positivo sintético',summary:{...baseline.summary,spend:Number.MIN_VALUE}}),
+    client({id:'synthetic-zero',name:'C: zero observado',summary:{...baseline.summary,spend:0}}),
+  ];
+  const before=structuredClone(input);
+  const result=agencyPortfolioChart(input,'spend');
+  assert.deepEqual(result.rows.map(row=>row.width),[100,0,0]);
+  assert.equal(result.rows[1].value,Number.MIN_VALUE);
+  assert.equal(result.rows[2].value,0);
+  assert.ok(result.rows.every(row=>Number.isFinite(row.width)));
+  assert.deepEqual(input,before);
+});

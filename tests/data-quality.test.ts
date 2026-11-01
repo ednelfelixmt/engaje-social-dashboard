@@ -218,3 +218,82 @@ test('DATAQUAL-META-ACCOUNT-001: one Meta campaign across account aliases; other
  assert.equal(report.items[1].rows,3);
  assert.deepEqual(rows,snapshot); // A read-only projection must not rewrite source data.
 });
+
+
+test('DATAQUAL-OPAQUE-CONTROLS-001: internal C0/C1 controls invalidate row IDs from every source',()=>{
+ const records={
+  integrations:{id:'integration',organization_id:scope.organizationId,provider:'meta_ads',status:'connected',is_enabled:true},
+  metrics:metric,
+  dimensions:{id:'dimension',organization_id:scope.organizationId,platform:'meta_ads',dimension_type:'age'},
+  jobs:job,
+ };
+ for(const collection of ['integrations','metrics','dimensions','jobs'] as const){
+  for(const control of ['\u0000','\t','\n','\u007f','\u0085']){
+   const data={...input(),[collection]:[{...records[collection],id:'opaque'+control+'id'}]} as QualityInput;
+   const before=structuredClone(data);
+   assert.throws(()=>buildDataQuality(data,scope),/Quality source scope or identity mismatch/,collection+' control='+control.codePointAt(0));
+   assert.deepEqual(data,before,'validation must not mutate source rows');
+  }
+ }
+});
+
+test('DATAQUAL-OPAQUE-CONTROLS-001: control characters in dimension, campaign and provider identities fail closed',()=>{
+ const integration:QualityInput['integrations'][number]={id:'integration',organization_id:scope.organizationId,provider:'meta_ads',status:'connected',is_enabled:true};
+ const dimension:QualityInput['dimensions'][number]={id:'dimension',organization_id:scope.organizationId,platform:'meta_ads',dimension_type:'age'};
+ for(const control of ['\u0000','\t','\n','\u007f','\u0085']){
+  const cases:[QualityInput,RegExp,string][]=[
+   [{...input(),integrations:[{...integration,provider:('future'+control+'ads') as typeof integration.provider}]},/Quality integration provider missing/,'provider'],
+   [{...input(),metrics:[{...metric,platform:('future'+control+'ads') as typeof metric.platform}]},/Quality campaign identity missing/,'metric platform'],
+   [{...input(),metrics:[{...metric,account_id:'account'+control+'id'}]},/Quality campaign identity missing/,'account'],
+   [{...input(),metrics:[{...metric,campaign_id:'campaign'+control+'id'}]},/Quality campaign identity missing/,'campaign'],
+   [{...input(),dimensions:[{...dimension,platform:('future'+control+'ads') as typeof dimension.platform}]},/Quality dimension missing/,'dimension platform'],
+   [{...input(),dimensions:[{...dimension,dimension_type:'custom'+control+'age'}]},/Quality dimension missing/,'dimension type'],
+  ];
+  for(const [data,error,label] of cases){
+   const before=structuredClone(data);
+   assert.throws(()=>buildDataQuality(data,scope),error,label);
+   assert.deepEqual(data,before);
+  }
+ }
+});
+
+test('DATAQUAL-OPAQUE-CONTROLS-001: ordinary internal spaces and observed zero remain valid',()=>{
+ const data=input();
+ data.integrations=[{id:'integration 1',organization_id:scope.organizationId,provider:'meta_ads',status:'connected',is_enabled:true}];
+ data.metrics=[{...metric,id:'metric 1',account_id:'act_123 A',campaign_id:'campaign A'}];
+ data.dimensions=[{id:'dimension 1',organization_id:scope.organizationId,platform:'meta_ads',dimension_type:'age range'}];
+ data.jobs=[{...job,id:'job 1',rows_processed:0}];
+ const before=structuredClone(data);
+ const result=buildDataQuality(data,scope);
+ assert.equal(result.items[0].campaigns,1);
+ assert.equal(result.items[0].rows,1);
+ assert.equal(result.items[0].connected,1);
+ assert.equal(result.items[0].breakdowns['age range'],1);
+ assert.equal(result.jobs[0].recordedCount,0);
+ assert.deepEqual(data,before);
+});
+
+
+test('DATAQUAL-COLLECTION-PROVENANCE-001: a recent metric date cannot conceal an unverified collection',()=>{
+ const mixed=buildDataQuality({...input(),metrics:[
+  {...metric,id:'known',synced_at:'2026-10-27T11:00:00Z'},
+  {...metric,id:'future',synced_at:'2026-10-27T14:00:00Z'},
+ ]},scope).items[0];
+ assert.equal(mixed.status,'invalid');
+ assert.equal(mixed.latest,'2026-10-27');
+ assert.equal(mixed.age,0);
+ assert.equal(mixed.lastReceived,'2026-10-27T11:00:00.000Z');
+ assert.equal(mixed.unknownCollections,1);
+ assert.equal(mixed.invalidDates,0);
+ assert.equal(mixed.futureDates,0);
+ const unknown=buildDataQuality({...input(),metrics:[{...metric,synced_at:'not-a-timestamp'}]},scope).items[0];
+ assert.equal(unknown.status,'invalid');
+ assert.equal(unknown.unknownCollections,1);
+ assert.equal(unknown.lastReceived,null);
+ const healthy=buildDataQuality(input(),scope).items[0];
+ assert.equal(healthy.status,'recent');
+ assert.equal(healthy.unknownCollections,0);
+ const missing=buildDataQuality({...input(),metrics:[]},scope).items[0];
+ assert.equal(missing.status,'missing');
+ assert.equal(missing.unknownCollections,0);
+});
