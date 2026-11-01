@@ -224,3 +224,33 @@ test('AUDIENCE-OPAQUE-GRAIN-CONTROLS-001: retain legitimate spaces, zero and mul
  assert.deepEqual(first,originalFirst);
  assert.deepEqual(unclassified,originalUnclassified);
 });
+
+test('AUDIENCE-TIMEZONE-REQUIRED-001: absent or non-textual timezone fails closed before any aggregation',()=>{
+ // Intl.DateTimeFormat accepts undefined and defaults to the process timezone.
+ const missing={...scope} as Partial<AudienceReportScope>;
+ delete missing.timezone;
+ assert.throws(()=>buildAudienceReport([],missing as AudienceReportScope),/Audience report timezone must be explicit/);
+ for(const invalid of [undefined,null,0,42,false,true,{},[],{toString:()=> 'UTC'}]){
+  const malformed={...scope,timezone:invalid as string};
+  assert.throws(()=>buildAudienceReport([],malformed),/Audience report timezone must be explicit/,String(invalid));
+  assert.throws(()=>buildAudienceReport([fact()],malformed),/Audience report timezone must be explicit/,String(invalid));
+ }
+});
+
+test('AUDIENCE-TIMEZONE-REQUIRED-001: explicit valid zones preserve observed zero and CSV provenance',()=>{
+ for(const timezone of ['UTC','America/Cuiaba']){
+  const row=fact({spend:0,impressions:0,clicks:0,leads:0});
+  const untouched={...row};
+  const report=buildAudienceReport([row],{...scope,timezone});
+  assert.equal(report.scope.timezone,timezone);
+  assert.equal(report.attributionWindow,'7d_click');
+  assert.deepEqual([report.groups.gender[0].spend,report.groups.gender[0].impressions,report.groups.gender[0].clicks,report.groups.gender[0].leads],[0,0,0,0]);
+  const parsed=Papa.parse<Record<string,string>>(audienceReportCsv(report),{delimiter:';',header:true});
+  assert.equal(parsed.errors.length,0);
+  assert.equal(parsed.data[0].fuso_organizacao,timezone);
+  assert.deepEqual(row,untouched);
+  const empty=buildAudienceReport([],{...scope,timezone});
+  assert.equal(empty.sourceRecords,0);
+  assert.equal(empty.scope.timezone,timezone);
+ }
+});
