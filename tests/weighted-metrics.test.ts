@@ -129,3 +129,39 @@ test('legacy weighted fallback also excludes invalid provider values', () => {
   assert.equal(summary.quality_score.missingValues, 1);
   assert.equal(summary.quality_score.status, 'partial');
 });
+
+
+test('WEIGHTED-PRECISION-LOSS-001: underflowed nonzero contribution is unavailable, not an observed zero', () => {
+  // Synthetic fractional weight probes the IEEE-754 multiplication boundary.
+  const tiny = summarizeWeightedMetric([{value: Number.MIN_VALUE, weight: 0.5}], {min: 0, max: 100});
+  assert.equal(Number.MIN_VALUE * 0.5, 0, 'unprotected multiplication loses the positive source value');
+  assert.equal(tiny.value, null);
+  assert.equal(tiny.status, 'unavailable');
+  assert.equal(tiny.precisionLoss, true);
+  assert.equal(tiny.overflow, false);
+  assert.equal(tiny.includedRows, 1);
+  const actualZero = summarizeWeightedMetric([{value: 0, weight: 0.5}], {min: 0, max: 100});
+  assert.equal(actualZero.value, 0);
+  assert.equal(actualZero.status, 'complete');
+  assert.equal(actualZero.precisionLoss, false);
+});
+
+test('WEIGHTED-PRECISION-LOSS-001: division underflow and merged statistics never fabricate zero', () => {
+  // Each valid observation is individually representable. The combined mean is not.
+  const tiny = summarizeWeightedMetric([{value: Number.MIN_VALUE, weight: 1}]);
+  const zero = summarizeWeightedMetric([{value: 0, weight: 1e308}]);
+  const before = JSON.stringify([tiny, zero]);
+  const result = mergeWeightedMetrics([tiny, zero]);
+  assert.equal(result.weightedTotal, Number.MIN_VALUE);
+  assert.equal(result.value, null);
+  assert.equal(result.status, 'unavailable');
+  assert.equal(result.precisionLoss, true);
+  assert.equal(result.overflow, false);
+  assert.equal(JSON.stringify([tiny, zero]), before, 'source summaries must remain immutable');
+  const mixed = mergeWeightedMetrics([summarizeWeightedMetric([{value: Number.MIN_VALUE, weight: 0.5}]), zero]);
+  assert.equal(mixed.precisionLoss, true, 'precision loss propagates across aggregation levels');
+  assert.equal(mixed.value, null);
+  const ordinary = mergeWeightedMetrics([summarizeWeightedMetric([{value: 8, weight: 100}]), summarizeWeightedMetric([{value: 4, weight: 100}])]);
+  assert.equal(ordinary.value, 6);
+  assert.equal(ordinary.precisionLoss, false);
+});
