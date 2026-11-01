@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 test('staleness reflects tenant business date',()=>{assert.deepEqual(paidDataFreshness(['2026-10-20','2026-10-23'],'2026-10-25'),{status:'recent',latest:'2026-10-23',daysOld:2});assert.deepEqual(paidDataFreshness(['2026-10-21'],'2026-10-25'),{status:'delayed',latest:'2026-10-21',daysOld:4});});
 test('future, empty and malformed records never appear as fresh',()=>{assert.deepEqual(paidDataFreshness(['2026-10-26'],'2026-10-25'),{status:'empty',latest:null,daysOld:null});assert.equal(paidDataFreshness([],'2026-10-25').status,'empty');});
 
-test('invalid calendar dates do not count as fresh',()=>{assert.deepEqual(paidDataFreshness(['2026-02-30'],'2026-03-01'),{status:'empty',latest:null,daysOld:null});assert.equal(paidDataFreshness(['2026-02-28'],'2026-02-30').status,'empty');});
+test('invalid calendar dates do not count as fresh',()=>{assert.deepEqual(paidDataFreshness(['2026-02-30'],'2026-03-01'),{status:'empty',latest:null,daysOld:null});assert.equal(paidDataFreshness(['2026-02-28'],'2026-02-30').status,'invalid');});
 
 test('historical reporting periods do not falsely diagnose delayed provider collection',()=>{
  assert.equal(currentPeriodFreshness(['2024-01-20'],'2024-01-31','2026-10-26'),null);
@@ -56,4 +56,29 @@ test('DATA-FRESH-INVALID-ONLY-001: invalid-only observations are inconsistent, n
  const dashboard=readFileSync(new URL('../src/app/(tenant)/[organizationSlug]/[section]/page.tsx',import.meta.url),'utf8');
  assert.match(dashboard,/freshness\?\.status==='invalid'/);
  assert.match(dashboard,/Datas de anúncios inconsistentes/);
+});
+
+
+test('DATA-FRESH-BUSINESS-DAY-001: invalid tenant reference date is inconsistent, not empty or fresh', () => {
+ const invalidDays=['2026-02-30','2026-13-01','2026-10-1','not-a-date','2026-10-31T00:00:00Z'];
+ const unavailable={status:'invalid',latest:null,daysOld:null};
+ for(const businessDate of invalidDays){
+  assert.deepEqual(paidDataFreshness(['2026-10-30'],businessDate),unavailable,businessDate);
+  assert.deepEqual(paidDataFreshness([],businessDate),unavailable,businessDate);
+  assert.deepEqual(currentPeriodFreshness(['2026-10-30'],businessDate,businessDate),unavailable,businessDate);
+  assert.deepEqual(currentPeriodFreshness([],businessDate,businessDate),unavailable,businessDate);
+ }
+});
+
+test('DATA-FRESH-BUSINESS-DAY-001: preserve valid leap days and skip historical freshness warnings', () => {
+ const leap='2024-02-29';
+ assert.deepEqual(paidDataFreshness([leap],leap),{status:'recent',latest:leap,daysOld:0});
+ assert.equal(currentPeriodFreshness([leap],leap,leap),null);
+ assert.equal(currentPeriodFreshness([],leap,leap),null);
+ assert.equal(currentPeriodFreshness(['2026-10-30'],'2026-10-30','2026-02-30'),null);
+ const original=['2026-10-30'];
+ const copy=[...original];
+ paidDataFreshness(original,'2026-02-30');
+ currentPeriodFreshness(original,'2026-02-30','2026-02-30');
+ assert.deepEqual(original,copy);
 });
