@@ -22,5 +22,13 @@ export function formatReportObservation(value: number | null | undefined, option
 /** Percent changes require a finite comparable baseline; never render an infinite variation. */
 export function formatReportChange(change: number | null | undefined): string {
   if (change == null || !Number.isFinite(change)) return 'Variação indisponível';
-  return (change > 0 ? '+' : '') + formatReportObservation(change, {maximumFractionDigits: 2, suffix: '%'});
+  // Changes smaller than half a hundredth of a percentage point would round to
+  // 0,00%, misrepresenting a real, nonzero observation as no change. Preserve
+  // its sign and magnitude in scientific notation without altering the data.
+  const normalized = Object.is(change, -0) ? 0 : change;
+  const tiny = normalized !== 0 && Math.abs(normalized) < 0.005;
+  const formatted = tiny
+    ? new Intl.NumberFormat('pt-BR', {notation: 'scientific', maximumFractionDigits: 2}).format(normalized) + '%'
+    : formatReportObservation(normalized, {maximumFractionDigits: 2, suffix: '%'});
+  return (normalized > 0 ? '+' : '') + formatted;
 }
