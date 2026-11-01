@@ -21,6 +21,8 @@ export function validateOrganicScope(scope:OrganicScope){
  if(!uuid.test(scope.organizationId)||!['all',...organicPlatforms].includes(scope.platform))throw new Error('Invalid organic report scope');
  // Organization time zone is report provenance, not an unchecked display label.
  // Validate without converting the stored UTC publication or collection dates.
+ // Intl silently substitutes the runner's timezone when timeZone is undefined.
+ if(typeof scope.timezone!=='string')throw new RangeError('Organic report timezone must be explicit');
  new Intl.DateTimeFormat('pt-BR',{timeZone:scope.timezone});
  calendarDays(scope.from,scope.to);
  const generated=organicTimestamp(scope.generatedAt);

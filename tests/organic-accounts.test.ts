@@ -155,3 +155,21 @@ test('ORG-SOURCE-INVISIBLE-CONTROLS-001: account grain rejects invisible and bid
  assert.equal(accepted.accounts[0].account,'conta:Ωmega');
  assert.equal(accepted.rows[0].values.impressions,0);
 });
+
+
+test('ORG-TIMEZONE-REQUIRED-001: missing or non-string timezone cannot inherit runtime defaults in account reports',()=>{
+ for(const timezone of [undefined,null,0,false,{},[]]){
+  const invalid={...scope,timezone} as unknown as OrganicScope;
+  assert.throws(()=>validateOrganicScope(invalid),RangeError,String(timezone));
+  assert.throws(()=>buildOrganicAccountsReport([],invalid),RangeError,'empty '+String(timezone));
+  assert.throws(()=>buildOrganicAccountsReport([record()],invalid),RangeError,'populated '+String(timezone));
+ }
+ const omitted={...scope} as Partial<OrganicScope>;
+ delete omitted.timezone;
+ assert.throws(()=>buildOrganicAccountsReport([],omitted as OrganicScope),RangeError,'omitted timezone');
+ for(const timezone of ['UTC','America/Cuiaba']){
+  const valid=buildOrganicAccountsReport([record({impressions:0})],{...scope,timezone});
+  assert.equal(valid.scope.timezone,timezone);
+  assert.equal(valid.rows[0].values.impressions,0);
+ }
+});
