@@ -11,10 +11,10 @@ function validCalendarDate(value:string):boolean {
  return Number.isFinite(parsed.getTime())&&parsed.toISOString().slice(0,10)===value;
 }
 
-/** Reject padded or control-bearing opaque source IDs without normalizing their value. */
+/** Reject ambiguous invisible characters and invalid UTF-16 in opaque source IDs, without rewriting their bytes. */
 function validGrainIdentifier(value: string): boolean {
  return typeof value === 'string' && value.trim().length > 0 && value === value.trim()
-  && !/[\u0000-\u001f\u007f-\u009f]/.test(value);
+  && !/[\u0000-\u001f\u007f-\u009f\p{Cf}\u2028\u2029\uD800-\uDFFF]/u.test(value);
 }
 
 /** Fail closed: do not silently de-duplicate conflicting campaign-day facts or convert currencies. */
