@@ -68,3 +68,20 @@ test('invalid report currencies fail closed without changing observed values', (
   assert.equal(formatReportObservation(null, {currency: 'BRL'}), '—');
   assert.equal(formatReportObservation(2.5, {suffix: 'x'}), '2,5x');
 });
+
+test('invalid decimal precision options fail closed instead of crashing report rendering', () => {
+  for (const digits of [-1, -0.5, 1.5, 101, NaN, Infinity, -Infinity]) {
+    assert.equal(formatReportObservation(12.345, {maximumFractionDigits: digits}), '—', String(digits));
+    assert.equal(formatReportObservation(0, {currency: 'BRL', minimumFractionDigits: digits}), '—', String(digits));
+  }
+  assert.equal(formatReportObservation(12.345, {minimumFractionDigits: 3, maximumFractionDigits: 2}), '—');
+  assert.equal(formatReportObservation(0, {currency: 'BRL', minimumFractionDigits: 4, maximumFractionDigits: 1}), '—');
+
+  // Supported precision and a genuine observed zero retain the same values.
+  assert.equal(formatReportObservation(12.3456, {minimumFractionDigits: 3, maximumFractionDigits: 4}), '12,3456');
+  assert.equal(formatReportObservation(4.1, {maximumFractionDigits: 0}), '4');
+  assert.equal(formatReportObservation(0, {maximumFractionDigits: 0}), '0');
+  assert.match(formatReportObservation(0, {currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2}), /R\$\s*0,00$/u);
+  assert.equal(formatReportObservation(0, {maximumFractionDigits: 100}), '0');
+  assert.equal(formatReportObservation(null, {minimumFractionDigits: -1}), '—');
+});
