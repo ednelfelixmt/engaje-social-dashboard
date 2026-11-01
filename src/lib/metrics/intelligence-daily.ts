@@ -2,6 +2,7 @@ import {calendarDays,isValidCalendarDay} from './calendar';
 import {isRfcOrganizationUuid} from './organization-scope';
 import type {Row} from '@/types/database.types';
 import {paidTotals} from './paid-metrics';
+import {platformDashboards} from './platforms';
 
 /** Read-only projection of the already tenant/currency/period-scoped ads query. */
 export type IntelligenceDailyFact = Readonly<Pick<Row<'metrics_ads'>, 'organization_id' | 'currency' | 'platform' | 'metric_date' | 'spend' | 'impressions' | 'clicks' | 'leads'>>;
@@ -12,6 +13,11 @@ export type IntelligenceDailyPoint = Readonly<{
   clicks: number | null;
   leads: number | null;
 }>;
+
+/** Never mix unsupported provider facts into an all-channel paid timeline. */
+function isSupportedPaidPlatform(value: unknown): value is string {
+  return typeof value === 'string' && platformDashboards.some(item => item.platform === value);
+}
 
 /**
  * A day is complete for a metric only when every fact that day reports a
@@ -40,12 +46,10 @@ export function buildIntelligenceTimeline(
   }
   // Validate the whole scoped batch before selecting a channel. Invalid facts
   // in another channel must never disappear behind a filter.
-  if (selectedPlatform !== undefined && (typeof selectedPlatform !== 'string'
-    || selectedPlatform.length === 0 || selectedPlatform.trim() !== selectedPlatform)) {
+  if (selectedPlatform !== undefined && !isSupportedPaidPlatform(selectedPlatform)) {
     throw new Error('Intelligence timeline requires a valid selected platform');
   }
-  if (rows.some(row => typeof row.platform !== 'string' || row.platform.length === 0
-    || row.platform.trim() !== row.platform)) {
+  if (rows.some(row => !isSupportedPaidPlatform(row.platform))) {
     throw new Error('Intelligence timeline requires valid source platforms');
   }
   const byDate = new Map<string, IntelligenceDailyFact[]>();
