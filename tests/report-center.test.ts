@@ -73,7 +73,7 @@ test('REPORT-NAV-INVISIBLE-SLUG-001: visible Unicode and escaped segments preser
 
 
 test('REPORT-NAV-UTF16-FAILCLOSED-001: every report route rejects unpaired UTF-16 slug code units before URL encoding',()=>{
- const invalidSlugs=['cliente\\uD800','\\uDC00cliente','cliente\\uD83Dtexto','cliente\\uD83D\\uDE00\\uDC00'];
+ const invalidSlugs=['cliente'+String.fromCharCode(0xD800),String.fromCharCode(0xDC00)+'cliente','cliente'+String.fromCharCode(0xD83D)+'texto','cliente😀'+String.fromCharCode(0xDC00)];
  const context={...scope},snapshot=structuredClone(context);
  for(const item of reportCatalog)for(const slug of invalidSlugs){
   assert.throws(()=>reportHref(slug,item.path,context),/Invalid report navigation/,item.path+' '+JSON.stringify(slug));
