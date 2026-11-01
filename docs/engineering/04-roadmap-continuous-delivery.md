@@ -1,3 +1,13 @@
+## 01/11/2026 — REPORT-CURRENCY-FAILCLOSED-001: impedir erro de renderização para código monetário inválido
+
+- **Falha reproduzida com exemplos sintéticos:** `formatReportObservation` passava `currency` diretamente a `Intl.NumberFormat`. Códigos vazios, excessivamente longos ou com espaços/controles causavam `RangeError` durante a renderização, em vez de indicar indisponibilidade; códigos minúsculos eram normalizados silenciosamente. Não há evidência de ocorrência com cliente real.
+- **Pacote independente:** validar estritamente a moeda declarada como três letras ASCII maiúsculas antes de formatar, retornando `—` em caso inválido. Continuar aceitando códigos sintaticamente válidos sem inventar câmbio, precisão, valor ou fallback de unidade; conservar zero genuíno e o comportamento de números sem moeda.
+- **Regressões sintéticas:** teste em `tests/report-local-finite-format.test.ts` para nove moedas inválidas, valor positivo, zero legítimo, BRL/USD válidos, ausência de medição e saída não monetária. Nenhum dado de cliente, conexão externa ou segredo usado.
+- **Risco, rollback e limite:** alteração restrita ao formatador de relatórios, teste e documentação; um código inválido deixa de causar exceção (ou normalização silenciosa) e passa a exibir indisponibilidade. Reverter estes três arquivos se houver regressão. Não há mudança em endpoints, SQL/migrações, RLS, Edge, Auth, Storage, OAuth, acessos, isolamento multi-tenant ou regra de cliente somente leitura.
+- **Aceite:** Quality Gate integral `completed/success` e Vercel Preview `READY` com check GitHub `success` no **mesmo HEAD SHA final**, PR mergeável sem revisão bloqueante. Só depois integrar à `main` e verificar Quality Gate e Vercel de produção no SHA integrado; não inferir homologação autenticada. SEC-010/011, UX-002, integrações reais, PDF/TV física e diagnóstico Supabase #211 permanecem abertos.
+- **PRs anteriores:** #325, #319, #318, #315, #302, #294, #292, #149, #157 permaneciam abertas na triagem inicial; #325 estava não mergeável e seu check Vercel `failure`. Nenhuma foi integrada neste pacote.
+
+
 ## 01/11/2026 — REPORT-CHANGE-NONZERO-001: preservar variações percentuais positivas e negativas abaixo do arredondamento
 
 - **Lacuna comprovada na `main` `f427218a`:** `formatReportChange` apresentava qualquer delta não nulo de magnitude inferior a 0,005 ponto percentual como `+0%` ou `-0%` ao aplicar duas casas decimais, embora `computeDelta` já preservasse o sinal numérico. Isso fazia relatórios de campanha, receita e desempenho exibirem variação observada como se fosse zero. É um defeito de apresentação demonstrado com números sintéticos, sem evidência de ocorrência em dados reais.
