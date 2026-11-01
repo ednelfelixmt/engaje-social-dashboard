@@ -197,3 +197,40 @@ test('REPORT-TIMEZONE-REQUIRED-001: revenue report refuses implicit or non-textu
   assert.equal(valid.previous, null);
  }
 });
+
+
+test('REVENUE-OPAQUE-IDENTITY-001: invisible and bidirectional controls never enter financial source grains', () => {
+ const hidden = ['row\u200Btoken','row\u200Etoken','row\u200Ftoken','row\u202Etoken',
+  'row\u2066token','row\u2069token','row\u2060token','row\u00ADtoken',
+  'row\u061Ctoken','row\uFEFFtoken','row\u2028token','row\u2029token'];
+ for (const field of ['id','account_id','campaign_id'] as const) for (const value of hidden) {
+  const patch = {channel:'google_ads' as const,account_id:'account alpha',campaign_id:'campaign alpha',[field]:value};
+  const row = fact(patch);
+  const before = structuredClone(row);
+  assert.throws(() => buildRevenueReport([row], [], {...scope,compare:'none'}), /Invalid revenue report grain/, field + ' current ' + JSON.stringify(value));
+  assert.throws(() => buildRevenueReport([], [fact({...patch,metric_date:'2026-10-18'})], scope), /Invalid revenue report grain/, field + ' previous');
+  assert.throws(() => buildRevenueReport([fact({...patch,source:'spreadsheet'})], [], {...scope,compare:'none'}), /Invalid revenue report grain/, field + ' unselected');
+  assert.deepEqual(row,before,'Invalid identity never mutates an original fact');
+ }
+});
+
+test('REVENUE-OPAQUE-IDENTITY-001: malformed UTF-16 fails closed while visible Unicode and observed zero survive', () => {
+ const malformed = [String.fromCharCode(0xD800),String.fromCharCode(0xDC00),'😀'+String.fromCharCode(0xD800)];
+ for (const field of ['id','account_id','campaign_id'] as const) for (const fragment of malformed) {
+  const patch = {channel:'google_ads' as const,account_id:'account alpha',campaign_id:'campaign alpha',[field]:'opaque'+fragment+'id'};
+  assert.throws(() => buildRevenueReport([fact(patch)], [], {...scope,compare:'none'}), /Invalid revenue report grain/, field + ' current');
+  assert.throws(() => buildRevenueReport([], [fact({...patch,metric_date:'2026-10-18'})], scope), /Invalid revenue report grain/, field + ' previous');
+  assert.throws(() => buildRevenueReport([fact({...patch,source:'spreadsheet'})], [], {...scope,compare:'none'}), /Invalid revenue report grain/, field + ' unselected');
+ }
+ const accepted = fact({id:'origem:São Paulo 😀',channel:'meta_ads',account_id:'act_conta:Ω 😀',
+  campaign_id:'campanha:α 😀',revenue:0,purchases:0,leads:0,checkouts:0});
+ const original = structuredClone(accepted);
+ const report = buildRevenueReport([accepted], [], {...scope,to:scope.from,compare:'none'});
+ assert.equal(report.current.records,1);
+ assert.deepEqual(report.current.days[0].sourceIds,['origem:São Paulo 😀']);
+ assert.equal(report.current.totals.revenue,0);
+ assert.equal(report.current.totals.purchases,0);
+ assert.deepEqual(accepted,original);
+ assert.equal(buildRevenueReport([fact({revenue:0})],[],{...scope,to:scope.from,compare:'none'}).current.totals.revenue,0,
+  'Empty optional provider identifiers remain valid');
+});
