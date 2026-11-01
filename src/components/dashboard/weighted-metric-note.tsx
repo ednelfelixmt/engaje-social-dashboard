@@ -8,6 +8,7 @@ export function WeightedMetricNote({summary, comparisonIncomplete = false}: {sum
     {summary.missingValues > 0 ? <p>{summary.missingValues} sem valor válido.</p> : null}
     {summary.invalidWeights > 0 ? <p>{summary.invalidWeights} com impressões ausentes, inválidas ou sem peso positivo.</p> : null}
     {summary.overflow ? <p>Cálculo excede o limite numérico; valor indisponível.</p> : null}
+    {summary.precisionLoss ? <p>Precisão numérica insuficiente para calcular a média ponderada; valor indisponível.</p> : null}
     {summary.value != null ? <p>Estimativa ponderada por impressões; pode diferir do consolidado do provedor.</p> : null}
     {comparisonIncomplete ? <p>Comparação indisponível por falta de cobertura completa nos dois períodos.</p> : null}
   </div>;
