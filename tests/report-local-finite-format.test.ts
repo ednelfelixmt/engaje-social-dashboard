@@ -81,7 +81,7 @@ test('invalid decimal precision options fail closed instead of crashing report r
   assert.equal(formatReportObservation(12.3456, {minimumFractionDigits: 3, maximumFractionDigits: 4}), '12,3456');
   assert.equal(formatReportObservation(4.1, {maximumFractionDigits: 0}), '4');
   assert.equal(formatReportObservation(0, {maximumFractionDigits: 0}), '0');
-  assert.match(formatReportObservation(0, {currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2}), /R\\$\\s*0,00$/u);
+  assert.match(formatReportObservation(0, {currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2}), /R\$\s*0,00$/u);
   assert.equal(formatReportObservation(0, {maximumFractionDigits: 100}), '0');
   assert.equal(formatReportObservation(null, {minimumFractionDigits: -1}), '—');
 });
