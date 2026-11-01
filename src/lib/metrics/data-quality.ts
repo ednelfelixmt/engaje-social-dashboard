@@ -57,12 +57,15 @@ export function buildDataQuality(input:QualityInput,scope:QualityScope){
   const futureDates=records.filter(row=>validDate(row.metric_date)&&row.metric_date>scope.businessDate).length;
   const collections=records.map(row=>known(row.synced_at));
   const received=collections.filter((ms):ms is bigint=>ms!==null);
+  // A recent metric_date alone cannot certify freshness when its collection instant
+  // is missing, invalid or after the report generation timestamp.
+  const unknownCollections=collections.length-received.length;
   const integrations=input.integrations.filter(row=>row.provider===platform),breakdowns:Record<string,number>=Object.create(null);
   for(const row of input.dimensions.filter(row=>row.platform===platform)){breakdowns[row.dimension_type]=(breakdowns[row.dimension_type]??0)+1;}
   return {platform,campaigns:new Set(records.map(row=>JSON.stringify([platform==='meta_ads'?row.account_id.replace(/^act_/,''):row.account_id,row.campaign_id]))).size,rows:records.length,days:dates.length,first:dates[0]??null,latest:freshness.latest,lastReceived:iso(received.length?received.reduce((latest,ms)=>ms>latest?ms:latest):null),age:freshness.daysOld,
    integrations:integrations.length,connected:integrations.filter(row=>row.status==='connected'&&row.is_enabled===true).length,expired:integrations.filter(row=>row.status==='expired'||row.status==='error').length,breakdowns,
-   status:invalidDates>0||futureDates>0?'invalid':freshness.status==='empty'?(records.length?'invalid':'missing'):freshness.status,
-   invalidDates,futureDates,unknownCollections:collections.filter(ms=>ms===null).length};
+   status:invalidDates>0||futureDates>0||unknownCollections>0?'invalid':freshness.status==='empty'?(records.length?'invalid':'missing'):freshness.status,
+   invalidDates,futureDates,unknownCollections};
  });
  const jobs:QualityJobView[]=input.jobs.map(row=>{
   const status=(['queued','running','completed','failed'].includes(row.status)?row.status:'unknown') as QualityJobView['status'];
