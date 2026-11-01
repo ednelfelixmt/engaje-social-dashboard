@@ -38,3 +38,20 @@ test('executive, campaign, revenue and target report views use the finite local 
     assert.match(source, /from '@\/lib\/reports\/format-observation'/, filename);
   }
 });
+
+test('real but tiny report changes remain distinguishable from observed zero', () => {
+  for (const magnitude of [0.0049, 0.00001, 1e-8, Number.MIN_VALUE]) {
+    const rising = formatReportChange(magnitude);
+    const falling = formatReportChange(-magnitude);
+    assert.match(rising, /^\+[\d,.]+E-\d+%$/u, String(magnitude));
+    assert.match(falling, /^-[\d,.]+E-\d+%$/u, String(-magnitude));
+    assert.notEqual(rising, '+0%');
+    assert.notEqual(falling, '-0%');
+  }
+  // Values at the two-decimal rounding boundary retain their regular display.
+  assert.equal(formatReportChange(0.005), '+0,01%');
+  assert.equal(formatReportChange(-0.005), '-0,01%');
+  assert.equal(formatReportChange(2.345), '+2,35%');
+  assert.equal(formatReportChange(-0), '0%');
+  assert.equal(formatReportChange(0), '0%');
+});
