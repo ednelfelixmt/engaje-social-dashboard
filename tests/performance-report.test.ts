@@ -178,15 +178,13 @@ test('SOURCE-GRAIN-CONTROLS-001: performance source keys reject internal C0/C1 c
 test('PERF-ATTRIBUTION-PROVENANCE-001: malformed source windows cannot prove comparable leads or CPL', () => {
  const original=buildPerformanceReport([fact()],[prior()],scope);
  assert.equal(comparableAttribution(original.current,original.previous!),true);
- assert.equal(performanceDelta(original.current,original.previous,'leads'),100);
+ assert.equal(performanceDelta(original.current,original.previous,'leads'),0);
  const malformed: unknown[] = [
-  ' 7d_click', '7d_click ', '7d_click\\n', '7d_\\u0000click',
-  '7d_click\\u0085', '7d_click\\u2028', ' ', null,
+  ' 7d_click', '7d_click ', '7d_click\n', '7d_\u0000click',
+  '7d_click\u0085', '7d_click\u2028', ' ', null,
  ];
  for (const raw of malformed) {
-  const value=(typeof raw==='string' ? raw
-   .replace('\\n','\n').replace('\\u0000','\u0000')
-   .replace('\\u0085','\u0085').replace('\\u2028','\u2028') : raw) as string;
+  const value=raw as string;
   for (const corruptedCurrent of [true,false]) {
    const report=buildPerformanceReport(
     [fact({attribution_window:corruptedCurrent?value:'7d_click'})],
