@@ -32,7 +32,10 @@ export function formatReportObservation(value: number | null | undefined, option
     : {maximumFractionDigits: options.maximumFractionDigits ?? Math.max(2, options.minimumFractionDigits ?? 0), notation};
   if (options.maximumFractionDigits !== undefined) intl.maximumFractionDigits = options.maximumFractionDigits;
   if (options.minimumFractionDigits !== undefined) intl.minimumFractionDigits = options.minimumFractionDigits;
-  return new Intl.NumberFormat('pt-BR', intl).format(value) + (options.suffix ?? '');
+  // IEEE-754 negative zero is still an observed zero, not negative spend.
+  // Normalize only -0 at the display boundary; never round negative nonzero measurements away.
+  const displayValue = Object.is(value, -0) ? 0 : value;
+  return new Intl.NumberFormat('pt-BR', intl).format(displayValue) + (options.suffix ?? '');
 }
 
 /** Percent changes require a finite comparable baseline; never render an infinite variation. */

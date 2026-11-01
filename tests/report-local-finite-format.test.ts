@@ -99,3 +99,27 @@ test('minimum-only report precision never conflicts with its implicit maximum', 
   assert.equal(formatReportObservation(2.5), '2,5');
   assert.match(formatReportObservation(0, {currency: 'BRL', minimumFractionDigits: 3}), /R\$\s*0,000$/u);
 });
+
+test('negative zero is an observed zero in every report presentation mode', () => {
+  const formats = [
+    {},
+    {suffix: '%'},
+    {currency: 'BRL'},
+    {currency: 'USD', minimumFractionDigits: 2},
+    {scientificTiny: true, maximumFractionDigits: 6},
+    {minimumFractionDigits: 4},
+  ] as const;
+  for (const options of formats) {
+    assert.equal(formatReportObservation(-0, options), formatReportObservation(0, options), JSON.stringify(options));
+  }
+  assert.equal(formatReportObservation(-0), '0');
+  assert.equal(formatReportObservation(-0, {suffix: '%'}), '0%');
+  assert.equal(formatReportChange(-0), '0%');
+});
+
+test('normalizing signed zero does not erase genuine negative report measurements', () => {
+  assert.equal(formatReportObservation(-1.25), '-1,25');
+  assert.match(formatReportObservation(-1.25, {currency: 'BRL'}), /-R\$\s*1,25$/u);
+  assert.equal(formatReportObservation(-1e-8, {scientificTiny: true, maximumFractionDigits: 6}), '-1E-8');
+  assert.equal(formatReportObservation(1e-8, {scientificTiny: true, maximumFractionDigits: 6}), '1E-8');
+});
