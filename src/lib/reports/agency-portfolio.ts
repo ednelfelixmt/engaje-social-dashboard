@@ -1,4 +1,5 @@
 import type {summarizeClientAds} from '@/lib/metrics/agency-overview';
+import {finiteRatio} from '../metrics/aggregation';
 
 export type AgencyClientCard = {
   id: string; name: string; slug: string; currency: string;
@@ -29,7 +30,9 @@ export function agencyPortfolioChart(clients: readonly AgencyClientCard[], metri
   }
   // Use the largest observed value, not an artificial unit floor; preserve measured zero.
   const maximum = observed.reduce((highest, row) => Math.max(highest, row.value), 0);
+  // Preserve representable, positive micro-bars: dividing before scaling can underflow to zero.
+  // Unrepresentably small percentages use zero width; the original observed value remains visible.
   const rows = [...observed].sort((a,b) => b.value-a.value || a.client.name.localeCompare(b.client.name,'pt-BR'))
-    .slice(0,8).map(row => ({...row, width: maximum > 0 ? row.value / maximum * 100 : 0}));
+    .slice(0,8).map(row => ({...row, width: maximum > 0 ? (finiteRatio(row.value, maximum, 100) ?? 0) : 0}));
   return {rows, currency, excluded: clients.length-observed.length, totalObserved: observed.length, mixedCurrency: false};
 }
