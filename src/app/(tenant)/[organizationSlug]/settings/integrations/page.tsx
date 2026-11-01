@@ -10,6 +10,7 @@ import {FoundationConnector} from '@/components/foundation-connector';
 import {IntegrationDiagnostics} from '@/components/integration-diagnostics';
 import {MetaAccountSelector} from '@/components/meta-account-selector';
 import {IntegrationAccountCard} from '@/components/integration-account-card';
+import {clientDiscoveryCandidates} from '@/lib/integrations/asset-discovery';
 import {PlatformAssetSelector} from '@/components/platform-asset-selector';
 import {ClientPlatformAssets} from '@/components/client-platform-assets';
 
@@ -58,7 +59,8 @@ export default async function Page({params: params_, searchParams: searchParams_
   const connectionId = searchParams.connection_id && /^[0-9a-f-]{36}$/.test(searchParams.connection_id) ? searchParams.connection_id : null;
   const {data: discoveredRows, error: discoveredError} = connectionId ? await db.from('platform_assets').select('id,name,external_id,asset_type,asset_status,recommended').eq('connection_id', connectionId).order('asset_type').order('name') : {data: [], error: null};
   if (discoveredError) throw discoveredError;
-  const availableDiscoveredRows = (discoveredRows ?? []).filter((item) => item.asset_status !== 'assigned');
+  const clientDiscoveredRows = clientDiscoveryCandidates(discoveredRows ?? [], assignedIds);
+  const availableDiscoveredRows = clientDiscoveredRows.filter(item => item.asset_status !== 'assigned');
   const assetById = new Map((assignedAssetRows ?? []).map((asset) => [asset.id, asset]));
   const assignedAssets = (assignmentRows ?? []).flatMap((assignment) => {const asset=assetById.get(assignment.asset_id);return asset?[{assignmentId:assignment.id,assetId:asset.id,connectionId:asset.connection_id,name:asset.name,externalId:asset.external_id,assetType:asset.asset_type,syncEnabled:assignment.sync_enabled}]:[];});
   const integrations = data ?? [];
@@ -111,7 +113,7 @@ export default async function Page({params: params_, searchParams: searchParams_
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[.025] px-4 py-3"><div><h2 className="text-sm font-semibold">Auditoria da qualidade dos dados</h2><p className="mt-1 text-xs text-zinc-400">Datas de cobertura, origem das métricas, dimensões disponíveis e histórico de trabalhos.</p></div><Link href={`/${org.slug}/settings/data-quality`} className="rounded-lg border border-primary/30 px-3 py-2 text-xs font-semibold text-primary">Abrir auditoria</Link></div>
       <IntegrationDiagnostics organizationId={org.id} />
 
-      {searchParams.select_assets && connectionId && availableDiscoveredRows.length ? <PlatformAssetSelector organizationId={org.id} connectionId={connectionId} candidates={availableDiscoveredRows.map((item) => ({id:item.id,name:item.name,externalId:item.external_id,assetType:item.asset_type,status:item.asset_status,recommended:item.recommended}))} /> : null}
+      {searchParams.select_assets && connectionId && clientDiscoveredRows.length ? <PlatformAssetSelector organizationId={org.id} connectionId={connectionId} candidates={clientDiscoveredRows.map((item) => ({id:item.id,name:item.name,externalId:item.external_id,assetType:item.asset_type,status:item.asset_status,recommended:item.recommended}))} /> : null}
 
       {candidateGroups.map((group) => <MetaAccountSelector
         key={`${group.provider}:${group.batchId ?? 'unbatched'}`}

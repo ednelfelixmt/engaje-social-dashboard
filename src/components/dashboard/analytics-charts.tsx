@@ -14,7 +14,8 @@ type TimelinePoint={index:number;currentDate:string|null;previousDate:string|nul
 export function AnalyticsTrend({rows,metric,currency,comparing}:{rows:TimelinePoint[];metric:PaidMetricKey;currency:string;comparing:boolean}){
  const [view,setView]=useState<'area'|'bars'>('area');
  const [windowDays,setWindowDays]=useState(0);
- const points=rows.map(row=>({...row,current:row.current?paidMetric(row.current,metric):null,previous:row.previous?paidMetric(row.previous,metric):null}));
+ // Hidden historical observations cannot justify displaying a current-period chart.
+ const points=rows.map(row=>({...row,previousDate:comparing?row.previousDate:null,current:row.current?paidMetric(row.current,metric):null,previous:comparing&&row.previous?paidMetric(row.previous,metric):null}));
  const measured=points.some(row=>row.current!==null||row.previous!==null),color=analyticsMetricColors[metric];
  if(!measured)return <div className="analytics-empty">Sem medições diárias no recorte. Ausências não foram convertidas em zero.</div>;
  const plotted=windowDays?points.slice(-windowDays):points;
