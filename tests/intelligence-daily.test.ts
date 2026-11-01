@@ -154,6 +154,38 @@ test('channel projection rejects malformed provider identity instead of silently
   }
 });
 
+test('paid intelligence rejects unsupported or invisible provider identities before portfolio aggregation', () => {
+  const valid = fact({spend: 0, leads: 0});
+  for (const platform of ['instagram_organic', 'microsoft_ads', 'meta_ads\\n', 'google_ads\\u0085', 'unknown']) {
+    const malformed = fact({platform: platform.replace('\\n', '\n').replace('\\u0085', '\u0085') as IntelligenceDailyFact['platform'], spend: 500});
+    assert.throws(() => buildIntelligenceTimeline([valid, malformed]), /valid source platforms/, platform);
+    assert.throws(() => buildScopedIntelligenceTimeline([valid, malformed], organizationId, currency, 'meta_ads'),
+      /valid source platforms/, platform);
+  }
+});
+
+test('paid intelligence rejects an unsupported selected channel even when there are no facts', () => {
+  for (const platform of ['all', 'instagram_organic', 'microsoft_ads', 'meta_ads\\n', 'google_ads\\u0085', 'unknown']) {
+    const malformed = platform.replace('\\n', '\n').replace('\\u0085', '\u0085');
+    assert.throws(() => buildScopedIntelligenceTimeline([], organizationId, currency, malformed),
+      /valid selected platform/, platform);
+  }
+  assert.deepEqual(buildScopedIntelligenceTimeline([], organizationId, currency, 'meta_ads'), []);
+  assert.deepEqual(buildScopedIntelligenceTimeline([], organizationId, currency), []);
+});
+
+test('supported paid providers preserve zero, channel totals and input immutability', () => {
+  const records = Object.freeze([
+    Object.freeze(fact({platform: 'meta_ads', spend: 0, leads: 0})),
+    Object.freeze(fact({platform: 'google_ads', spend: 40, leads: 4})),
+    Object.freeze(fact({platform: 'tiktok_ads', spend: 60, leads: 6})),
+  ]);
+  assert.deepEqual(buildIntelligenceTimeline(records).map(day => [day.spend, day.leads]), [[100, 10]]);
+  assert.deepEqual(buildScopedIntelligenceTimeline(records, organizationId, currency, 'meta_ads').map(day => [day.spend, day.leads]), [[0, 0]]);
+  assert.deepEqual(buildScopedIntelligenceTimeline(records, organizationId, currency, 'tiktok_ads').map(day => [day.spend, day.leads]), [[60, 6]]);
+  assert.equal(records[1].spend, 40);
+});
+
 test('channel filter preserves calendar positions and breaks a missing mid-period observation', () => {
   const current = [
     fact({platform: 'meta_ads', metric_date: '2026-10-01', spend: 100, leads: 10}),
