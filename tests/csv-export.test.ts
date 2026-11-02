@@ -87,3 +87,15 @@ test('SEC-CSV-IGNORABLE-MARK-001: preserve normal Unicode labels, valid zero and
   // Variation selectors inside a visible label are not stripped or normalized.
   assert.equal(serializeCsv([['❤️'], ['  Campanha']]), '\ufeff"❤️"\r\n"  Campanha"');
 });
+
+
+test('SEC-CSV-IGNORABLE-MARK-001: legacy Cf interlinear annotation prefixes remain escaped', () => {
+  for (const prefix of ['\uFFF9', '\uFFFA', '\uFFFB']) {
+    // These Cf characters are not in Default_Ignorable_Code_Point.
+    for (const formula of ['=1+1', '+2', '＠SUM(1;2)']) {
+      const raw = prefix + formula;
+      assert.equal(serializeCsv([[raw]]), '\ufeff"' + "'" + raw + '"', JSON.stringify(raw));
+    }
+    assert.equal(serializeCsv([[prefix + 'texto']]), '\ufeff"' + "'" + prefix + 'texto"');
+  }
+});
