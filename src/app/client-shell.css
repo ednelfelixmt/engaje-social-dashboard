@@ -74,12 +74,13 @@
     padding: 8px;
     box-shadow: 0 24px 60px rgba(0,0,0,.35);
     opacity: 0;
+    visibility: hidden; /* fechado: sai da ordem de tabulação e da árvore de acessibilidade */
     pointer-events: none;
     transform: translateY(-6px) scale(.98);
     transform-origin: top right;
-    transition: opacity .2s, transform .25s cubic-bezier(.22,1,.36,1);
+    transition: opacity .2s, transform .25s cubic-bezier(.22,1,.36,1), visibility 0s linear .25s;
   }
-  .client-header__nav.is-open { opacity: 1; pointer-events: auto; transform: none; }
+  .client-header__nav.is-open { opacity: 1; visibility: visible; pointer-events: auto; transform: none; transition-delay: 0s; }
   .client-header__nav a, .client-header__nav button { width: 100%; justify-content: flex-start; border-radius: 12px; }
   .client-header__logo { width: 44px; height: 44px; border-radius: 14px; }
   .client-dashboard-header.client-header { padding-top: 12px; padding-bottom: 12px; }

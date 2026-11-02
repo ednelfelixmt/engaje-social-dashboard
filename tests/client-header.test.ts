@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {loadTypescript} from './helpers/load-typescript';
@@ -44,4 +45,11 @@ test('ZF footer renders the small mark with an accessible name and is hidden in 
  const html=renderToStaticMarkup(React.createElement(ZfFooter));
  assert.ok(html.includes('src="/zf-marca.png"')&&html.includes('alt="ZF Comunicação"'));
  assert.ok(html.includes('tv-hide'));
+});
+
+test('closed mobile menu is removed from keyboard and accessibility order',()=>{
+ const css=readFileSync(new URL('../src/app/client-shell.css',import.meta.url),'utf8').replace(/\r\n/g,'\n');
+ const mobile=css.slice(css.indexOf('@media (max-width: 720px)'));
+ assert.ok(/visibility:\s*hidden/.test(mobile),'menu fechado precisa de visibility:hidden');
+ assert.ok(/\.client-header__nav\.is-open\s*\{[^}]*visibility:\s*visible/.test(mobile),'menu aberto volta a ser visível');
 });
