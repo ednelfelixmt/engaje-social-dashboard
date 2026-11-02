@@ -27,7 +27,9 @@ function fixture(options:Options={}){
    const builder={
     select(){return builder;},
     update(){query.operation='update';return builder;},
+    delete(){query.operation='delete';return builder;},
     eq(field:string,value:unknown){query.filters[field]=value;return builder;},
+    neq(field:string,value:unknown){query.filters[field+'!=']=value;return builder;},
     single(){return builder;},
     maybeSingle(){return builder;},
     then(resolve:(value:Result)=>unknown){
@@ -169,3 +171,12 @@ test('actual delete handler stops before database deletion if Storage cannot be 
  assert.match((await response.json()).message,/conferir os arquivos/);
  assert.ok(!f.calls.includes('delete_client_organization'));
 });
+
+const hubDraftId='40000000-0000-4000-8000-000000000004';
+const legacyAccountId='50000000-0000-4000-8000-000000000005';
+const hubDraft={id:hubDraftId,organization_id:organizationId,provider:'hubspot',status:'pending',is_enabled:false,config:{connection_hub:true,selection_pending:true,authorization_status:'verified'}};
+test('new authorization drafts cannot be activated through legacy account assignment',async()=>{const f=fixture({role:'super_admin',query:q=>q.table==='integrations'?{data:[hubDraft],error:null}:{data:null,error:null}});const response=await f.handler(request('assign_accounts','Bearer synthetic',{provider:'hubspot',integrationIds:[hubDraftId]}));assert.equal(response.status,400);assert.match((await response.json()).message,/não pertence/);assert.equal(f.queries.filter(q=>q.operation!=='select').length,0);assert.deepEqual(f.calls,['getUser','is_super_admin']);});
+test('legacy account selection preserves unrelated authorization drafts for the same product provider',async()=>{const f=fixture({role:'super_admin',query:q=>q.table==='integrations'&&q.operation==='select'?{data:[hubDraft,{id:legacyAccountId,organization_id:organizationId,provider:'hubspot',config:{selection_pending:true}}],error:null}:{data:null,error:null}});const response=await f.handler(request('assign_accounts','Bearer synthetic',{provider:'hubspot',integrationIds:[legacyAccountId]}));assert.equal(response.status,200);assert.equal(f.queries.filter(q=>q.operation!=='select'&&q.filters.id===hubDraftId).length,0);assert.equal(f.queries.filter(q=>q.operation==='update'&&q.filters.id===legacyAccountId).length,1);});
+test('manual sync refuses an authorization draft before locks, Vault or provider calls',async()=>{const f=fixture({role:'super_admin',query:()=>({data:hubDraft,error:null})});const response=await f.handler(request('sync','Bearer synthetic',{integrationId:hubDraftId}));assert.equal(response.status,400);assert.match((await response.json()).message,/seleção da conta/);assert.equal(f.queries.filter(q=>q.operation!=='select').length,0);assert.deepEqual(f.calls,['getUser','is_super_admin']);});
+
+test('scheduled sync skips authorization drafts even if their legacy enabled flag is incorrectly set',async()=>{const f=fixture({cronAuthorized:true,query:()=>({data:{...hubDraft,provider:'windsor',is_enabled:true,organizations:{status:'active'}},error:null})});const req=new Request(request('scheduled_sync','Bearer synthetic',{integrationId:hubDraftId}),{headers:{'Content-Type':'application/json','x-cron-secret':'s'.repeat(32)}});const response=await f.handler(req);assert.equal(response.status,200);assert.equal((await response.json()).skipped,true);assert.equal(f.queries.filter(q=>q.operation!=='select').length,0);assert.deepEqual(f.calls,['verify_cron_secret']);});

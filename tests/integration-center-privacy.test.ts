@@ -28,6 +28,7 @@ const {IntegrationCenter}=loadTypescript<{IntegrationCenter:(props:{summary:Retu
   if(id==='next/link')return ({children,...props}:{children:React.ReactNode})=>createElement('a',props,children);
   if(id==='@/lib/integrations/catalog')return {connectorCatalog:[{provider:'meta_ads',name:'Meta',stage:'live',description:'Meta Ads',capabilities:['mídia paga']}]};
   if(id==='@/components/admin-integration-start-button')return {AdminIntegrationStartButton:()=>createElement('button',null,'Iniciar conexão')};
+  if(id==='@/components/platform-connection-hub')return {PlatformConnectionHub:()=>createElement('button',null,'Nova conexão')};
   return native(id);
  });
 
@@ -49,7 +50,8 @@ test('client search in the agency integration center ignores diacritics without 
     if(id==='next/link')return ({children,...props}:{children:React.ReactNode})=>createElement('a',props,children);
     if(id==='@/lib/integrations/catalog')return {connectorCatalog:[]};
     if(id==='@/components/admin-integration-start-button')return {AdminIntegrationStartButton:()=>createElement('button',null,'Conectar')};
-    return native(id);
+    if(id==='@/components/platform-connection-hub')return {PlatformConnectionHub:()=>createElement('button',null,'Nova conexão')};
+  return native(id);
    });
  for(const [name,query] of [['São João Mídia','sao joao'],['CUIABÁ Marketing','cuiaba'],['Água Viva','  AGUA  '],['Cliente sintético','CLIENTE']]){
   assert.equal(matchesIntegrationClientQuery(name,query),true,name);
@@ -66,7 +68,8 @@ test('accent-insensitive search filters only authorized client rows in the globa
    if(id==='next/link')return ({children,...props}:{children:React.ReactNode})=>createElement('a',props,children);
    if(id==='@/lib/integrations/catalog')return {connectorCatalog:[]};
    if(id==='@/components/admin-integration-start-button')return {AdminIntegrationStartButton:()=>createElement('button',null,'Conectar')};
-   return native(id);
+   if(id==='@/components/platform-connection-hub')return {PlatformConnectionHub:()=>createElement('button',null,'Nova conexão')};
+  return native(id);
   });
  const summary=summarizeClientConnectionHealth(['synthetic-sao','synthetic-rio'],[
   {organization_id:'synthetic-sao',status:'connected',is_enabled:true,external_account_id:'private_sao_account',last_synced_at:null,config:{}},

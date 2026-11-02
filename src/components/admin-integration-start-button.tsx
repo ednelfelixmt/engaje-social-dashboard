@@ -30,7 +30,8 @@ export function AdminIntegrationStartButton({platformKey,available,workspaces}:{
         return;
       }
       setOpen(false);
-      router.push(`/${encodeURIComponent(selected.slug)}/settings/integrations#${platformKey==='google'?'windsor':platformKey==='rd-station'?'rd_station':platformKey==='crm'?'generic_crm':platformKey}`);
+      const product=platformKey==='google'?'google_ads':platformKey==='rd-station'?'rd_station_crm':platformKey==='crm'?'generic_crm':platformKey;
+      router.push(`/${encodeURIComponent(selected.slug)}/settings/integrations?connect=${encodeURIComponent(product)}`);
     }catch(error){setMessage(error instanceof Error?error.message:'Não foi possível iniciar a integração.');setBusy(false);}
   }
 

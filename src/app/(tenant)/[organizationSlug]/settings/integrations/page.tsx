@@ -1,46 +1,15 @@
 import Link from 'next/link';
-import type {ReactNode} from 'react';
-import {Activity, Blocks, Cable, CheckCircle2, Database, LineChart, MessageSquareText, TriangleAlert, Webhook} from 'lucide-react';
+import {Cable, CheckCircle2, TriangleAlert} from 'lucide-react';
 import {agencyTenant} from '@/lib/auth/session';
-import {connectorCatalog, connectorByProvider, type ConnectorDefinition} from '@/lib/integrations/catalog';
+import {connectorByProvider} from '@/lib/integrations/catalog';
+import {connectionProducts} from '@/lib/integrations/connection-products';
+import {PlatformConnectionHub} from '@/components/platform-connection-hub';
 import {Card} from '@/components/ui/card';
-import {IntegrationControls} from '@/components/integration-controls';
-import {ExtractorSetup} from '@/components/extractor-setup';
-import {FoundationConnector} from '@/components/foundation-connector';
 import {IntegrationDiagnostics} from '@/components/integration-diagnostics';
 import {MetaAccountSelector} from '@/components/meta-account-selector';
 import {IntegrationAccountCard} from '@/components/integration-account-card';
 import {PlatformAssetSelector} from '@/components/platform-asset-selector';
 import {ClientPlatformAssets} from '@/components/client-platform-assets';
-
-const icons: Record<string, ReactNode> = {
-  meta_ads: <LineChart className="text-blue-400" />, tiktok_ads: <Activity className="text-cyan-300" />,
-  windsor: <Database className="text-indigo-300" />,
-  stract: <Database className="text-orange-300" />, hubspot: <MessageSquareText className="text-orange-400" />,
-  rd_station: <Blocks className="text-teal-300" />, generic_crm: <Webhook className="text-zinc-300" />,
-};
-
-function StageBadge({stage}: Pick<ConnectorDefinition, 'stage'>) {
-  return <span className={`connector-badge connector-badge-${stage}`}>{stage === 'live' ? 'Conector implementado' : 'Sincronização pendente'}</span>;
-}
-
-function ConnectorCard({connector, organizationId, prepared}: {connector: ConnectorDefinition; organizationId: string; prepared: boolean}) {
-  return (
-    <Card className="integration-card" id={connector.provider}>
-      <div>
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div className="integration-brand">{icons[connector.provider]}<div><h3>{connector.name}</h3><p>{connector.description}</p></div></div>
-          <StageBadge stage={connector.stage} />
-        </div>
-        <div className="flex flex-wrap gap-2">{connector.capabilities.map((capability) => <span className="connector-capability" key={capability}>{capability}</span>)}</div>
-      </div>
-      <p className="muted text-xs">{connector.stage==='live'?'A conta só será vinculada após você selecioná-la e confirmar o cliente.':'O cadastro inicial não autoriza nem sincroniza dados. O adaptador e a homologação desta plataforma ainda precisam ser concluídos.'}</p>
-      {connector.stage === 'live'
-        ? <IntegrationControls organizationId={organizationId} provider={connector.provider} />
-        : <FoundationConnector organizationId={organizationId} provider={connector.provider} prepared={prepared} />}
-    </Card>
-  );
-}
 
 export default async function Page({params: params_, searchParams: searchParams_}: {params: Promise<{organizationSlug: string}>; searchParams: Promise<Record<string, string | undefined>>}) {
   const params = await params_;
@@ -64,7 +33,8 @@ export default async function Page({params: params_, searchParams: searchParams_
   const integrations = data ?? [];
   const configOf = (item: typeof integrations[number]) => item.config && typeof item.config === 'object' && !Array.isArray(item.config) ? item.config as Record<string, unknown> : {};
   const organicProviders = new Set(['facebook_organic','instagram_organic','tiktok_organic','youtube','google_business']);
-  const candidates = integrations.filter((item) => !organicProviders.has(item.provider) && configOf(item).selection_pending === true);
+  const hubAuthorizations = integrations.filter(item => configOf(item).connection_hub === true);
+  const candidates = integrations.filter((item) => configOf(item).connection_hub !== true && !organicProviders.has(item.provider) && configOf(item).selection_pending === true);
   const candidateGroups = Array.from(new Set(candidates.filter((item)=>item.provider !== 'meta_ads').map((item) => `${item.provider}:${String(configOf(item).batch_id ?? 'unbatched')}`))).map((key) => {
     const [provider, batchValue] = key.split(':');
     return {
@@ -86,9 +56,6 @@ export default async function Page({params: params_, searchParams: searchParams_
   );
   const connected = operationalIntegrations.filter(item => item.status === 'connected' && item.is_enabled).length;
   const attention = failingIntegrations.length;
-  const preparedProviders = new Set(integrations.map((item) => item.provider));
-  const official = connectorCatalog.filter((item) => item.group === 'official');
-  const crms = connectorCatalog.filter((item) => item.group === 'crm');
 
   return (
     <div className="space-y-8">
@@ -127,23 +94,9 @@ export default async function Page({params: params_, searchParams: searchParams_
         <Card className="flex items-center gap-4 p-4"><TriangleAlert className={attention ? 'text-red-300' : 'text-zinc-500'} /><div><strong className="text-xl">{attention}</strong><p className="muted text-xs">exigem atenção</p></div></Card>
       </div>
 
-      <section className="space-y-4">
-        <div><h2 className="text-xl font-semibold">Plataformas oficiais</h2><p className="muted mt-1 text-sm">A conexão Meta reúne Facebook, Instagram e todos os ativos vinculados. Não é necessário conectar cada produto separadamente.</p></div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{official.map((connector) => <ConnectorCard connector={connector} organizationId={org.id} prepared={preparedProviders.has(connector.provider)} key={connector.provider} />)}</div>
-      </section>
-
-      <section className="space-y-4">
-        <div><h2 className="text-xl font-semibold">Extratores de mídia paga</h2><p className="muted mt-1 text-sm">Uma única fonte por plataforma evita duplicidade de investimento e conversões.</p></div>
-        <div className="grid gap-4 xl:grid-cols-2">
-          <Card><div className="mb-4 flex items-start justify-between gap-3"><div className="integration-brand">{icons.windsor}<div><h3>Windsor.ai</h3><p>Google Ads operacional para campanhas e conversões.</p></div></div><StageBadge stage="live" /></div><p className="muted mb-4 text-xs">Cadastre as contas disponíveis e confirme quais pertencem a este cliente.</p><ExtractorSetup organizationId={org.id} provider="windsor" /></Card>
-          <Card><div className="mb-4 flex items-start justify-between gap-3"><div className="integration-brand">{icons.stract}<div><h3>Stract</h3><p>Destino Supabase e contas por cliente preparados para a carga externa.</p></div></div><StageBadge stage="foundation" /></div><p className="muted mb-4 text-xs">Cadastre as contas disponíveis e confirme quais pertencem a este cliente.</p><ExtractorSetup organizationId={org.id} provider="stract" /></Card>
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <div><h2 className="text-xl font-semibold">CRM e receita real</h2><p className="muted mt-1 text-sm">Bases preparadas para que ROAS e ROI usem vendas reais quando a integração for finalizada.</p></div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{crms.map((connector) => <ConnectorCard connector={connector} organizationId={org.id} prepared={preparedProviders.has(connector.provider)} key={connector.provider} />)}</div>
-      </section>
+      <PlatformConnectionHub workspaces={[{id:org.id,name:org.name,slug:org.slug}]} initialProduct={searchParams.connect}/>
+      {searchParams.authorization==='verified'&&hubAuthorizations.some(item=>item.id===searchParams.connection&&configOf(item).authorization_status==='verified')?<Card>Autorização recebida. A seleção da conta e a primeira coleta permanecem pendentes.</Card>:null}
+      {hubAuthorizations.length?<section className="space-y-4"><div><h2 className="text-xl font-semibold">Autorizações por plataforma</h2><p className="muted mt-1 text-sm">Acesso validado não equivale a uma conta vinculada ou a uma coleta concluída.</p></div><div className="connection-auth-list">{hubAuthorizations.map(item=>{const config=configOf(item),product=connectionProducts.find(p=>p.id===config.product);return <article key={item.id}><div><strong>{product?.name??item.account_name}</strong><p>{config.method==='oauth'?'OAuth 2.0':'API'} · {config.authorization_status==='verified'?'Última autorização validada; conta e coleta pendentes':item.status==='error'?'Autorização não concluída':'Aguardando autorização'}</p></div><Link className="admin-row-action" href={`/${org.slug}/settings/integrations?connect=${encodeURIComponent(String(config.product??''))}`}>Configurar acesso ↗</Link></article>;})}</div></section>:null}
 
       <section className="space-y-4">
         <div><h2 className="text-xl font-semibold">Ativos e bases deste cliente</h2><p className="muted mt-1 text-sm">Somente os ativos atribuídos nesta área podem alimentar o dashboard de {org.name}.</p></div>
