@@ -38,6 +38,12 @@ export function projectMarketingWaterfall(report:DriverReport):MarketingWaterfal
     bars.push({name:row.name,base:Math.min(running,next),magnitude,change:row.change});
     running=next;
   }
+  // The independently aggregated endpoint must agree with the visible steps.
+  // Sorting campaigns and grouping the tail can introduce a few floating-point
+  // ULPs; tolerate that arithmetic noise, not a missing or contradictory driver.
+  const scale=Math.max(Math.abs(report.start),Math.abs(report.end),...shown.map(row=>Math.abs(row.change)));
+  const tolerance=Number.EPSILON*scale*(shown.length+2);
+  if (!shown.length || !Number.isFinite(tolerance) || Math.abs(running-report.end)>tolerance) return null;
   bars.push({name:'Atual',base:0,magnitude:report.end,change:null});
   return bars;
 }
