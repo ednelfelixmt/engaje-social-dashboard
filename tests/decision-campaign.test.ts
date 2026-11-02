@@ -227,3 +227,41 @@ test('DECISION-GRAIN-GUARD-002: valid Meta aliases share a stable key without no
   assert.notEqual(google.decisionKey, withAlias.decisionKey);
   assert.equal(rankCampaignDecisionImpacts([campaign({spend: 0, currency: ''}), campaign()], [], false).length, 1);
 });
+
+
+test('DECISION-OPAQUE-IDENTITY-001: invisible controls and unpaired UTF-16 never form comparable or actionable campaign grains', () => {
+  const hidden = [
+    '\u00ad', '\u061c', '\u200b', '\u200c', '\u200e', '\u200f',
+    '\u2028', '\u2029', '\u202e', '\u2060', '\u2066', '\u2069', '\ufeff',
+    String.fromCharCode(0xd800), String.fromCharCode(0xdc00),
+  ];
+  const legitimate = campaign();
+  for (const field of ['platform', 'accountId', 'campaignId'] as const) {
+    for (const mark of hidden) {
+      const identity = field === 'platform' ? 'meta_ads' + mark
+        : field === 'accountId' ? 'act_12' + mark + '3'
+        : 'shared-' + mark + 'campaign-id';
+      const malformed = campaign({[field]: identity} as Partial<CampaignPerformance>);
+      assert.equal(findComparableCampaign(malformed, [malformed]), null, field + '/' + JSON.stringify(mark));
+      assert.equal(findComparableCampaign(legitimate, [malformed]), null, field + '/' + JSON.stringify(mark));
+      assert.throws(() => rankCampaignDecisionImpacts([malformed], [legitimate], true), /Invalid decision campaign grain/);
+    }
+  }
+  assert.equal(findComparableCampaign(legitimate, [legitimate]), legitimate);
+});
+
+test('DECISION-OPAQUE-IDENTITY-001: visible Unicode, joined emoji, Meta alias and observed zero retain identity and recommendation semantics', () => {
+  const id = 'ação-👩‍💻-🔍';
+  const current = campaign({accountId: 'act_12 alpha', campaignId: id, spend: 75, leads: 15});
+  const previous = campaign({accountId: '12 alpha', campaignId: id, spend: 100, leads: 10});
+  const snapshot = structuredClone({current, previous});
+  assert.equal(findComparableCampaign(current, [previous]), previous);
+  const ranked = rankCampaignDecisionImpacts([current], [previous], true);
+  assert.equal(ranked.length, 1);
+  assert.equal(ranked[0].recommendation, 'scale');
+  assert.equal(ranked[0].cpl, 5);
+  assert.equal(ranked[0].decisionKey, JSON.stringify([orgA, 'meta_ads', '12 alpha', id, 'BRL']));
+  const zero = campaign({accountId: 'act_12 alpha', campaignId: id, spend: 1, leads: 0});
+  assert.equal(rankCampaignDecisionImpacts([zero], [], false)[0].recommendation, 'review');
+  assert.deepEqual({current, previous}, snapshot);
+});
