@@ -36,6 +36,34 @@ test('agency chart limits only presentation and search/status filters keep no-da
 });
 
 
+test('UX-AGENCY-CLIENT-SEARCH-ACCENT-001: accented names match plain Portuguese search and collapsed whitespace', () => {
+  const input=[
+    client({id:'synthetic-cafe',name:'Café São Paulo',hasData:true,connected:true}),
+    client({id:'synthetic-reuniao',name:'Reunião de Negócios',hasData:false,connected:false}),
+    client({id:'synthetic-cafe-novo',name:'Cafe Novo',hasData:true,connected:false}),
+  ];
+  const before=structuredClone(input);
+  assert.deepEqual(selectAgencyClients(input,'  CAFE   SAO  ','all').map(row=>row.id),['synthetic-cafe']);
+  assert.deepEqual(selectAgencyClients(input,'reuniao   de negocios','no_data').map(row=>row.id),['synthetic-reuniao']);
+  assert.deepEqual(selectAgencyClients(input,'SÃO','connected').map(row=>row.id),['synthetic-cafe']);
+  assert.deepEqual(selectAgencyClients(input,'sao','attention'),[]);
+  assert.deepEqual(input,before,'search must never alter client records');
+});
+
+test('UX-AGENCY-CLIENT-SEARCH-ACCENT-001: preserve emoji selectors and existing query/connection filters', () => {
+  const input=[
+    client({id:'synthetic-emoji',name:'Equipe🧑‍💻 Aurora',connected:true}),
+    client({id:'synthetic-heart',name:'Equipe❤️ Aurora',connected:false}),
+    client({id:'synthetic-plain',name:'Equipe Aurora',connected:true}),
+  ];
+  const before=structuredClone(input);
+  assert.deepEqual(selectAgencyClients(input,'🧑‍💻','connected').map(row=>row.id),['synthetic-emoji']);
+  assert.deepEqual(selectAgencyClients(input,'❤️','attention').map(row=>row.id),['synthetic-heart']);
+  assert.deepEqual(selectAgencyClients(input,'EQUIPE AURORA','all').map(row=>row.id),['synthetic-plain']);
+  assert.equal(selectAgencyClients(input,'','all').length,3);
+  assert.deepEqual(input,before);
+});
+
 test('agency portfolio fractional BRL spends use the actual largest observed amount',()=>{
   const a=client(),input=[
     client({name:'A: R$ 0,25',summary:{...a.summary,spend:0.25}}),
@@ -128,5 +156,30 @@ test('AGENCY-PORTFOLIO-BAR-RATIO-001: unrepresentable ratios never become NaN or
   assert.equal(result.rows[1].value,Number.MIN_VALUE);
   assert.equal(result.rows[2].value,0);
   assert.ok(result.rows.every(row=>Number.isFinite(row.width)));
+  assert.deepEqual(input,before);
+});
+
+test('UX-AGENCY-BI-COMPARE-CONTEXT-001: agency comparison selection follows both Marketing BI links',()=>{
+  const a=client(),input=[a],before=structuredClone(input);
+  const props={clients:input,summary:a.summary,currency:'BRL',from:'2026-10-01',to:'2026-10-20'};
+  for(const compare of ['none','previous_period','previous_year'] as const) {
+    const html=renderToStaticMarkup(React.createElement(AgencyOverview,{...props,compare}));
+    const expected='href="/aurora-sintetica/reports/analytics?from=2026-10-01&amp;to=2026-10-20&amp;currency=BRL&amp;compare='+compare+'"';
+    assert.equal(html.split(expected).length-1,2,'chart and client directory must preserve '+compare);
+  }
+  assert.deepEqual(input,before,'changing navigation context must not mutate tenant facts');
+});
+
+test('UX-AGENCY-BI-COMPARE-CONTEXT-001: default comparison and client currency remain stable',()=>{
+  const baseline=client();
+  const usd=client({id:orgB,name:'Cliente USD sintético',slug:'cliente-usd-sintetico',currency:'USD',summary:{...baseline.summary,currency:'USD'}});
+  const input=[usd],before=structuredClone(input);
+  const props={clients:input,summary:usd.summary,currency:'BRL',from:'2026-02-28',to:'2026-03-01'};
+  const previous=renderToStaticMarkup(React.createElement(AgencyOverview,props));
+  const expectedDefault='href="/cliente-usd-sintetico/reports/analytics?from=2026-02-28&amp;to=2026-03-01&amp;currency=USD&amp;compare=previous_period"';
+  assert.equal(previous.split(expectedDefault).length-1,2,'existing fallback must remain previous_period');
+  const none=renderToStaticMarkup(React.createElement(AgencyOverview,{...props,compare:'none'}));
+  const expectedNone='href="/cliente-usd-sintetico/reports/analytics?from=2026-02-28&amp;to=2026-03-01&amp;currency=USD&amp;compare=none"';
+  assert.equal(none.split(expectedNone).length-1,2,'explicit none must not be reset');
   assert.deepEqual(input,before);
 });

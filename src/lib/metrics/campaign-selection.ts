@@ -1,3 +1,5 @@
+import {validTenantNavigationSlug} from '../navigation/tenant-slug';
+import {calendarDays} from './calendar';
 export type CampaignSelection = {platform:'meta_ads'|'google_ads'|'tiktok_ads';account:string;campaign:string};
 export type CampaignLinkFilters = {from:string;to:string;currency:string;compare:'none'|'previous_period'|'previous_year'};
 const identifier = (value:unknown):value is string => typeof value==='string' && value.trim().length>0 && value===value.trim() && value.length<=512 && ![...value].some(char=>{const code=char.charCodeAt(0);return code<32||(code>=127&&code<=159);});
@@ -10,6 +12,10 @@ export function campaignSelection(search:Record<string,unknown>):CampaignSelecti
  return {platform,account,campaign:search.campaign};
 }
 export function campaignHref(slug:string,filters:CampaignLinkFilters,selected:CampaignSelection):string {
- if(typeof slug!=='string'||!slug.trim()||slug.trim()!==slug||slug==='.'||slug==='..'||/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/u.test(slug))throw new Error('Invalid organization slug');
+ if(!validTenantNavigationSlug(slug))throw new Error('Invalid organization slug');
+ // Match report navigation's strict period, currency and comparison contract.
+ // Reject malformed query contexts before emitting a shareable campaign URL.
+ if(!['none','previous_period','previous_year'].includes(filters.compare)||!/^[A-Z]{3}$/.test(filters.currency))throw new Error('Invalid campaign navigation filters');
+ calendarDays(filters.from,filters.to);
  return '/'+encodeURIComponent(slug)+'/reports/campaign?'+new URLSearchParams({from:filters.from,to:filters.to,currency:filters.currency,compare:filters.compare,platform:selected.platform,account:selected.account,campaign:selected.campaign}).toString();
 }

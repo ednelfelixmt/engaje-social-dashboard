@@ -353,3 +353,49 @@ test('FUNNEL-OPAQUE-CONTROLS-001: valid opaque IDs, observed zero and prior-peri
   assert.equal(comparison[0].previousValue, null);
   assert.match(comparison[0].detail, /Comparação indisponível/);
 });
+
+
+test('FUNNEL-OPAQUE-FORMAT-001: ambiguous Unicode and unpaired UTF-16 cannot establish measured funnel grains', () => {
+  const observed = rows(fact())[0], initial = structuredClone(observed);
+  const forbidden = [0x00ad, 0x061c, 0x200b, 0x200c, 0x200e, 0x200f,
+    0x2028, 0x2029, 0x202e, 0x2060, 0x2066, 0x206a, 0x206f,
+    0xfeff, 0xd800, 0xdc00].map(code => String.fromCharCode(code));
+  for (const field of ['platform', 'accountId', 'campaignId'] as const) {
+    for (const marker of forbidden) {
+      const corrupt = {...observed, [field]: observed[field] + marker + 'opaque'} as CampaignPerformance;
+      const result = summary([observed, corrupt]);
+      assert.equal(result.value, null, field + ': ' + JSON.stringify(marker));
+      assert.equal(result.cost, null);
+      assert.match(result.detail, /identificador de origem inválido/);
+      assert.equal(summary([corrupt]).value, null);
+    }
+  }
+  assert.deepEqual(observed, initial, 'provider identities must never be rewritten');
+});
+
+test('FUNNEL-OPAQUE-FORMAT-001: invalid catalog and prior identities fail closed while valid emoji, aliases and zero persist', () => {
+  const observed = rows(fact({spend: 0, clicks: 0}))[0];
+  const valid: CampaignPerformance = {...observed,
+    accountId: 'act_Café🧑‍💻 | setor', campaignId: 'campanha/ação 🧑‍💻'};
+  const original = structuredClone(valid);
+  assert.equal(summary([valid]).value, 0);
+  assert.equal(summary([valid]).cost, null);
+  const catalog = campaigns([], [], 'crm', [{
+    organization_id: scope.organizationId, platform: 'meta_ads',
+    account_id: 'synthetic-catalog-account', external_id: 'synthetic-catalog',
+    name: 'Synthetic catalog', status: 'active',
+  } as Row<'ad_campaigns'>])[0];
+  assert.equal(hasFunnelMeasurements(catalog), false);
+  const invalidCatalog = {...catalog, campaignId: catalog.campaignId + '\u200bhidden'};
+  assert.equal(hasFunnelMeasurements(invalidCatalog), false);
+  const rejected = summary([valid, invalidCatalog]);
+  assert.equal(rejected.value, null);
+  assert.equal(rejected.cost, null);
+  assert.match(rejected.detail, /identificador de origem inválido/);
+  const prior = {...rows(fact())[0], accountId: 'act_prior' + String.fromCharCode(0xd800)};
+  const comparison = configuredFunnel([valid], steps, scope, [prior]);
+  assert.equal(comparison[0].value, 0);
+  assert.equal(comparison[0].previousValue, null);
+  assert.match(comparison[0].detail, /Comparação indisponível/);
+  assert.deepEqual(valid, original);
+});
