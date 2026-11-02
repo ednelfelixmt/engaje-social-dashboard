@@ -158,3 +158,28 @@ test('AGENCY-PORTFOLIO-BAR-RATIO-001: unrepresentable ratios never become NaN or
   assert.ok(result.rows.every(row=>Number.isFinite(row.width)));
   assert.deepEqual(input,before);
 });
+
+test('UX-AGENCY-BI-COMPARE-CONTEXT-001: agency comparison selection follows both Marketing BI links',()=>{
+  const a=client(),input=[a],before=structuredClone(input);
+  const props={clients:input,summary:a.summary,currency:'BRL',from:'2026-10-01',to:'2026-10-20'};
+  for(const compare of ['none','previous_period','previous_year'] as const) {
+    const html=renderToStaticMarkup(React.createElement(AgencyOverview,{...props,compare}));
+    const expected='href="/aurora-sintetica/reports/analytics?from=2026-10-01&amp;to=2026-10-20&amp;currency=BRL&amp;compare='+compare+'"';
+    assert.equal(html.split(expected).length-1,2,'chart and client directory must preserve '+compare);
+  }
+  assert.deepEqual(input,before,'changing navigation context must not mutate tenant facts');
+});
+
+test('UX-AGENCY-BI-COMPARE-CONTEXT-001: default comparison and client currency remain stable',()=>{
+  const baseline=client();
+  const usd=client({id:orgB,name:'Cliente USD sintético',slug:'cliente-usd-sintetico',currency:'USD',summary:{...baseline.summary,currency:'USD'}});
+  const input=[usd],before=structuredClone(input);
+  const props={clients:input,summary:usd.summary,currency:'BRL',from:'2026-02-28',to:'2026-03-01'};
+  const previous=renderToStaticMarkup(React.createElement(AgencyOverview,props));
+  const expectedDefault='href="/cliente-usd-sintetico/reports/analytics?from=2026-02-28&amp;to=2026-03-01&amp;currency=USD&amp;compare=previous_period"';
+  assert.equal(previous.split(expectedDefault).length-1,2,'existing fallback must remain previous_period');
+  const none=renderToStaticMarkup(React.createElement(AgencyOverview,{...props,compare:'none'}));
+  const expectedNone='href="/cliente-usd-sintetico/reports/analytics?from=2026-02-28&amp;to=2026-03-01&amp;currency=USD&amp;compare=none"';
+  assert.equal(none.split(expectedNone).length-1,2,'explicit none must not be reset');
+  assert.deepEqual(input,before);
+});
