@@ -16,8 +16,8 @@ export const reportCatalog = [
 ] as const;
 export type ReportPath = typeof reportCatalog[number]['path'];
 /** Whitelist navigation context. Account/campaign identifiers never follow a report link. */
-/** Reject invisible and bidirectional controls in tenant navigation without changing the slug. */
-const unsafeSlugControls = /[\u0000-\u001F\u007F-\u009F\u061C\u200B\u200E-\u200F\u2028-\u202E\u2060\u2066-\u2069\uFEFF]/u;
+/** Reject invisible format and bidirectional controls in tenant navigation without changing the slug. */
+const unsafeSlugControls = /[\u0000-\u001F\u007F-\u009F\u00AD\u061C\u200B\u200E-\u200F\u2028-\u202E\u2060-\u206F\uFEFF]/u;
 /** Lone UTF-16 surrogates cannot be percent-encoded as valid navigation paths. */
 const malformedUtf16Slug = /[\uD800-\uDFFF]/u;
 export function reportHref(slug:string, path:ReportPath, context:ReportContext):string {

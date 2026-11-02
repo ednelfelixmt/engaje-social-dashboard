@@ -93,3 +93,27 @@ test('REPORT-NAV-UTF16-FAILCLOSED-001: valid Unicode surrogate pairs preserve en
  }
  assert.deepEqual(context,snapshot);
 });
+
+test('REPORT-NAV-FORMAT-CONTROLS-001: soft hyphen and invisible operator slugs fail closed on every report route',()=>{
+ const newlyBlocked=[0x00AD,0x2061,0x2062,0x2063,0x2064,0x2065,0x206A,0x206B,0x206C,0x206D,0x206E,0x206F];
+ const context={...scope},before=structuredClone(context);
+ for(const item of reportCatalog)for(const codepoint of newlyBlocked){
+  const slug='cliente'+String.fromCodePoint(codepoint)+'filial';
+  assert.throws(()=>reportHref(slug,item.path,context),/Invalid report navigation/,item.path+' U+'+codepoint.toString(16));
+ }
+ assert.deepEqual(context,before,'failed navigation must never modify input context');
+});
+
+test('REPORT-NAV-FORMAT-CONTROLS-001: visible Unicode and joined emoji keep route and filter semantics',()=>{
+ const context={...scope},before=structuredClone(context),slug='Café🧑‍💻/filial';
+ for(const item of reportCatalog){
+  const href=reportHref(slug,item.path,context);
+  const url=new URL(href,'https://synthetic.example');
+  assert.ok(href.startsWith('/Caf%C3%A9%F0%9F%A7%91%E2%80%8D%F0%9F%92%BB%2Ffilial/'),item.path);
+  assert.equal(url.searchParams.get('from'),context.from);
+  assert.equal(url.searchParams.get('to'),context.to);
+  assert.equal(url.searchParams.get('currency'),context.currency);
+  assert.equal(url.searchParams.get('compare'),item.comparison?context.compare:'none');
+ }
+ assert.deepEqual(context,before,'visible Unicode navigation is a read-only projection');
+});
