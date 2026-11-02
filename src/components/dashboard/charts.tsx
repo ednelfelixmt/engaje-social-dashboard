@@ -23,8 +23,8 @@ export function Timeline({rows, currency = 'BRL'}: {rows: TimelineRow[]; currenc
       <AreaChart data={rows} margin={{top: 8, right: 6, left: -18, bottom: 0}}>
         <defs>
           <linearGradient id="revenueGlow" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity={0.34} />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity={0} />
+            <stop offset="0%" stopColor="#8ec5ff" stopOpacity={0.34} />
+            <stop offset="100%" stopColor="#8ec5ff" stopOpacity={0} />
           </linearGradient>
           <linearGradient id="spendGlow" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#5ee7f7" stopOpacity={0.18} />
@@ -42,7 +42,7 @@ export function Timeline({rows, currency = 'BRL'}: {rows: TimelineRow[]; currenc
           formatter={(value) => money(typeof value === 'number' ? value : Number(value), currency)}
           labelFormatter={(value) => new Intl.DateTimeFormat('pt-BR', {day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC'}).format(new Date(`${value}T00:00:00Z`))}
         />
-        <Area type="monotone" dataKey="revenue" name="Receita" stroke="#ffffff" strokeWidth={2.5} fill="url(#revenueGlow)" connectNulls={false} />
+        <Area type="monotone" dataKey="revenue" name="Receita" stroke="#8ec5ff" strokeWidth={2.5} fill="url(#revenueGlow)" connectNulls={false} />
         <Area type="monotone" dataKey="spend" name="Investimento" stroke="#5ee7f7" strokeWidth={2} fill="url(#spendGlow)" connectNulls={false} />
       </AreaChart>
     </ResponsiveContainer>
