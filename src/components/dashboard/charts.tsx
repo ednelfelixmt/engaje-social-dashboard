@@ -1,50 +1,25 @@
 'use client';
 
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import {money} from '@/lib/utils';
+import {useState} from 'react';
+import {ChartFrame, ChartModeSwitch} from '@/components/charts/chart-frame';
+import {TimeSeriesChart, timeSeriesModes, type TimePoint, type TimeSeriesMode} from '@/components/charts/time-series-chart';
+import {formatChartValue, shortDate} from '@/lib/charts/format';
 
 type TimelineRow = {date: string; spend: number | null; revenue: number | null};
 
+/** Daily investment (left axis) and, when a commercial source reports it, revenue (right axis). Missing days stay gaps. */
 export function Timeline({rows, currency = 'BRL'}: {rows: TimelineRow[]; currency?: string}) {
-  if (!rows.length) {
-    return <div className="timeline-chart grid place-items-center text-sm text-zinc-500">Sem dados sincronizados neste período.</div>;
-  }
-
-  return <div className="timeline-chart mt-6 w-full">
-    <ResponsiveContainer width="100%" height="100%">
-      <AreaChart data={rows} margin={{top: 8, right: 6, left: -18, bottom: 0}}>
-        <defs>
-          <linearGradient id="revenueGlow" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity={0.34} />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity={0} />
-          </linearGradient>
-          <linearGradient id="spendGlow" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#5ee7f7" stopOpacity={0.18} />
-            <stop offset="100%" stopColor="#5ee7f7" stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid stroke="rgba(255,255,255,.065)" vertical={false} />
-        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#71717a', fontSize: 11}} tickMargin={12} tickFormatter={(value) => String(value).slice(5).split('-').reverse().join('/')} />
-        <YAxis axisLine={false} tickLine={false} tick={{fill: '#71717a', fontSize: 11}} tickFormatter={(value) => Intl.NumberFormat('pt-BR', {notation: 'compact'}).format(Number(value))} />
-        <Tooltip
-          cursor={{stroke: 'rgba(255,255,255,.18)', strokeDasharray: '4 4'}}
-          contentStyle={{background: 'rgba(10,15,26,.96)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 14, boxShadow: '0 18px 60px rgba(0,0,0,.42)'}}
-          labelStyle={{color: '#a1a1aa', marginBottom: 8}}
-          itemStyle={{fontSize: 12, fontWeight: 600}}
-          formatter={(value) => money(typeof value === 'number' ? value : Number(value), currency)}
-          labelFormatter={(value) => new Intl.DateTimeFormat('pt-BR', {day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC'}).format(new Date(`${value}T00:00:00Z`))}
-        />
-        <Area type="monotone" dataKey="revenue" name="Receita" stroke="#ffffff" strokeWidth={2.5} fill="url(#revenueGlow)" connectNulls={false} />
-        <Area type="monotone" dataKey="spend" name="Investimento" stroke="#5ee7f7" strokeWidth={2} fill="url(#spendGlow)" connectNulls={false} />
-      </AreaChart>
-    </ResponsiveContainer>
+  const [mode, setMode] = useState<TimeSeriesMode>('columns');
+  const money = {kind: 'money', currency} as const;
+  const hasRevenue = rows.some(row => row.revenue != null);
+  const points: TimePoint[] = rows.map(row => ({label: shortDate(row.date) || row.date, detail: shortDate(row.date, true) || row.date, current: row.spend, secondary: hasRevenue ? row.revenue : undefined}));
+  return <div className="mt-6 w-full">
+    <ChartFrame bare hideTitle title="Investimento e receita por dia" height={300} empty={rows.length ? null : 'Sem dados sincronizados neste período.'}
+      actions={<ChartModeSwitch label="Estilo do gráfico" value={mode} options={timeSeriesModes} onChange={setMode} />}
+      legend={hasRevenue ? [{label: 'Investimento', color: 'var(--chart-primary)'}, {label: 'Receita (eixo direito)', color: 'var(--chart-secondary)', kind: 'line'}] : [{label: 'Investimento', color: 'var(--chart-primary)'}]}
+      table={{columns: ['Dia', 'Investimento', ...(hasRevenue ? ['Receita'] : [])], rows: rows.map(row => [shortDate(row.date, true) || row.date, formatChartValue(money, row.spend), ...(hasRevenue ? [formatChartValue(money, row.revenue)] : [])])}}
+      footnote={hasRevenue ? 'Receita informada pela fonte comercial; dias sem registro aparecem como lacuna, não como zero.' : undefined}>
+      <TimeSeriesChart points={points} format={money} mode={mode} name="Investimento" secondary={hasRevenue ? {name: 'Receita', format: money} : undefined} ariaLabel="Investimento e receita por dia" />
+    </ChartFrame>
   </div>;
 }

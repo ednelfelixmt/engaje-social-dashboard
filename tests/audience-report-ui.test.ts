@@ -29,9 +29,10 @@ test('export failure is announced and does not claim a file was saved',()=>{
 });
 
 const chartData: {name:string;data:unknown}[]=[];
-const passthrough=({children}:{children?:React.ReactNode})=>React.createElement('div',null,children);
 const {AudienceOverview}=loadTypescript<{AudienceOverview:React.ComponentType<{gender:BreakdownPoint[];age:BreakdownPoint[];device:BreakdownPoint[]}>}>(new URL('../src/components/dashboard/audience-overview-v3.tsx',import.meta.url),(id,native)=>{
- if(id==='recharts')return new Proxy({}, {get:(_target,key)=>key==='Pie'||key==='BarChart'?({children,data}:{children?:React.ReactNode;data:unknown})=>{chartData.push({name:String(key),data});return React.createElement('div',null,children);}:passthrough});
+ // The chart models are replaced by recorders: what matters here is which data reaches them.
+ if(id==='@/components/charts/composition-charts')return {DonutChart:({slices}:{slices:unknown})=>{chartData.push({name:'Pie',data:slices});return React.createElement('div');}};
+ if(id==='@/components/charts/time-series-chart')return {TimeSeriesChart:({points}:{points:unknown})=>{chartData.push({name:'BarChart',data:points});return React.createElement('div');}};
  return native(id);
 });
 const point=(impressions:number|null,clicks:number|null=1):BreakdownPoint=>({label:'Synthetic',spend:1,impressions,clicks,leads:null});
@@ -43,7 +44,7 @@ test('partial and overflowing demographic distributions do not become a pie of a
 
 test('age series preserves missing clicks and explicit zero rather than inventing a bar',()=>{
  chartData.length=0;renderToStaticMarkup(React.createElement(AudienceOverview,{gender:[],age:[point(10,null),{...point(20,0),label:'Other'}],device:[]}));
- const rows=chartData.find(row=>row.name==='BarChart')!.data as {clicks:number|null}[];assert.ok(rows.some(row=>row.clicks===null));assert.ok(rows.some(row=>row.clicks===0));
+ const rows=chartData.find(row=>row.name==='BarChart')!.data as {secondary?:number|null}[];assert.ok(rows.some(row=>row.secondary===null),'cliques ausentes continuam ausentes');assert.ok(rows.some(row=>row.secondary===0),'zero explícito continua zero');
 });
 
 test('observed zero demographic data is distinct from absent data',()=>{
