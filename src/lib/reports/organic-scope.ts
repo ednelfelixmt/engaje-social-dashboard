@@ -33,7 +33,8 @@ export function validateOrganicScope(scope:OrganicScope){
 export function organicIdentifier(value:unknown):value is string{
  return typeof value==='string'&&value.length>0&&value.trim()===value&&
   // Directional formatting and invisible controls cannot be trusted as opaque source IDs.
+  // Reject line separators and isolated UTF-16 surrogates as well; valid emoji pairs remain allowed.
   // Keep visible Unicode; never normalize or silently merge provider identities.
-  !/[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u200b\u200e-\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]/u.test(value);
+  !/[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u200b\u200e-\u200f\u202a-\u202e\u2060\u2066-\u2069\u2028\u2029\ufeff\uD800-\uDFFF]/u.test(value);
 }
 export function organicCounter(value:unknown):number|null{return typeof value==='number'&&Number.isSafeInteger(value)&&value>=0?value:null;}

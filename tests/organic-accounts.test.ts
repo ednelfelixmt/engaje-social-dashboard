@@ -173,3 +173,17 @@ test('ORG-TIMEZONE-REQUIRED-001: missing or non-string timezone cannot inherit r
   assert.equal(valid.rows[0].values.impressions,0);
  }
 });
+
+test('ORG-SOURCE-UTF16-SEPARATORS-001: account identities reject Unicode line separators and isolated UTF-16 surrogates',()=>{
+ const invalid=['id\u2028token','id\u2029token','id'+String.fromCharCode(0xd800)+'token','id'+String.fromCharCode(0xdc00)+'token','id🎯'+String.fromCharCode(0xd800)];
+ for(const field of ['id','account_id'] as const)for(const value of invalid){
+  assert.throws(()=>buildOrganicAccountsReport([record({[field]:value})],scope),/Organic account identity is missing/,field+' '+JSON.stringify(value));
+ }
+ const input=record({id:'linha 🎯',account_id:'conta café 🎯',impressions:0});
+ const original=structuredClone(input);
+ const report=buildOrganicAccountsReport([input],scope);
+ assert.equal(report.rows[0].id,'linha 🎯');
+ assert.equal(report.accounts[0].account,'conta café 🎯');
+ assert.equal(report.rows[0].values.impressions,0);
+ assert.deepEqual(input,original);
+});
