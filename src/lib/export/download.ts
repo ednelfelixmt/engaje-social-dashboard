@@ -12,8 +12,11 @@ const browserPort: DownloadPort = {
 /** Reject ambiguous or path-like local filenames before allocating a Blob URL. */
 function assertCsvFilename(filename: string): void {
  const stem = filename.slice(0, -4);
+ // Windows reserves device basenames even with an extension (or another dot).
+ // Fail before allocating a Blob URL; do not rewrite the user's filename.
+ const windowsDevice = /^(?:CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|COM[1-9¹²³]|LPT[1-9¹²³])$/i.test(stem.split('.')[0].trimEnd());
  if (!/\.csv$/i.test(filename) || !stem || stem === '.' || stem === '..' ||
-     filename.length > 255 || filename !== filename.trim() ||
+     windowsDevice || filename.length > 255 || filename !== filename.trim() ||
      /[\\/:*?"<>|\u0000-\u001f\u007f-\u009f\u00ad\u061c\u200b\u200c\u200e\u200f\u2028-\u202e\u2060-\u206f\ufeff]/.test(filename) ||
      [...filename].some(char => {const code = char.codePointAt(0)!; return code >= 0xd800 && code <= 0xdfff;})) {
   throw new Error('Invalid CSV filename');
