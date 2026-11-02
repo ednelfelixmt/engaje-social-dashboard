@@ -36,7 +36,9 @@ export function buildTargetReferences(facts: readonly Row<'metrics_ads'>[], conf
  const knownAttribution = comparableAttribution(report.current, report.current);
  const rows = definitions.map((definition): TargetReference => {
   const raw = config[definition.field];
-  const validTarget = typeof raw === 'number' && Number.isFinite(raw) && (definition.field === 'target_roi' || raw >= 0);
+  // Count references are discrete facts, not fractional or precision-lost estimates.
+  const validTarget = typeof raw === 'number' && Number.isFinite(raw) && (definition.field === 'target_roi' || raw >= 0)
+   && (definition.unit !== 'count' || Number.isSafeInteger(raw));
   const target = validTarget ? raw : null;
   const metric = definition.metric;
   const knownDays = metric ? daily.filter(day => components[metric].every(key => day[key] !== null)).length : 0;
