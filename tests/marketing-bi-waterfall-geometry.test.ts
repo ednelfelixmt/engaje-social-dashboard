@@ -85,3 +85,37 @@ test('missing driver pairs and invalid grouped tail fail closed rather than prod
   const synthetic={...report,rows};
   assert.equal(projectMarketingWaterfall(synthetic),null,'overflow in grouped tail is not replaced by zero');
 });
+
+test('BI-WATERFALL-END-RECONCILIATION-001: inconsistent totals or driver changes never produce a misleading waterfall',()=>{
+  const report=marketingDrivers(selected(),'spend');
+  assert.equal(report.available,true);
+  const original=structuredClone(report);
+  assert.equal(projectMarketingWaterfall({...report,end:report.end!+1}),null,'unexplained final total cannot be plotted as reconciled');
+  assert.equal(projectMarketingWaterfall({...report,rows:report.rows.map(row=>({...row,change:row.change+1}))}),null,'a missing delta cannot be concealed');
+  assert.equal(projectMarketingWaterfall({...report,rows:[]}),null,'no visible drivers means no waterfall evidence');
+  assert.ok(projectMarketingWaterfall(report),'the canonical reconciled report remains usable');
+  assert.deepEqual(report,original,'no mutation of underlying observations');
+});
+
+test('BI-WATERFALL-END-RECONCILIATION-001: decimal rounding and grouped tail remain valid, material imbalance does not',()=>{
+  const original=marketingDrivers(selected(),'spend'),first=original.rows[0];
+  const decimal={...original,start:0.8,end:0,rows:[
+    {...first,key:'synthetic-a',name:'A',change:-0.7},
+    {...first,key:'synthetic-b',name:'B',change:-0.1},
+  ]};
+  const rounded=projectMarketingWaterfall(decimal);
+  assert.ok(rounded,'a sub-ULP decimal residue is not a new discrepancy');
+  assert.equal(rounded.at(-1)?.magnitude,0);
+
+  const grouped={...original,start:10,end:21,rows:Array.from({length:10},(_,i)=>({
+    ...first,key:'synthetic-'+i,name:'Synthetic '+i,change:1.1,
+  }))};
+  const snapshot=structuredClone(grouped);
+  const bars=projectMarketingWaterfall(grouped);
+  assert.ok(bars);
+  assert.equal(bars.length,11,'eight detailed campaign bars, one tail, and two endpoint bars');
+  assert.equal(bars.at(-2)?.name,'Demais campanhas');
+  assert.equal(bars.at(-1)?.magnitude,21);
+  assert.equal(projectMarketingWaterfall({...grouped,end:22}),null,'material mismatch after grouping cannot be presented as reconciled');
+  assert.deepEqual(grouped,snapshot);
+});
