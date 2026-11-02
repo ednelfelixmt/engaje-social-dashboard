@@ -63,5 +63,5 @@ export type SyncResult = {
 };
 
 export const defaultTheme = {
-  background: '#0F0F13', primary: '#FFD600', secondary: '#242430',
+  background: '#0F0F13', primary: '#FFD600', secondary: '#252525',
 } as const;

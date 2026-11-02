@@ -1,0 +1,161 @@
+/* Sistema de design ZF: refinamentos dos blocos compartilhados (cartões, botões, tabelas, gráficos, carregamento).
+   Só usa tokens e seletores genéricos; não depende de uma tela específica. */
+:root {
+  --ds-ease: cubic-bezier(.22, 1, .36, 1);
+  --ds-spring: cubic-bezier(.34, 1.56, .64, 1);
+  --ds-line: rgba(255, 255, 255, .09);
+  --ds-line-strong: rgba(255, 255, 255, .22);
+  --ds-glow: rgb(var(--primary-rgb) / .22);
+}
+
+/* ---------- Base: foco, seleção, rolagem, números ---------- */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid rgb(var(--primary-rgb) / .9);
+  outline-offset: 2px;
+}
+* { scrollbar-width: thin; scrollbar-color: rgba(127, 127, 127, .35) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { border: 3px solid transparent; border-radius: 999px; background: rgba(127, 127, 127, .35); background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: rgba(127, 127, 127, .6); background-clip: content-box; }
+.dashboard-shell :is(strong, td, th, output, .data-value) { font-variant-numeric: tabular-nums; }
+
+/* ---------- Cartões: respondem ao toque e ao mouse quando são clicáveis ---------- */
+.glass-panel { transition: border-color .25s var(--ds-ease), box-shadow .25s var(--ds-ease), transform .3s var(--ds-ease), background-color .25s; }
+:is(a, button, [role="button"], [data-interactive]).glass-panel { cursor: pointer; }
+:is(a, button, [role="button"], [data-interactive]).glass-panel:hover {
+  transform: translateY(-3px);
+  border-color: var(--ds-line-strong);
+  box-shadow: 0 22px 54px rgba(0, 0, 0, .32), inset 0 1px rgba(255, 255, 255, .06);
+}
+:is(a, button, [role="button"], [data-interactive]).glass-panel:active { transform: translateY(-1px) scale(.995); transition-duration: .1s; }
+
+/* ---------- Botões: retorno ao pressionar ---------- */
+.dashboard-shell button:not(:disabled):active, .dashboard-shell a[class*="rounded"]:active { transform: scale(.97); transition-duration: .08s; }
+.dashboard-shell button { transition-property: color, background-color, border-color, box-shadow, transform, opacity; transition-duration: .2s; transition-timing-function: var(--ds-ease); }
+
+/* ---------- Tabelas: leitura e rolagem no celular ---------- */
+.dashboard-shell tbody tr { transition: background-color .15s; }
+.dashboard-shell th { backdrop-filter: blur(6px); }
+.dashboard-shell :is(.overflow-x-auto, [data-scroll-x]) { -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; }
+
+/* ---------- Revelação suave ao rolar (progressiva: só onde há scroll-driven animations) ---------- */
+@keyframes ds-reveal { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .dashboard-shell .glass-panel { animation: ds-reveal linear backwards; animation-timeline: view(); animation-range: entry 0% entry 40%; }
+    .tv-mode .dashboard-shell .glass-panel { animation: none; }
+  }
+}
+
+/* ---------- Gráficos (Recharts): destaque do item sob o cursor e linhas mais suaves ---------- */
+.recharts-wrapper { font-variant-numeric: tabular-nums; }
+.recharts-cartesian-grid line { stroke-dasharray: 3 5; }
+.recharts-tooltip-cursor { stroke: rgba(127, 127, 127, .45); stroke-width: 1; }
+.recharts-bar-rectangle, .recharts-pie-sector, .recharts-sector { transition: opacity .2s, filter .2s; }
+.recharts-bar-rectangles:hover .recharts-bar-rectangle:not(:hover) { opacity: .5; }
+.recharts-bar-rectangle:hover, .recharts-pie-sector:hover { filter: brightness(1.15); }
+.recharts-line-curve, .recharts-area-curve { stroke-linecap: round; stroke-linejoin: round; }
+.recharts-active-dot circle { filter: drop-shadow(0 0 6px var(--ds-glow)); }
+
+/* ---------- Carregamento: esqueletos que mantêm o formato da tela ---------- */
+@keyframes ds-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.ds-skeleton {
+  border-radius: 14px;
+  background: linear-gradient(90deg, rgba(127, 127, 127, .08) 25%, rgba(127, 127, 127, .18) 50%, rgba(127, 127, 127, .08) 75%);
+  background-size: 200% 100%;
+  animation: ds-shimmer 1.6s linear infinite;
+}
+.ds-skeleton-grid { display: grid; gap: 16px; }
+.ds-skeleton-kpis { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.ds-skeleton-main { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
+@media (max-width: 900px) { .ds-skeleton-main { grid-template-columns: 1fr; } }
+
+/* ---------- Movimento reduzido ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .glass-panel, .dashboard-shell button, .dashboard-shell tbody tr, .recharts-bar-rectangle, .recharts-pie-sector { transition: none; }
+  :is(a, button, [role="button"], [data-interactive]).glass-panel:hover { transform: none; }
+  .ds-skeleton { animation: none; }
+}
+@media print { .glass-panel { animation: none !important; transform: none !important; } .ds-skeleton { display: none; } }
+
+/* =====================================================================
+   Cor e movimento: aurora de fundo, acento por cartão e brilho que segue o cursor.
+   Paleta nascida do cromo da coroa: gelo, violeta, ciano, esmeralda, âmbar e rosa.
+   ===================================================================== */
+:root {
+  --primary: #8ec5ff;
+  --primary-rgb: 142 197 255;
+  --c-ice: 142 197 255;
+  --c-violet: 167 139 250;
+  --c-cyan: 77 212 255;
+  --c-emerald: 61 220 151;
+  --c-amber: 244 211 94;
+  --c-rose: 255 107 139;
+  --ds-aurora: linear-gradient(120deg, #8ec5ff 0%, #a78bfa 50%, #ff8fb1 100%);
+}
+
+/* Aurora: manchas de cor muito suaves sobre o preto, sem competir com os dados */
+body {
+  background:
+    radial-gradient(900px circle at 88% -8%, rgb(var(--c-ice) / .12), transparent 62%),
+    radial-gradient(760px circle at 6% 14%, rgb(var(--c-violet) / .10), transparent 62%),
+    radial-gradient(860px circle at 62% 112%, rgb(var(--c-emerald) / .07), transparent 62%),
+    linear-gradient(180deg, #0d0d0d 0%, var(--background) 48%, #070707 100%);
+  background-attachment: fixed;
+}
+
+/* Títulos grandes com gradiente de cromo */
+.display-title {
+  background: linear-gradient(120deg, #fff 15%, #cfe6ff 55%, #d8ccff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Cada cartão tem um acento próprio (gelo, violeta, esmeralda, âmbar, rosa) que aparece na borda superior e no brilho */
+.dashboard-shell .glass-panel { --accent: var(--c-ice); }
+.dashboard-shell .glass-panel:nth-child(5n + 2) { --accent: var(--c-violet); }
+.dashboard-shell .glass-panel:nth-child(5n + 3) { --accent: var(--c-emerald); }
+.dashboard-shell .glass-panel:nth-child(5n + 4) { --accent: var(--c-amber); }
+.dashboard-shell .glass-panel:nth-child(5n + 5) { --accent: var(--c-rose); }
+.dashboard-shell .glass-panel:not(.absolute):not(.fixed):not(.sticky) { position: relative; }
+.dashboard-shell .glass-panel { box-shadow: 0 16px 44px rgba(0, 0, 0, .22), inset 0 1px rgb(var(--accent) / .32); }
+
+/* Brilho e borda que seguem o cursor (posição vem de --mx/--my, definidos por DesignEffects) */
+.dashboard-shell .glass-panel::before,
+.dashboard-shell .glass-panel::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .35s var(--ds-ease); }
+.dashboard-shell .glass-panel::before {
+  padding: 1px;
+  background: radial-gradient(340px circle at var(--mx, 50%) var(--my, 50%), rgb(var(--accent) / .75), transparent 62%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+.dashboard-shell .glass-panel::after { background: radial-gradient(460px circle at var(--mx, 50%) var(--my, 50%), rgb(var(--accent) / .10), transparent 62%); }
+.dashboard-shell .glass-panel:hover::before, .dashboard-shell .glass-panel:hover::after { opacity: 1; }
+@media (hover: none) { .dashboard-shell .glass-panel::before, .dashboard-shell .glass-panel::after { display: none; } }
+
+/* Tabelas e listas: linha em destaque com tom do acento principal */
+.dashboard-shell tbody tr:hover { background: rgb(var(--c-ice) / .06); }
+
+/* Etiquetas e números com mais presença */
+.eyebrow { background: var(--ds-aurora); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.dashboard-shell .status-pill { backdrop-filter: blur(6px); }
+
+/* Esqueleto com cor sutil */
+.ds-skeleton { background-image: linear-gradient(90deg, rgb(var(--c-ice) / .06) 25%, rgb(var(--c-violet) / .16) 50%, rgb(var(--c-ice) / .06) 75%); background-size: 200% 100%; }
+
+@media (prefers-reduced-motion: reduce) { .dashboard-shell .glass-panel::before, .dashboard-shell .glass-panel::after { transition: none; } }
+@media print {
+  body { background: #fff !important; }
+  .dashboard-shell .glass-panel::before, .dashboard-shell .glass-panel::after { display: none; }
+  .display-title, .eyebrow { background: none; color: inherit; -webkit-text-fill-color: currentColor; }
+}
+
+/* Ajustes: gradiente em texto não pode cortar descendentes; brilho de canto permanente em cada cartão */
+.display-title { padding-bottom: .12em; }
+.dashboard-shell .glass-panel {
+  background:
+    radial-gradient(260px circle at 100% 0%, rgb(var(--accent) / .11), transparent 70%),
+    linear-gradient(145deg, rgb(23 23 23 / .98), rgb(12 12 12 / .97));
+}
