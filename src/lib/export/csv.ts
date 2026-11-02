@@ -7,11 +7,11 @@
  */
 export type CsvCell = string | number | null | undefined;
 
-// Unicode default-ignorable prefixes include Cf plus non-Cf marks such as
-// the combining grapheme joiner and variation selectors. Some spreadsheet
-// importers can discard those prefixes before evaluating a formula.
-// Keep the original bytes; neutralize only the CSV text-cell interpretation.
-const hiddenPrefix = /[\p{Cc}\p{Default_Ignorable_Code_Point}]/u;
+// Preserve the original C0/C1 and Cf defenses: Default_Ignorable_Code_Point
+// alone does not include every Cf mark (for example U+FFF9-U+FFFB).
+// Also guard non-Cf invisibles such as grapheme joiners and variation selectors.
+// Do not normalize cell bytes; only neutralize dangerous spreadsheet text.
+const hiddenPrefix = /[\p{Cc}\p{Cf}\p{Default_Ignorable_Code_Point}]/u;
 const whitespace = /\s/u;
 
 function needsTextEscape(raw: string): boolean {
