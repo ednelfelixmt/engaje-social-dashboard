@@ -295,7 +295,7 @@ async function syncWindsor(i:Integration){
 }
 // Janelas de 30 dias, da mais recente para a mais antiga, para importar histórico sem estourar a API da Meta.
 function historyWindows(days:number){const windows:{since:string;until:string}[]=[];const end=new Date();for(let offset=0;offset<days;offset+=30){const until=new Date(end);until.setUTCDate(until.getUTCDate()-offset);const since=new Date(until);since.setUTCDate(since.getUTCDate()-29);windows.push({since:isoDate(since),until:isoDate(until)});}return windows;}
-async function sync(i:Integration,options:{days?:number}={}){if(i.provider==='windsor')return syncWindsor(i);const token=await check(await service.rpc('integration_token',{p_id:i.id}));if(!token)throw new Error('Conta sem autorização. Reconecte.');let rows=0,creativeCount=0,coverageFailures=0,accountMetricRows=0,accountMetricAvailability:string[]=[];
+async function sync(i:Integration,options:{days?:number}={}){if(i.config?.connection_hub===true)throw new Error('Conclua a seleção da conta e a validação da coleta antes de sincronizar.');if(i.provider==='windsor')return syncWindsor(i);const token=await check(await service.rpc('integration_token',{p_id:i.id}));if(!token)throw new Error('Conta sem autorização. Reconecte.');let rows=0,creativeCount=0,coverageFailures=0,accountMetricRows=0,accountMetricAvailability:string[]=[];
  if(i.provider==='meta_ads'){
   const normalizedAccountId=metaAccountId(i.external_account_id);
   const statuses=new Map<string,string>();try{const campaignRows=await pages(i.external_account_id+'/campaigns',token,{fields:'id,name,effective_status,status'});for(const campaign of campaignRows){const status=campaignStatus(campaign.effective_status||campaign.status);if(status)statuses.set(String(campaign.id),status);}if(campaignRows.length)await check(await service.from('ad_campaigns').upsert(campaignRows.map((campaign:any)=>({organization_id:i.organization_id,integration_id:i.id,platform:'meta_ads',account_id:normalizedAccountId,external_id:String(campaign.id),name:String(campaign.name||campaign.id),status:campaignStatus(campaign.effective_status||campaign.status),last_seen_at:new Date().toISOString()})),{onConflict:'organization_id,platform,account_id,external_id'}));}catch(error){console.warn('[meta-campaign-status]',{integration_id:i.id,message:error instanceof Error?error.message:'Falha desconhecida'});}
@@ -359,7 +359,7 @@ async function scheduledSync(req:Request,body:any){
  const id=String(body.integrationId||'');
  if(!/^[0-9a-f-]{36}$/.test(id))return json({message:'Integração inválida.'},400);
  const {data:i}=await service.from('integrations').select('*,organizations!inner(status)').eq('id',id).maybeSingle();
- if(!i||!i.is_enabled||(i.organizations as any)?.status!=='active'||!scheduledProviders.includes(i.provider))return json({message:'Integração fora da agenda.',skipped:true});
+ if(!i||!i.is_enabled||i.config?.connection_hub===true||(i.organizations as any)?.status!=='active'||!scheduledProviders.includes(i.provider))return json({message:'Integração fora da agenda.',skipped:true});
  // Só sincroniza contas saudáveis ou com erro passageiro; 'syncing' só é retomada se travou há mais de 30 minutos.
  const stale=new Date(Date.now()-30*60*1000).toISOString();
  const {data:locked}=await service.from('integrations').update({status:'syncing',last_sync_started_at:new Date().toISOString(),last_error:null}).eq('id',i.id).or('status.in.(connected,error),and(status.eq.syncing,last_sync_started_at.lt.'+stale+')').select('id').maybeSingle();
@@ -476,7 +476,7 @@ Deno.serve(async(req:Request)=>{
    if(batchId&&!/^[0-9a-f-]{36}$/.test(batchId))throw new Error('Lote de autorização inválido.');
    const {data:rows,error}=await service.from('integrations').select('*').eq('organization_id',org).eq('provider',provider);
    if(error)throw new Error('Não foi possível validar as contas descobertas.');
-   const candidates=(rows||[]).filter((row:any)=>row.config?.selection_pending===true&&(batchId?row.config?.batch_id===batchId:!row.config?.batch_id));const candidateIds=new Set(candidates.map((row:any)=>String(row.id)));
+   const candidates=(rows||[]).filter((row:any)=>row.config?.connection_hub!==true&&row.config?.selection_pending===true&&(batchId?row.config?.batch_id===batchId:!row.config?.batch_id));const candidateIds=new Set(candidates.map((row:any)=>String(row.id)));
    if(requested.some((id:string)=>!candidateIds.has(id)))throw new Error('Uma conta selecionada não pertence a este cliente.');
    const readyToConnect=['meta_ads','facebook_organic','instagram_organic','windsor'];let blocked=0;
    const syncQueue:{row:any;config:Record<string,unknown>}[]=[];
@@ -604,7 +604,7 @@ Deno.serve(async(req:Request)=>{
    const login=new URL('https://www.facebook.com/'+graphVersion+'/dialog/oauth');login.search=new URLSearchParams(loginConfigId?{client_id:metaId,redirect_uri:callback,state,config_id:loginConfigId,response_type:'code',override_default_response_type:'true'}:{client_id:metaId,redirect_uri:callback,state,scope:scopes,response_type:'code'}).toString();return json({url:login.href});
   }
   if(body.action==='sync'){
-   const {data:i}=await service.from('integrations').select('*').eq('id',body.integrationId).eq('organization_id',org).single();if(!i)throw new Error('Conta não encontrada.');activeId=i.id;
+   const {data:i}=await service.from('integrations').select('*').eq('id',body.integrationId).eq('organization_id',org).single();if(!i)throw new Error('Conta não encontrada.');if(i.config?.connection_hub===true)throw new Error('Conclua a seleção da conta e a validação da coleta antes de sincronizar.');activeId=i.id;
    const {data:locked}=await service.from('integrations').update({status:'syncing',last_sync_started_at:new Date().toISOString(),last_error:null}).eq('id',i.id).neq('status','syncing').select('id').maybeSingle();if(!locked)return json({message:'Esta conta já está sincronizando. Aguarde a conclusão.'});return json(await sync(i));
   }
   return json({message:'Ação inválida.'},400);
