@@ -9,7 +9,9 @@ import {campaignCpl} from './efficiency';
 /** Keep direct campaign comparison consistent with the strict reconciliation grain. */
 function validGrainIdentifier(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0 && value === value.trim()
-    && !/[\u0000-\u001f\u007f-\u009f]/.test(value);
+    // Reject hidden formatting/bidi controls, Unicode line separators and lone UTF-16 surrogates.
+    // U+200D stays valid so visible joined emoji identifiers are not silently rewritten.
+    && !/[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u200b\u200c\u200e\u200f\u2028-\u202e\u2060-\u206f\ufeff\uD800-\uDFFF]/u.test(value);
 }
 
 function comparisonKey(row: CampaignPerformance): string | null {
