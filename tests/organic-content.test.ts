@@ -156,3 +156,18 @@ test('ORG-TIMEZONE-REQUIRED-001: missing or non-string timezone cannot label con
   assert.equal(valid.rows[0].likes,0);
  }
 });
+
+test('ORG-SOURCE-UTF16-SEPARATORS-001: content identities reject Unicode line separators and isolated UTF-16 surrogates',()=>{
+ const invalid=['id\u2028token','id\u2029token','id'+String.fromCharCode(0xd800)+'token','id'+String.fromCharCode(0xdc00)+'token','id🎯'+String.fromCharCode(0xd800)];
+ for(const field of ['id','account_id','external_id'] as const)for(const value of invalid){
+  assert.throws(()=>buildOrganicContentReport([post({[field]:value})],scope),/Organic source identity is missing/,field+' '+JSON.stringify(value));
+ }
+ const input=post({id:'post 🎯',account_id:'conta café 🎯',external_id:'externo Ω 🎯',lifetime_metrics:{likes:0,comments:2}});
+ const original=structuredClone(input);
+ const report=buildOrganicContentReport([input],scope);
+ assert.equal(report.rows[0].id,'post 🎯');
+ assert.equal(report.rows[0].account,'conta café 🎯');
+ assert.equal(report.rows[0].externalId,'externo Ω 🎯');
+ assert.equal(report.rows[0].likes,0);
+ assert.deepEqual(input,original);
+});
