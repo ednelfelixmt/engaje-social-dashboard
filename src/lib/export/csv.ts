@@ -7,10 +7,11 @@
  */
 export type CsvCell = string | number | null | undefined;
 
-// Invisible Unicode format characters (e.g. BOM, bidi controls and zero-width
-// marks) and C0/C1 controls may be stripped by spreadsheet importers before
-// formula detection. Treat any such leading characters as untrusted text.
-const hiddenPrefix = /[\p{Cc}\p{Cf}]/u;
+// Unicode default-ignorable prefixes include Cf plus non-Cf marks such as
+// the combining grapheme joiner and variation selectors. Some spreadsheet
+// importers can discard those prefixes before evaluating a formula.
+// Keep the original bytes; neutralize only the CSV text-cell interpretation.
+const hiddenPrefix = /[\p{Cc}\p{Default_Ignorable_Code_Point}]/u;
 const whitespace = /\s/u;
 
 function needsTextEscape(raw: string): boolean {
