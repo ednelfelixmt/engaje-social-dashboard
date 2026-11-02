@@ -59,3 +59,32 @@ test('CAMP-NAV-SLUG-PARITY-001: safe visible Unicode, emoji joiners and selector
  assert.deepEqual(filters,beforeFilters);
  assert.deepEqual(selection,beforeSelection);
 });
+
+test('CAMP-NAV-FILTER-CONTEXT-001: reject invalid filter enums, currency and period inputs before creating campaign links', () => {
+ const invalid=[
+  {...filters,currency:'brl'}, {...filters,currency:'BR1'}, {...filters,currency:'BRL '},
+  {...filters,compare:'arbitrary'}, {...filters,compare:''},
+ ];
+ const before=structuredClone(filters), beforeSelection=structuredClone(selection);
+ for(const candidate of invalid){
+  assert.throws(()=>campaignHref('synthetic',candidate as typeof filters,selection),/Invalid campaign navigation filters/);
+ }
+ for(const candidate of [
+  {...filters,from:'2026-02-30'}, {...filters,to:'2026-13-01'},
+  {...filters,from:'2026-10-22',to:'2026-10-21'},
+  {...filters,from:'2024-01-01',to:'2026-01-02'},
+ ]) assert.throws(()=>campaignHref('synthetic',candidate,selection),/calendar|period/i);
+ assert.deepEqual(filters,before);
+ assert.deepEqual(selection,beforeSelection);
+});
+
+test('CAMP-NAV-FILTER-CONTEXT-001: preserve valid leap dates, currency, no-comparison selector and opaque campaign IDs', () => {
+ const valid={from:'2024-02-29',to:'2024-03-01',currency:'USD',compare:'none' as const};
+ const before=structuredClone(valid), beforeSelection=structuredClone(selection);
+ const href=campaignHref('Café🧑‍💻/filial',valid,selection);
+ const url=new URL(href,'https://synthetic.example');
+ assert.equal(url.pathname,'/Caf%C3%A9%F0%9F%A7%91%E2%80%8D%F0%9F%92%BB%2Ffilial/reports/campaign');
+ assert.deepEqual(Object.fromEntries(url.searchParams.entries()),{...valid,...selection});
+ assert.deepEqual(valid,before);
+ assert.deepEqual(selection,beforeSelection);
+});
