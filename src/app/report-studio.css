@@ -22,7 +22,7 @@
   background: var(--studio-bg);
 }
 .report-studio-frame[data-studio-theme=night] {
-  --studio-bg: #122039;
+  --studio-bg: #1f1f1f;
   --studio-surface: #1a2b45;
   --studio-soft: #203450;
   --studio-text: #eef3ff;

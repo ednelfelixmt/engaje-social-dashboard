@@ -10,7 +10,7 @@ export function Filters({value,organizations,slug,actions,allowComparison=true}:
  const router=useRouter(),path=usePathname(),search=useSearchParams();
  const comparison=!allowComparison||value.compare==='none'?null:comparisonPeriod(value.from,value.to,value.compare);
  const dateLabel=(day:string)=>day.split('-').reverse().join('/');
- const field='!h-9 !min-h-0 !rounded-lg !border-white/10 !bg-[#111723] !px-2.5 !py-1 !text-xs text-zinc-200';
+ const field='!h-9 !min-h-0 !rounded-lg !border-white/10 !bg-[#171717] !px-2.5 !py-1 !text-xs text-zinc-200';
  const label='flex min-w-0 flex-col gap-1 text-[10px] font-medium leading-4 text-zinc-500';
  function changeClient(next:string){const segments=path.split('/');segments[1]=next;router.push(segments.join('/')+'?'+search.toString());}
  function submit(e:React.FormEvent<HTMLFormElement>){e.preventDefault();const form=new FormData(e.currentTarget);

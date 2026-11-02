@@ -18,7 +18,7 @@
 .bi-top-kpis>div:last-child { border-right:0; }
 .bi-top-kpis span { display:block; color:var(--studio-muted); font-size:10px; line-height:1.5; }
 .bi-top-kpis strong { display:block; font-size:clamp(19px,1.6vw,30px); font-weight:750; letter-spacing:-.04em; margin-top:9px; overflow-wrap:anywhere; }
-.bi-top-kpis .bi-kpi-total { background:#24252b; color:#fff; }
+.bi-top-kpis .bi-kpi-total { background:#252525; color:#fff; }
 .bi-top-kpis .bi-kpi-total span { color:#d2d4dc; }
 .bi-overview-charts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:13px; }
 .bi-panel { background:var(--studio-surface); border:1px solid var(--studio-border); border-radius:11px; padding:16px; min-width:0; box-shadow:0 3px 5px #24344d06; }
@@ -40,7 +40,7 @@
 .bi-funnel-row>span { font-size:10px; color:var(--studio-muted); }
 .bi-funnel-value { width:var(--stage-width); min-width:min(95px,100%); background:var(--bi-red); color:white; padding:13px 10px; border-radius:6px; clip-path:polygon(0 0,100% 0,92% 100%,0 100%); box-shadow:0 3px 6px #b706181a; }
 .bi-funnel-value strong { font-size:clamp(15px,1.25vw,24px); font-weight:750; letter-spacing:-.025em; }
-.bi-funnel-cost { background:#24252b; color:#fff; border-radius:6px; padding:9px 10px; min-width:0; }
+.bi-funnel-cost { background:#252525; color:#fff; border-radius:6px; padding:9px 10px; min-width:0; }
 .bi-funnel-cost span { font-size:9px; color:#d2d4dc; display:block; }
 .bi-funnel-cost strong { font-size:14px; display:block; margin-top:3px; overflow-wrap:anywhere; }
 .bi-footnote { color:var(--studio-muted); font-size:10px; line-height:1.65; }
@@ -89,7 +89,7 @@
 
 /* Client canvases use the full viewport; administrative navigation is rendered only by the server for agency administrators. */
 .dashboard-shell[data-client-dashboard],.report-studio-frame .dashboard-shell[data-client-dashboard]{margin-left:0;max-width:none}
-.client-dashboard-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 28px;border-bottom:1px solid var(--studio-border,#263041);background:var(--studio-surface,#0d121d);color:var(--studio-text,#fff)}
+.client-dashboard-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 28px;border-bottom:1px solid var(--studio-border,#263041);background:var(--studio-surface,#121212);color:var(--studio-text,#fff)}
 .client-dashboard-header>div{min-width:0;display:grid;gap:4px}.client-dashboard-header span{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--studio-muted,#a1acc0)}.client-dashboard-header strong{font-size:16px;overflow-wrap:anywhere}.client-dashboard-header button{font-size:12px;border:1px solid var(--studio-border,#42506a);border-radius:8px;padding:9px 16px;min-height:38px}
 .bi-top-kpis>button{padding:18px 16px;min-width:0;border-right:1px solid var(--studio-border);text-align:left;transition:background .15s}.bi-top-kpis>button:last-child{border-right:0}.bi-top-kpis>button:hover{background:var(--studio-tint)}.bi-top-kpis>button[aria-pressed=true]{box-shadow:inset 0 3px var(--bi-red)}.bi-top-kpis>button.bi-kpi-total{color:var(--studio-text);background:var(--studio-tint)}.bi-top-kpis>button.bi-kpi-total>span{color:var(--studio-muted)}
 .bi-kpi-delta{display:block;font-size:10px;margin-top:10px;line-height:1.6;color:var(--studio-muted)}.bi-kpi-delta[data-tone=good]{color:var(--studio-good,#087656)}.bi-kpi-delta[data-tone=bad]{color:var(--studio-bad,#bd2840)}.bi-kpi-delta span{font-size:9px;color:var(--studio-muted);margin-top:3px}

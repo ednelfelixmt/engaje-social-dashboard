@@ -9,7 +9,7 @@ export const analyticsPlatformColors:Record<string,string>={meta_ads:'#367be0',g
 export const analyticsMetricLabels:Record<PaidMetricKey,string>={spend:'Investimento',impressions:'Impressões',clicks:'Cliques',leads:'Leads atribuídos',ctr:'CTR',cpc:'CPC',cpm:'CPM',cpl:'CPL'};
 export const analyticsMetricColors:Record<PaidMetricKey,string>={spend:'#b47908',impressions:'#3276d8',clicks:'#7954d4',leads:'#098d91',ctr:'#1778a0',cpc:'#c16b27',cpm:'#ad4d94',cpl:'#6c5cce'};
 export const analyticsFormat=(value:number|null|undefined,metric:PaidMetricKey,currency:string)=>value==null?'—':['spend','cpc','cpm','cpl'].includes(metric)?money(value,currency):number(value,metric==='ctr'?2:0)+(metric==='ctr'?'%':'');
-const tooltipStyle={background:'var(--studio-surface, #121a28)',border:'1px solid var(--studio-border, #334156)',borderRadius:12,color:'var(--studio-text, #eef2f8)',fontSize:12};
+const tooltipStyle={background:'var(--studio-surface, #191919)',border:'1px solid var(--studio-border, #334156)',borderRadius:12,color:'var(--studio-text, #eef2f8)',fontSize:12};
 type TimelinePoint={index:number;currentDate:string|null;previousDate:string|null;current:PaidTotals|null;previous:PaidTotals|null};
 export function AnalyticsTrend({rows,metric,currency,comparing}:{rows:TimelinePoint[];metric:PaidMetricKey;currency:string;comparing:boolean}){
  const [view,setView]=useState<'area'|'bars'>('area');
