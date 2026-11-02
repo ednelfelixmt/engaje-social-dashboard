@@ -10,7 +10,7 @@ type NavGroup={id:string;label:string;icon:LucideIcon;items:NavItem[];/** Grupos
 
 const workspaceGroups:NavGroup[]=[
   {id:'overview',label:'Visão geral',icon:LayoutDashboard,items:[{key:'overview',label:'Visão geral',icon:LayoutDashboard,requires:'overview'}]},
-  {id:'intelligence',label:'Inteligência estratégica',icon:ChartNoAxesCombined,items:[{key:'reports/analytics',label:'Análise 360',icon:ChartNoAxesCombined,requires:'overview'},{key:'reports',label:'Central de relatórios',icon:Database},{key:'intelligence',label:'Análises e relatórios',icon:ChartNoAxesCombined,requires:'overview'},{key:'reports/methodology',label:'Guia de métricas',icon:Database,requires:'overview'}]},
+  {id:'intelligence',label:'Inteligência estratégica',icon:ChartNoAxesCombined,items:[{key:'painel',label:'Painel de marketing',icon:ChartNoAxesCombined,requires:'overview'},{key:'reports/analytics',label:'Análise 360',icon:ChartNoAxesCombined,requires:'overview'},{key:'reports',label:'Central de relatórios',icon:Database},{key:'intelligence',label:'Análises e relatórios',icon:ChartNoAxesCombined,requires:'overview'},{key:'reports/methodology',label:'Guia de métricas',icon:Database,requires:'overview'}]},
   {id:'meta',label:'Meta Ads',icon:Megaphone,collapsible:true,defaultOpen:true,items:[
     {key:'meta_ads',label:'Campanhas Meta Ads',icon:ChartNoAxesCombined,requires:'paid'},
     {key:'reports/meta-audience',label:'Público e dispositivos',icon:Users,requires:'paid'},

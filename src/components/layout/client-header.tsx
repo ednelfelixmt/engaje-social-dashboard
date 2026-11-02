@@ -27,7 +27,8 @@ export function ClientHeader({slug,name,logoUrl}:{slug:string;name:string;logoUr
   },[open]);
   useEffect(()=>{setOpen(false);},[pathname]);
   const reportsActive=pathname.startsWith(`/${slug}/reports`);
-  const dashboardsActive=pathname.startsWith(`/${slug}`)&&!reportsActive;
+  const painelActive=pathname.startsWith(`/${slug}/painel`);
+  const dashboardsActive=pathname.startsWith(`/${slug}`)&&!reportsActive&&!painelActive;
   return <header className={`client-dashboard-header client-header tv-hide${compact?' is-compact':''}`} data-client-dashboard-header>
     <div className="client-header__identity">
       <span className="client-header__logo">{logoUrl&&!failed?<img src={logoUrl} alt={`Logo de ${name}`} onError={()=>setFailed(true)}/>:<b aria-hidden>{initials(name)}</b>}</span>
@@ -37,6 +38,7 @@ export function ClientHeader({slug,name,logoUrl}:{slug:string;name:string;logoUr
       <button type="button" className="client-header__toggle" aria-expanded={open} aria-controls="client-header-nav" aria-label={open?'Fechar menu':'Abrir menu'} onClick={()=>setOpen(value=>!value)}>{open?<X size={20} aria-hidden/>:<Menu size={20} aria-hidden/>}</button>
       <nav id="client-header-nav" className={`client-header__nav${open?' is-open':''}`} aria-label="Navegação do cliente">
         <Link href="/" aria-current={dashboardsActive?'page':undefined}>Dashboards</Link>
+        <Link href={`/${slug}/painel`} aria-current={painelActive?'page':undefined}>Painel</Link>
         <Link href={`/${slug}/reports`} aria-current={reportsActive?'page':undefined}>Relatórios</Link>
         <form action="/auth/signout" method="post"><button type="submit"><LogOut size={15} aria-hidden/>Sair</button></form>
       </nav>
