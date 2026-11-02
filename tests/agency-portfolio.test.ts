@@ -36,6 +36,34 @@ test('agency chart limits only presentation and search/status filters keep no-da
 });
 
 
+test('UX-AGENCY-CLIENT-SEARCH-ACCENT-001: accented names match plain Portuguese search and collapsed whitespace', () => {
+  const input=[
+    client({id:'synthetic-cafe',name:'Café São Paulo',hasData:true,connected:true}),
+    client({id:'synthetic-reuniao',name:'Reunião de Negócios',hasData:false,connected:false}),
+    client({id:'synthetic-cafe-novo',name:'Cafe Novo',hasData:true,connected:false}),
+  ];
+  const before=structuredClone(input);
+  assert.deepEqual(selectAgencyClients(input,'  CAFE   SAO  ','all').map(row=>row.id),['synthetic-cafe']);
+  assert.deepEqual(selectAgencyClients(input,'reuniao   de negocios','no_data').map(row=>row.id),['synthetic-reuniao']);
+  assert.deepEqual(selectAgencyClients(input,'SÃO','connected').map(row=>row.id),['synthetic-cafe']);
+  assert.deepEqual(selectAgencyClients(input,'sao','attention'),[]);
+  assert.deepEqual(input,before,'search must never alter client records');
+});
+
+test('UX-AGENCY-CLIENT-SEARCH-ACCENT-001: preserve emoji selectors and existing query/connection filters', () => {
+  const input=[
+    client({id:'synthetic-emoji',name:'Equipe🧑‍💻 Aurora',connected:true}),
+    client({id:'synthetic-heart',name:'Equipe❤️ Aurora',connected:false}),
+    client({id:'synthetic-plain',name:'Equipe Aurora',connected:true}),
+  ];
+  const before=structuredClone(input);
+  assert.deepEqual(selectAgencyClients(input,'🧑‍💻','connected').map(row=>row.id),['synthetic-emoji']);
+  assert.deepEqual(selectAgencyClients(input,'❤️','attention').map(row=>row.id),['synthetic-heart']);
+  assert.deepEqual(selectAgencyClients(input,'EQUIPE AURORA','all').map(row=>row.id),['synthetic-plain']);
+  assert.equal(selectAgencyClients(input,'','all').length,3);
+  assert.deepEqual(input,before);
+});
+
 test('agency portfolio fractional BRL spends use the actual largest observed amount',()=>{
   const a=client(),input=[
     client({name:'A: R$ 0,25',summary:{...a.summary,spend:0.25}}),
