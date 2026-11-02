@@ -14,8 +14,15 @@ test('monta linhas por dia, campanha e anúncio com métricas reais e nulos como
  assert.equal(d.platforms[0].name,'Meta Ads');
  assert.equal(d.campaigns.length,1);
  assert.equal(d.rows.length,2);
- assert.deepEqual(d.rows[0],[59,0,0,1000,50,100,5,0,0,30,0]);
+ assert.deepEqual(d.rows[0],[59,0,0,1000,50,100,4,0,0,30,0,12]);
  assert.equal(d.rows[1][0],58);
+});
+test('não soma mensagens de novo e marca o que a integração não informou',()=>{
+ const d=mod.buildPainelDataset({end:'2026-11-01',currency:'BRL',ads:[ad({leads:5,message_leads:2,revenue:null,purchases:null})],breakdowns:[brk({leads:3,message_leads:1})],crm:[],creatives:[]});
+ assert.equal(d.rows[0][6],5);
+ assert.equal(d.rows[0][11]&1,0);
+ assert.equal(d.rows[0][11]&4,4);
+ assert.equal(d.brk[0][7],3);
 });
 test('ignora dias fora da janela de 60 dias',()=>{
  const d=mod.buildPainelDataset({end:'2026-11-01',currency:'BRL',ads:[ad({metric_date:'2026-08-01'})],breakdowns:[],crm:[],creatives:[]});

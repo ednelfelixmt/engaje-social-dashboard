@@ -4,17 +4,19 @@
   const SLUG = new URLSearchParams(location.search).get('org') || '';
   const PLAT_COLORS = { meta_ads: '#2563EB', google_ads: '#F59E0B', tiktok_ads: '#E11D48' };
   const PLAT_EXTRA = ['#0E7490', '#7C3AED', '#10B981'];
+  // Nenhum nome vindo da sincronização chega ao HTML com caracteres de marcação: eles viram símbolos parecidos.
+  const safe = (v) => String(v == null ? '' : v).replace(/[<>&"'`]/g, (c) => ({ '<': '‹', '>': '›', '&': '＆', '"': '″', "'": '′', '`': '′' }[c]));
   function adapt(raw) {
     const end = new Date(raw.end + 'T12:00:00Z');
     const D = { DAYS: raw.days, END: raw.end, currency: raw.currency, dateOf: (d) => { const x = new Date(end); x.setUTCDate(x.getUTCDate() - (raw.days - 1 - d)); return new Date(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate()); } };
-    D.PLATFORM_IDS = raw.platforms.map((p) => p.id); D.PLATFORMS = raw.platforms.map((p) => p.name);
+    D.PLATFORM_IDS = raw.platforms.map((p) => safe(p.id)); D.PLATFORMS = raw.platforms.map((p) => safe(p.name));
     D.OBJECTIVES = ['Reconhecimento', 'Tráfego', 'Engajamento', 'Leads', 'Vendas', 'Remarketing'];
-    D.CAMPAIGNS = raw.campaigns;
-    D.ADS = raw.ads.map((a) => { let h = 0; for (const ch of a.id) h = (h * 31 + ch.charCodeAt(0)) % 360; return Object.assign({ hue: h }, a); });
-    D.DEVICES = raw.dims.device; D.GENDERS = raw.dims.gender; D.AGES = raw.dims.age; D.STATES = raw.dims.state; D.CITIES = raw.dims.city;
-    D.rows = raw.rows.map((r) => { const c = raw.campaigns[r[1]]; return { d: r[0], c: r[1], a: r[2], p: c.p, o: c.o, imp: r[3], clk: r[4], sp: r[5], ld: r[6], sl: r[7], rv: r[8], pv: r[9], ck: r[10] }; });
-    D.brk = raw.brk.map((r) => { const c = raw.campaigns[r[1]]; return { d: r[0], c: r[1], p: c.p, o: c.o, t: r[2], v: r[3], imp: r[4], clk: r[5], sp: r[6], ld: r[7], sl: r[8], rv: r[9] }; });
-    D.crmChannels = raw.crmChannels; D.crm = raw.crm.map((r) => ({ d: r[0], ch: r[1], rv: r[2], pu: r[3], ld: r[4] }));
+    D.CAMPAIGNS = raw.campaigns.map((c) => ({ id: safe(c.id), n: safe(c.n), p: c.p, o: c.o }));
+    D.ADS = raw.ads.map((a) => { let h = 0; for (const ch of a.id) h = (h * 31 + ch.charCodeAt(0)) % 360; return { hue: h, id: safe(a.id), n: safe(a.n), f: safe(a.f), c: a.c, t: typeof a.t === 'string' && /^https?:\/\//.test(a.t) ? a.t : null }; });
+    D.DEVICES = raw.dims.device.map(safe); D.GENDERS = raw.dims.gender.map(safe); D.AGES = raw.dims.age.map(safe); D.STATES = raw.dims.state.map(safe); D.CITIES = raw.dims.city.map(safe);
+    D.rows = raw.rows.map((r) => { const c = raw.campaigns[r[1]]; return { d: r[0], c: r[1], a: r[2], p: c.p, o: c.o, imp: r[3], clk: r[4], sp: r[5], ld: r[6], sl: r[7], rv: r[8], pv: r[9], ck: r[10], m: r[11] || 0 }; });
+    D.brk = raw.brk.map((r) => { const c = raw.campaigns[r[1]]; return { d: r[0], c: r[1], p: c.p, o: c.o, t: r[2], v: r[3], imp: r[4], clk: r[5], sp: r[6], ld: r[7], sl: r[8], rv: r[9], m: r[10] || 0 }; });
+    D.crmChannels = raw.crmChannels.map(safe); D.crm = raw.crm.map((r) => ({ d: r[0], ch: r[1], rv: r[2], pu: r[3], ld: r[4] }));
     return D;
   }
   function boot(D) {
@@ -37,7 +39,11 @@
   const nf = new Intl.NumberFormat('pt-BR');
   const dec = (n, d) => n.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
   const compact = (n) => (n >= 1e6 ? dec(n / 1e6, 2) + ' mi' : n >= 1e3 ? dec(n / 1e3, 1) + ' mil' : nf.format(Math.round(n)));
-  const F = { int: (n) => nf.format(Math.round(n)), money: (n) => 'R$ ' + nf.format(Math.round(n)), money2: (n) => 'R$ ' + dec(n, 2), compact, mcompact: (n) => 'R$ ' + compact(n), pct: (n) => dec(n, 2) + '%', pct1: (n) => dec(n, 1) + '%', x: (n) => dec(n, 1) + 'x' };
+  const CUR = D.currency || 'BRL';
+  const curFmt = (d) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: CUR, minimumFractionDigits: d, maximumFractionDigits: d });
+  const SYM = (curFmt(0).formatToParts(0).find((p) => p.type === 'currency') || { value: CUR }).value;
+  const F = { int: (n) => nf.format(Math.round(n)), money: (n) => curFmt(0).format(n), money2: (n) => curFmt(2).format(n), compact, mcompact: (n) => SYM + ' ' + compact(n), pct: (n) => dec(n, 2) + '%', pct1: (n) => dec(n, 1) + '%', x: (n) => dec(n, 1) + 'x' };
+  Object.keys(F).forEach((k) => { const f = F[k]; F[k] = (v) => (v == null || Number.isNaN(v) ? '—' : f(v)); });
   const KPIS = [
     { k: 'spend', l: 'Investimento', f: F.money }, { k: 'imp', l: 'Impressões', f: F.compact }, { k: 'clk', l: 'Cliques', f: F.compact },
     { k: 'ctr', l: 'CTR', f: F.pct, good: 'up' }, { k: 'ld', l: 'Leads', f: F.int, good: 'up' }, { k: 'cpl', l: 'Custo por lead', f: F.money2, good: 'down' },
@@ -66,7 +72,7 @@
   const S = {
     page: 0, period: 30, view: 'all', metric: { evo: 'spend', plat: 'ld', rank: 'roas', ads: 'roas', dv: 'ld', demo: 'ld' }, sel: { stage: 3, seg: null, dev: null, gen: null, age: null, st: null, ci: null },
     f: { platform: null, objective: null, campaign: null, format: null, group: null },
-    groups: store.get(('zf-painel-grupos-' + SLUG), DEFAULT_GROUPS), auto: false
+    groups: store.get(('zf-painel-grupos-' + SLUG), DEFAULT_GROUPS).map((g) => Object.assign({}, g, { name: safe(g.name), q: safe(g.q), platforms: (g.platforms || []).map(safe) })), auto: false
   };
   let GSET = null; let timer = null;
 
@@ -90,9 +96,9 @@
   const cur = (ign) => rowsIn(D.DAYS - S.period, D.DAYS, ign);
   const prv = (ign) => rowsIn(D.DAYS - 2 * S.period, D.DAYS - S.period, ign);
   const bk = (t) => D.brk.filter((r) => r.t === t && r.d >= D.DAYS - S.period && pass(r));
-  const fin = (t) => { t.spend = t.sp; t.ctr = t.imp ? (t.clk / t.imp) * 100 : 0; t.cpc = t.clk ? t.sp / t.clk : 0; t.cpm = t.imp ? (t.sp / t.imp) * 1000 : 0; t.cpl = t.ld ? t.sp / t.ld : 0; t.cpa = t.sl ? t.sp / t.sl : 0; t.roas = t.sp ? t.rv / t.sp : 0; t.cvr = t.clk ? (t.ld / t.clk) * 100 : 0; return t; };
-  const blank = () => ({ imp: 0, clk: 0, sp: 0, ld: 0, sl: 0, rv: 0, pv: 0, ck: 0 });
-  const add = (t, r) => { t.imp += r.imp; t.clk += r.clk; t.sp += r.sp; t.ld += r.ld; t.sl += r.sl; t.rv += r.rv; t.pv += r.pv || 0; t.ck += r.ck || 0; };
+  const fin = (t) => { t.hasRv = !!(t.m & 1); t.hasSl = !!(t.m & 2); t.hasLd = !!(t.m & 4); t.spend = t.sp; t.ctr = t.imp ? (t.clk / t.imp) * 100 : 0; t.cpc = t.clk ? t.sp / t.clk : 0; t.cpm = t.imp ? (t.sp / t.imp) * 1000 : 0; t.cpl = t.hasLd && t.ld ? t.sp / t.ld : (t.hasLd ? 0 : null); t.cpa = t.hasSl && t.sl ? t.sp / t.sl : (t.hasSl ? 0 : null); t.roas = t.hasRv && t.sp ? t.rv / t.sp : (t.hasRv ? 0 : null); t.cvr = t.clk ? (t.ld / t.clk) * 100 : 0; return t; };
+  const blank = () => ({ m: 0, imp: 0, clk: 0, sp: 0, ld: 0, sl: 0, rv: 0, pv: 0, ck: 0 });
+  const add = (t, r) => { t.imp += r.imp; t.clk += r.clk; t.sp += r.sp; t.ld += r.ld; t.sl += r.sl; t.rv += r.rv; t.pv += r.pv || 0; t.ck += r.ck || 0; t.m |= r.m || 0; };
   const tot = (rs) => { const t = blank(); for (const r of rs) add(t, r); return fin(t); };
   const groupBy = (rs, key, n) => { const a = Array.from({ length: n }, blank); for (const r of rs) add(a[key(r)], r); return a.map(fin); };
   const daily = (rs, from, to) => { const a = Array.from({ length: to - from }, blank); for (const r of rs) { const t = a[r.d - from]; if (t) add(t, r); } return a.map(fin); };
@@ -136,7 +142,7 @@
   const ch = (id) => `<div class="ch" id="${id}"></div>`;
   const seg = (name, opts, curv) => `<div class="seg" role="group">${opts.map(([v, l]) => `<button type="button" data-seg="${name}" data-v="${v}" aria-pressed="${String(curv) === String(v)}">${l}</button>`).join('')}</div>`;
   const spark = (arr, color) => { if (!arr.length) return ''; const mn = Math.min(...arr), mx = Math.max(...arr), n = arr.length; const pts = arr.map((v, i) => `${((i / Math.max(1, n - 1)) * 100).toFixed(1)},${(22 - ((v - mn) / (mx - mn || 1)) * 19).toFixed(1)}`).join(' '); return `<svg class="sp" viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true"><polygon points="0,24 ${pts} 100,24" fill="${color}" opacity=".12"/><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`; };
-  function deltaOf(v, p, good) { if (!p) return { cls: 'flat', txt: '—' }; const d = ((v - p) / p) * 100; if (!isFinite(d)) return { cls: 'flat', txt: '—' }; const better = good === 'down' ? d < 0 : d > 0; return { cls: good && Math.abs(d) >= 0.05 ? (better ? 'up' : 'down') : 'flat', txt: (d > 0 ? '▲ ' : '▼ ') + dec(Math.abs(d), 1) + '%' }; }
+  function deltaOf(v, p, good) { if (v == null || !p) return { cls: 'flat', txt: '—' }; const d = ((v - p) / p) * 100; if (!isFinite(d)) return { cls: 'flat', txt: '—' }; const better = good === 'down' ? d < 0 : d > 0; return { cls: good && Math.abs(d) >= 0.05 ? (better ? 'up' : 'down') : 'flat', txt: (d > 0 ? '▲ ' : '▼ ') + dec(Math.abs(d), 1) + '%' }; }
   function kpiHTML(list, tC, tP, ser, active) {
     return list.map((k) => { const dl = deltaOf(tC[k.k], tP ? tP[k.k] : 0, k.good); return `<button type="button" class="kpi" data-kpi="${k.k}" aria-pressed="${active === k.k}"><span class="l">${k.l}</span><span class="row"><span class="v">${k.f(tC[k.k])}</span><span class="delta ${dl.cls}">${dl.txt}</span></span>${ser ? spark(ser[k.k] || [], COL.plat[0]) : ''}</button>`; }).join('');
   }
@@ -232,8 +238,8 @@
     put('ov-dow', {
       grid: { left: 6, right: 8, top: 24, bottom: 4, containLabel: true }, legend: { right: 4, top: 0, icon: 'roundRect', itemWidth: 12, itemHeight: 3, textStyle: { color: mut(), fontSize: 11 } }, tooltip: Object.assign(TT(), { trigger: 'axis' }),
       xAxis: Object.assign({ type: 'category', data: wd }, AX(), { splitLine: { show: false } }),
-      yAxis: [{ type: 'value', axisLabel: { color: mut(), fontSize: 10.5, formatter: compact }, axisLine: { show: false }, axisTick: { show: false }, splitLine: { lineStyle: { color: css('--line'), type: [3, 4] } } }, { type: 'value', axisLabel: { color: mut(), fontSize: 10.5, formatter: (v) => 'R$' + Math.round(v) }, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false } }],
-      series: [{ name: 'Leads', type: 'bar', barWidth: '48%', data: bw.map((t) => Math.round(t.ld)), itemStyle: { color: COL.obj[3], borderRadius: [6, 6, 0, 0] } }, { name: 'CPL', type: 'line', yAxisIndex: 1, smooth: 0.3, symbol: 'circle', symbolSize: 6, data: bw.map((t) => +t.cpl.toFixed(2)), lineStyle: { color: COL.plat[1], width: 2.4 }, itemStyle: { color: COL.plat[1] } }]
+      yAxis: [{ type: 'value', axisLabel: { color: mut(), fontSize: 10.5, formatter: compact }, axisLine: { show: false }, axisTick: { show: false }, splitLine: { lineStyle: { color: css('--line'), type: [3, 4] } } }, { type: 'value', axisLabel: { color: mut(), fontSize: 10.5, formatter: (v) => SYM + Math.round(v) }, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false } }],
+      series: [{ name: 'Leads', type: 'bar', barWidth: '48%', data: bw.map((t) => Math.round(t.ld)), itemStyle: { color: COL.obj[3], borderRadius: [6, 6, 0, 0] } }, { name: 'CPL', type: 'line', yAxisIndex: 1, smooth: 0.3, symbol: 'circle', symbolSize: 6, data: bw.map((t) => (t.cpl == null ? null : +t.cpl.toFixed(2))), lineStyle: { color: COL.plat[1], width: 2.4 }, itemStyle: { color: COL.plat[1] } }]
     });
   };
 
@@ -274,7 +280,7 @@
     hbar('cp-rank', sorted.slice(0, 10).map((x) => ({ name: D.CAMPAIGNS[x.i].n, value: x.t[k], color: COL.plat[D.CAMPAIGNS[x.i].p], dim: dimmed(S.f.campaign, x.i) })), { fmt: MF[k], lw: 130, right: 70, click: (p) => toggle('campaign', sorted[p.dataIndex].i) });
     put('cp-bub', {
       grid: { left: 8, right: 60, top: 34, bottom: 8, containLabel: true }, tooltip: Object.assign(TT(), { trigger: 'item', formatter: (p) => `<b>${p.data.name}</b><br/>Investimento ${F.money(p.data.value[0])}<br/>ROAS ${F.x(p.data.value[1])}<br/>Leads ${F.int(p.data.value[2])}` }),
-      xAxis: Object.assign({ type: 'value', name: 'Investimento', nameLocation: 'middle', nameGap: 26, nameTextStyle: { color: mut(), fontSize: 11 }, axisLabel: { color: mut(), fontSize: 10.5, formatter: (v) => 'R$ ' + compact(v) } }, { axisLine: { lineStyle: { color: css('--line') } }, axisTick: { show: false }, splitLine: { lineStyle: { color: css('--line'), type: [3, 4] } } }),
+      xAxis: Object.assign({ type: 'value', name: 'Investimento', nameLocation: 'middle', nameGap: 26, nameTextStyle: { color: mut(), fontSize: 11 }, axisLabel: { color: mut(), fontSize: 10.5, formatter: (v) => SYM + ' ' + compact(v) } }, { axisLine: { lineStyle: { color: css('--line') } }, axisTick: { show: false }, splitLine: { lineStyle: { color: css('--line'), type: [3, 4] } } }),
       yAxis: Object.assign({ type: 'value', name: 'ROAS', nameTextStyle: { color: mut(), fontSize: 11 }, axisLabel: { color: mut(), fontSize: 10.5, formatter: (v) => dec(v, 0) + 'x' } }, { axisLine: { show: false }, axisTick: { show: false }, splitLine: { lineStyle: { color: css('--line'), type: [3, 4] } } }),
       series: [{ type: 'scatter', symbolSize: (v) => Math.max(14, Math.sqrt(v[2]) * 2.1), label: { show: true, position: 'right', color: mut(), fontSize: 10, formatter: (p) => (p.data.value[2] > 90 ? p.data.name.split(' • ')[0] : ''), fontFamily: css('--font') }, markLine: { silent: true, symbol: 'none', lineStyle: { color: css('--mut2'), type: [5, 4] }, label: { formatter: 'ROAS 3x', color: mut(), fontSize: 10 }, data: [{ yAxis: 3 }] }, data: by.map((x) => ({ name: D.CAMPAIGNS[x.i].n, value: [x.t.sp, x.t.roas, x.t.ld], itemStyle: { color: COL.plat[D.CAMPAIGNS[x.i].p], opacity: dimmed(S.f.campaign, x.i) ? 0.18 : 0.78, borderColor: cardc(), borderWidth: 2 }, idx: x.i })) }]
     }, (p) => toggle('campaign', p.data.idx));
@@ -352,7 +358,7 @@
     });
     const med = (() => { const a = groupBy(cur('campaign'), (r) => r.c, D.CAMPAIGNS.length).filter((t) => t.ld > 0).map((t) => t.cpl).sort((x, y) => x - y); return a.length ? a[Math.floor(a.length / 2)] : 0; })();
     const rows = groupBy(cur('campaign'), (r) => r.c, D.CAMPAIGNS.length).map((t, i) => ({ t, i })).filter((x) => x.t.sp > 0).sort((a, b) => b.t.sp - a.t.sp).slice(0, 7);
-    const act = (t) => { if (t.rv > 0 && t.roas >= 4) return ['Escalar', 'up', 'Aumentar o orçamento com acompanhamento diário']; if (t.rv > 0 && t.roas < 1.5) return ['Revisar', 'down', 'Custo acima do retorno: revisar público e criativos']; if (t.rv > 0) return ['Manter', 'flat', 'Retorno saudável: testar novas variações']; if (t.ld === 0 && t.sl === 0) return ['Revisar', 'down', 'Sem resultado no período: pausar ou revisar a oferta']; if (med && t.cpl <= med) return ['Manter', 'flat', 'Custo por lead abaixo da mediana das campanhas']; return ['Otimizar', 'down', 'Custo por lead acima da mediana: testar criativos e público']; };
+    const act = (t) => { if (!t.hasRv && !t.hasLd && !t.hasSl) return ['Sem dado', 'flat', 'A integração não informa resultados desta campanha']; if (t.rv > 0 && t.roas >= 4) return ['Escalar', 'up', 'Aumentar o orçamento com acompanhamento diário']; if (t.rv > 0 && t.roas < 1.5) return ['Revisar', 'down', 'Custo acima do retorno: revisar público e criativos']; if (t.rv > 0) return ['Manter', 'flat', 'Retorno saudável: testar novas variações']; if ((t.hasLd || t.hasSl) && t.ld === 0 && t.sl === 0) return ['Revisar', 'down', 'Sem resultado no período: pausar ou revisar a oferta']; if (t.cpl == null) return ['Manter', 'flat', 'Sem custo por lead informado para comparar']; if (med && t.cpl <= med) return ['Manter', 'flat', 'Custo por lead abaixo da mediana das campanhas']; return ['Otimizar', 'down', 'Custo por lead acima da mediana: testar criativos e público']; };
     $('#rf-tbl').innerHTML = `<table><thead><tr><th>Campanha</th><th>Plataforma</th><th>Invest.</th><th>Leads</th><th>CPL</th><th>ROAS</th><th>Status</th><th style="text-align:left">Ação sugerida</th></tr></thead><tbody>${rows.map(({ t, i }) => { const a = act(t); const c = D.CAMPAIGNS[i]; return `<tr data-camp="${i}"><td><span class="name">${c.n}</span></td><td><span class="tag"><span class="dot" style="background:${COL.plat[c.p]};margin:0"></span>${D.PLATFORMS[c.p]}</span></td><td>${F.money(t.sp)}</td><td>${F.int(t.ld)}</td><td>${t.ld ? F.money2(t.cpl) : '—'}</td><td>${t.rv > 0 ? F.x(t.roas) : '—'}</td><td><span class="delta ${a[1]}">${a[0]}</span></td><td style="text-align:left;white-space:normal;color:var(--mut);font-weight:600;font-size:11.5px">${a[2]}</td></tr>`; }).join('')}</tbody></table>`;
   };
 
@@ -415,7 +421,7 @@
       grid: { left: 6, right: 12, top: 28, bottom: 4, containLabel: true }, legend: { right: 4, top: 0, icon: 'roundRect', itemWidth: 12, itemHeight: 3, textStyle: { color: mut(), fontSize: 11 } }, tooltip: Object.assign(TT(), { trigger: 'axis' }),
       xAxis: Object.assign({ type: 'category', data: cmp.map((c) => c.g.name.length > 14 ? c.g.name.slice(0, 13) + '…' : c.g.name), axisLabel: { color: mut(), fontSize: 10, interval: 0 } }, { axisLine: { lineStyle: { color: css('--line') } }, axisTick: { show: false } }),
       yAxis: [{ type: 'value', axisLabel: { color: mut(), fontSize: 10, formatter: compact }, axisLine: { show: false }, axisTick: { show: false }, splitLine: { lineStyle: { color: css('--line'), type: [3, 4] } } }, { type: 'value', axisLabel: { color: mut(), fontSize: 10, formatter: (v) => dec(v, 0) + 'x' }, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false } }],
-      series: [{ name: 'Investimento', type: 'bar', barWidth: '44%', data: cmp.map((c) => Math.round(c.t.sp)), itemStyle: { color: COL.plat[0], borderRadius: [6, 6, 0, 0] } }, { name: 'ROAS', type: 'line', yAxisIndex: 1, smooth: 0.2, symbol: 'circle', symbolSize: 7, data: cmp.map((c) => +c.t.roas.toFixed(2)), lineStyle: { color: COL.plat[1], width: 2.4 }, itemStyle: { color: COL.plat[1] } }]
+      series: [{ name: 'Investimento', type: 'bar', barWidth: '44%', data: cmp.map((c) => Math.round(c.t.sp)), itemStyle: { color: COL.plat[0], borderRadius: [6, 6, 0, 0] } }, { name: 'ROAS', type: 'line', yAxisIndex: 1, smooth: 0.2, symbol: 'circle', symbolSize: 7, data: cmp.map((c) => (c.t.roas == null ? null : +c.t.roas.toFixed(2))), lineStyle: { color: COL.plat[1], width: 2.4 }, itemStyle: { color: COL.plat[1] } }]
     });
   };
 
@@ -476,7 +482,7 @@
       if (t.closest('#dlg-cancel') || t.id === 'dlg') { $('#dlg').hidden = true; return; }
       if (t.closest('#dlg-save')) {
         const name = $('#dlg-name').value.trim(); if (!name) { $('#dlg-name').focus(); return; }
-        const g = { id: 'g' + Date.now(), name, objectives: $$('#dlg-obj input:checked').map((i) => +i.value), platforms: $$('#dlg-plat input:checked').map((i) => i.value), q: $('#dlg-q').value.trim(), min: +$('#dlg-min').value || 0 };
+        const g = { id: 'g' + Date.now(), name: safe(name), objectives: $$('#dlg-obj input:checked').map((i) => +i.value), platforms: $$('#dlg-plat input:checked').map((i) => i.value), q: safe($('#dlg-q').value.trim()), min: +$('#dlg-min').value || 0 };
         S.groups.push(g); S.f.group = g.id; store.set(('zf-painel-grupos-' + SLUG), S.groups); $('#dlg').hidden = true; render(); return;
       }
       if (t.closest('#btn-theme')) { const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = next; store.set('zf-painel-tema', next); render(); return; }

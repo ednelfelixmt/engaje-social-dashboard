@@ -154,7 +154,7 @@ body {
 
 /* Ajustes: gradiente em texto não pode cortar descendentes; brilho de canto permanente em cada cartão */
 .display-title { padding-bottom: .12em; }
-.dashboard-shell .glass-panel {
+.dashboard-shell .glass-panel:not(.report-studio-frame .glass-panel) {
   background:
     radial-gradient(260px circle at 100% 0%, rgb(var(--accent) / .11), transparent 70%),
     linear-gradient(145deg, rgb(23 23 23 / .98), rgb(12 12 12 / .97));

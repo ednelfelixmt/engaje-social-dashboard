@@ -18,10 +18,10 @@ export type PainelDataset={
   platforms:{id:string;name:string}[];
   campaigns:{id:string;n:string;p:number;o:number}[];
   ads:{id:string;n:string;f:string;c:number;t:string|null}[];
-  /** [dia, campanha, anúncio, impressões, cliques, gasto, leads, vendas, receita, visualizações da página, checkouts] */
+  /** [dia, campanha, anúncio, impressões, cliques, gasto, leads, vendas, receita, visualizações da página, checkouts, presença] */
   rows:number[][];
   dims:Record<BreakdownType,string[]>;
-  /** [dia, campanha, tipo, valor, impressões, cliques, gasto, leads, vendas, receita] */
+  /** [dia, campanha, tipo, valor, impressões, cliques, gasto, leads, vendas, receita, presença] */
   brk:number[][];
   /** [dia, canal, receita, compras, leads] */
   crm:(string|number)[][];
@@ -29,6 +29,8 @@ export type PainelDataset={
 };
 
 const n=(v:number|null|undefined)=>typeof v==='number'&&Number.isFinite(v)?v:0;
+/** Bits: 1 receita, 2 compras, 4 leads, 8 visualizações da página, 16 checkouts. Marcam o que a integração informou (nulo ≠ zero). */
+const presence=(r:{revenue?:number|null;purchases?:number|null;leads?:number|null;page_views?:number|null;checkouts?:number|null})=>(r.revenue!=null?1:0)|(r.purchases!=null?2:0)|(r.leads!=null?4:0)|(r.page_views!=null?8:0)|(r.checkouts!=null?16:0);
 const dayIndex=(end:string,date:string)=>PAINEL_DAYS-1-Math.round((Date.parse(end+'T12:00:00Z')-Date.parse(date+'T12:00:00Z'))/86400000);
 
 export function normalizeDevice(raw:string){
@@ -81,8 +83,9 @@ export function buildPainelDataset(input:{end:string;currency:string;ads:AdRow[]
       a=ads.length;adIndex.set(adKey,a);
       ads.push({id:adKey,n:cr?.name?.trim()||`Anúncio ${r.ad_id}`,f:cr?FORMAT_NAMES[cr.kind]??'Imagem':'Não identificado',c,t:cr?.thumbnail_url??null});
     }
-    const ld=n(r.leads)+n(r.message_leads);
-    rows.push([d,c,a,n(r.impressions),n(r.clicks),n(r.spend),ld,n(r.purchases),n(r.revenue),n(r.page_views),n(r.checkouts)]);
+    // `leads` já é o total (cadastros + mensagens) gravado pela sincronização.
+    const ld=n(r.leads);
+    rows.push([d,c,a,n(r.impressions),n(r.clicks),n(r.spend),ld,n(r.purchases),n(r.revenue),n(r.page_views),n(r.checkouts),presence(r)]);
     const t=campaignTotals[c];t.imp+=n(r.impressions);t.clk+=n(r.clicks);t.ld+=ld;t.sl+=n(r.purchases);t.rv+=n(r.revenue);
   }
   campaigns.forEach((c,i)=>{c.o=inferObjective(c.n,campaignTotals[i]);});
@@ -100,7 +103,7 @@ export function buildPainelDataset(input:{end:string;currency:string;ads:AdRow[]
     const d=dayIndex(end,r.metric_date);if(d<0||d>=PAINEL_DAYS)continue;
     const key=`${r.platform}:${r.campaign_id}`;const c=campaignIndex.get(key);if(c===undefined)continue;
     const text=label(type,r);let v=dims[type].indexOf(text);if(v<0){dims[type].push(text);v=dims[type].length-1;}
-    brk.push([d,c,t,v,n(r.impressions),n(r.clicks),n(r.spend),n(r.leads)+n(r.message_leads),n(r.purchases),n(r.revenue)]);
+    brk.push([d,c,t,v,n(r.impressions),n(r.clicks),n(r.spend),n(r.leads),n(r.purchases),n(r.revenue),presence(r)]);
   }
   const ageBefore=dims.age.slice();
   dims.age.sort((x,y)=>x.localeCompare(y,'pt-BR',{numeric:true}));
