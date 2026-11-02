@@ -12,9 +12,9 @@ const actions=['disconnect_client','delete_client','assign_assets','refresh_asse
  'assign_accounts','disconnect','diagnose','prepare_connector','register_candidate_account',
  'create_ingest_key','configure_extractor','connect','sync'];
 type Result={data:unknown;error:unknown};
-type Query={table:string;operation:string;filters:Record<string,unknown>};
+type Query={table:string;operation:string;filters:Record<string,unknown>;values?:Record<string,unknown>};
 type Options={role?:string;authError?:boolean;roleError?:boolean;
- query?:(query:Query)=>Result;cronAuthorized?:unknown;storage?:Parameters<typeof listTenantStorage>[0]};
+ query?:(query:Query)=>Result;providerFetch?:(url:URL)=>Promise<Response>;rpc?:(name:string)=>Result;cronAuthorized?:unknown;storage?:Parameters<typeof listTenantStorage>[0]};
 function fixture(options:Options={}){
  const native=createRequire(import.meta.url);
  const queries:Query[]=[];
@@ -26,7 +26,11 @@ function fixture(options:Options={}){
    const query:Query={table,operation:'select',filters:{}};
    const builder={
     select(){return builder;},
-    update(){query.operation='update';return builder;},
+    update(values:Record<string,unknown>){query.operation='update';query.values=values;return builder;},
+    insert(values:Record<string,unknown>){query.operation='insert';query.values=values;return builder;},
+    upsert(values:Record<string,unknown>){query.operation='upsert';query.values=values;return builder;},
+    delete(){query.operation='delete';return builder;},
+    order(){return builder;},limit(){return builder;},in(){return builder;},
     eq(field:string,value:unknown){query.filters[field]=value;return builder;},
     single(){return builder;},
     maybeSingle(){return builder;},
@@ -39,6 +43,7 @@ function fixture(options:Options={}){
   },
   rpc:async(name:string)=>{
    calls.push(name);
+   if(options.rpc)return options.rpc(name);
    assert.equal(name,'verify_cron_secret');
    return {data:options.cronAuthorized??false,error:null};
   },
@@ -56,7 +61,7 @@ function fixture(options:Options={}){
  new Function('Deno','fetch','require','module','exports',code)(
   {env:{get:(name:string)=>name==='SUPABASE_URL'?'https://synthetic.invalid':'synthetic-only'},
    serve:(callback:typeof handler)=>{handler=callback;}},
-  ()=>{throw new Error('provider/network access forbidden in fixture');},
+  (url:URL)=>{if(options.providerFetch)return options.providerFetch(url);throw new Error('provider/network access forbidden in fixture');},
   (id:string)=>{
    if(id==='npm:@supabase/supabase-js@2.76.1')return {createClient};
    if(id.startsWith('../_shared/'))return native('../supabase/functions/engaje-integrations/'+id);
@@ -168,4 +173,51 @@ test('actual delete handler stops before database deletion if Storage cannot be 
  assert.equal(response.status,400);
  assert.match((await response.json()).message,/conferir os arquivos/);
  assert.ok(!f.calls.includes('delete_client_organization'));
+});
+
+
+type ExistingConnection={id:string;target_organization_id:string|null};
+function oauthOwnershipFixture(existing:ExistingConnection|null,options:{lookupError?:boolean;insertConflict?:boolean;changedOwner?:boolean}={}){
+ return fixture({rpc:()=>({data:null,error:null}),providerFetch:async(url)=>{
+  const endpoint=url.pathname.split('/').slice(2).join('/');
+  const payload=endpoint==='oauth/access_token'?{access_token:'synthetic-token-only'}:endpoint==='me'?{id:'synthetic-meta-user',name:'Synthetic account'}:endpoint==='me/permissions'?{data:[{permission:'ads_read',status:'granted'}]}:{data:[]};
+  return Response.json(payload);
+ },query:q=>{
+  if(q.table==='organization_members')return {data:[{role:'super_admin',is_active:true,organizations:{is_agency:true,status:'active'}}],error:null};
+  if(q.table==='organizations')return {data:q.filters.is_agency?{id:'synthetic-agency'}:{slug:'synthetic',status:'active'},error:null};
+  if(q.table==='integrations')return {data:q.filters.status==='pending'?{id:organizationId,organization_id:organizationId,provider:'meta_ads',config:{user_id:userId,nonce:'synthetic-nonce'}}:{config:{}},error:null};
+  if(q.table==='platform_connections'){
+   if(q.operation==='select')return {data:existing,error:options.lookupError?new Error('synthetic lookup failed'):null};
+   if(q.operation==='insert'&&options.insertConflict)return {data:null,error:new Error('synthetic unique conflict')};
+   if(q.operation==='update'&&q.values?.status==='syncing'&&options.changedOwner)return {data:null,error:null};
+   return {data:{id:existing?.id??'synthetic-new-connection'},error:null};
+  }
+  return {data:[],error:null};
+ }});
+}
+const ownershipCallback=()=>new Request('https://synthetic.invalid/functions/v1/meta-auth/callback?state='+callbackState()+'&code=synthetic-code');
+
+test('actual OAuth callback never retargets or overwrites credentials belonging to another tenant',async()=>{
+ for(const owner of ['synthetic-other-tenant',null]){
+  const f=oauthOwnershipFixture({id:'synthetic-existing',target_organization_id:owner});const response=await f.handler(ownershipCallback());
+  assert.equal(response.status,400);assert.match((await response.json()).message,/outro cliente|destino/);
+  assert.equal(f.queries.filter(q=>q.table==='platform_connections'&&q.operation!=='select').length,0);
+  assert.ok(!f.calls.includes('store_platform_connection_token'));
+ }
+});
+test('actual OAuth refresh updates only its existing tenant-owned connection without retargeting',async()=>{
+ const f=oauthOwnershipFixture({id:'synthetic-existing',target_organization_id:organizationId});const response=await f.handler(ownershipCallback());assert.equal(response.status,303);
+ const write=f.queries.find(q=>q.table==='platform_connections'&&q.values?.status==='syncing');assert.ok(write);assert.equal(write.operation,'update');assert.equal(write.filters.target_organization_id,organizationId);assert.equal(write.filters.id,'synthetic-existing');assert.ok(!Object.hasOwn(write.values!,'target_organization_id'));assert.ok(!Object.hasOwn(write.values!,'external_user_id'));
+ assert.ok(f.calls.includes('store_platform_connection_token'));
+});
+test('actual OAuth callback stops if ownership changes between lookup and guarded update',async()=>{
+ const f=oauthOwnershipFixture({id:'synthetic-existing',target_organization_id:organizationId},{changedOwner:true});const response=await f.handler(ownershipCallback());assert.equal(response.status,400);assert.ok(!f.calls.includes('store_platform_connection_token'));
+});
+test('actual OAuth callback never turns a lookup failure or concurrent unique conflict into an overwrite',async()=>{
+ for(const options of [{lookupError:true},{insertConflict:true}]){
+  const f=oauthOwnershipFixture(null,options);const response=await f.handler(ownershipCallback());assert.equal(response.status,400);assert.ok(!f.calls.includes('store_platform_connection_token'));assert.equal(f.queries.filter(q=>q.table==='platform_connections'&&['update','upsert'].includes(q.operation)).length,0);
+ }
+});
+test('actual OAuth first connection inserts a real provider identity scoped to its requested tenant',async()=>{
+ const f=oauthOwnershipFixture(null);const response=await f.handler(ownershipCallback());assert.equal(response.status,303);const write=f.queries.find(q=>q.table==='platform_connections'&&q.values?.status==='syncing');assert.ok(write);assert.equal(write.operation,'insert');assert.equal(write.values?.target_organization_id,organizationId);assert.equal(write.values?.external_user_id,'synthetic-meta-user');assert.ok(f.calls.includes('store_platform_connection_token'));
 });
