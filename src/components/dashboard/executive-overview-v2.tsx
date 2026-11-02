@@ -13,11 +13,11 @@ type Metric='spend'|'impressions'|'clicks'|'leads'|'ctr'|'cpc'|'cpl';
 const labels:Record<Metric,string>={spend:'Investimento',impressions:'Impressões',clicks:'Cliques',leads:'Leads',ctr:'CTR',cpc:'CPC',cpl:'CPL'};
 const palette=['#facc15','#53a8f8','#a78bfa','#32c5a0','#fb923c','#f472b6'];
 const channelNames:Record<string,string>={meta_ads:'Meta Ads',google_ads:'Google Ads',tiktok_ads:'TikTok Ads'};
-const theme={backgroundColor:'#101722',border:'1px solid #344154',borderRadius:12,color:'#f1f5f9',fontSize:12};
+const theme={backgroundColor:'#161616',border:'1px solid #344154',borderRadius:12,color:'#f1f5f9',fontSize:12};
 function rollup(rows:ExecutiveCampaign[]){return paidTotals(rows);}
 function metric(r:{spend:number|null;impressions:number|null;clicks:number|null;leads:number|null},k:Metric):number|null{return paidMetric(r,k);}
 function fmt(v:number|null|undefined,k:Metric,currency:string){return v==null?'—':k==='spend'||k==='cpc'||k==='cpl'?money(v,currency):k==='ctr'?number(v,2)+'%':number(v);}
-function Panel({children,className=''}:{children:React.ReactNode;className?:string}){return <div className={`min-w-0 rounded-2xl border border-white/[.09] bg-[radial-gradient(ellipse_at_top_left,rgba(255,255,255,.045),transparent_75%)] bg-[#101722] p-4 shadow-[0_8px_35px_rgba(0,0,0,.12)] ${className}`}>{children}</div>;}
+function Panel({children,className=''}:{children:React.ReactNode;className?:string}){return <div className={`min-w-0 rounded-2xl border border-white/[.09] bg-[radial-gradient(ellipse_at_top_left,rgba(255,255,255,.045),transparent_75%)] bg-[#161616] p-4 shadow-[0_8px_35px_rgba(0,0,0,.12)] ${className}`}>{children}</div>;}
 function SectionHeading({eyebrow,title,aside}:{eyebrow:string;title:string;aside?:React.ReactNode}){return <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><p className="text-[10px] font-bold uppercase tracking-[.15em] text-zinc-500">{eyebrow}</p><h3 className="mt-1 text-sm font-semibold tracking-tight text-white">{title}</h3></div>{aside}</div>;}
 function Kpi({label,value,change,subtitle,kind}:{label:string;value:string;change:number|null;subtitle:string;kind?:'lower'|'higher'}){
  const positive=change==null?null:kind==='lower'?change<=0:kind==='higher'?change>=0:null;
