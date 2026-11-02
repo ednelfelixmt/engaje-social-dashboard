@@ -217,3 +217,5 @@ td .name { display: inline-block; max-width: 190px; overflow: hidden; text-overf
 .kpi .row { flex-direction: column; align-items: flex-start; gap: 3px; }
 .kpi .v { font-size: clamp(16px, 1.45vw, 20px); }
 .kpi svg.sp { height: 20px; }
+.nodata { display: flex; flex-direction: column; gap: 6px; justify-content: center; align-items: flex-start; height: 100%; padding: 14px; color: var(--mut); font-size: 12.5px; line-height: 1.55; }
+.nodata b { color: var(--tx); font-size: 13px; }
