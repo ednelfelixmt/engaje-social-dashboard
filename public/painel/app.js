@@ -229,7 +229,7 @@
     donut('ov-plat', D.PLATFORMS.map((n, i) => ({ name: n, value: bp[i].sp, color: COL.plat[i], dim: dimmed(S.f.platform, i) })), { center: F.mcompact(bp.reduce((s, t) => s + t.sp, 0)), sub: 'investidos', legend: true, cs: 15, fmt: F.money, click: (p) => toggle('platform', D.PLATFORMS.indexOf(p.name)) });
     const geo = (v) => Math.log10(v + 1) * 100;
     const st = [['Impressões', tC.imp, '#1D4ED8'], ['Cliques', tC.clk, '#3B82F6'], ['Leads', tC.ld, '#7C3AED'], ['Vendas', tC.sl, '#10B981']];
-    funnelSVG($('#ov-fun'), { id: 'fo', compact: true, values: st.map((x) => x[1]), labels: st.map((x) => x[0]), colors: st.map((x) => x[2]), onPick: () => go(4) });
+    funnelSVG($('#ov-fun'), { id: 'fo', compact: true, values: st.map((x) => x[1]), avail: [true, true, tC.hasLd, tC.hasSl], labels: st.map((x) => x[0]), colors: st.map((x) => x[2]), onPick: () => go(4) });
     const mx = D.OBJECTIVES.map(() => D.PLATFORMS.map(() => 0)); cur('objective').forEach((r) => { mx[r.o][r.p] += r.sp; });
     put('ov-obj', {
       grid: { left: 6, right: 14, top: 4, bottom: 4, containLabel: true }, tooltip: Object.assign(TT(), { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: F.money }),
@@ -308,6 +308,8 @@
   /* Funil desenhado como um funil de verdade: boca elíptica, corpo cônico em faixas, gargalo e gotas de conversão. */
   function funnelSVG(box, o) {
     const n = o.values.length, compact = !!o.compact;
+    // Zero observado é diferente de dado ausente: `avail` diz se a integração informou cada etapa.
+    const has = (i) => (o.avail ? !!o.avail[i] : true);
     const W = compact ? 420 : 760, H = compact ? 300 : 540;
     const cx = compact ? 150 : 370, top = compact ? 22 : 34, neck = compact ? 26 : 44;
     const maxW = compact ? 230 : 400, minW = compact ? 40 : 60;
@@ -330,19 +332,19 @@
       const lt = cx - wt / 2, rt = cx + wt / 2, lb = cx - wb / 2, rb = cx + wb / 2, k = bandH * .55;
       const d = `M${lt},${y0} C${lt + (wt - wb) / 8},${y0 + k} ${lb - (wt - wb) / 10},${y1 - k} ${lb},${y1} A${wb / 2},${ry(wb)} 0 0 0 ${rb},${y1} C${rb + (wt - wb) / 10},${y1 - k} ${rt - (wt - wb) / 8},${y0 + k} ${rt},${y0} A${wt / 2},${ry(wt)} 0 0 1 ${lt},${y0}Z`;
       const on = o.selected === i, dim = o.selected != null && !on;
-      body += `<g class="fseg${on ? ' on' : ''}" data-stage="${i}" tabindex="0" role="button" aria-label="${o.labels[i]}: ${x ? F.int(x) : 'sem dado'}" style="--d:${i * 70}ms" opacity="${dim ? .55 : 1}"><path d="${d}" fill="url(#${o.id}g${i})"/><path d="M${lb},${y1} A${wb / 2},${ry(wb)} 0 0 0 ${rb},${y1}" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.4"/>`;
-      if (!compact) body += `<text x="${cx}" y="${y0 + bandH / 2 + 2}" text-anchor="middle" font-size="${wt > 150 ? 17 : 14}" font-weight="800" fill="#fff">${x ? compact_(x) : '—'}</text>`;
+      body += `<g class="fseg${on ? ' on' : ''}" data-stage="${i}" tabindex="0" role="button" aria-label="${o.labels[i]}: ${has(i) ? F.int(x) : 'sem dado'}" style="--d:${i * 70}ms" opacity="${dim ? .55 : 1}"><path d="${d}" fill="url(#${o.id}g${i})"/><path d="M${lb},${y1} A${wb / 2},${ry(wb)} 0 0 0 ${rb},${y1}" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.4"/>`;
+      if (!compact) body += `<text x="${cx}" y="${y0 + bandH / 2 + 2}" text-anchor="middle" font-size="${wt > 150 ? 17 : 14}" font-weight="800" fill="#fff">${has(i) ? compact_(x) : '—'}</text>`;
       body += `</g>`;
       // rótulos laterais
       const ly = y0 + bandH / 2;
       if (compact) {
-        labels += `<text x="${cx + Math.max(wt, wb) / 2 + 12}" y="${ly - 2}" font-size="11.5" font-weight="700" fill="${css('--tx')}">${o.labels[i]}</text><text x="${cx + Math.max(wt, wb) / 2 + 12}" y="${ly + 13}" font-size="11.5" font-weight="800" fill="${css('--mut')}">${x ? compact_(x) : '—'}</text>`;
+        labels += `<text x="${cx + Math.max(wt, wb) / 2 + 12}" y="${ly - 2}" font-size="11.5" font-weight="700" fill="${css('--tx')}">${o.labels[i]}</text><text x="${cx + Math.max(wt, wb) / 2 + 12}" y="${ly + 13}" font-size="11.5" font-weight="800" fill="${css('--mut')}">${has(i) ? compact_(x) : '—'}</text>`;
       } else {
         const xl = cx - maxW / 2 - 18;
         labels += `<text x="${xl}" y="${ly - 3}" text-anchor="end" font-size="12.5" font-weight="800" fill="${css('--tx')}">${o.labels[i]}</text><text x="${xl}" y="${ly + 13}" text-anchor="end" font-size="11" font-weight="600" fill="${css('--mut')}">${o.costs && o.costs[i] != null ? 'Custo ' + F.money2(o.costs[i]) : ''}</text>`;
         labels += `<line x1="${xl + 6}" y1="${ly}" x2="${cx - wt / 2 - 4}" y2="${ly}" stroke="${css('--line')}" stroke-dasharray="3 3"/>`;
         if (i < n - 1) {
-          const rate = x && o.values[i + 1] ? (o.values[i + 1] / x) * 100 : null; const yy = y1; const xr = cx + maxW / 2 + 22;
+          const rate = has(i) && has(i + 1) && x > 0 ? (o.values[i + 1] / x) * 100 : null; const yy = y1; const xr = cx + maxW / 2 + 22;
           labels += `<line x1="${cx + wb / 2 + 6}" y1="${yy}" x2="${xr - 4}" y2="${yy}" stroke="${css('--line')}"/><rect x="${xr}" y="${yy - 12}" width="92" height="24" rx="12" fill="${css('--card2')}" stroke="${css('--line')}"/><text x="${xr + 46}" y="${yy + 4}" text-anchor="middle" font-size="11.5" font-weight="800" fill="${css('--tx')}">${rate == null ? '—' : '↓ ' + dec(rate, rate < 10 ? 2 : 1) + '%'}</text>`;
         }
       }
@@ -351,12 +353,12 @@
     const yb = top + n * bandH, nw = tipW * .55;
     body += `<path d="M${cx - tipW / 2},${yb} L${cx - nw / 2},${yb + neck * .7} L${cx + nw / 2},${yb + neck * .7} L${cx + tipW / 2},${yb}Z" fill="url(#${o.id}g${n - 1})" opacity=".85"/>`;
     body += `<g class="fdrops">${[0, 1, 2].map((k) => `<circle cx="${cx}" cy="${yb + neck * .7 + 6}" r="${compact ? 3 : 4.5}" fill="${o.colors[n - 1]}"><animate attributeName="cy" values="${yb + neck * .7 + 4};${H - 4}" dur="1.8s" begin="${k * .6}s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0" dur="1.8s" begin="${k * .6}s" repeatCount="indefinite"/></circle>`).join('')}</g>`;
-    if (!compact) labels += `<text x="${cx}" y="${H - 4}" text-anchor="middle" font-size="11" font-weight="700" fill="${css('--mut')}">Impressão → venda: ${o.values[0] ? dec((o.values[n - 1] / o.values[0]) * 100, 4) + '%' : '—'}</text>`;
+    if (!compact) labels += `<text x="${cx}" y="${H - 4}" text-anchor="middle" font-size="11" font-weight="700" fill="${css('--mut')}">Impressão → venda: ${has(n - 1) && o.values[0] > 0 ? dec((o.values[n - 1] / o.values[0]) * 100, 4) + '%' : '—'}</text>`;
     box.innerHTML = `<svg class="funnel3d" viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Funil de marketing e vendas"><defs>${defs}</defs><g filter="url(#${o.id}sh)">${body}</g>${labels}</svg><div class="ftip" hidden></div>`;
     const tip = box.querySelector('.ftip');
     const show = (g, ev) => {
       const i = +g.dataset.stage, x = o.values[i], prev = i ? o.values[i - 1] : null;
-      tip.innerHTML = `<b>${o.labels[i]}</b><span>${x ? F.int(x) : 'Sem dado'}</span><span>${i && prev && x ? 'Da etapa anterior: ' + F.pct((x / prev) * 100) : 'Topo do funil'}</span><span>${v0 && x ? 'Do topo: ' + F.pct((x / v0) * 100) : ''}</span>${o.costs && o.costs[i] != null ? `<span>Custo por etapa: ${F.money2(o.costs[i])}</span>` : ''}`;
+      tip.innerHTML = `<b>${o.labels[i]}</b><span>${has(i) ? F.int(x) : 'Sem dado'}</span><span>${i === 0 ? 'Topo do funil' : has(i) && has(i - 1) && prev > 0 ? 'Da etapa anterior: ' + F.pct((x / prev) * 100) : ''}</span><span>${has(i) && o.values[0] > 0 ? 'Do topo: ' + F.pct((x / o.values[0]) * 100) : ''}</span>${o.costs && o.costs[i] != null ? `<span>Custo por etapa: ${F.money2(o.costs[i])}</span>` : ''}`;
       tip.hidden = false; const r = box.getBoundingClientRect();
       tip.style.left = Math.min(r.width - 190, Math.max(4, ev.clientX - r.left + 14)) + 'px'; tip.style.top = Math.max(4, ev.clientY - r.top - 10) + 'px';
     };
@@ -374,9 +376,10 @@
   const STAGE_COL = ['#1D4ED8', '#2563EB', '#3B82F6', '#7C3AED', '#0D9488', '#15803D'];
   RENDER.funnel = () => {
     const rc = cur(); const t = tot(rc); const v = STAGE_KEY.map((k) => t[k]);
-    funnelSVG($('#fn-svg'), { id: 'fp', values: v, labels: STAGES, colors: STAGE_COL, costs: v.map((x) => (x ? t.sp / x : null)), selected: S.sel.stage, onPick: (i) => { S.sel.stage = i; RENDER.funnel(); } });
+    const av = [true, true, !!(t.m & 8), t.hasLd, !!(t.m & 16), t.hasSl];
+    funnelSVG($('#fn-svg'), { id: 'fp', values: v, avail: av, labels: STAGES, colors: STAGE_COL, costs: v.map((x, i) => (av[i] && x > 0 ? t.sp / x : null)), selected: S.sel.stage, onPick: (i) => { S.sel.stage = i; RENDER.funnel(); } });
     const ov = v[0] ? (v[5] / v[0]) * 100 : 0;
-    $('#fn-rates').innerHTML = `<table><thead><tr><th>Etapa</th><th>Volume</th><th>Da etapa anterior</th><th>Custo por etapa</th></tr></thead><tbody>${v.map((x, i) => `<tr data-stage="${i}" class="${S.sel.stage === i ? 'sel' : ''}"><td><span class="dot" style="background:${STAGE_COL[i]}"></span><span class="name">${STAGES[i]}</span></td><td>${x ? F.compact(x) : '—'}</td><td>${i && x && v[i - 1] ? F.pct((x / v[i - 1]) * 100) : '—'}</td><td>${x ? F.money2(t.sp / x) : '—'}</td></tr>`).join('')}<tr class="total"><td>Impressão → venda</td><td>${F.int(v[5])}</td><td colspan="2">${dec(ov, 4)}%</td></tr></tbody></table>`;
+    $('#fn-rates').innerHTML = `<table><thead><tr><th>Etapa</th><th>Volume</th><th>Da etapa anterior</th><th>Custo por etapa</th></tr></thead><tbody>${v.map((x, i) => `<tr data-stage="${i}" class="${S.sel.stage === i ? 'sel' : ''}"><td><span class="dot" style="background:${STAGE_COL[i]}"></span><span class="name">${STAGES[i]}</span></td><td>${av[i] ? F.compact(x) : '—'}</td><td>${i && av[i] && av[i - 1] && v[i - 1] > 0 ? F.pct((x / v[i - 1]) * 100) : '—'}</td><td>${av[i] && x > 0 ? F.money2(t.sp / x) : '—'}</td></tr>`).join('')}<tr class="total"><td>Impressão → venda</td><td>${F.int(v[5])}</td><td colspan="2">${dec(ov, 4)}%</td></tr></tbody></table>`;
     const si = S.sel.stage ?? 3; $('#fn-sel-t').textContent = STAGES[si];
     const bp = groupBy(cur('platform'), (r) => r.p, D.PLATFORMS.length);
     hbar('fn-plat', D.PLATFORMS.map((n, i) => ({ name: n, value: bp[i][STAGE_KEY[si]], color: COL.plat[i], dim: dimmed(S.f.platform, i) })).sort((x, y) => y.value - x.value), { fmt: (x) => compact(x), lw: 92, right: 56, click: (p) => toggle('platform', D.PLATFORMS.indexOf(p.name)) });
