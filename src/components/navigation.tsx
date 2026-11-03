@@ -43,7 +43,8 @@ const workspaceGroups:NavGroup[]=[
 
 const agencyGroups:NavGroup[]=[
   {id:'agency',label:'Agência',icon:Building2,items:[
-    {key:'admin',label:'Visão geral',icon:LayoutDashboard},
+    {key:'admin/painel',label:'Painel da carteira',icon:LayoutDashboard},
+    {key:'admin',label:'Visão da agência',icon:ChartNoAxesCombined},
     {key:'admin/organizations',label:'Clientes',icon:Building2},
     {key:'admin/users',label:'Usuários',icon:Users},
   ]},

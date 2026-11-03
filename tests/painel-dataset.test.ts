@@ -53,5 +53,15 @@ test('ordena faixas etárias e mantém os índices coerentes',()=>{
 test('agrupa CRM por canal',()=>{
  const d=mod.buildPainelDataset({end:'2026-11-01',currency:'BRL',ads:[],breakdowns:[],crm:[{metric_date:'2026-11-01',channel:'whatsapp',revenue:300,purchases:2,leads:null} as never],creatives:[]});
  assert.deepEqual(d.crmChannels,['whatsapp']);
- assert.deepEqual(d.crm[0],[59,0,300,2,0]);
+ assert.deepEqual(d.crm[0],[59,0,300,2,0,-1]);
+});
+
+test('modo agência separa campanhas de mesmo ID por cliente e informa o cliente de cada uma',()=>{
+ const clients=[{id:'org-a',name:'Cliente A'},{id:'org-b',name:'Cliente B'}];
+ const d=mod.buildPainelDataset({end:'2026-11-01',currency:'BRL',clients,ads:[ad({organization_id:'org-a'}),ad({organization_id:'org-b'})],breakdowns:[brk({organization_id:'org-b'})],crm:[{metric_date:'2026-11-01',channel:'site',revenue:10,purchases:1,leads:1,organization_id:'org-b'} as never],creatives:[]});
+ assert.deepEqual(d.clients,['Cliente A','Cliente B']);
+ assert.equal(d.campaigns.length,2);
+ assert.deepEqual(d.campaigns.map(c=>c.g),[0,1]);
+ assert.equal(d.brk[0][1],1);
+ assert.equal(d.crm[0][5],1);
 });

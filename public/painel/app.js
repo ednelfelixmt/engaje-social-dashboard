@@ -1,7 +1,9 @@
 /* Painel Marketing ZF — interface, filtros cruzados e gráficos. Depende de data.js (window.PAINEL) e ECharts. */
 (function () {
   'use strict';
-  const SLUG = new URLSearchParams(location.search).get('org') || '';
+  const QS = new URLSearchParams(location.search);
+  const AGENCY = QS.get('agency') === '1';
+  const SLUG = AGENCY ? 'agencia' : (QS.get('org') || '');
   const PLAT_COLORS = { meta_ads: '#2563EB', google_ads: '#F59E0B', tiktok_ads: '#E11D48' };
   const PLAT_EXTRA = ['#0E7490', '#7C3AED', '#10B981'];
   // Nenhum nome vindo da sincronização chega ao HTML com caracteres de marcação: eles viram símbolos parecidos.
@@ -11,12 +13,13 @@
     const D = { DAYS: raw.days, END: raw.end, currency: raw.currency, dateOf: (d) => { const x = new Date(end); x.setUTCDate(x.getUTCDate() - (raw.days - 1 - d)); return new Date(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate()); } };
     D.PLATFORM_IDS = raw.platforms.map((p) => safe(p.id)); D.PLATFORMS = raw.platforms.map((p) => safe(p.name));
     D.OBJECTIVES = ['Reconhecimento', 'Tráfego', 'Engajamento', 'Leads', 'Vendas', 'Remarketing'];
-    D.CAMPAIGNS = raw.campaigns.map((c) => ({ id: safe(c.id), n: safe(c.n), p: c.p, o: c.o }));
+    D.CLIENTS = (raw.clients || []).map(safe);
+    D.CAMPAIGNS = raw.campaigns.map((c) => { const own = safe(c.n); const full = (c.g != null && D.CLIENTS[c.g] ? D.CLIENTS[c.g] + ' · ' : '') + own; return { id: safe(c.id), n: full, own, full, p: c.p, o: c.o, g: c.g == null ? -1 : c.g }; });
     D.ADS = raw.ads.map((a) => { let h = 0; for (const ch of a.id) h = (h * 31 + ch.charCodeAt(0)) % 360; return { hue: h, id: safe(a.id), n: safe(a.n), f: safe(a.f), c: a.c, t: typeof a.t === 'string' && /^https?:\/\//.test(a.t) ? a.t : null }; });
     D.DEVICES = raw.dims.device.map(safe); D.GENDERS = raw.dims.gender.map(safe); D.AGES = raw.dims.age.map(safe); D.STATES = raw.dims.state.map(safe); D.CITIES = raw.dims.city.map(safe);
     D.rows = raw.rows.map((r) => { const c = raw.campaigns[r[1]]; return { d: r[0], c: r[1], a: r[2], p: c.p, o: c.o, imp: r[3], clk: r[4], sp: r[5], ld: r[6], sl: r[7], rv: r[8], pv: r[9], ck: r[10], m: r[11] || 0 }; });
     D.brk = raw.brk.map((r) => { const c = raw.campaigns[r[1]]; return { d: r[0], c: r[1], p: c.p, o: c.o, t: r[2], v: r[3], imp: r[4], clk: r[5], sp: r[6], ld: r[7], sl: r[8], rv: r[9], m: r[10] || 0 }; });
-    D.crmChannels = raw.crmChannels.map(safe); D.crm = raw.crm.map((r) => ({ d: r[0], ch: r[1], rv: r[2], pu: r[3], ld: r[4] }));
+    D.crmChannels = raw.crmChannels.map(safe); D.crm = raw.crm.map((r) => ({ d: r[0], ch: r[1], rv: r[2], pu: r[3], ld: r[4], g: r[5] == null ? -1 : r[5] }));
     return D;
   }
   function boot(D) {
@@ -71,19 +74,20 @@
   ];
   const S = {
     page: 0, period: 30, view: 'all', metric: { evo: 'spend', plat: 'ld', rank: 'roas', ads: 'roas', dv: 'ld', demo: 'ld' }, sel: { stage: 3, seg: null, dev: null, gen: null, age: null, st: null, ci: null },
-    f: { platform: null, objective: null, campaign: null, format: null, group: null },
+    f: { client: null, platform: null, objective: null, campaign: null, format: null, group: null },
     groups: store.get(('zf-painel-grupos-' + SLUG), DEFAULT_GROUPS).map((g) => Object.assign({}, g, { name: safe(g.name), q: safe(g.q), platforms: (g.platforms || []).map(safe) })), auto: false
   };
   let GSET = null; let timer = null;
 
   D.rows.forEach((r) => { r.w = (D.dateOf(r.d).getDay() + 6) % 7; });
   const CAMP30 = D.CAMPAIGNS.map(() => 0); D.rows.forEach((r) => { if (r.d >= D.DAYS - 30) CAMP30[r.c] += r.sp; });
-  const inGroup = (g, ci) => { const c = D.CAMPAIGNS[ci]; if (g.objectives.length && !g.objectives.includes(c.o)) return false; if (g.platforms.length && !g.platforms.includes(D.PLATFORM_IDS[c.p])) return false; if (g.q && !c.n.toLowerCase().includes(g.q.toLowerCase())) return false; if (g.min && CAMP30[ci] < g.min) return false; return true; };
+  const inGroup = (g, ci) => { const c = D.CAMPAIGNS[ci]; if (g.objectives.length && !g.objectives.includes(c.o)) return false; if (g.platforms.length && !g.platforms.includes(D.PLATFORM_IDS[c.p])) return false; if (g.q && !(c.full || c.n).toLowerCase().includes(g.q.toLowerCase())) return false; if (g.min && CAMP30[ci] < g.min) return false; return true; };
   function refreshGroup() { const g = S.groups.find((x) => x.id === S.f.group); GSET = g ? new Set(D.CAMPAIGNS.map((_, i) => i).filter((i) => inGroup(g, i))) : null; if (S.f.group && !g) S.f.group = null; }
 
   /* ---------- filtros cruzados e agregação ---------- */
   function pass(r, ign) {
     const f = S.f;
+    if (f.client != null && ign !== 'client' && D.CAMPAIGNS[r.c].g !== f.client) return false;
     if (f.platform != null && ign !== 'platform' && r.p !== f.platform) return false;
     if (f.objective != null && ign !== 'objective' && r.o !== f.objective) return false;
     if (f.campaign != null && ign !== 'campaign' && r.c !== f.campaign) return false;
@@ -96,7 +100,7 @@
   const cur = (ign) => rowsIn(D.DAYS - S.period, D.DAYS, ign);
   const prv = (ign) => rowsIn(D.DAYS - 2 * S.period, D.DAYS - S.period, ign);
   const bk = (t) => D.brk.filter((r) => r.t === t && r.d >= D.DAYS - S.period && pass(r));
-  const fin = (t) => { t.hasRv = !!(t.m & 1); t.hasSl = !!(t.m & 2); t.hasLd = !!(t.m & 4); t.spend = t.sp; t.ctr = t.imp ? (t.clk / t.imp) * 100 : 0; t.cpc = t.clk ? t.sp / t.clk : 0; t.cpm = t.imp ? (t.sp / t.imp) * 1000 : 0; t.cpl = t.hasLd && t.ld ? t.sp / t.ld : (t.hasLd ? 0 : null); t.cpa = t.hasSl && t.sl ? t.sp / t.sl : (t.hasSl ? 0 : null); t.roas = t.hasRv && t.sp ? t.rv / t.sp : (t.hasRv ? 0 : null); t.cvr = t.clk ? (t.ld / t.clk) * 100 : 0; return t; };
+  const fin = (t) => { t.hasRv = !!(t.m & 1); t.hasSl = !!(t.m & 2); t.hasLd = !!(t.m & 4); t.spend = t.sp; t.ctr = t.imp ? (t.clk / t.imp) * 100 : 0; t.cpc = t.clk ? t.sp / t.clk : 0; t.cpm = t.imp ? (t.sp / t.imp) * 1000 : 0; t.cpl = t.hasLd && t.ld ? t.sp / t.ld : null; t.cpa = t.hasSl && t.sl ? t.sp / t.sl : null; t.roas = t.hasRv && t.sp ? t.rv / t.sp : (t.hasRv ? 0 : null); t.cvr = t.clk ? (t.ld / t.clk) * 100 : 0; return t; };
   const blank = () => ({ m: 0, imp: 0, clk: 0, sp: 0, ld: 0, sl: 0, rv: 0, pv: 0, ck: 0 });
   const add = (t, r) => { t.imp += r.imp; t.clk += r.clk; t.sp += r.sp; t.ld += r.ld; t.sl += r.sl; t.rv += r.rv; t.pv += r.pv || 0; t.ck += r.ck || 0; t.m |= r.m || 0; };
   const tot = (rs) => { const t = blank(); for (const r of rs) add(t, r); return fin(t); };
@@ -345,7 +349,7 @@
       xAxis: { type: 'category', data: wd, position: 'top', axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: tx(), fontSize: 11, fontWeight: 600 } }, yAxis: { type: 'category', inverse: true, data: D.PLATFORMS, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: tx(), fontSize: 11, fontWeight: 600 } },
       series: [{ type: 'heatmap', data: hdata, label: { show: true, fontSize: 11, fontWeight: 700, color: tx(), formatter: (p) => compact(p.data[2]) }, itemStyle: { borderColor: cardc(), borderWidth: 3, borderRadius: 6 } }]
     });
-    const crmRows = D.crm.filter((r) => r.d >= D.DAYS - S.period); const chv = D.crmChannels.map(() => 0); crmRows.forEach((r) => { chv[r.ch] += r.rv; });
+    const crmRows = D.crm.filter((r) => r.d >= D.DAYS - S.period && (S.f.client == null || r.g === S.f.client)); const chv = D.crmChannels.map(() => 0); crmRows.forEach((r) => { chv[r.ch] += r.rv; });
     if (!crmRows.length || !chv.some((x) => x > 0)) nodata('rf-coh', 'Sem receita de CRM sincronizada neste período.');
     else hbar('rf-coh', D.crmChannels.map((n, i) => ({ name: n, value: chv[i], color: COL.ch[i % COL.ch.length] })).sort((x, y) => y.value - x.value).slice(0, 6), { fmt: F.mcompact, lw: 70, right: 60 });
     const bc = groupBy(cur('campaign'), (r) => r.c, D.CAMPAIGNS.length).map((t, i) => ({ t, i })).filter((x) => x.t.rv > 0).sort((a, b) => b.t.rv - a.t.rv); const totRv = bc.reduce((s, x) => s + x.t.rv, 0) || 1; let acc = 0;
@@ -430,7 +434,7 @@
   const CHIPS = { platform: (v) => `Plataforma: <b>${D.PLATFORMS[v]}</b>`, objective: (v) => `Objetivo: <b>${D.OBJECTIVES[v]}</b>`, device: (v) => `Dispositivo: <b>${D.DEVICES[v]}</b>`, gender: (v) => `Sexo: <b>${D.GENDERS[v]}</b>`, age: (v) => `Idade: <b>${D.AGES[v]}</b>`, country: (v) => `País: <b>${D.COUNTRIES[v]}</b>`, city: (v) => `Cidade: <b>${D.CITIES[v].name}</b>`, campaign: (v) => `Campanha: <b>${D.CAMPAIGNS[v].n}</b>`, format: (v) => `Formato: <b>${v}</b>`, group: (v) => { const g = S.groups.find((x) => x.id === v); return `Grupo: <b>${g ? g.name : ''}</b>`; } };
   function syncTop() {
     const p = PG[S.page]; $('#t-eye').textContent = `${String(S.page + 1).padStart(2, '0')} / ${String(PG.length).padStart(2, '0')}`; $('#t-title').textContent = p.t; $('#t-sub').textContent = p.s;
-    $('#f-period').value = String(S.period); $('#f-plat').value = S.f.platform == null ? '' : String(S.f.platform); $('#f-obj').value = S.f.objective == null ? '' : String(S.f.objective);
+    $('#f-period').value = String(S.period); if (AGENCY && $('#f-cli')) $('#f-cli').value = S.f.client == null ? '' : String(S.f.client); $('#f-plat').value = S.f.platform == null ? '' : String(S.f.platform); $('#f-obj').value = S.f.objective == null ? '' : String(S.f.objective);
     $('#f-grp').innerHTML = '<option value="">Todas as campanhas</option>' + S.groups.map((g) => `<option value="${g.id}">${g.name}</option>`).join(''); $('#f-grp').value = S.f.group || '';
     const keys = Object.keys(CHIPS).filter((k) => S.f[k] != null && !['platform', 'objective', 'group'].includes(k) || (['platform', 'objective', 'group'].includes(k) && S.f[k] != null && false));
     const extra = ['campaign', 'format'].filter((k) => S.f[k] != null);
@@ -441,6 +445,7 @@
     void keys;
   }
   function render() {
+    D.CAMPAIGNS.forEach((c) => { c.n = S.f.client != null ? c.own : c.full; });
     refreshGroup(); syncTop();
     const noSync = D.rows.length === 0; const empty = noSync || cur().length === 0; $('#banner').hidden = !empty; $('#banner').firstChild.textContent = noSync ? 'Ainda não há dados sincronizados nos últimos 60 dias para este cliente.' : 'Nenhum dado para esta combinação de filtros. '; $('#banner button').hidden = noSync;
     $$('[data-seg]').forEach((b) => b.setAttribute('aria-pressed', String(S.metric[b.dataset.seg] === b.dataset.v)));
@@ -455,6 +460,7 @@
     $('#dots').innerHTML = PG.map((p, i) => `<button type="button" data-go="${i}" aria-label="${p.t}"></button>`).join('');
     $('#stage').innerHTML = PG.map((p) => `<section class="page" id="pg-${p.id}" style="grid-template-rows:${ROWS[p.id]}">${HTML[p.id]()}</section>`).join('');
     const st = document.createElement('style'); st.textContent = r3; document.head.appendChild(st);
+    if (AGENCY) { const sel = document.createElement('select'); sel.className = 'sel'; sel.id = 'f-cli'; sel.setAttribute('aria-label', 'Cliente'); sel.innerHTML = '<option value="">Todos os clientes</option>' + D.CLIENTS.map((n, i) => `<option value="${i}">${n}</option>`).join(''); $('#f-period').before(sel); sel.addEventListener('change', (e) => { S.f.client = e.target.value === '' ? null : +e.target.value; render(); }); }
     $('#f-plat').innerHTML = '<option value="">Todas as plataformas</option>' + D.PLATFORMS.map((n, i) => `<option value="${i}">${n}</option>`).join('');
     $('#f-obj').innerHTML = '<option value="">Todos os objetivos</option>' + D.OBJECTIVES.map((n, i) => `<option value="${i}">${n}</option>`).join('');
   }
@@ -507,7 +513,7 @@
   function init() {
     const saved = store.get('zf-painel-tema', 'light'); document.documentElement.dataset.theme = saved === 'dark' ? 'dark' : 'light';
     build(); wire();
-    $('.foot .zf span').textContent = 'Dados reais sincronizados • até ' + D.END.split('-').reverse().join('/') + ' • ' + D.currency;
+    $('.foot .zf span').textContent = (AGENCY ? 'Carteira: ' + D.CLIENTS.length + ' clientes • ' : '') + 'Dados reais sincronizados • até ' + D.END.split('-').reverse().join('/') + ' • ' + D.currency;
     render();
     const hash = (location.hash || '').replace('#', ''); const hi = PG.findIndex((p) => p.id === hash); if (hi > 0) go(hi);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => render());
@@ -515,8 +521,8 @@
   init();
   }
   // Os atalhos de navegação não dependem da coleta de dados: continuam úteis se a coleta falhar.
-  (function initLinks() { const $1 = (s) => document.querySelector(s); const admin = new URLSearchParams(location.search).get('admin') === '1'; const rep = $1('#lk-reports'); const ag = $1('#lk-agency'); if (rep) rep.href = '/' + encodeURIComponent(SLUG) + '/reports'; if (ag) ag.hidden = !admin; })();
-  fetch('/' + SLUG + '/painel/dados', { credentials: 'same-origin' })
+  (function initLinks() { const $1 = (s) => document.querySelector(s); const admin = new URLSearchParams(location.search).get('admin') === '1'; const rep = $1('#lk-reports'); const ag = $1('#lk-agency'); if (rep) { rep.href = AGENCY ? '/admin/organizations' : '/' + encodeURIComponent(SLUG) + '/reports'; if (AGENCY) { rep.title = 'Clientes'; rep.setAttribute('aria-label', 'Clientes'); } } if (ag) { ag.hidden = !admin; if (AGENCY) { ag.title = 'Visão da agência e gestão'; ag.setAttribute('aria-label', 'Visão da agência e gestão'); } } })();
+  fetch(AGENCY ? '/admin/painel/dados' : '/' + SLUG + '/painel/dados', { credentials: 'same-origin' })
     .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
     .then((raw) => boot(adapt(raw)))
     .catch(() => { document.body.insertAdjacentHTML('afterbegin', '<div class="nodata" style="margin:24px"><b>Não foi possível carregar os dados do painel.</b><span>Atualize a página ou entre novamente.</span></div>'); });
