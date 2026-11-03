@@ -7,13 +7,13 @@ let superAdmin=false,denied=false,reads=0;
 const db={from(){reads++;const builder={select(){return builder;},eq(){return builder;},single:async()=>({data:{}})};return builder;}};
 const {default:Layout}=loadTypescript<typeof import('../src/app/(tenant)/[organizationSlug]/layout')>(new URL('../src/app/(tenant)/[organizationSlug]/layout.tsx',import.meta.url),(id,native)=>{
  if(id==='@/lib/auth/session')return {tenant:async()=>{if(denied)throw new Error('Denied');return {db,org:{id:'synthetic-org',name:'Organização sintética',slug:'synthetic'},superAdmin};},dashboardConfig:async()=>({enabled_pages:['overview']})};
- if(id==='@/components/navigation')return {Navigation:()=>React.createElement('aside',{'data-report-navigation':''},'ADMIN_NAVIGATION')};
+ if(id==='@/components/navigation')return {Navigation:(props:{canShare:boolean;slug:string})=>React.createElement('aside',{'data-report-navigation':''},'ADMIN_NAVIGATION share='+String(props.canShare)+' slug='+props.slug)};
  if(id==='@/components/dashboard/report-studio-frame')return {ReportStudioFrame:({children}:{children:React.ReactNode})=>React.createElement('div',null,children)};
  return native(id);
 });
-test('client dashboard omits the navigation tree on the server and uses a full-width canvas',async()=>{
+test('client dashboard uses the same side menu as the agency, without administrative areas',async()=>{
  superAdmin=false;denied=false;const html=renderToStaticMarkup(await Layout({params:Promise.resolve({organizationSlug:'synthetic'}),children:'DASHBOARD'}));
- assert.ok(!html.includes('ADMIN_NAVIGATION'));assert.ok(!html.includes('data-report-navigation'));assert.ok(!html.includes('lg:ml-'));assert.ok(html.includes('data-client-dashboard=""'));assert.ok(html.includes('Organização sintética'));assert.ok(html.includes('action="/auth/signout"'));assert.ok(html.includes('DASHBOARD'));assert.ok(html.includes('href="/"'));assert.ok(html.includes('Dashboards'));assert.ok(html.includes('href="/synthetic/reports"'));
+ assert.ok(html.includes('data-report-navigation'));assert.ok(html.includes('share=false slug=synthetic'));assert.ok(html.includes('lg:ml-[272px]'));assert.ok(!html.includes('data-client-dashboard'));assert.ok(html.includes('DASHBOARD'));
 });
 test('verified agency administrators retain their navigation and tenant failures stop branding reads',async()=>{
  superAdmin=true;denied=false;const html=renderToStaticMarkup(await Layout({params:Promise.resolve({organizationSlug:'synthetic'}),children:'DASHBOARD'}));assert.ok(html.includes('ADMIN_NAVIGATION'));assert.ok(html.includes('lg:ml-[272px]'));assert.ok(!html.includes('data-client-dashboard=""'));
