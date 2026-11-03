@@ -220,3 +220,15 @@ td .name { display: inline-block; max-width: 190px; overflow: hidden; text-overf
 .kpi svg.sp { height: 20px; }
 .nodata { display: flex; flex-direction: column; gap: 6px; justify-content: center; align-items: flex-start; height: 100%; padding: 14px; color: var(--mut); font-size: 12.5px; line-height: 1.55; }
 .nodata b { color: var(--tx); font-size: 13px; }
+
+/* Funil 3D interativo */
+
+.funnel3d .fseg { cursor: pointer; transform-box: fill-box; transform-origin: 50% 0; animation: fdrop .55s cubic-bezier(.22,1,.36,1) both; animation-delay: var(--d); transition: filter .18s, opacity .18s; outline: none; }
+.funnel3d .fseg:hover, .funnel3d .fseg:focus-visible { filter: brightness(1.12) drop-shadow(0 4px 10px rgba(15,40,90,.28)); }
+.funnel3d .fseg.on path:first-child { stroke: var(--tx); stroke-width: 2; }
+.funnel3d .fseg:focus-visible path:first-child { stroke: var(--acc); stroke-width: 2.5; }
+@keyframes fdrop { from { opacity: 0; transform: translateY(-14px) scaleY(.6); } to { opacity: 1; transform: none; } }
+.ftip { position: absolute; z-index: 5; pointer-events: none; min-width: 170px; display: grid; gap: 2px; padding: 9px 11px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); box-shadow: 0 12px 30px rgba(0,0,0,.18); font-size: 12px; color: var(--mut); }
+.ftip b { color: var(--tx); font-size: 12.5px; }
+.ftip span:nth-of-type(1) { color: var(--tx); font-size: 16px; font-weight: 800; }
+@media (prefers-reduced-motion: reduce) { .funnel3d .fseg { animation: none; } .funnel3d .fdrops { display: none; } }
