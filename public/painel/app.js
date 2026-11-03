@@ -81,7 +81,7 @@
 
   D.rows.forEach((r) => { r.w = (D.dateOf(r.d).getDay() + 6) % 7; });
   const CAMP30 = D.CAMPAIGNS.map(() => 0); D.rows.forEach((r) => { if (r.d >= D.DAYS - 30) CAMP30[r.c] += r.sp; });
-  const inGroup = (g, ci) => { const c = D.CAMPAIGNS[ci]; if (g.objectives.length && !g.objectives.includes(c.o)) return false; if (g.platforms.length && !g.platforms.includes(D.PLATFORM_IDS[c.p])) return false; if (g.q && !c.n.toLowerCase().includes(g.q.toLowerCase())) return false; if (g.min && CAMP30[ci] < g.min) return false; return true; };
+  const inGroup = (g, ci) => { const c = D.CAMPAIGNS[ci]; if (g.objectives.length && !g.objectives.includes(c.o)) return false; if (g.platforms.length && !g.platforms.includes(D.PLATFORM_IDS[c.p])) return false; if (g.q && !(c.full || c.n).toLowerCase().includes(g.q.toLowerCase())) return false; if (g.min && CAMP30[ci] < g.min) return false; return true; };
   function refreshGroup() { const g = S.groups.find((x) => x.id === S.f.group); GSET = g ? new Set(D.CAMPAIGNS.map((_, i) => i).filter((i) => inGroup(g, i))) : null; if (S.f.group && !g) S.f.group = null; }
 
   /* ---------- filtros cruzados e agregação ---------- */
