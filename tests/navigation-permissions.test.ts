@@ -12,7 +12,7 @@ const {Navigation}=loadTypescript<{Navigation:(props:{slug:string;canShare:boole
  });
 test('viewer navigation retains dashboards and filters while hiding administrative settings',()=>{
  const html=renderToStaticMarkup(createElement(Navigation,{slug:'fixture-a',canShare:false,enabled:['overview','paid','external']}));
- assert.ok(html.includes('/fixture-a/overview'));
+ assert.ok(html.includes('/fixture-a/painel'));
  assert.ok(html.includes('/fixture-a/paid'));
  assert.ok(!html.includes('/fixture-a/settings/'));
  assert.ok(!html.includes('/fixture-a/sharing'));

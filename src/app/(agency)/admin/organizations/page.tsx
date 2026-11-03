@@ -60,7 +60,7 @@ export default async function Page() {
                 </Link>
               </Button>
               <Button asChild variant="outline">
-                <Link href={`/${organization.slug}/overview`}>
+                <Link href={`/${organization.slug}/painel`}>
                   Abrir workspace <ArrowUpRight size={16} />
                 </Link>
               </Button>
