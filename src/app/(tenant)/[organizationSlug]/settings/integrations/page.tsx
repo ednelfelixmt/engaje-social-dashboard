@@ -87,7 +87,8 @@ export default async function Page({params: params_, searchParams: searchParams_
   const connected = operationalIntegrations.filter(item => item.status === 'connected' && item.is_enabled).length;
   const attention = failingIntegrations.length;
   const preparedProviders = new Set(integrations.map((item) => item.provider));
-  const official = connectorCatalog.filter((item) => item.group === 'official');
+  // Google Ads chega pelo extrator: o cartão dele é o do Windsor.ai abaixo, não um conector OAuth.
+  const official = connectorCatalog.filter((item) => item.group === 'official' && item.provider !== 'google_ads');
   const crms = connectorCatalog.filter((item) => item.group === 'crm');
 
   return (
