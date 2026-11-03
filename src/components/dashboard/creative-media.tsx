@@ -10,7 +10,7 @@ export function CreativeMedia({primary,thumbnail,kind,title}:{primary:string|nul
  const current=distinct[index];
  const failed=()=>{setPlaying(false);setIndex(i=>i+1);};
  const video=kind==='video';
- return <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-xl bg-[#090e17]">
+ return <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-xl bg-[#0e0e0e]">
   {current?video&&playing?
     <video src={primary||undefined} poster={thumbnail||undefined} controls autoPlay playsInline preload="metadata" onError={failed} className="h-full w-full object-contain" aria-label={title}/>:
     <>

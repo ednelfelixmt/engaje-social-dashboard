@@ -15,7 +15,7 @@ void main(){
   float glow=exp(-dot(q,q)*4.)*.035;
   float vig=1.-smoothstep(.25,1.15,length(q*vec2(1.,1.15)));
   float l=clamp((edge+spot+glow)*vig,0.,.7);
-  vec3 col=vec3(.9,.93,1.)*l;
+  vec3 tint=mix(vec3(.62,.78,1.),vec3(.78,.65,1.),lobes);vec3 col=mix(vec3(.9,.93,1.),tint,.65)*l;
   col+=(h21(gl_FragCoord.xy+fract(u_t)*91.7)-.5)*.045*(l*3.+.2);
   gl_FragColor=vec4(clamp(col,0.,1.),1.);
 }`;

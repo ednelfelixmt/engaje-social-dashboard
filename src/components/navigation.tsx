@@ -10,7 +10,7 @@ type NavGroup={id:string;label:string;icon:LucideIcon;items:NavItem[];/** Grupos
 
 const workspaceGroups:NavGroup[]=[
   {id:'overview',label:'Visão geral',icon:LayoutDashboard,items:[{key:'overview',label:'Visão geral',icon:LayoutDashboard,requires:'overview'}]},
-  {id:'intelligence',label:'Inteligência estratégica',icon:ChartNoAxesCombined,items:[{key:'reports/analytics',label:'Análise 360',icon:ChartNoAxesCombined,requires:'overview'},{key:'reports',label:'Central de relatórios',icon:Database},{key:'intelligence',label:'Análises e relatórios',icon:ChartNoAxesCombined,requires:'overview'},{key:'reports/methodology',label:'Guia de métricas',icon:Database,requires:'overview'}]},
+  {id:'intelligence',label:'Inteligência estratégica',icon:ChartNoAxesCombined,items:[{key:'painel',label:'Painel de marketing',icon:ChartNoAxesCombined,requires:'overview'},{key:'reports/analytics',label:'Análise 360',icon:ChartNoAxesCombined,requires:'overview'},{key:'reports',label:'Central de relatórios',icon:Database},{key:'intelligence',label:'Análises e relatórios',icon:ChartNoAxesCombined,requires:'overview'},{key:'reports/methodology',label:'Guia de métricas',icon:Database,requires:'overview'}]},
   {id:'meta',label:'Meta Ads',icon:Megaphone,collapsible:true,defaultOpen:true,items:[
     {key:'meta_ads',label:'Campanhas Meta Ads',icon:ChartNoAxesCombined,requires:'paid'},
     {key:'reports/meta-audience',label:'Público e dispositivos',icon:Users,requires:'paid'},
@@ -78,7 +78,7 @@ export function Navigation({slug,admin=false,enabled=[],canShare=false,organizat
     return next;
   });
 
-  return <><aside suppressHydrationWarning data-report-navigation data-collapsed={collapsed} data-mobile-open={mobileOpen} className="sticky top-0 z-40 flex w-full flex-col border-b border-white/[.08] bg-[#090d15] lg:fixed lg:inset-y-0 lg:w-[272px] lg:border-b-0 lg:border-r">
+  return <><aside suppressHydrationWarning data-report-navigation data-collapsed={collapsed} data-mobile-open={mobileOpen} className="sticky top-0 z-40 flex w-full flex-col border-b border-white/[.08] bg-[#0d0d0d] lg:fixed lg:inset-y-0 lg:w-[272px] lg:border-b-0 lg:border-r">
     <div className="navigation-brand"><Link prefetch href={slug?`/${encodeURIComponent(slug)}/reports/analytics`:'/admin'} title={organizationName??'Engaje Mídia Hub'}><span className="navigation-logo">{logoUrl&&!logoFailed?<img src={logoUrl} alt="" onError={()=>setLogoFailed(true)}/>:organizationName?<b>{organizationName.split(/\s+/).map(s=>s[0]).slice(0,2).join('')}</b>:<Crown className="text-primary" size={21}/>}</span><div className="navigation-label"><strong>{organizationName??'Engaje Mídia Hub'}</strong><small>MARKETING INTELLIGENCE</small></div></Link><button type="button" className="navigation-mobile-toggle" aria-label="Abrir navegação" aria-expanded={mobileOpen} onClick={()=>setMobileOpen(!mobileOpen)}><Menu size={21}/></button></div>
     {!admin&&canShare?<Link href="/admin" className="navigation-agency-return" aria-label="Voltar à agência" title="Voltar à agência"><ArrowLeft size={18}/><span className="navigation-label">Voltar à agência</span></Link>:null}
     <button type="button" className="navigation-collapse" aria-label={collapsed?'Expandir menu lateral':'Recolher menu lateral'} aria-expanded={!collapsed} onClick={collapse}>{collapsed?<PanelLeftOpen size={19}/>:<PanelLeftClose size={19}/>}<span className="navigation-label">Recolher menu</span></button>

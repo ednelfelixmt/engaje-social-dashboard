@@ -122,7 +122,7 @@ export function Funnel({steps: suppliedSteps, values, currency = 'BRL', comparin
     isLeak: index === leak && index > 0,
   }));
 
-  return <div className="mt-6 overflow-hidden rounded-[24px] border border-white/[.08] bg-[#090d15]/80" data-funnel-cone>
+  return <div className="mt-6 overflow-hidden rounded-[24px] border border-white/[.08] bg-[#0d0d0d]/80" data-funnel-cone>
     <div className="grid border-b border-white/[.08] sm:grid-cols-3">
       <div className="flex items-center gap-3 border-b border-white/[.08] px-5 py-4 sm:border-b-0 sm:border-r"><Route className="shrink-0 text-cyan-300" size={18} /><div className="min-w-0"><p className="truncate text-[9px] font-bold uppercase tracking-[.16em] text-zinc-500">Entrada · {steps[0].label}</p><strong className="data-value mt-1 block text-lg">{number(firstValue)}</strong></div></div>
       <div className="flex items-center gap-3 border-b border-white/[.08] px-5 py-4 sm:border-b-0 sm:border-r"><CheckCircle2 className="shrink-0 text-emerald-400" size={18} /><div className="min-w-0"><p className="truncate text-[9px] font-bold uppercase tracking-[.16em] text-zinc-500">Conversão final · {steps.at(-1)?.label}</p><strong className="data-value mt-1 block text-lg">{totalConversion == null ? '—' : `${number(totalConversion, totalConversion < 1 ? 2 : 1)}%`}</strong></div></div>

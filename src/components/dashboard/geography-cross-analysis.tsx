@@ -7,7 +7,7 @@ const dimensions=['Impressões','Cliques','Leads','Investimento'] as const;
 type Dimension=typeof dimensions[number];
 const getValue=(p:AudiencePoint,k:Dimension)=>breakdownMetricValue(p,k==='Impressões'?'impressions':k==='Cliques'?'clicks':k==='Leads'?'leads':'spend');
 const format=(v:number|null,k:Dimension,c:string)=>v==null?'—':k==='Investimento'?money(v,c):number(v);
-const panel='rounded-2xl border border-white/10 bg-[#101722] p-4';
+const panel='rounded-2xl border border-white/10 bg-[#161616] p-4';
 export function RegionPerformance({states,cities,currency}:{states:AudiencePoint[];cities:AudiencePoint[];currency:string}){
  const [metric,setMetric]=useState<Dimension>('Impressões');
  const [group,setGroup]=useState<'state'|'city'>('state');
