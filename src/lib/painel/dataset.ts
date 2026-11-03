@@ -8,22 +8,24 @@ const FORMAT_NAMES:Record<string,string>={image:'Imagem',video:'Vídeo',carousel
 export type BreakdownType='gender'|'age'|'device'|'state'|'city';
 export const BREAKDOWN_TYPES:BreakdownType[]=['gender','age','device','state','city'];
 
-export type AdRow=Pick<Row<'metrics_ads'>,'metric_date'|'platform'|'account_id'|'campaign_id'|'campaign_name'|'ad_id'|'spend'|'revenue'|'impressions'|'clicks'|'page_views'|'leads'|'message_leads'|'checkouts'|'purchases'>;
-export type BreakdownRow=Pick<Row<'metrics_ads_breakdowns'>,'metric_date'|'platform'|'campaign_id'|'dimension_type'|'dimension_value'|'dimension_label'|'spend'|'revenue'|'impressions'|'clicks'|'leads'|'message_leads'|'purchases'>;
-export type CrmRow=Pick<Row<'metrics_crm'>,'metric_date'|'channel'|'revenue'|'purchases'|'leads'>;
+export type AdRow=Pick<Row<'metrics_ads'>,'metric_date'|'platform'|'account_id'|'campaign_id'|'campaign_name'|'ad_id'|'spend'|'revenue'|'impressions'|'clicks'|'page_views'|'leads'|'message_leads'|'checkouts'|'purchases'>&{organization_id?:string};
+export type BreakdownRow=Pick<Row<'metrics_ads_breakdowns'>,'metric_date'|'platform'|'campaign_id'|'dimension_type'|'dimension_value'|'dimension_label'|'spend'|'revenue'|'impressions'|'clicks'|'leads'|'message_leads'|'purchases'>&{organization_id?:string};
+export type CrmRow=Pick<Row<'metrics_crm'>,'metric_date'|'channel'|'revenue'|'purchases'|'leads'>&{organization_id?:string};
 export type CreativeRow=Pick<Row<'creatives'>,'platform'|'campaign_id'|'ad_id'|'kind'|'name'|'thumbnail_url'>;
 
 export type PainelDataset={
   end:string;days:number;currency:string;
   platforms:{id:string;name:string}[];
-  campaigns:{id:string;n:string;p:number;o:number}[];
+  campaigns:{id:string;n:string;p:number;o:number;g?:number}[];
+  /** Modo agência: nomes dos clientes; `g` de cada campanha aponta para esta lista. */
+  clients?:string[];
   ads:{id:string;n:string;f:string;c:number;t:string|null}[];
   /** [dia, campanha, anúncio, impressões, cliques, gasto, leads, vendas, receita, visualizações da página, checkouts, presença] */
   rows:number[][];
   dims:Record<BreakdownType,string[]>;
   /** [dia, campanha, tipo, valor, impressões, cliques, gasto, leads, vendas, receita, presença] */
   brk:number[][];
-  /** [dia, canal, receita, compras, leads] */
+  /** [dia, canal, receita, compras, leads, cliente (modo agência; -1 fora dele)] */
   crm:(string|number)[][];
   crmChannels:string[];
 };
@@ -57,7 +59,9 @@ export function inferObjective(name:string,t:{imp:number;clk:number;ld:number;sl
   return 0;
 }
 
-export function buildPainelDataset(input:{end:string;currency:string;ads:AdRow[];breakdowns:BreakdownRow[];crm:CrmRow[];creatives:CreativeRow[]}):PainelDataset{
+export function buildPainelDataset(input:{end:string;currency:string;ads:AdRow[];breakdowns:BreakdownRow[];crm:CrmRow[];creatives:CreativeRow[];clients?:{id:string;name:string}[]}):PainelDataset{
+  const clientAt=new Map((input.clients??[]).map((c,i)=>[c.id,i]));
+  const scope=(org?:string)=>input.clients&&org?org+'|':'';
   const {end}=input;
   const platformIds:string[]=[];
   const platformOf=(id:string)=>{let i=platformIds.indexOf(id);if(i<0){platformIds.push(id);i=platformIds.length-1;}return i;};
@@ -67,17 +71,17 @@ export function buildPainelDataset(input:{end:string;currency:string;ads:AdRow[]
   const adIndex=new Map<string,number>();
   const ads:PainelDataset['ads']=[];
   const creativeByAd=new Map<string,CreativeRow>();
-  for(const c of input.creatives)if(c.ad_id)creativeByAd.set(`${c.platform}:${c.ad_id}`,c);
-  const campaignOf=(platform:string,id:string,name:string)=>{
-    const key=`${platform}:${id}`;let i=campaignIndex.get(key);
-    if(i===undefined){i=campaigns.length;campaignIndex.set(key,i);campaigns.push({id:key,n:name||id,p:platformOf(platform),o:0});campaignTotals.push({imp:0,clk:0,ld:0,sl:0,rv:0});}
+  for(const c of input.creatives)if(c.ad_id)creativeByAd.set(`${scope((c as {organization_id?:string}).organization_id)}${c.platform}:${c.ad_id}`,c);
+  const campaignOf=(platform:string,id:string,name:string,org?:string)=>{
+    const key=`${scope(org)}${platform}:${id}`;let i=campaignIndex.get(key);
+    if(i===undefined){i=campaigns.length;campaignIndex.set(key,i);const g=org!==undefined?clientAt.get(org):undefined;campaigns.push({id:key,n:name||id,p:platformOf(platform),o:0,...(g!==undefined?{g}:{})});campaignTotals.push({imp:0,clk:0,ld:0,sl:0,rv:0});}
     return i;
   };
   const rows:number[][]=[];
   for(const r of input.ads){
     const d=dayIndex(end,r.metric_date);if(d<0||d>=PAINEL_DAYS)continue;
-    const c=campaignOf(r.platform,r.campaign_id,r.campaign_name);
-    const adKey=`${r.platform}:${r.ad_id}`;let a=adIndex.get(adKey);
+    const c=campaignOf(r.platform,r.campaign_id,r.campaign_name,r.organization_id);
+    const adKey=`${scope(r.organization_id)}${r.platform}:${r.ad_id}`;let a=adIndex.get(adKey);
     if(a===undefined){
       const cr=creativeByAd.get(adKey);
       a=ads.length;adIndex.set(adKey,a);
@@ -101,7 +105,7 @@ export function buildPainelDataset(input:{end:string;currency:string;ads:AdRow[]
   for(const r of input.breakdowns){
     const type=r.dimension_type as BreakdownType;const t=BREAKDOWN_TYPES.indexOf(type);if(t<0)continue;
     const d=dayIndex(end,r.metric_date);if(d<0||d>=PAINEL_DAYS)continue;
-    const key=`${r.platform}:${r.campaign_id}`;const c=campaignIndex.get(key);if(c===undefined)continue;
+    const key=`${scope(r.organization_id)}${r.platform}:${r.campaign_id}`;const c=campaignIndex.get(key);if(c===undefined)continue;
     const text=label(type,r);let v=dims[type].indexOf(text);if(v<0){dims[type].push(text);v=dims[type].length-1;}
     brk.push([d,c,t,v,n(r.impressions),n(r.clicks),n(r.spend),n(r.leads),n(r.purchases),n(r.revenue),presence(r)]);
   }
@@ -115,8 +119,8 @@ export function buildPainelDataset(input:{end:string;currency:string;ads:AdRow[]
   for(const r of input.crm){
     const d=dayIndex(end,r.metric_date);if(d<0||d>=PAINEL_DAYS)continue;
     const ch=r.channel||'Sem canal';let i=crmChannels.indexOf(ch);if(i<0){crmChannels.push(ch);i=crmChannels.length-1;}
-    crm.push([d,i,n(r.revenue),n(r.purchases),n(r.leads)]);
+    crm.push([d,i,n(r.revenue),n(r.purchases),n(r.leads),r.organization_id!==undefined?clientAt.get(r.organization_id)??-1:-1]);
   }
   return {end,days:PAINEL_DAYS,currency:input.currency,
-    platforms:platformIds.map(id=>({id,name:PLATFORM_NAMES[id]??id})),campaigns,ads,rows,dims,brk,crm,crmChannels};
+    platforms:platformIds.map(id=>({id,name:PLATFORM_NAMES[id]??id})),campaigns,ads,rows,dims,brk,crm,crmChannels,...(input.clients?{clients:input.clients.map(c=>c.name)}:{})};
 }
