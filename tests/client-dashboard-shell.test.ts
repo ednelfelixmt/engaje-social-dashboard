@@ -26,8 +26,8 @@ const {default:Home}=loadTypescript<typeof import('../src/app/page')>(new URL('.
  if(id==='next/navigation')return {redirect:(url:string)=>{throw new Error('REDIRECT:'+url);}};
  return native(id);
 });
-test('login entry opens the BI canvas for clients while administrators retain the agency home',async()=>{
- superAdmin=false;await assert.rejects(Home(),/REDIRECT:\/synthetic\/reports\/analytics/);
- homeOrganizations.push({id:'second',name:'Segunda sintética',slug:'second'});const html=renderToStaticMarkup(await Home());assert.ok(html.includes('/synthetic/reports/analytics'));assert.ok(html.includes('/second/reports/analytics'));assert.ok(!html.includes('/overview'));
+test('login entry opens the marketing panel for clients while administrators retain the agency home',async()=>{
+ superAdmin=false;await assert.rejects(Home(),/REDIRECT:\/synthetic\/painel/);
+ homeOrganizations.push({id:'second',name:'Segunda sintética',slug:'second'});const html=renderToStaticMarkup(await Home());assert.ok(html.includes('/synthetic/painel'));assert.ok(html.includes('/second/painel'));assert.ok(!html.includes('/overview'));
  superAdmin=true;await assert.rejects(Home(),/REDIRECT:\/admin/);homeOrganizations=homeOrganizations.slice(0,1);
 });

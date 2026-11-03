@@ -514,6 +514,8 @@
   }
   init();
   }
+  // Os atalhos de navegação não dependem da coleta de dados: continuam úteis se a coleta falhar.
+  (function initLinks() { const $1 = (s) => document.querySelector(s); const admin = new URLSearchParams(location.search).get('admin') === '1'; const rep = $1('#lk-reports'); const ag = $1('#lk-agency'); if (rep) rep.href = '/' + encodeURIComponent(SLUG) + '/reports'; if (ag) ag.hidden = !admin; })();
   fetch('/' + SLUG + '/painel/dados', { credentials: 'same-origin' })
     .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
     .then((raw) => boot(adapt(raw)))
