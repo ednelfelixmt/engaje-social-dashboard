@@ -7,10 +7,10 @@ const validCount = (value: unknown): value is number => typeof value === 'number
 
 /** Provider IDs are opaque: retain internal spaces/delimiters but never accept empty or padded identities. */
 function validFunnelSourceId(value: unknown): value is string {
-  // Control characters are not legitimate opaque source identity: reject
-  // invisible C0/C1 and DEL delimiters without rewriting provider IDs.
+  // Reject ambiguous invisible Unicode controls and malformed UTF-16 source IDs.
+  // U+200D is deliberately allowed for visible joined-emoji opaque identifiers.
   return typeof value === 'string' && value.length > 0 && value.trim() === value
-    && !/[\u0000-\u001f\u007f-\u009f]/.test(value);
+    && !/[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u200b\u200c\u200e\u200f\u2028-\u202e\u2060-\u206f\ufeff\uD800-\uDFFF]/u.test(value);
 }
 
 function validFunnelIdentity(row: CampaignPerformance): boolean {

@@ -119,3 +119,34 @@ test('target reference boundary accepts RFC v7 tenant and keeps observed zero di
  assert.equal(get(report,'target_leads').actual,0);
  assert.equal(get(buildTargetReferences([],settings,authorized),'target_spend').status,'insufficient_data');
 });
+
+test('count references reject fractional and unsafe integers without inventing comparable targets',()=>{
+ for(const field of ['target_leads','target_purchases'] as const){
+  for(const invalid of [0.5,1.25,Number.MAX_SAFE_INTEGER+1,-0.5]){
+   const report=buildTargetReferences(facts(),config({[field]:invalid}),scope);
+   const row=get(report,field);
+   assert.equal(row.status,'invalid_target',field+' / '+invalid);
+   assert.equal(row.target,null);
+   assert.equal(row.difference,null);
+   assert.equal(row.actual,field==='target_leads'?10:null);
+  }
+ }
+});
+
+test('safe integer count references preserve observed zero and decimal monetary or ratio targets',()=>{
+ const report=buildTargetReferences(facts(),config({
+  target_leads:10,target_purchases:Number.MAX_SAFE_INTEGER,target_spend:199.95,target_cpl:19.5,target_roas:1.75,
+ }),scope);
+ assert.equal(get(report,'target_leads').status,'equal');
+ assert.equal(get(report,'target_leads').target,10);
+ assert.equal(get(report,'target_purchases').status,'unsupported');
+ assert.equal(get(report,'target_purchases').target,Number.MAX_SAFE_INTEGER);
+ assert.equal(get(report,'target_spend').status,'above');
+ assert.equal(get(report,'target_spend').target,199.95);
+ assert.equal(get(report,'target_cpl').target,19.5);
+ assert.equal(get(report,'target_roas').target,1.75);
+ const zeros=buildTargetReferences(facts().map(row=>({...row,leads:0})),config({target_leads:0,target_purchases:0}),scope);
+ assert.equal(get(zeros,'target_leads').status,'equal');
+ assert.equal(get(zeros,'target_leads').actual,0);
+ assert.equal(get(zeros,'target_purchases').target,0);
+});

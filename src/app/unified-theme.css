@@ -1,0 +1,43 @@
+/* Padrão único do Mídia Hub: o mesmo visual do painel de marketing em todas as telas da agência e do cliente.
+   Menu lateral preto da ZF, tema claro com cartões brancos, destaque azul e tipografia Manrope.
+   Carregado por último para prevalecer sobre os estilos antigos de cada área. */
+body { font-family: Manrope, Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+
+.report-studio-frame {
+  --studio-accent: #2563eb;
+  --studio-tint: #e8efff;
+  --primary-rgb: 37 99 235;
+  --zf-rail: #0b0b0d;
+  --zf-rail-line: #1d1e24;
+  --zf-rail-text: #c5cad6;
+  --zf-rail-muted: #858b99;
+}
+.report-studio-frame[data-studio-theme=night] { --studio-accent: #6ea0ff; --studio-tint: #1c2c4d; }
+
+/* Menu lateral: trilho preto da ZF, igual ao do painel */
+body .report-studio-frame aside[data-report-navigation][data-report-navigation] { background: var(--zf-rail); border-color: var(--zf-rail-line); color: var(--zf-rail-text); }
+body .report-studio-frame [data-report-navigation] a,
+body .report-studio-frame [data-report-navigation] button,
+body .report-studio-frame [data-report-navigation] :is(.text-zinc-500, .text-zinc-600) { color: var(--zf-rail-text); }
+body .report-studio-frame [data-report-navigation] a[href="/"],
+body .report-studio-frame [data-report-navigation] strong { color: #fff; }
+body .report-studio-frame [data-report-navigation] :is(.eyebrow, small, .navigation-brand span) { color: var(--zf-rail-muted); -webkit-text-fill-color: currentColor; background: none; }
+body .report-studio-frame [data-report-navigation] a[aria-current=page] { color: #fff; background: rgba(255, 255, 255, .1); box-shadow: inset 3px 0 #fff; border-color: transparent; }
+body .report-studio-frame [data-report-navigation] a:not([aria-current]):hover,
+body .report-studio-frame [data-report-navigation] button:hover { background: rgba(255, 255, 255, .06); color: #fff; }
+body .report-studio-frame [data-report-navigation] :is(form, hr, .border-t, .border-b) { border-color: var(--zf-rail-line); }
+body .report-studio-frame [data-report-navigation] :is(.navigation-agency-return, .navigation-collapse) { border-color: var(--zf-rail-line); background: transparent; color: var(--zf-rail-text); }
+
+/* Tema claro: classes pensadas para o fundo escuro ganham equivalentes legíveis */
+.report-studio-frame[data-studio-theme=day] :is(.text-white, .text-white\/85):not([class*="bg-"]):not([data-report-navigation]):not([data-report-navigation] *) { color: var(--studio-text); }
+.report-studio-frame[data-studio-theme=day] :is(.text-zinc-100, .text-zinc-200, .text-zinc-300):not([data-report-navigation]):not([data-report-navigation] *) { color: var(--studio-text); }
+.report-studio-frame[data-studio-theme=day] :is(.text-amber-100, .text-amber-200, .text-amber-300) { color: #8a5a00; }
+.report-studio-frame[data-studio-theme=day] :is(.text-emerald-100, .text-emerald-200, .text-emerald-300, .text-emerald-400) { color: var(--studio-good); }
+.report-studio-frame[data-studio-theme=day] :is(.text-red-200, .text-red-300, .text-red-400) { color: var(--studio-bad); }
+.report-studio-frame[data-studio-theme=day] :is(.border-white\/5, .border-white\/10, .border-white\/15, .border-white\/20, .border-white\/25):not([data-report-navigation]):not([data-report-navigation] *) { border-color: var(--studio-border); }
+.report-studio-frame[data-studio-theme=day] .ring-white\/15 { --tw-ring-color: var(--studio-border); }
+.report-studio-frame[data-studio-theme=day] :is(.bg-white\/5, .bg-white\/10, .bg-black\/10, .bg-black\/15, .bg-black\/20):not([data-report-navigation]):not([data-report-navigation] *) { background-color: var(--studio-soft); }
+.report-studio-frame[data-studio-theme=day] :is(.bg-\[\#0d0d0d\], .bg-\[\#101010\], .bg-\[\#131313\], .bg-\[\#141419\], .bg-\[\#161616\], .bg-\[\#191919\]):not([data-report-navigation]):not([data-report-navigation] *) { background-color: var(--studio-surface); color: var(--studio-text); }
+.report-studio-frame[data-studio-theme=day] .display-title { background: linear-gradient(120deg, #0f1b3d 10%, #2563eb 60%, #7c3aed 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.report-studio-frame[data-studio-theme=day] .glass-panel::before,
+.report-studio-frame[data-studio-theme=day] .glass-panel::after { opacity: .35; }

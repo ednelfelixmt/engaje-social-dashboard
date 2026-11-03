@@ -9,9 +9,13 @@ export type AgencyClientCard = {
 export type AgencyClientFilter = 'all' | 'connected' | 'attention' | 'no_data';
 export type AgencyChartMetric = 'spend' | 'leads';
 
+/** Search-only accent/space folding: keep names, identities and tenant facts unchanged. */
+const searchKey = (value: string): string => value.normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ').trim();
+
 export function selectAgencyClients(clients: readonly AgencyClientCard[], query: string, filter: AgencyClientFilter) {
-  const search = query.trim().toLocaleLowerCase('pt-BR');
-  return clients.filter(client => client.name.toLocaleLowerCase('pt-BR').includes(search) &&
+  const search = searchKey(query);
+  return clients.filter(client => searchKey(client.name).includes(search) &&
     (filter === 'all' || filter === 'connected' && client.connected ||
       filter === 'attention' && !client.connected || filter === 'no_data' && !client.hasData));
 }
