@@ -507,6 +507,7 @@
   function init() {
     const saved = store.get('zf-painel-tema', 'light'); document.documentElement.dataset.theme = saved === 'dark' ? 'dark' : 'light';
     build(); wire();
+    { const q = new URLSearchParams(location.search); const admin = q.get('admin') === '1'; $('#lk-reports').href = '/' + encodeURIComponent(SLUG) + '/reports'; $('#lk-agency').hidden = !admin; }
     $('.foot .zf span').textContent = 'Dados reais sincronizados • até ' + D.END.split('-').reverse().join('/') + ' • ' + D.currency;
     render();
     const hash = (location.hash || '').replace('#', ''); const hi = PG.findIndex((p) => p.id === hash); if (hi > 0) go(hi);
