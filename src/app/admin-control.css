@@ -58,3 +58,22 @@
 @media(max-width:640px){.admin-client-row>summary{grid-template-columns:40px minmax(0,1fr) 65px;gap:10px}.admin-client-edit{grid-column:2/-1;justify-content:end;font-size:11px}.admin-client-actions{width:100%;grid-template-columns:1fr}.admin-client-actions>a{white-space:normal;height:auto;min-height:40px}.admin-collection-toolbar>label{width:100%}.agency-bi-panel{padding:16px}.agency-bi-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.agency-chart-summary{gap:8px}.agency-chart-summary strong{font-size:18px}.agency-chart-summary span{font-size:10px;min-height:28px}.agency-chart-summary small{display:block;font-size:10px}.agency-bi-funnel{grid-template-columns:1fr}.agency-bi-trend{height:270px}.agency-ranking-name{font-size:11px}.agency-ranking-name strong{font-size:12px}.integration-catalog-card{grid-template-rows:auto}.integration-catalog-card>header{min-height:42px}}
 
 @media(max-width:640px){.integration-catalog-grid{grid-template-columns:1fr}.admin-collection-toolbar>select{width:100%;flex-basis:100%}}
+
+/* Integrações: cartões compactos com detalhes sob demanda */
+.integration-tile-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;align-items:start}
+.integration-tile{display:grid;gap:10px;border:1px solid var(--studio-border);border-radius:12px;padding:14px;background:var(--studio-surface);min-width:0}
+.integration-tile>header{display:flex;align-items:center;gap:10px;min-width:0}
+.integration-tile>header>div{min-width:0}
+.integration-tile h3{font-size:14px;font-weight:700;letter-spacing:-.02em;line-height:1.25}
+.integration-tile .integration-provider-icon{width:36px;height:36px;border-radius:10px;flex:none}
+.integration-tile-state{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--studio-muted);margin-top:2px}
+.integration-tile[data-live=true] .integration-tile-state{color:#15803d}
+.integration-tile .integration-tile-action{width:100%;height:34px;min-height:34px;font-size:12px;gap:6px}
+.integration-tile details{border-top:1px solid var(--studio-border);padding-top:8px;font-size:12px;color:var(--studio-muted)}
+.integration-tile summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11.5px;font-weight:600;color:var(--studio-muted)}
+.integration-tile summary b{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#fff3d6;color:#8a5a00;font-size:10.5px}
+.integration-tile details p{margin:8px 0 0;line-height:1.55}
+.integration-tile details .integration-capability-list{margin-top:8px}
+.integration-tile details ul{margin:8px 0 0;padding-left:16px;display:grid;gap:5px;line-height:1.5}
+.integration-tile details .integration-tile-ok{color:#15803d}
+.provider-google_ads{color:#b45309;background:#fff4e0}
