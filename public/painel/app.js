@@ -229,7 +229,7 @@
     donut('ov-plat', D.PLATFORMS.map((n, i) => ({ name: n, value: bp[i].sp, color: COL.plat[i], dim: dimmed(S.f.platform, i) })), { center: F.mcompact(bp.reduce((s, t) => s + t.sp, 0)), sub: 'investidos', legend: true, cs: 15, fmt: F.money, click: (p) => toggle('platform', D.PLATFORMS.indexOf(p.name)) });
     const geo = (v) => Math.log10(v + 1) * 100;
     const st = [['Impressões', tC.imp, '#1D4ED8'], ['Cliques', tC.clk, '#3B82F6'], ['Leads', tC.ld, '#7C3AED'], ['Vendas', tC.sl, '#10B981']];
-    put('ov-fun', { tooltip: Object.assign(TT(), { trigger: 'item', formatter: (p) => `${p.name}<br/><b>${F.int(p.data.real)}</b>` }), series: [{ type: 'funnel', left: '3%', width: '52%', top: 6, bottom: 6, minSize: '10%', maxSize: '100%', gap: 4, sort: 'none', label: { position: 'right', color: tx(), fontSize: 11, fontWeight: 700, formatter: (p) => `${p.name}\n${compact(p.data.real)}` }, labelLine: { length: 12, lineStyle: { color: css('--line') } }, itemStyle: { borderWidth: 0 }, data: st.map(([n, v, c]) => ({ name: n, value: geo(v), real: v, itemStyle: { color: c } })) }] });
+    funnelSVG($('#ov-fun'), { id: 'fo', compact: true, values: st.map((x) => x[1]), avail: [true, true, tC.hasLd, tC.hasSl], labels: st.map((x) => x[0]), colors: st.map((x) => x[2]), onPick: () => go(4) });
     const mx = D.OBJECTIVES.map(() => D.PLATFORMS.map(() => 0)); cur('objective').forEach((r) => { mx[r.o][r.p] += r.sp; });
     put('ov-obj', {
       grid: { left: 6, right: 14, top: 4, bottom: 4, containLabel: true }, tooltip: Object.assign(TT(), { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: F.money }),
@@ -305,29 +305,81 @@
     hbar('ad-cpl', cpl.map((x) => ({ name: x.name, value: x.t.cpl, color: COL.fmt[x.name], dim: dimmed(S.f.format, x.name) })), { fmt: F.money2, lw: 74, right: 64, click: (p) => toggle('format', cpl[p.dataIndex].name) });
   };
 
+  /* Funil desenhado como um funil de verdade: boca elíptica, corpo cônico em faixas, gargalo e gotas de conversão. */
+  function funnelSVG(box, o) {
+    const n = o.values.length, compact = !!o.compact;
+    // Zero observado é diferente de dado ausente: `avail` diz se a integração informou cada etapa.
+    const has = (i) => (o.avail ? !!o.avail[i] : true);
+    const W = compact ? 420 : 760, H = compact ? 300 : 540;
+    const cx = compact ? 150 : 370, top = compact ? 22 : 34, neck = compact ? 26 : 44;
+    const maxW = compact ? 230 : 400, minW = compact ? 40 : 60;
+    const bandH = (H - top - neck - (compact ? 16 : 24)) / n;
+    const v0 = Math.max(o.values[0] || 0, 1);
+    const ws = []; o.values.forEach((x, i) => { const r = Math.pow(Math.max(x, 0) / v0, 0.25); let w = minW + (maxW - minW) * r; if (i && w > ws[i - 1]) w = ws[i - 1]; ws.push(w); });
+    const ry = (w) => Math.max(4, w * 0.075);
+    const tipW = Math.max(minW * 0.55, ws[n - 1] * 0.55);
+    const shade = (c, k) => { const h = c.replace('#', ''); const num = parseInt(h, 16); const f = (x) => Math.max(0, Math.min(255, Math.round(x * k))); return `rgb(${f(num >> 16)},${f((num >> 8) & 255)},${f(num & 255)})`; };
+    let defs = '', body = '', labels = '';
+    o.values.forEach((x, i) => {
+      const c = o.colors[i];
+      defs += `<linearGradient id="${o.id}g${i}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${shade(c, .62)}"/><stop offset=".22" stop-color="${c}"/><stop offset=".5" stop-color="${shade(c, 1.28)}"/><stop offset=".78" stop-color="${c}"/><stop offset="1" stop-color="${shade(c, .62)}"/></linearGradient>`;
+    });
+    defs += `<linearGradient id="${o.id}rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${shade(o.colors[0], .45)}"/><stop offset="1" stop-color="${shade(o.colors[0], .8)}"/></linearGradient><filter id="${o.id}sh" x="-20%" y="-10%" width="140%" height="130%"><feDropShadow dx="0" dy="6" stdDeviation="7" flood-color="#0b1b3f" flood-opacity=".18"/></filter>`;
+    // boca do funil (fundo da elipse, visto por dentro)
+    body += `<ellipse cx="${cx}" cy="${top}" rx="${ws[0] / 2}" ry="${ry(ws[0])}" fill="url(#${o.id}rim)"/>`;
+    o.values.forEach((x, i) => {
+      const y0 = top + i * bandH, y1 = y0 + bandH, wt = ws[i], wb = i < n - 1 ? ws[i + 1] : tipW;
+      const lt = cx - wt / 2, rt = cx + wt / 2, lb = cx - wb / 2, rb = cx + wb / 2, k = bandH * .55;
+      const d = `M${lt},${y0} C${lt + (wt - wb) / 8},${y0 + k} ${lb - (wt - wb) / 10},${y1 - k} ${lb},${y1} A${wb / 2},${ry(wb)} 0 0 0 ${rb},${y1} C${rb + (wt - wb) / 10},${y1 - k} ${rt - (wt - wb) / 8},${y0 + k} ${rt},${y0} A${wt / 2},${ry(wt)} 0 0 1 ${lt},${y0}Z`;
+      const on = o.selected === i, dim = o.selected != null && !on;
+      body += `<g class="fseg${on ? ' on' : ''}" data-stage="${i}" tabindex="0" role="button" aria-label="${o.labels[i]}: ${has(i) ? F.int(x) : 'sem dado'}" style="--d:${i * 70}ms" opacity="${dim ? .55 : 1}"><path d="${d}" fill="url(#${o.id}g${i})"/><path d="M${lb},${y1} A${wb / 2},${ry(wb)} 0 0 0 ${rb},${y1}" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.4"/>`;
+      if (!compact) body += `<text x="${cx}" y="${y0 + bandH / 2 + 2}" text-anchor="middle" font-size="${wt > 150 ? 17 : 14}" font-weight="800" fill="#fff">${has(i) ? compact_(x) : '—'}</text>`;
+      body += `</g>`;
+      // rótulos laterais
+      const ly = y0 + bandH / 2;
+      if (compact) {
+        labels += `<text x="${cx + Math.max(wt, wb) / 2 + 12}" y="${ly - 2}" font-size="11.5" font-weight="700" fill="${css('--tx')}">${o.labels[i]}</text><text x="${cx + Math.max(wt, wb) / 2 + 12}" y="${ly + 13}" font-size="11.5" font-weight="800" fill="${css('--mut')}">${has(i) ? compact_(x) : '—'}</text>`;
+      } else {
+        const xl = cx - maxW / 2 - 18;
+        labels += `<text x="${xl}" y="${ly - 3}" text-anchor="end" font-size="12.5" font-weight="800" fill="${css('--tx')}">${o.labels[i]}</text><text x="${xl}" y="${ly + 13}" text-anchor="end" font-size="11" font-weight="600" fill="${css('--mut')}">${o.costs && o.costs[i] != null ? 'Custo ' + F.money2(o.costs[i]) : ''}</text>`;
+        labels += `<line x1="${xl + 6}" y1="${ly}" x2="${cx - wt / 2 - 4}" y2="${ly}" stroke="${css('--line')}" stroke-dasharray="3 3"/>`;
+        if (i < n - 1) {
+          const rate = has(i) && has(i + 1) && x > 0 ? (o.values[i + 1] / x) * 100 : null; const yy = y1; const xr = cx + maxW / 2 + 22;
+          labels += `<line x1="${cx + wb / 2 + 6}" y1="${yy}" x2="${xr - 4}" y2="${yy}" stroke="${css('--line')}"/><rect x="${xr}" y="${yy - 12}" width="92" height="24" rx="12" fill="${css('--card2')}" stroke="${css('--line')}"/><text x="${xr + 46}" y="${yy + 4}" text-anchor="middle" font-size="11.5" font-weight="800" fill="${css('--tx')}">${rate == null ? '—' : '↓ ' + dec(rate, rate < 10 ? 2 : 1) + '%'}</text>`;
+        }
+      }
+    });
+    // gargalo e gotas
+    const yb = top + n * bandH, nw = tipW * .55;
+    body += `<path d="M${cx - tipW / 2},${yb} L${cx - nw / 2},${yb + neck * .7} L${cx + nw / 2},${yb + neck * .7} L${cx + tipW / 2},${yb}Z" fill="url(#${o.id}g${n - 1})" opacity=".85"/>`;
+    body += `<g class="fdrops">${[0, 1, 2].map((k) => `<circle cx="${cx}" cy="${yb + neck * .7 + 6}" r="${compact ? 3 : 4.5}" fill="${o.colors[n - 1]}"><animate attributeName="cy" values="${yb + neck * .7 + 4};${H - 4}" dur="1.8s" begin="${k * .6}s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0" dur="1.8s" begin="${k * .6}s" repeatCount="indefinite"/></circle>`).join('')}</g>`;
+    if (!compact) labels += `<text x="${cx}" y="${H - 4}" text-anchor="middle" font-size="11" font-weight="700" fill="${css('--mut')}">Impressão → venda: ${has(n - 1) && o.values[0] > 0 ? dec((o.values[n - 1] / o.values[0]) * 100, 4) + '%' : '—'}</text>`;
+    box.innerHTML = `<svg class="funnel3d" viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Funil de marketing e vendas"><defs>${defs}</defs><g filter="url(#${o.id}sh)">${body}</g>${labels}</svg><div class="ftip" hidden></div>`;
+    const tip = box.querySelector('.ftip');
+    const show = (g, ev) => {
+      const i = +g.dataset.stage, x = o.values[i], prev = i ? o.values[i - 1] : null;
+      tip.innerHTML = `<b>${o.labels[i]}</b><span>${has(i) ? F.int(x) : 'Sem dado'}</span><span>${i === 0 ? 'Topo do funil' : has(i) && has(i - 1) && prev > 0 ? 'Da etapa anterior: ' + F.pct((x / prev) * 100) : ''}</span><span>${has(i) && o.values[0] > 0 ? 'Do topo: ' + F.pct((x / o.values[0]) * 100) : ''}</span>${o.costs && o.costs[i] != null ? `<span>Custo por etapa: ${F.money2(o.costs[i])}</span>` : ''}`;
+      tip.hidden = false; const r = box.getBoundingClientRect();
+      tip.style.left = Math.min(r.width - 190, Math.max(4, ev.clientX - r.left + 14)) + 'px'; tip.style.top = Math.max(4, ev.clientY - r.top - 10) + 'px';
+    };
+    box.querySelectorAll('.fseg').forEach((g) => {
+      g.addEventListener('mousemove', (ev) => show(g, ev));
+      g.addEventListener('mouseleave', () => { tip.hidden = true; });
+      const pick = () => { if (o.onPick) o.onPick(+g.dataset.stage); };
+      g.addEventListener('click', pick);
+      g.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pick(); } });
+    });
+  }
+  const compact_ = (x) => compact(x);
   const STAGES = ['Impressões', 'Cliques', 'Visualizações da página', 'Leads', 'Checkouts', 'Vendas'];
   const STAGE_KEY = ['imp', 'clk', 'pv', 'ld', 'ck', 'sl'];
   const STAGE_COL = ['#1D4ED8', '#2563EB', '#3B82F6', '#7C3AED', '#0D9488', '#15803D'];
   RENDER.funnel = () => {
     const rc = cur(); const t = tot(rc); const v = STAGE_KEY.map((k) => t[k]);
-    const W = 760, H = 520, top = 10, sh = 62, gap = 8, cx = 330, maxW = 470, minW = 110;
-    const lg = (x) => Math.log10(Math.max(x, 1)); const lmax = lg(Math.max(...v)) || 1;
-    const w = v.map((x) => minW + (maxW - minW) * Math.pow(Math.max(0, lg(x)) / lmax, 1.15));
-    let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Funil de marketing e vendas"><defs>${STAGE_COL.map((c, i) => `<linearGradient id="fg${i}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${c}" stop-opacity=".78"/><stop offset=".5" stop-color="${c}"/><stop offset="1" stop-color="${c}" stop-opacity=".78"/></linearGradient>`).join('')}<filter id="fsh" x="-5%" y="-10%" width="110%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-opacity=".18"/></filter></defs>`;
-    svg += `<text x="6" y="${top + 2}" font-size="10" font-weight="800" fill="${css('--mut2')}" letter-spacing=".12em">MARKETING</text>`;
-    v.forEach((x, i) => {
-      const y = top + 14 + i * (sh + gap); const wt = w[i], wb = i < v.length - 1 ? w[i + 1] : wt * 0.82;
-      const pts = [[cx - wt / 2, y], [cx + wt / 2, y], [cx + wb / 2, y + sh], [cx - wb / 2, y + sh]].map((p) => p.join(',')).join(' ');
-      const on = S.sel.stage === i;
-      svg += `<g class="stg" data-stage="${i}" style="cursor:pointer" opacity="${S.sel.stage != null && !on ? 0.62 : 1}"><polygon points="${pts}" fill="url(#fg${i})" filter="url(#fsh)" ${on ? `stroke="${css('--tx')}" stroke-width="2"` : ''}/>`;
-      svg += `<text x="${cx}" y="${y + sh / 2 - 2}" text-anchor="middle" font-size="16" font-weight="800" fill="#fff">${x ? compact(x) : '—'}</text><text x="${cx}" y="${y + sh / 2 + 14}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff" opacity=".9">${STAGES[i]}${x ? '' : ' (sem dado)'}</text></g>`;
-      if (i < v.length - 1) { const rate = x && v[i + 1] ? (v[i + 1] / x) * 100 : null; const yy = y + sh + gap / 2; const xr = cx + Math.max(wt, wb) / 2 + 22; svg += `<line x1="${cx + wb / 2 + 4}" y1="${yy}" x2="${xr - 6}" y2="${yy}" stroke="${css('--line')}" stroke-width="1.2"/><g><rect x="${xr - 4}" y="${yy - 11}" width="74" height="22" rx="11" fill="${css('--card2')}" stroke="${css('--line')}"/><text x="${xr + 33}" y="${yy + 4}" text-anchor="middle" font-size="11" font-weight="800" fill="${css('--tx')}">${rate == null ? '—' : '↓ ' + dec(rate, rate < 10 ? 2 : 1) + '%'}</text></g>`; }
-    });
-    svg += `</svg>`;
-    const box = $('#fn-svg'); box.innerHTML = svg;
-    $$('.stg', box).forEach((g) => g.addEventListener('click', () => { S.sel.stage = +g.dataset.stage; RENDER.funnel(); }));
+    const av = [true, true, !!(t.m & 8), t.hasLd, !!(t.m & 16), t.hasSl];
+    funnelSVG($('#fn-svg'), { id: 'fp', values: v, avail: av, labels: STAGES, colors: STAGE_COL, costs: v.map((x, i) => (av[i] && x > 0 ? t.sp / x : null)), selected: S.sel.stage, onPick: (i) => { S.sel.stage = i; RENDER.funnel(); } });
     const ov = v[0] ? (v[5] / v[0]) * 100 : 0;
-    $('#fn-rates').innerHTML = `<table><thead><tr><th>Etapa</th><th>Volume</th><th>Da etapa anterior</th><th>Custo por etapa</th></tr></thead><tbody>${v.map((x, i) => `<tr data-stage="${i}" class="${S.sel.stage === i ? 'sel' : ''}"><td><span class="dot" style="background:${STAGE_COL[i]}"></span><span class="name">${STAGES[i]}</span></td><td>${x ? F.compact(x) : '—'}</td><td>${i && x && v[i - 1] ? F.pct((x / v[i - 1]) * 100) : '—'}</td><td>${x ? F.money2(t.sp / x) : '—'}</td></tr>`).join('')}<tr class="total"><td>Impressão → venda</td><td>${F.int(v[5])}</td><td colspan="2">${dec(ov, 4)}%</td></tr></tbody></table>`;
+    $('#fn-rates').innerHTML = `<table><thead><tr><th>Etapa</th><th>Volume</th><th>Da etapa anterior</th><th>Custo por etapa</th></tr></thead><tbody>${v.map((x, i) => `<tr data-stage="${i}" class="${S.sel.stage === i ? 'sel' : ''}"><td><span class="dot" style="background:${STAGE_COL[i]}"></span><span class="name">${STAGES[i]}</span></td><td>${av[i] ? F.compact(x) : '—'}</td><td>${i && av[i] && av[i - 1] && v[i - 1] > 0 ? F.pct((x / v[i - 1]) * 100) : '—'}</td><td>${av[i] && x > 0 ? F.money2(t.sp / x) : '—'}</td></tr>`).join('')}<tr class="total"><td>Impressão → venda</td><td>${F.int(v[5])}</td><td colspan="2">${dec(ov, 4)}%</td></tr></tbody></table>`;
     const si = S.sel.stage ?? 3; $('#fn-sel-t').textContent = STAGES[si];
     const bp = groupBy(cur('platform'), (r) => r.p, D.PLATFORMS.length);
     hbar('fn-plat', D.PLATFORMS.map((n, i) => ({ name: n, value: bp[i][STAGE_KEY[si]], color: COL.plat[i], dim: dimmed(S.f.platform, i) })).sort((x, y) => y.value - x.value), { fmt: (x) => compact(x), lw: 92, right: 56, click: (p) => toggle('platform', D.PLATFORMS.indexOf(p.name)) });

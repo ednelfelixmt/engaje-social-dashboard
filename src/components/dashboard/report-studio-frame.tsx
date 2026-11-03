@@ -9,7 +9,8 @@ const storageKey = 'engaje:report-studio:appearance:v1';
 export function ReportStudioFrame({children}: {children: React.ReactNode}) {
   const pathname = usePathname();
   const route = pathname.split('/').slice(2).join('/');
-  const active = ['reports', 'reports/analytics', 'reports/funnel', 'settings/integrations', 'settings/data-quality'].includes(route);
+  // Padrão único: todas as telas do cliente usam o mesmo tema claro do painel (o próprio painel cobre a tela inteira).
+  const active = route !== 'painel';
   const [night, setNight] = useState(false);
 
   useEffect(() => {
