@@ -507,7 +507,6 @@
   function init() {
     const saved = store.get('zf-painel-tema', 'light'); document.documentElement.dataset.theme = saved === 'dark' ? 'dark' : 'light';
     build(); wire();
-    { const q = new URLSearchParams(location.search); const admin = q.get('admin') === '1'; $('#lk-reports').href = '/' + encodeURIComponent(SLUG) + '/reports'; $('#lk-agency').hidden = !admin; }
     $('.foot .zf span').textContent = 'Dados reais sincronizados • até ' + D.END.split('-').reverse().join('/') + ' • ' + D.currency;
     render();
     const hash = (location.hash || '').replace('#', ''); const hi = PG.findIndex((p) => p.id === hash); if (hi > 0) go(hi);
@@ -515,6 +514,8 @@
   }
   init();
   }
+  // Os atalhos de navegação não dependem da coleta de dados: continuam úteis se a coleta falhar.
+  (function initLinks() { const $1 = (s) => document.querySelector(s); const admin = new URLSearchParams(location.search).get('admin') === '1'; const rep = $1('#lk-reports'); const ag = $1('#lk-agency'); if (rep) rep.href = '/' + encodeURIComponent(SLUG) + '/reports'; if (ag) ag.hidden = !admin; })();
   fetch('/' + SLUG + '/painel/dados', { credentials: 'same-origin' })
     .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
     .then((raw) => boot(adapt(raw)))

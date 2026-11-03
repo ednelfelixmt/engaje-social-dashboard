@@ -1,4 +1,4 @@
-import {notFound} from 'next/navigation';
+import {redirect} from 'next/navigation';
 import {tenant,dashboardConfig} from '@/lib/auth/session';
 
 export const metadata={title:'Painel de marketing'};
@@ -9,7 +9,8 @@ export default async function Page({params:pending}:{params:Promise<{organizatio
  const {organizationSlug}=await pending;
  const {superAdmin}=await tenant(organizationSlug);
  const config=await dashboardConfig(organizationSlug);
- if(!config.enabled_pages.includes('overview'))notFound();
+ // Sem a visão geral habilitada, o cliente segue para a área de relatórios, que explica a indisponibilidade dentro do menu.
+ if(!config.enabled_pages.includes('overview'))redirect(`/${organizationSlug}/reports`);
  // Tela cheia: o painel traz a própria navegação (menu lateral, filtros e paginação) e cobre o menu antigo.
  return <iframe title="Painel de marketing" src={`/painel/index.html?org=${encodeURIComponent(organizationSlug)}${superAdmin?'&admin=1':''}`} className="painel-frame" style={{position:'fixed',inset:0,zIndex:60,width:'100%',height:'100%',border:0,background:'#f4f6fb'}}/>;
 }
