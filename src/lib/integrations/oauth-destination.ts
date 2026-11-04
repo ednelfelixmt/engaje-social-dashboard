@@ -1,4 +1,4 @@
-const authorizationHosts=new Set(['www.facebook.com','accounts.google.com','business-api.tiktok.com','www.tiktok.com']);
+const authorizationHosts=new Set(['www.facebook.com','accounts.google.com','business-api.tiktok.com','www.tiktok.com','app.hubspot.com']);
 
 export function oauthDestination(value:unknown):string {
   if(typeof value!=='string')throw new Error('Endereço de autorização ausente.');

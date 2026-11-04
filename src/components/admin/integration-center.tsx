@@ -8,7 +8,7 @@ import type {ClientConnectionSummary} from '@/lib/integrations/operational-state
 import {AdminIntegrationStartButton} from '@/components/admin-integration-start-button';
 
 const icons={meta_ads:Facebook,google_ads:Target,tiktok_ads:Activity,windsor:Database,stract:Database,hubspot:Blocks,rd_station:Radio,generic_crm:Webhook};
-const platformKey:Record<string,string>={meta_ads:'meta',google_ads:'google',rd_station:'rd-station',generic_crm:'crm',tiktok_ads:'tiktok_ads'};
+const platformKey:Record<string,string>={meta_ads:'meta',google_ads:'google',hubspot:'hubspot',rd_station:'rd-station',generic_crm:'crm',tiktok_ads:'tiktok_ads'};
 type Workspace={id:string;name:string;slug:string};
 const empty=(organizationId:string):ClientConnectionSummary=>({organizationId,connected:0,attention:0,pending:0,inactive:0,lastSyncedAt:null});
 /** Match Brazilian client names without making users enter accent marks. */
@@ -35,8 +35,8 @@ export function IntegrationCenter({summary,workspaces}:{summary:ClientConnection
       const Icon=icons[connector.provider as keyof typeof icons]??Database;
       const live=connector.stage==='live';
       const pending=connector.pending??[];
-      return <article className="integration-tile" data-live={live?'true':'false'} key={connector.provider} id={'connector-'+connector.provider}>
-        <header><span className={'integration-provider-icon provider-'+connector.provider}><Icon size={20}/></span><div><h3>{connector.name}</h3><span className="integration-tile-state">{live?<CircleCheck size={12} aria-hidden/>:<CircleDashed size={12} aria-hidden/>}{live?(connector.via?'Ativo via '+connector.via:'Ativo'):'Em construção'}</span></div></header>
+      return <article className="integration-tile" data-live={live&&!connector.setup?'true':'false'} key={connector.provider} id={'connector-'+connector.provider}>
+        <header><span className={'integration-provider-icon provider-'+connector.provider}><Icon size={20}/></span><div><h3>{connector.name}</h3><span className="integration-tile-state">{live?<CircleCheck size={12} aria-hidden/>:<CircleDashed size={12} aria-hidden/>}{live?(connector.setup?'Pronto · aguarda credenciais':connector.via?'Ativo via '+connector.via:'Ativo'):'Em construção'}</span></div></header>
         <AdminIntegrationStartButton platformKey={platformKey[connector.provider]??connector.provider} available={live} workspaces={selection} compact/>
         <details><summary>Detalhes e pendências{pending.length?<b>{pending.length}</b>:null}</summary><p>{connector.description}</p><div className="integration-capability-list">{connector.capabilities.map(capability=><span key={capability}>{capability}</span>)}</div>{pending.length?<ul>{pending.map(item=><li key={item}>{item}</li>)}</ul>:<p className="integration-tile-ok">Nenhuma pendência conhecida.</p>}</details>
       </article>;

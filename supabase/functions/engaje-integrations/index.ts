@@ -2,6 +2,7 @@ import {createClient} from 'npm:@supabase/supabase-js@2.76.1';
 import {listTenantStorage,removeTenantStorage} from '../_shared/tenant-storage.ts';
 import {verifiedOAuthScopes} from '../_shared/oauth-permissions.ts';
 import {AgencyAuthorizationError,requireAgencyAdministrator,isActiveAgencyAdministrator} from '../_shared/agency-authorization.ts';
+import {hubspotAuthorizeUrl,hubspotCrmFacts,rdCrmFacts,tiktokAuthorizeUrl,tiktokAdFacts,TIKTOK_REPORT_METRICS} from '../_shared/api-connectors.ts';
 const base=Deno.env.get('SUPABASE_URL')!;
 const service=createClient(base,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,{auth:{persistSession:false}});
 const origin='https://mediahub.engajeperformance.com.br';
@@ -11,6 +12,8 @@ const json=(value:unknown,status=200)=>new Response(JSON.stringify(value),{statu
 const graphVersion=Deno.env.get('META_GRAPH_VERSION')||'v26.0';
 const metaId=Deno.env.get('META_APP_ID'),metaSecret=Deno.env.get('META_APP_SECRET');
 const windsorKey=Deno.env.get('WINDSOR_API_KEY');
+const hubspotId=Deno.env.get('HUBSPOT_CLIENT_ID'),hubspotSecret=Deno.env.get('HUBSPOT_CLIENT_SECRET');
+const tiktokId=Deno.env.get('TIKTOK_APP_ID'),tiktokSecret=Deno.env.get('TIKTOK_APP_SECRET');
 // ID da configuração de Login do Facebook para Empresas. Quando definido (secret META_LOGIN_CONFIG_ID ou
 // segredo `meta_login_config_id` no Vault do banco), o login usa a configuração (permissões e ativos vêm
 // dela) em vez de `scope`. Sem ele, o comportamento anterior é mantido.
@@ -295,7 +298,7 @@ async function syncWindsor(i:Integration){
 }
 // Janelas de 30 dias, da mais recente para a mais antiga, para importar histórico sem estourar a API da Meta.
 function historyWindows(days:number){const windows:{since:string;until:string}[]=[];const end=new Date();for(let offset=0;offset<days;offset+=30){const until=new Date(end);until.setUTCDate(until.getUTCDate()-offset);const since=new Date(until);since.setUTCDate(since.getUTCDate()-29);windows.push({since:isoDate(since),until:isoDate(until)});}return windows;}
-async function sync(i:Integration,options:{days?:number}={}){if(i.provider==='windsor')return syncWindsor(i);const token=await check(await service.rpc('integration_token',{p_id:i.id}));if(!token)throw new Error('Conta sem autorização. Reconecte.');let rows=0,creativeCount=0,coverageFailures=0,accountMetricRows=0,accountMetricAvailability:string[]=[];
+async function sync(i:Integration,options:{days?:number}={}){if(i.provider==='windsor')return syncWindsor(i);if(i.provider==='hubspot')return syncHubspot(i);if(i.provider==='rd_station')return syncRdStation(i);if(i.provider==='tiktok_ads')return syncTiktok(i);const token=await check(await service.rpc('integration_token',{p_id:i.id}));if(!token)throw new Error('Conta sem autorização. Reconecte.');let rows=0,creativeCount=0,coverageFailures=0,accountMetricRows=0,accountMetricAvailability:string[]=[];
  if(i.provider==='meta_ads'){
   const normalizedAccountId=metaAccountId(i.external_account_id);
   const statuses=new Map<string,string>();try{const campaignRows=await pages(i.external_account_id+'/campaigns',token,{fields:'id,name,effective_status,status'});for(const campaign of campaignRows){const status=campaignStatus(campaign.effective_status||campaign.status);if(status)statuses.set(String(campaign.id),status);}if(campaignRows.length)await check(await service.from('ad_campaigns').upsert(campaignRows.map((campaign:any)=>({organization_id:i.organization_id,integration_id:i.id,platform:'meta_ads',account_id:normalizedAccountId,external_id:String(campaign.id),name:String(campaign.name||campaign.id),status:campaignStatus(campaign.effective_status||campaign.status),last_seen_at:new Date().toISOString()})),{onConflict:'organization_id,platform,account_id,external_id'}));}catch(error){console.warn('[meta-campaign-status]',{integration_id:i.id,message:error instanceof Error?error.message:'Falha desconhecida'});}
@@ -350,7 +353,94 @@ async function sync(i:Integration,options:{days?:number}={}){if(i.provider==='wi
  await check(await service.from('integrations').update({status:'connected',is_enabled:true,last_synced_at:completedAt,config:completedConfig,last_error:warning}).eq('id',i.id));
  return {message:`Sincronização ${partial?'parcial':'concluída'}: ${rows} métricas de conteúdo, ${accountMetricRows} métricas diárias de conta e ${creativeCount} criativos gravados no Supabase.${partial?' '+warning:''}`,rows,accountMetrics:accountMetricRows,creatives:creativeCount,partial};
 }
-const scheduledProviders=['meta_ads','facebook_organic','instagram_organic','windsor'];
+
+/* ---------- Conectores por API: HubSpot, RD Station CRM e TikTok Ads ---------- */
+async function readJson(response:Response,what:string){const text=await response.text();let data:any=null;try{data=text?JSON.parse(text):null;}catch{/* resposta sem JSON */}if(!response.ok)throw new Error(what+' recusou a solicitação (HTTP '+response.status+').');return data;}
+async function hubspotTokens(params:Record<string,string>){if(!hubspotId||!hubspotSecret)throw new Error('Configure HUBSPOT_CLIENT_ID e HUBSPOT_CLIENT_SECRET nos Secrets do Supabase.');return readJson(await fetch('https://api.hubapi.com/oauth/v1/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:hubspotId,client_secret:hubspotSecret,...params})}),'O HubSpot');}
+/** Conclui a autorização gravando a conta e o segredo; uma reconexão atualiza o registro que já existia. */
+async function finishIntegration(pending:any,externalId:string,name:string,secret:string){
+ const {data:existing}=await service.from('integrations').select('id').eq('organization_id',pending.organization_id).eq('provider',pending.provider).eq('external_account_id',externalId).neq('id',pending.id).maybeSingle();
+ const targetId=existing?.id||pending.id;
+ if(existing)await check(await service.from('integrations').delete().eq('id',pending.id));
+ await check(await service.from('integrations').update({external_account_id:externalId,account_name:name,status:'connected',is_enabled:true,last_error:null,config:{connected_by:pending.config.user_id}}).eq('id',targetId));
+ await setToken(targetId,secret);
+ return targetId;
+}
+async function finishApiOAuth(pending:any,url:URL,slug:string){
+ if(pending.provider==='hubspot'){
+  const code=url.searchParams.get('code');if(!code)throw new Error('Código ausente.');
+  const t=await hubspotTokens({grant_type:'authorization_code',redirect_uri:callback,code});
+  if(!t?.refresh_token||!t?.access_token)throw new Error('O HubSpot não devolveu a autorização.');
+  const info=await readJson(await fetch('https://api.hubapi.com/oauth/v1/access-tokens/'+encodeURIComponent(t.access_token)),'O HubSpot');
+  const portal=String(info?.hub_id||'');if(!portal)throw new Error('Conta HubSpot não identificada.');
+  await finishIntegration(pending,portal,String(info?.hub_domain||'HubSpot '+portal),JSON.stringify({refresh_token:t.refresh_token}));
+ }else{
+  if(!tiktokId||!tiktokSecret)throw new Error('Configure TIKTOK_APP_ID e TIKTOK_APP_SECRET nos Secrets do Supabase.');
+  const code=url.searchParams.get('auth_code')||url.searchParams.get('code');if(!code)throw new Error('Código ausente.');
+  const r=await readJson(await fetch('https://business-api.tiktok.com/open_api/v1.3/oauth2/access_token/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({app_id:tiktokId,secret:tiktokSecret,auth_code:code})}),'O TikTok');
+  if(r?.code!==0||!r?.data?.access_token)throw new Error('O TikTok não devolveu a autorização'+(r?.message?': '+r.message:'.'));
+  const ids:string[]=(r.data.advertiser_ids||[]).map((id:unknown)=>String(id)).filter(Boolean);if(!ids.length)throw new Error('Nenhuma conta de anúncios do TikTok foi autorizada.');
+  const token=String(r.data.access_token);
+  await finishIntegration(pending,ids[0],'TikTok '+ids[0],token);
+  for(const id of ids.slice(1)){
+   const {data:existing}=await service.from('integrations').select('id').eq('organization_id',pending.organization_id).eq('provider','tiktok_ads').eq('external_account_id',id).maybeSingle();
+   const extra=existing?existing:await check(await service.from('integrations').insert({organization_id:pending.organization_id,provider:'tiktok_ads',external_account_id:id,account_name:'TikTok '+id,status:'connected',is_enabled:true,config:{connected_by:pending.config.user_id}}).select('id').single());
+   if(existing)await check(await service.from('integrations').update({status:'connected',is_enabled:true,last_error:null}).eq('id',existing.id));
+   await setToken(extra!.id,token);
+  }
+ }
+ return Response.redirect(origin+'/'+slug+'/settings/integrations?connected='+pending.provider,303);
+}
+/** Grava os totais diários do CRM e remove, só desta integração e janela, os que não vieram na nova leitura (negócio reaberto, excluído ou movido). */
+async function saveCrm(i:Integration,facts:any[],fromDay:string){
+ const keep=new Set(facts.map((f)=>[f.metric_date,f.channel,f.currency,f.account_id].join('|')));
+ const {data:existing,error}=await service.from('metrics_crm').select('id,metric_date,channel,currency,account_id').eq('organization_id',i.organization_id).eq('integration_id',i.id).gte('metric_date',fromDay);
+ if(error)throw new Error('Não foi possível conferir os totais anteriores do CRM.');
+ for(let n=0;n<facts.length;n+=200)await check(await service.from('metrics_crm').upsert(facts.slice(n,n+200),{onConflict:'organization_id,source,metric_date,currency,channel,account_id,campaign_id'}));
+ const stale=(existing||[]).filter((r:any)=>!keep.has([r.metric_date,r.channel,r.currency,r.account_id].join('|'))).map((r:any)=>r.id);
+ for(let n=0;n<stale.length;n+=200)await check(await service.from('metrics_crm').delete().eq('organization_id',i.organization_id).eq('integration_id',i.id).in('id',stale.slice(n,n+200)));
+}
+async function markSynced(i:Integration){await check(await service.from('integrations').update({status:'connected',is_enabled:true,last_synced_at:new Date().toISOString(),last_error:null}).eq('id',i.id));}
+async function orgCurrency(id:string){const {data}=await service.from('organizations').select('currency').eq('id',id).single();return String(data?.currency||'BRL');}
+async function syncHubspot(i:Integration){
+ const stored=await check(await service.rpc('integration_token',{p_id:i.id}));let refresh='';try{refresh=JSON.parse(String(stored||'{}')).refresh_token||'';}catch{/* segredo antigo */}if(!refresh)throw new Error('Reconecte o HubSpot para renovar a autorização.');
+ const t=await hubspotTokens({grant_type:'refresh_token',refresh_token:refresh});if(!t?.access_token)throw new Error('O HubSpot não renovou o acesso. Reconecte a conta.');
+ if(t.refresh_token&&t.refresh_token!==refresh)await setToken(i.id,JSON.stringify({refresh_token:t.refresh_token}));
+ const sinceMs=Date.now()-90*86400000;const since=String(sinceMs);
+ const search=async(object:string,dateProp:string,extra:Record<string,string>[],properties:string[])=>{const out:any[]=[];let after:string|undefined;for(let page=0;page<50;page++){const data=await readJson(await fetch('https://api.hubapi.com/crm/v3/objects/'+object+'/search',{method:'POST',headers:{Authorization:'Bearer '+t.access_token,'Content-Type':'application/json'},body:JSON.stringify({filterGroups:[{filters:[{propertyName:dateProp,operator:'GTE',value:since},...extra]}],properties,limit:100,...(after?{after}:{})})}),'O HubSpot');out.push(...(data?.results||[]));after=data?.paging?.next?.after;if(!after)break;}return out;};
+ const deals=await search('deals','closedate',[{propertyName:'hs_is_closed_won',operator:'EQ',value:'true'}],['amount','closedate','deal_currency_code','hs_analytics_source','hs_analytics_source_data_1']);
+ const contacts=await search('contacts','createdate',[],['createdate','hs_analytics_source','hs_analytics_source_data_1']);
+ const facts=hubspotCrmFacts({deals,contacts,organizationId:i.organization_id,integrationId:i.id,portalId:i.external_account_id,fallbackCurrency:await orgCurrency(i.organization_id)});
+ await saveCrm(i,facts,isoDate(new Date(sinceMs)));await markSynced(i);
+ return {message:`HubSpot sincronizado: ${deals.length} negócios ganhos e ${contacts.length} contatos em ${facts.length} linhas diárias.`,rows:facts.length};
+}
+async function rdDeals(token:string,from:string,to:string,limit=200,maxPages=50){
+ const out:any[]=[];for(let page=1;page<=maxPages;page++){const url=new URL('https://crm.rdstation.com/api/v1/deals');url.search=new URLSearchParams({token,win:'true',closed_at_period:'true',start_date:from,end_date:to,page:String(page),limit:String(limit)}).toString();const data=await readJson(await fetch(url),'O RD Station CRM');out.push(...(data?.deals||[]));if(!data?.has_more)break;}return out;
+}
+async function syncRdStation(i:Integration){
+ const token=String(await check(await service.rpc('integration_token',{p_id:i.id}))||'');if(!token)throw new Error('Informe novamente o token do RD Station CRM.');
+ const to=new Date(),from=new Date(Date.now()-90*86400000);const deals=await rdDeals(token,isoDate(from),isoDate(to));
+ const facts=rdCrmFacts({deals,organizationId:i.organization_id,integrationId:i.id,accountId:i.external_account_id,currency:await orgCurrency(i.organization_id)});
+ await saveCrm(i,facts,isoDate(from));await markSynced(i);
+ return {message:`RD Station CRM sincronizado: ${deals.length} negócios vendidos em ${facts.length} linhas diárias.`,rows:facts.length};
+}
+async function tiktokGet(path:string,token:string,params:Record<string,string>){const url=new URL('https://business-api.tiktok.com/open_api/v1.3/'+path);url.search=new URLSearchParams(params).toString();const data=await readJson(await fetch(url,{headers:{'Access-Token':token}}),'O TikTok');if(data?.code!==0)throw new Error('O TikTok recusou a consulta'+(data?.message?': '+data.message:'.'));return data.data;}
+async function syncTiktok(i:Integration){
+ const token=String(await check(await service.rpc('integration_token',{p_id:i.id}))||'');if(!token)throw new Error('Reconecte o TikTok para renovar a autorização.');
+ const advertiser=i.external_account_id;
+ const info=await tiktokGet('advertiser/info/',token,{advertiser_ids:JSON.stringify([advertiser]),fields:JSON.stringify(['currency','name'])});
+ const meta=(info?.list||[])[0]||{};const currency=String(meta.currency||await orgCurrency(i.organization_id));
+ const to=new Date(),from=new Date(Date.now()-29*86400000);const rows:any[]=[];
+ for(let page=1;page<=50;page++){const data=await tiktokGet('report/integrated/get/',token,{advertiser_id:advertiser,report_type:'BASIC',data_level:'AUCTION_AD',dimensions:JSON.stringify(['ad_id','stat_time_day']),metrics:JSON.stringify(TIKTOK_REPORT_METRICS),start_date:isoDate(from),end_date:isoDate(to),page:String(page),page_size:'1000'});rows.push(...(data?.list||[]));if(page>=Number(data?.page_info?.total_page||1))break;}
+ const facts=tiktokAdFacts({rows,organizationId:i.organization_id,integrationId:i.id,advertiserId:advertiser,currency});
+ const campaigns=[...new Map(facts.map((f:any)=>[f.campaign_id,{organization_id:i.organization_id,integration_id:i.id,platform:'tiktok_ads',account_id:advertiser,external_id:f.campaign_id,name:f.campaign_name,status:null,last_seen_at:new Date().toISOString()}])).values()];
+ if(campaigns.length)await check(await service.from('ad_campaigns').upsert(campaigns,{onConflict:'organization_id,platform,account_id,external_id'}));
+ for(let n=0;n<facts.length;n+=200)await check(await service.from('metrics_ads').upsert(facts.slice(n,n+200),{onConflict:'organization_id,platform,account_id,campaign_id,ad_id,metric_date,currency'}));
+ if(meta.name)await check(await service.from('integrations').update({account_name:String(meta.name)}).eq('id',i.id));
+ await markSynced(i);
+ return {message:`TikTok Ads sincronizado: ${facts.length} métricas diárias de anúncios.`,rows:facts.length};
+}
+const scheduledProviders=['meta_ads','facebook_organic','instagram_organic','windsor','hubspot','rd_station','tiktok_ads'];
 async function scheduledSync(req:Request,body:any){
  const secret=req.headers.get('x-cron-secret')||'';
  if(secret.length<32||secret.length>256)return json({message:'Não autorizado.'},401);
@@ -385,6 +475,7 @@ Deno.serve(async(req:Request)=>{
    const state=url.searchParams.get('state')||'';const [id,expiry,nonce,signature]=state.split('.');const signed=[id,expiry,nonce].join('.');if(!signature||!safeEqual(signature,await stateHmac(signed))||!(Number(expiry)>=Date.now()))throw new Error('Autorização expirada.');if(url.searchParams.get('error'))throw new Error('Autorização recusada.');
    const {data:pending,error}=await service.from('integrations').update({status:'syncing'}).eq('id',id).eq('status','pending').select('*').single();if(error||!pending||pending.config.nonce!==nonce)throw new Error('Autorização já utilizada.');
    activeId=id;const actorId=pending.config.user_id;if(!actorId)throw new Error('Reconecte para renovar a autorização.');const {data:members,error:membershipError}=await service.from('organization_members').select('organization_id,role,is_active,organizations!inner(status,is_agency)').eq('user_id',actorId).eq('is_active',true);const authorized=!membershipError&&Array.isArray(members)&&members.some(isActiveAgencyAdministrator);if(!authorized)throw new Error('Permissão revogada durante a autorização.');const {data:org}=await service.from('organizations').select('slug,status').eq('id',pending.organization_id).single();if(!org||org.status!=='active')throw new Error('Cliente indisponível.');
+   if(pending.provider==='hubspot'||pending.provider==='tiktok_ads')return await finishApiOAuth(pending,url,org.slug);
    const code=url.searchParams.get('code');if(!code)throw new Error('Código ausente.');
    const loginConfigId=await loginConfig();
    const result=await graph('oauth/access_token',null,{client_id:metaId!,client_secret:metaSecret!,redirect_uri:callback,code},'a troca do código OAuth');let token=result.access_token;if(!token)throw new Error('Token não recebido.');
@@ -613,6 +704,23 @@ Deno.serve(async(req:Request)=>{
    if(provider==='windsor'&&!windsorKey)throw new Error('Configure WINDSOR_API_KEY nos Secrets do Supabase antes de cadastrar contas.');
    await check(await service.from('integrations').upsert({organization_id:org,provider,external_account_id:source+':'+sourceAccountId,account_name:accountName,status:'pending',is_enabled:false,config:{source_platform:source,source_account_id:sourceAccountId,configured_by:actor.id,selection_pending:true},last_error:null},{onConflict:'organization_id,provider,external_account_id'}));
    return json({message:'Conta cadastrada. Selecione e confirme se ela pertence a este cliente.'});
+  }
+  if(body.action==='connect'&&(body.provider==='hubspot'||body.provider==='tiktok_ads')){
+   const ready=body.provider==='hubspot'?hubspotId&&hubspotSecret:tiktokId&&tiktokSecret;
+   if(!ready)return json({message:body.provider==='hubspot'?'HubSpot: configure HUBSPOT_CLIENT_ID e HUBSPOT_CLIENT_SECRET nos Secrets do Supabase.':'TikTok: configure TIKTOK_APP_ID e TIKTOK_APP_SECRET nos Secrets do Supabase (app aprovado na Marketing API).'});
+   const nonce=crypto.randomUUID();const pending=await check(await service.from('integrations').insert({organization_id:org,provider:body.provider,external_account_id:'pending:'+nonce,account_name:'Autorização em andamento',status:'pending',config:{nonce,user_id:actor.id}}).select('id').single());
+   const signed=[pending!.id,Date.now()+600000,nonce].join('.');const state=signed+'.'+await stateHmac(signed);
+   return json({url:body.provider==='hubspot'?hubspotAuthorizeUrl(hubspotId!,callback,state):tiktokAuthorizeUrl(tiktokId!,callback,state)});
+  }
+  if(body.action==='connect_token'&&body.provider==='rd_station'){
+   const token=String(body.token||'').trim();if(!/^[A-Za-z0-9_-]{16,200}$/.test(token))return json({message:'Informe o token de API do RD Station CRM.'},400);
+   const today=isoDate(new Date());await rdDeals(token,today,today,1,1);
+   const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token)))).slice(0,6).map((b)=>b.toString(16).padStart(2,'0')).join('');
+   const externalId='rdcrm:'+digest;const name=String(body.accountName||'RD Station CRM').slice(0,120);
+   const {data:existing}=await service.from('integrations').select('id').eq('organization_id',org).eq('provider','rd_station').eq('external_account_id',externalId).maybeSingle();
+   const saved=existing?existing:await check(await service.from('integrations').insert({organization_id:org,provider:'rd_station',external_account_id:externalId,account_name:name,status:'connected',is_enabled:true,config:{connected_by:actor.id}}).select('id').single());
+   await setToken(saved!.id,token);
+   return json({message:'RD Station CRM conectado. A primeira sincronização traz os negócios vendidos dos últimos 90 dias.'});
   }
   if(body.action==='connect'){
    if(!['meta_ads','facebook_organic','instagram_organic'].includes(body.provider))return json({message:body.provider==='tiktok_ads'||body.provider==='tiktok_organic'?'TikTok: o conector está preparado, mas requer aplicativo aprovado e as credenciais TIKTOK_APP_ID e TIKTOK_APP_SECRET.':'Use o formulário do extrator para cadastrar esta fonte.'});
