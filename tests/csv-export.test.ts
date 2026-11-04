@@ -67,3 +67,35 @@ test('delimiter and quote attacks remain one neutralized text field with origina
  const values=['\u200b=1;"x"\r\n@SUM(1;2)','\u2066＠SUM(1;2);"quoted"','\u0000safe;"text"'];
  for(const value of values){const csv=serializeCsv([['name','count'],[value,0]]);const parsed=Papa.parse<string[]>(csv,{delimiter:';'});assert.deepEqual(parsed.errors,[]);assert.equal(parsed.data.length,2);assert.deepEqual(parsed.data[1],["'"+value,'0']);}
 });
+
+
+test('SEC-CSV-IGNORABLE-MARK-001: default-ignorable non-Cf marks cannot hide formula prefixes', () => {
+  // These marks are default-ignorable but are not Cc/Cf; older checks missed them.
+  const prefixes = ['\u034f', '\u180b', '\u180f', '\ufe0f', '\u{e0100}'];
+  for (const prefix of prefixes) {
+    for (const marker of ['=', '+', '-', '@', '＝', '＋', '－', '＠']) {
+      const value = prefix + marker + '1+1';
+      assert.equal(serializeCsv([[value]]), '\ufeff"' + "'" + value + '"', JSON.stringify(value));
+    }
+    assert.equal(serializeCsv([[prefix + 'Título']]), '\ufeff"' + "'" + prefix + 'Título"');
+  }
+});
+
+test('SEC-CSV-IGNORABLE-MARK-001: preserve normal Unicode labels, valid zero and trusted numeric cells', () => {
+  const rows = [['Campanha São Paulo', '❤️ Oferta', 'Promo = 1', -12.5, 0, null] as const];
+  assert.equal(serializeCsv(rows), '\ufeff"Campanha São Paulo";"❤️ Oferta";"Promo = 1";"-12.5";"0";""');
+  // Variation selectors inside a visible label are not stripped or normalized.
+  assert.equal(serializeCsv([['❤️'], ['  Campanha']]), '\ufeff"❤️"\r\n"  Campanha"');
+});
+
+
+test('SEC-CSV-IGNORABLE-MARK-001: legacy Cf interlinear annotation prefixes remain escaped', () => {
+  for (const prefix of ['\uFFF9', '\uFFFA', '\uFFFB']) {
+    // These Cf characters are not in Default_Ignorable_Code_Point.
+    for (const formula of ['=1+1', '+2', '＠SUM(1;2)']) {
+      const raw = prefix + formula;
+      assert.equal(serializeCsv([[raw]]), '\ufeff"' + "'" + raw + '"', JSON.stringify(raw));
+    }
+    assert.equal(serializeCsv([[prefix + 'texto']]), '\ufeff"' + "'" + prefix + 'texto"');
+  }
+});
