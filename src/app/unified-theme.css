@@ -43,5 +43,9 @@ body .report-studio-frame [data-report-navigation] :is(.navigation-agency-return
 .report-studio-frame[data-studio-theme=day] .glass-panel::after { opacity: .35; }
 
 /* Logo da ZF no menu (marca preta original, invertida para o trilho preto) */
-.navigation-logo .navigation-zf { width: 30px; height: 30px; object-fit: contain; filter: invert(1); }
-body .report-studio-frame [data-report-navigation] .navigation-logo { background: transparent; border-color: var(--zf-rail-line); }
+/* Logo da ZF igual ao do painel: sem moldura, 40px, marca invertida para o trilho preto */
+body .report-studio-frame [data-report-navigation] .navigation-logo:has(.navigation-zf) { width: 52px; height: 52px; background: transparent; border: 0; box-shadow: none; border-radius: 0; display: grid; place-items: center; }
+.navigation-logo .navigation-zf { width: 40px; height: auto; object-fit: contain; filter: invert(1); opacity: .95; }
+body .report-studio-frame [data-report-navigation] .navigation-logo:not(:has(.navigation-zf)) { background: transparent; border-color: var(--zf-rail-line); }
+/* Item ativo igual ao do painel: fundo claro translúcido e ícone branco */
+body .report-studio-frame [data-report-navigation] a[aria-current=page] svg { color: #fff; }
