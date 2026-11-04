@@ -397,7 +397,27 @@ Deno.serve(async(req:Request)=>{
    // pelas checagens de permissionsFor/assign_assets, em vez de conceder acesso fictício.
    granted=verifiedOAuthScopes(granted);const identity=await graph('me',token,{fields:'id,name'},'a identificação do usuário');
    const {data:agency}=await service.from('organizations').select('id').eq('is_agency',true).order('created_at').limit(1).maybeSingle();
-   const savedConnection=await check(await service.from('platform_connections').upsert({agency_organization_id:agency?.id||pending.organization_id,target_organization_id:pending.organization_id,provider:pending.provider,external_user_id:String(identity.id),account_name:String(identity.name||'Conta Meta'),status:'syncing',scopes:granted,config:{connected_by:actorId},last_error:null},{onConflict:'agency_organization_id,provider,external_user_id'}).select('id').single());
+   const agencyId=agency?.id||pending.organization_id;
+   const externalUserId=String(identity.id);
+   const {data:existingConnection,error:connectionLookupError}=await service.from('platform_connections')
+    .select('id,target_organization_id').eq('agency_organization_id',agencyId)
+    .eq('provider',pending.provider).eq('external_user_id',externalUserId).maybeSingle();
+   if(connectionLookupError)throw new Error('Não foi possível conferir o destino desta conexão. Tente novamente.');
+   // The legacy unique key spans every client of the agency. An upsert here
+   // could retarget another client's connection and replace its Vault token.
+   // Never adopt orphaned/foreign connections or rewrite their ownership.
+   if(existingConnection&&existingConnection.target_organization_id!==pending.organization_id)
+    throw new Error('Esta identidade Meta já possui uma conexão com outro cliente ou está sem destino. A reconexão foi bloqueada para preservar os vínculos existentes.');
+   const connectionValues={account_name:String(identity.name||'Conta Meta'),status:'syncing',scopes:granted,config:{connected_by:actorId},last_error:null};
+   const savedConnection=existingConnection
+    ?await check(await service.from('platform_connections').update(connectionValues)
+      .eq('id',existingConnection.id).eq('agency_organization_id',agencyId)
+      .eq('provider',pending.provider).eq('external_user_id',externalUserId)
+      .eq('target_organization_id',pending.organization_id).select('id').single())
+    :await check(await service.from('platform_connections').insert({...connectionValues,
+      agency_organization_id:agencyId,target_organization_id:pending.organization_id,
+      provider:pending.provider,external_user_id:externalUserId}).select('id').single());
+   if(!savedConnection?.id)throw new Error('O destino da conexão mudou durante a autorização. Reconecte para conferir os vínculos.');
    await setConnectionToken(savedConnection.id,token);
    const imported=await discoverMetaAssets(savedConnection.id,token);
    await check(await service.from('integrations').delete().eq('id',id));
