@@ -391,19 +391,27 @@ async function finishApiOAuth(pending:any,url:URL,slug:string){
  }
  return Response.redirect(origin+'/'+slug+'/settings/integrations?connected='+pending.provider,303);
 }
-async function saveCrm(facts:any[]){for(let n=0;n<facts.length;n+=200)await check(await service.from('metrics_crm').upsert(facts.slice(n,n+200),{onConflict:'organization_id,source,metric_date,currency,channel,account_id,campaign_id'}));}
+/** Grava os totais diários do CRM e remove, só desta integração e janela, os que não vieram na nova leitura (negócio reaberto, excluído ou movido). */
+async function saveCrm(i:Integration,facts:any[],fromDay:string){
+ const keep=new Set(facts.map((f)=>[f.metric_date,f.channel,f.currency,f.account_id].join('|')));
+ const {data:existing,error}=await service.from('metrics_crm').select('id,metric_date,channel,currency,account_id').eq('organization_id',i.organization_id).eq('integration_id',i.id).gte('metric_date',fromDay);
+ if(error)throw new Error('Não foi possível conferir os totais anteriores do CRM.');
+ for(let n=0;n<facts.length;n+=200)await check(await service.from('metrics_crm').upsert(facts.slice(n,n+200),{onConflict:'organization_id,source,metric_date,currency,channel,account_id,campaign_id'}));
+ const stale=(existing||[]).filter((r:any)=>!keep.has([r.metric_date,r.channel,r.currency,r.account_id].join('|'))).map((r:any)=>r.id);
+ for(let n=0;n<stale.length;n+=200)await check(await service.from('metrics_crm').delete().eq('organization_id',i.organization_id).eq('integration_id',i.id).in('id',stale.slice(n,n+200)));
+}
 async function markSynced(i:Integration){await check(await service.from('integrations').update({status:'connected',is_enabled:true,last_synced_at:new Date().toISOString(),last_error:null}).eq('id',i.id));}
 async function orgCurrency(id:string){const {data}=await service.from('organizations').select('currency').eq('id',id).single();return String(data?.currency||'BRL');}
 async function syncHubspot(i:Integration){
  const stored=await check(await service.rpc('integration_token',{p_id:i.id}));let refresh='';try{refresh=JSON.parse(String(stored||'{}')).refresh_token||'';}catch{/* segredo antigo */}if(!refresh)throw new Error('Reconecte o HubSpot para renovar a autorização.');
  const t=await hubspotTokens({grant_type:'refresh_token',refresh_token:refresh});if(!t?.access_token)throw new Error('O HubSpot não renovou o acesso. Reconecte a conta.');
  if(t.refresh_token&&t.refresh_token!==refresh)await setToken(i.id,JSON.stringify({refresh_token:t.refresh_token}));
- const since=String(Date.now()-90*86400000);
+ const sinceMs=Date.now()-90*86400000;const since=String(sinceMs);
  const search=async(object:string,dateProp:string,extra:Record<string,string>[],properties:string[])=>{const out:any[]=[];let after:string|undefined;for(let page=0;page<50;page++){const data=await readJson(await fetch('https://api.hubapi.com/crm/v3/objects/'+object+'/search',{method:'POST',headers:{Authorization:'Bearer '+t.access_token,'Content-Type':'application/json'},body:JSON.stringify({filterGroups:[{filters:[{propertyName:dateProp,operator:'GTE',value:since},...extra]}],properties,limit:100,...(after?{after}:{})})}),'O HubSpot');out.push(...(data?.results||[]));after=data?.paging?.next?.after;if(!after)break;}return out;};
  const deals=await search('deals','closedate',[{propertyName:'hs_is_closed_won',operator:'EQ',value:'true'}],['amount','closedate','deal_currency_code','hs_analytics_source','hs_analytics_source_data_1']);
  const contacts=await search('contacts','createdate',[],['createdate','hs_analytics_source','hs_analytics_source_data_1']);
  const facts=hubspotCrmFacts({deals,contacts,organizationId:i.organization_id,integrationId:i.id,portalId:i.external_account_id,fallbackCurrency:await orgCurrency(i.organization_id)});
- await saveCrm(facts);await markSynced(i);
+ await saveCrm(i,facts,isoDate(new Date(sinceMs)));await markSynced(i);
  return {message:`HubSpot sincronizado: ${deals.length} negócios ganhos e ${contacts.length} contatos em ${facts.length} linhas diárias.`,rows:facts.length};
 }
 async function rdDeals(token:string,from:string,to:string,limit=200,maxPages=50){
@@ -413,7 +421,7 @@ async function syncRdStation(i:Integration){
  const token=String(await check(await service.rpc('integration_token',{p_id:i.id}))||'');if(!token)throw new Error('Informe novamente o token do RD Station CRM.');
  const to=new Date(),from=new Date(Date.now()-90*86400000);const deals=await rdDeals(token,isoDate(from),isoDate(to));
  const facts=rdCrmFacts({deals,organizationId:i.organization_id,integrationId:i.id,accountId:i.external_account_id,currency:await orgCurrency(i.organization_id)});
- await saveCrm(facts);await markSynced(i);
+ await saveCrm(i,facts,isoDate(from));await markSynced(i);
  return {message:`RD Station CRM sincronizado: ${deals.length} negócios vendidos em ${facts.length} linhas diárias.`,rows:facts.length};
 }
 async function tiktokGet(path:string,token:string,params:Record<string,string>){const url=new URL('https://business-api.tiktok.com/open_api/v1.3/'+path);url.search=new URLSearchParams(params).toString();const data=await readJson(await fetch(url,{headers:{'Access-Token':token}}),'O TikTok');if(data?.code!==0)throw new Error('O TikTok recusou a consulta'+(data?.message?': '+data.message:'.'));return data.data;}

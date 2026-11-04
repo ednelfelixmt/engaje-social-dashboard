@@ -25,7 +25,8 @@ test('HubSpot: negócios ganhos somam receita e vendas no dia do fechamento; con
  assert.equal(google.revenue,1500.5);assert.equal(google.purchases,2);assert.equal(google.leads,1);
  assert.equal(google.source,'crm');assert.equal(google.account_id,'123');assert.equal(google.campaign_id,'');
  const direct=facts.find(f=>f.channel==='direct')!;
- assert.equal(direct.purchases,1);assert.equal(direct.revenue,null,'valor ausente não vira zero');
+ assert.equal(direct.purchases,1);assert.equal(direct.revenue,null,'valor ausente não vira zero');assert.equal(direct.is_complete,false);
+ assert.equal(google.is_complete,true);
  assert.equal(facts.length,2,'contato com data inválida é descartado');
 });
 
@@ -52,4 +53,16 @@ test('endereços de autorização levam a URL de retorno e o estado assinado',()
  assert.equal(h.host,'app.hubspot.com');assert.equal(h.searchParams.get('state'),'st');assert.ok(h.searchParams.get('scope')!.includes('crm.objects.deals.read'));
  const t=new URL(m.tiktokAuthorizeUrl('app','https://x.supabase.co/functions/v1/meta-auth/callback','st'));
  assert.equal(t.host,'business-api.tiktok.com');assert.equal(t.searchParams.get('app_id'),'app');assert.equal(t.searchParams.get('state'),'st');
+});
+
+test('venda sem valor no mesmo dia e canal deixa a receita sem dado e a linha incompleta',()=>{
+ const facts=m.hubspotCrmFacts({organizationId:'org',integrationId:'int',portalId:'1',fallbackCurrency:'BRL',now,contacts:[],
+  deals:[{properties:{amount:'100',closedate:'2026-11-01T10:00:00Z',hs_analytics_source:'PAID_SEARCH'}},{properties:{amount:null,closedate:'2026-11-01T12:00:00Z',hs_analytics_source:'PAID_SEARCH'}}]});
+ assert.equal(facts.length,1);assert.equal(facts[0].purchases,2);assert.equal(facts[0].revenue,null);assert.equal(facts[0].is_complete,false);
+});
+test('o destino de autorização da HubSpot e do TikTok passa pela trava de endereços',()=>{
+ const guard=loadTypescript<typeof import('../src/lib/integrations/oauth-destination')>(new URL('../src/lib/integrations/oauth-destination.ts',import.meta.url),()=>({}));
+ assert.ok(guard.oauthDestination(m.hubspotAuthorizeUrl('cid','https://x.supabase.co/functions/v1/meta-auth/callback','st')).startsWith('https://app.hubspot.com/'));
+ assert.ok(guard.oauthDestination(m.tiktokAuthorizeUrl('app','https://x.supabase.co/functions/v1/meta-auth/callback','st')).startsWith('https://business-api.tiktok.com/'));
+ assert.throws(()=>guard.oauthDestination('https://evil.example/oauth'),/inválido/);
 });

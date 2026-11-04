@@ -22,14 +22,17 @@ export function crmChannel(source: unknown, detail: unknown = ''): CrmChannel {
 
 function aggregateCrm(items: {day: string | null; channel: CrmChannel; currency: string; revenue?: number | null; purchase?: boolean; lead?: boolean}[], base: {organizationId: string; integrationId: string; accountId: string; now: string}): CrmFact[] {
   const map = new Map<string, CrmFact>();
+  const missing = new Set<string>();
   for (const item of items) {
     if (!item.day) continue;
     const key = [item.day, item.channel, item.currency].join('|');
     let row = map.get(key);
     if (!row) { row = {organization_id: base.organizationId, integration_id: base.integrationId, spreadsheet_upload_id: null, source: 'crm', metric_date: item.day, currency: item.currency, channel: item.channel, account_id: base.accountId, campaign_id: '', revenue: null, purchases: null, leads: null, checkouts: null, is_complete: true, synced_at: base.now}; map.set(key, row); }
-    if (item.purchase) { row.purchases = (row.purchases ?? 0) + 1; if (item.revenue != null) row.revenue = (row.revenue ?? 0) + item.revenue; }
+    if (item.purchase) { row.purchases = (row.purchases ?? 0) + 1; if (item.revenue != null) row.revenue = (row.revenue ?? 0) + item.revenue; else missing.add(key); }
     if (item.lead) row.leads = (row.leads ?? 0) + 1;
   }
+  // Venda sem valor: a soma do dia seria parcial, então a receita fica sem dado e a linha, incompleta.
+  for (const key of missing) { const row = map.get(key)!; row.revenue = null; row.is_complete = false; }
   return [...map.values()];
 }
 
