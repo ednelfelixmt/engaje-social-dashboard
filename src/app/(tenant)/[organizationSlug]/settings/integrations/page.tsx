@@ -5,6 +5,7 @@ import {agencyTenant} from '@/lib/auth/session';
 import {connectorCatalog, connectorByProvider, type ConnectorDefinition} from '@/lib/integrations/catalog';
 import {Card} from '@/components/ui/card';
 import {IntegrationControls} from '@/components/integration-controls';
+import {RdStationTokenForm} from '@/components/rd-station-token-form';
 import {ExtractorSetup} from '@/components/extractor-setup';
 import {FoundationConnector} from '@/components/foundation-connector';
 import {IntegrationDiagnostics} from '@/components/integration-diagnostics';
@@ -35,7 +36,10 @@ function ConnectorCard({connector, organizationId, prepared}: {connector: Connec
         <div className="flex flex-wrap gap-2">{connector.capabilities.map((capability) => <span className="connector-capability" key={capability}>{capability}</span>)}</div>
       </div>
       <p className="muted text-xs">{connector.stage==='live'?'A conta só será vinculada após você selecioná-la e confirmar o cliente.':'O cadastro inicial não autoriza nem sincroniza dados. O adaptador e a homologação desta plataforma ainda precisam ser concluídos.'}</p>
-      {connector.stage === 'live'
+      {connector.setup ? <p className="text-xs text-amber-300">{connector.setup}</p> : null}
+      {connector.provider === 'rd_station'
+        ? <RdStationTokenForm organizationId={organizationId} />
+        : connector.stage === 'live'
         ? <IntegrationControls organizationId={organizationId} provider={connector.provider} />
         : <FoundationConnector organizationId={organizationId} provider={connector.provider} prepared={prepared} />}
     </Card>
@@ -137,7 +141,6 @@ export default async function Page({params: params_, searchParams: searchParams_
         <div><h2 className="text-xl font-semibold">Extratores de mídia paga</h2><p className="muted mt-1 text-sm">Uma única fonte por plataforma evita duplicidade de investimento e conversões.</p></div>
         <div className="grid gap-4 xl:grid-cols-2">
           <Card><div className="mb-4 flex items-start justify-between gap-3"><div className="integration-brand">{icons.windsor}<div><h3>Google Ads</h3><p>Campanhas e conversões do Google Ads, coletadas via Windsor.ai. A conexão direta pela API do Google está pendente.</p></div></div><StageBadge stage="live" /></div><p className="muted mb-4 text-xs">Cadastre as contas disponíveis e confirme quais pertencem a este cliente.</p><ExtractorSetup organizationId={org.id} provider="windsor" /></Card>
-          <Card><div className="mb-4 flex items-start justify-between gap-3"><div className="integration-brand">{icons.stract}<div><h3>Stract</h3><p>Destino Supabase e contas por cliente preparados para a carga externa.</p></div></div><StageBadge stage="foundation" /></div><p className="muted mb-4 text-xs">Cadastre as contas disponíveis e confirme quais pertencem a este cliente.</p><ExtractorSetup organizationId={org.id} provider="stract" /></Card>
         </div>
       </section>
 
