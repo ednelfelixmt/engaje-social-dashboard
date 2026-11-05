@@ -5,6 +5,7 @@ import {requireAdmin} from '@/lib/auth/session';
 import {administrationKey} from '@/lib/auth/administration-key';
 import {validateOrganizationUpdateRequest} from '@/lib/auth/organization-update-guards';
 import {adminMutationFailure} from '@/lib/auth/admin-mutation-feedback';
+import {validateInitialPassword} from '@/lib/auth/initial-password';
 import type {ActionState} from '@/components/action-form';
 import {businessNiches,salesModels,suggestFunnelModel,funnelPresetFor} from '@/lib/metrics/funnel-config';
 import {isValidTimezone} from '@/lib/organization-options';
@@ -88,4 +89,39 @@ export async function inviteClientUser(_:ActionState,f:FormData):Promise<ActionS
  if(recordError)return {ok:false,message:'E-mail solicitado, mas o registro do convite falhou. Nenhuma permissão foi concedida.'};
  revalidatePath('/admin/users');
  return {ok:true,message:'Convite enviado. Após o cadastro, defina os clientes e níveis de acesso em Configurar acessos.'};
+}
+
+async function generatedPassword():Promise<string>{
+ const {randomInt}=await import('node:crypto');
+ const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+ const body=Array.from({length:14},()=>alphabet[randomInt(alphabet.length)]).join('');
+ return body+randomInt(10)+randomInt(10); // always has letters and digits
+}
+
+/**
+ * Creates the account right away (e-mail already confirmed) so the administrator can hand over the access without
+ * waiting for an invitation e-mail. Like the invitation it grants no client access: that is set in "Configurar acessos".
+ * With no password typed, a strong one is generated and shown once.
+ */
+export async function createClientUser(_:ActionState,f:FormData):Promise<ActionState>{
+ await requireAdmin();
+ const typed=String(f.get('password')??'');
+ const parsed=z.object({email:z.string().trim().toLowerCase().email().max(254)}).safeParse({email:f.get('email')});
+ if(!parsed.success)return {ok:false,message:'Informe um endereço de e-mail válido.'};
+ const problem=typed?validateInitialPassword(typed):null;
+ if(problem)return {ok:false,message:problem};
+ const secret=administrationKey(process.env);
+ if(!secret)return {ok:false,message:'Serviço de contas não configurado no servidor.'};
+ const password=typed||await generatedPassword();
+ const {createClient}=await import('@supabase/supabase-js');
+ const {supabaseUrl}=await import('@/lib/supabase/config');
+ const admin=createClient(supabaseUrl,secret,{auth:{persistSession:false,autoRefreshToken:false}});
+ const {data:created,error:createError}=await admin.auth.admin.createUser({email:parsed.data.email,password,email_confirm:true});
+ if(createError||!created.user)return {ok:false,message:'Não foi possível criar a conta. Verifique se o e-mail já está cadastrado ou se a senha atende à política do serviço.'};
+ const now=new Date().toISOString();
+ const {error:recordError}=await admin.from('agency_user_invitations').upsert({user_id:created.user.id,email:parsed.data.email,status:'accepted',invited_at:now,expires_at:now,accepted_at:now},{onConflict:'user_id'});
+ revalidatePath('/admin/users');
+ const handover=typed?'Passe a senha à pessoa por um canal seguro.':'Senha gerada (aparece só agora): '+password;
+ if(recordError)return {ok:true,message:'Conta criada, mas o registro no histórico falhou. Nenhum acesso a clientes foi concedido. '+handover};
+ return {ok:true,message:'Conta criada e confirmada. Nenhum cliente foi liberado: defina em Configurar acessos. '+handover};
 }
